@@ -436,6 +436,7 @@ final class OperationsWorkspaceController extends Controller
             ->whereIn('operational_asset_id', $assetIds)
             ->with([
                 'job:id,reference,title,site',
+                'job.latestDelay',
                 'job.personnelAssignments' => fn ($q) => $q->active()->with('user:id,name'),
             ])
             ->get()
@@ -466,6 +467,7 @@ final class OperationsWorkspaceController extends Controller
         $telemetryJobs = ! empty($telemetryJobIds)
             ? DispatchJob::query()
                 ->whereIn('id', $telemetryJobIds)
+                ->with('latestDelay')
                 ->get(['id', 'reference', 'title', 'site', 'status'])
                 ->keyBy('id')
             : collect();
@@ -597,6 +599,8 @@ final class OperationsWorkspaceController extends Controller
                 'source',
                 'serviceRequest:id,reference',
                 'canonicalHandoff',
+                'latestDelay.reporter:id,name',
+                'latestDelay.operationalAsset:id,code,name',
             ])
             // Rank before limiting so historical rows cannot crowd out active work.
             ->orderByRaw("CASE WHEN status IN ('dispatched', 'accepted', 'en_route', 'arrived', 'working') THEN 0 WHEN status IN ('draft', 'pending_approval', 'scheduled') THEN 1 ELSE 2 END")

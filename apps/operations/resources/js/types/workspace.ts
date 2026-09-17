@@ -204,6 +204,7 @@ export interface DispatchJobViewModel {
     updated_at: string | null;
     personnel_assignments: DispatchAssignmentViewModel[];
     asset_assignments: DispatchAssetAssignmentViewModel[];
+    latest_delay?: DispatchExecutionDelayViewModel | null;
 }
 
 export interface ClientViewModel {
@@ -633,6 +634,7 @@ export interface LocationUpdateViewModel {
         reference: string;
         title: string;
         site?: string | null;
+        latest_delay?: DispatchExecutionDelayViewModel | null;
     } | null;
     latitude: number | null;
     longitude: number | null;
@@ -1259,6 +1261,30 @@ export interface DispatchHandoffEvidenceViewModel {
     can_fulfill?: boolean;
 }
 
+export interface DispatchExecutionDelayViewModel {
+    id: number;
+    context: {
+        value: 'transit' | 'on_site';
+        label: string;
+    };
+    reason: string;
+    reason_label: string;
+    estimated_minutes: number | null;
+    notes: string | null;
+    reported_at: string | null;
+    created_at?: string | null;
+    operational_asset_id?: number | null;
+    reporter?: {
+        id: number;
+        name: string;
+    } | null;
+    asset?: {
+        id: number;
+        code: string;
+        name: string;
+    } | null;
+}
+
 export interface DispatchExecutionViewModel {
     status: StatusViewModel<DispatchStatusValue>;
     updated_at: string | null;
@@ -1271,9 +1297,10 @@ export interface DispatchExecutionViewModel {
         latest_location: DispatchExecutionLocationViewModel | null;
     };
     reports: DispatchExecutionReportViewModel[];
+    delays?: DispatchExecutionDelayViewModel[];
     activity: Array<{
         id: string;
-        kind: 'status' | 'report' | 'location';
+        kind: 'status' | 'report' | 'location' | 'delay';
         title: string;
         detail: string;
         recorded_at: string | null;

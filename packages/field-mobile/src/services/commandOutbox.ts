@@ -15,6 +15,7 @@ import type {
     OutboxCommandPriority,
     OutboxCommandType,
     RentalHandoverCommandPayload,
+    ReportDelayPayload,
     SalesDeliveryCommandPayload,
 } from '../types/index';
 import type { FieldApiClient } from './apiClient';
@@ -436,6 +437,19 @@ export class CommandOutboxManager {
         );
     }
 
+    public enqueueReportDelay(
+        payload: ReportDelayPayload,
+        expectedVersion?: number,
+    ): Promise<OutboxCommand> {
+        return this.enqueue(
+            'report_delay',
+            payload.dispatch_job_id,
+            null,
+            payload as unknown as Record<string, unknown>,
+            expectedVersion,
+        );
+    }
+
     private async persist(command: OutboxCommand): Promise<void> {
         command.updatedAt = this.now().toISOString();
         await this.repository.save(command);
@@ -713,6 +727,14 @@ export class CommandOutboxManager {
                 response = await apiClient.submitMaintenanceWorkOrder(
                     payload.operational_asset_id,
                     payload,
+                    command.id,
+                );
+            } else if (command.type === 'report_delay') {
+                const payload =
+                    command.payload as unknown as ReportDelayPayload;
+                response = await apiClient.reportDelay(
+                    command.jobId!,
+                    payload as unknown as Record<string, unknown>,
                     command.id,
                 );
             }

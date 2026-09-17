@@ -17,5 +17,6 @@ export * from './sheets/ReliefHandoverModal';
 export * from './sheets/ChangeUnitModal';
 export * from './sheets/PreTripDefectFallbackModal';
 export * from './sheets/DispatchIntakeSheet';
+export * from './sheets/ReportDelayModal';
 export * from './common/Icon';
 export * from './sos';

@@ -31,6 +31,7 @@ final class DispatchDeskJobsQuery
                 ->with('user:id,name'),
             'assetAssignments' => fn ($assignment) => $assignment->whereNull('active_until')->with('asset:id,code,name'),
             'source', 'serviceRequest:id,reference', 'canonicalHandoff',
+            'latestDelay.reporter:id,name', 'latestDelay.operationalAsset:id,code,name',
         ])->whereIn('status', match ($filters['view']) {
             'history' => ['completed', 'cancelled'],
             'in-progress' => self::EXECUTION,

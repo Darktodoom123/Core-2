@@ -14,6 +14,7 @@ import { CommandConflictBanner } from '../panels/CommandConflictBanner';
 export interface JobListItemCardProps {
     job: DispatchJob;
     conflictedCommands?: OutboxCommand[];
+    queuedDelayCommand?: OutboxCommand;
     onAcceptServerState?: (commandId: string) => void;
     onRetryNewVersion?: (commandId: string, newVersion: number) => void;
     onSelectJob?: (jobId: number) => void;
@@ -34,16 +35,19 @@ export interface JobListItemCardProps {
         version: number,
     ) => void;
     onOpenDriveRoutes?: () => void;
+    onReportDelay?: (job: DispatchJob) => void;
 }
 
 export const JobListItemCard: React.FC<JobListItemCardProps> = ({
     job,
     conflictedCommands,
+    queuedDelayCommand,
     onAcceptServerState,
     onRetryNewVersion,
     onSelectJob,
     onAcceptAssignment,
     onRejectAssignment,
+    onReportDelay,
 }) => {
     const { isDarkHud } = useTheme();
 
@@ -486,7 +490,133 @@ export const JobListItemCard: React.FC<JobListItemCardProps> = ({
                         </View>
                     </View>
                 </View>
-            ) : null}
+            ) : (
+                <View style={styles.nonPendingActionsContainer}>
+                    {queuedDelayCommand ? (
+                        <View
+                            style={[
+                                styles.reportedDelayBanner,
+                                isDarkHud && styles.darkReportedDelayBanner,
+                                { opacity: 0.8 },
+                            ]}
+                            testID={`queued-delay-banner-${job.id}`}
+                        >
+                            <View style={styles.reportedDelayHeader}>
+                                <Icon color="#94A3B8" name="clock" size={14} />
+                                <Text
+                                    style={[
+                                        styles.reportedDelayTitle,
+                                        isDarkHud &&
+                                            styles.darkReportedDelayTitle,
+                                        {
+                                            color: isDarkHud
+                                                ? '#94A3B8'
+                                                : '#475569',
+                                        },
+                                    ]}
+                                >
+                                    Queued Delay:{' '}
+                                    {(queuedDelayCommand.payload as any)
+                                        .reason_label ||
+                                        (queuedDelayCommand.payload as any)
+                                            .reason}
+                                    {(queuedDelayCommand.payload as any)
+                                        .estimated_minutes
+                                        ? ` (+${(queuedDelayCommand.payload as any).estimated_minutes}m)`
+                                        : ''}
+                                </Text>
+                            </View>
+                            {(queuedDelayCommand.payload as any).notes ? (
+                                <Text
+                                    numberOfLines={2}
+                                    style={[
+                                        styles.reportedDelayNotes,
+                                        isDarkHud &&
+                                            styles.darkReportedDelayNotes,
+                                        {
+                                            color: isDarkHud
+                                                ? '#94A3B8'
+                                                : '#475569',
+                                        },
+                                    ]}
+                                >
+                                    {(queuedDelayCommand.payload as any).notes}
+                                </Text>
+                            ) : null}
+                        </View>
+                    ) : job.latest_delay ? (
+                        <View
+                            style={[
+                                styles.reportedDelayBanner,
+                                isDarkHud && styles.darkReportedDelayBanner,
+                            ]}
+                            testID={`delay-status-banner-${job.id}`}
+                        >
+                            <View style={styles.reportedDelayHeader}>
+                                <Icon color="#F59E0B" name="alert" size={14} />
+                                <Text
+                                    style={[
+                                        styles.reportedDelayTitle,
+                                        isDarkHud &&
+                                            styles.darkReportedDelayTitle,
+                                    ]}
+                                >
+                                    Delay Reported:{' '}
+                                    {job.latest_delay.reason_label ||
+                                        (job.latest_delay as any).reason}
+                                    {job.latest_delay.estimated_minutes ||
+                                    (job.latest_delay as any).estimated_minutes
+                                        ? ` (+${job.latest_delay.estimated_minutes ?? (job.latest_delay as any).estimated_minutes}m)`
+                                        : ''}
+                                    {job.latest_delay.reported_at
+                                        ? ` · ${formatPHT(job.latest_delay.reported_at, 'time')}`
+                                        : ''}
+                                </Text>
+                            </View>
+                            {job.latest_delay.notes ? (
+                                <Text
+                                    numberOfLines={2}
+                                    style={[
+                                        styles.reportedDelayNotes,
+                                        isDarkHud &&
+                                            styles.darkReportedDelayNotes,
+                                    ]}
+                                >
+                                    {job.latest_delay.notes}
+                                </Text>
+                            ) : null}
+                        </View>
+                    ) : null}
+
+                    {onReportDelay ? (
+                        <Pressable
+                            accessibilityLabel={`Report delay for ${job.reference}`}
+                            accessibilityRole="button"
+                            onPress={() => onReportDelay(job)}
+                            style={({ pressed }) => [
+                                styles.btnReportDelay,
+                                isDarkHud && styles.darkBtnReportDelay,
+                                pressed && styles.btnPressed,
+                            ]}
+                            testID={`report-delay-btn-${job.id}`}
+                        >
+                            <Icon
+                                color={isDarkHud ? '#FBBF24' : '#D97706'}
+                                name="alert"
+                                size={15}
+                            />
+                            <Text
+                                style={[
+                                    styles.btnReportDelayText,
+                                    isDarkHud && styles.darkBtnReportDelayText,
+                                ]}
+                            >
+                                Report Delay
+                            </Text>
+                        </Pressable>
+                    ) : null}
+                </View>
+            )}
         </Pressable>
     );
 };
@@ -736,5 +866,68 @@ const styles = StyleSheet.create({
     btnPressed: {
         opacity: 0.85,
         transform: [{ scale: 0.985 }],
+    },
+    nonPendingActionsContainer: {
+        marginTop: 10,
+        gap: 8,
+    },
+    reportedDelayBanner: {
+        backgroundColor: '#FFFBEB',
+        borderColor: '#FDE68A',
+        borderRadius: 8,
+        borderWidth: 1,
+        padding: 10,
+    },
+    darkReportedDelayBanner: {
+        backgroundColor: 'rgba(245, 158, 11, 0.12)',
+        borderColor: 'rgba(245, 158, 11, 0.3)',
+    },
+    reportedDelayHeader: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 6,
+    },
+    reportedDelayTitle: {
+        color: '#B45309',
+        fontSize: 12,
+        fontWeight: '700',
+        flexShrink: 1,
+        flexWrap: 'wrap',
+    },
+    darkReportedDelayTitle: {
+        color: '#FCD34D',
+    },
+    reportedDelayNotes: {
+        color: '#78350F',
+        fontSize: 11,
+        marginTop: 4,
+    },
+    darkReportedDelayNotes: {
+        color: '#FDE68A',
+    },
+    btnReportDelay: {
+        alignItems: 'center',
+        backgroundColor: '#FFFBEB',
+        borderColor: '#F59E0B',
+        borderRadius: 10,
+        borderWidth: 1,
+        flexDirection: 'row',
+        gap: 8,
+        justifyContent: 'center',
+        minHeight: 42,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+    },
+    darkBtnReportDelay: {
+        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+        borderColor: '#D97706',
+    },
+    btnReportDelayText: {
+        color: '#B45309',
+        fontSize: 13,
+        fontWeight: '700',
+    },
+    darkBtnReportDelayText: {
+        color: '#FCD34D',
     },
 });

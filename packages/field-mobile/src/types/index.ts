@@ -58,6 +58,40 @@ export interface AssetAssignment {
     rated_capacity?: string | null;
     engine_hours?: number | null;
     attachments?: string[] | null;
+    latest_delay?: DispatchJobDelayInfo | null;
+}
+
+export type DelayContextType =
+    'transit' | 'site' | 'on_site' | 'equipment' | 'personnel' | 'external';
+export type DelayReasonCode = string;
+
+export interface DispatchJobDelayInfo {
+    id: number;
+    dispatch_job_id: number;
+    context: DelayContextType;
+    context_label: string;
+    reason: DelayReasonCode;
+    reason_label: string;
+    estimated_minutes?: number | null;
+    notes?: string | null;
+    operational_asset_id?: number | null;
+    reported_by: {
+        id: number;
+        name: string;
+    };
+    reported_at: string;
+    created_at: string;
+}
+
+export interface ReportDelayPayload {
+    dispatch_job_id: number;
+    job_version?: number;
+    operational_asset_id?: number | null;
+    context: DelayContextType;
+    reason: DelayReasonCode;
+    estimated_minutes?: number | null;
+    notes?: string | null;
+    reported_at?: string;
 }
 
 export interface ProgressionStep {
@@ -125,6 +159,7 @@ export interface DispatchJob {
         id: number;
         reference?: string;
     } | null;
+    latest_delay?: DispatchJobDelayInfo | null;
 }
 
 export type SosIncidentCategory =
@@ -231,7 +266,8 @@ export type OutboxCommandType =
     | 'submit_sales_delivery'
     | 'submit_equipment_inspection'
     | 'submit_maintenance_work_order'
-    | 'release_maintenance_work_order';
+    | 'release_maintenance_work_order'
+    | 'report_delay';
 
 export interface EquipmentInspectionCommandPayload {
     operational_asset_id: number;

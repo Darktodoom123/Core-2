@@ -10,6 +10,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/dispatch-jobs', [FieldDispatchJobController::class, 'index'])->name('dispatch-jobs.index');
         Route::get('/dispatch-jobs/{dispatchJob}', [FieldDispatchJobController::class, 'show'])->name('dispatch-jobs.show');
         Route::post('/dispatch-jobs/{dispatchJob}/status', [FieldDispatchJobController::class, 'transitionStatus'])->name('dispatch-jobs.status');
+        Route::post('/dispatch-jobs/{dispatchJob}/delays', [FieldDispatchJobController::class, 'reportDelay'])->name('dispatch-jobs.delays');
+        Route::post('/dispatch-jobs/{dispatchJob}/delay', [FieldDispatchJobController::class, 'reportDelay'])->name('dispatch-jobs.delay');
     });
 });
 

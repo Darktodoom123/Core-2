@@ -215,4 +215,55 @@ describe('FieldExecutionWorkspace', () => {
             screen.getByRole('link', { name: 'Evidence' }),
         ).toHaveAttribute('href', '#handoff-evidence');
     });
+
+    it('renders reported delays panel with context, reason, estimated impact, and notes', () => {
+        const executionWithDelays = {
+            ...execution,
+            delays: [
+                {
+                    id: 101,
+                    context: { value: 'transit' as const, label: 'Transit / Travel' },
+                    reason: 'traffic',
+                    reason_label: 'Heavy Traffic Congestion',
+                    estimated_minutes: 45,
+                    notes: 'EDSA gridlock due to road re-blocking.',
+                    reported_at: '2026-09-17T09:15:00Z',
+                    reporter: { id: 9, name: 'Assigned Operator' },
+                    asset: { id: 12, code: 'CR-001', name: 'Liebherr LTM 1050' },
+                },
+            ],
+            activity: [
+                {
+                    id: 'delay-101',
+                    kind: 'delay' as const,
+                    title: 'Delay reported: Heavy Traffic Congestion',
+                    detail: 'EDSA gridlock due to road re-blocking.',
+                    recorded_at: '2026-09-17T09:15:00Z',
+                },
+            ],
+        };
+
+        render(
+            <FieldExecutionWorkspace
+                job={job}
+                execution={executionWithDelays}
+                capabilities={capabilities}
+                personnelCandidates={[]}
+                assetCandidates={[]}
+            />,
+        );
+
+        expect(screen.getByText(/Reported Delays \(1\)/)).toBeInTheDocument();
+        expect(screen.getByText('Transit / Travel')).toBeInTheDocument();
+        expect(screen.getByText('Heavy Traffic Congestion')).toBeInTheDocument();
+        expect(screen.getByText('+45m estimated impact')).toBeInTheDocument();
+        expect(
+            screen.getAllByText('EDSA gridlock due to road re-blocking.'),
+        ).toHaveLength(2);
+        expect(screen.getByText(/CR-001/)).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: 'Delays (1)' })).toHaveAttribute(
+            'href',
+            '#reported-delays',
+        );
+    });
 });

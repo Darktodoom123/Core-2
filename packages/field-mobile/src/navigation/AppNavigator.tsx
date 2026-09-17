@@ -80,6 +80,8 @@ import type {
     WeatherTelemetry,
     TechnicianInspectionCheck,
     MaintenanceWorkOrder,
+    DelayReasonCode,
+    ReportDelayPayload,
 } from '../types/index';
 
 export { isAuthorizedFieldRole } from '../auth/fieldRoles';
@@ -1015,6 +1017,39 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         [commandOutbox, handleRequestFailure, syncQueue],
     );
 
+    const handleReportDelay = useCallback(
+        async (jobId: number, payload: ReportDelayPayload) => {
+            setIsLoadingJobs(true);
+
+            try {
+                const targetJob =
+                    jobs.find((j) => j.id === jobId) ||
+                    (activeJob?.id === jobId ? activeJob : null);
+                const expectedVersion =
+                    payload.job_version ?? targetJob?.version;
+
+                await commandOutbox.enqueueReportDelay(
+                    {
+                        ...payload,
+                        dispatch_job_id: jobId,
+                        reported_at:
+                            payload.reported_at ?? new Date().toISOString(),
+                    },
+                    expectedVersion,
+                );
+                await syncQueue();
+            } catch (error: unknown) {
+                await handleRequestFailure(
+                    error,
+                    'Failed to submit delay report.',
+                );
+            } finally {
+                setIsLoadingJobs(false);
+            }
+        },
+        [activeJob, commandOutbox, handleRequestFailure, jobs, syncQueue],
+    );
+
     const handleAcceptServerState = useCallback(
         (commandId: string) => {
             void commandOutbox
@@ -1806,7 +1841,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                             />
                         ) : activeAppView === 'routes' ? (
                             <HeavyCraneDriveModeScreen
-                                activeJob={activeJob || jobs[0] || null}
+                                activeJob={activeJob}
                                 assetCode={resolvedAssetCode}
                                 assetName={resolvedAssetName}
                                 jobs={jobs}
@@ -1819,6 +1854,78 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                     setActiveAppView('main');
                                 }}
                                 onBack={() => setActiveAppView('main')}
+                                onReportDelay={(
+                                    delayReason,
+                                    explicitPayload,
+                                ) => {
+                                    const jobToDelay = activeJob;
+
+                                    if (!jobToDelay) {
+                                        return;
+                                    }
+
+                                    if (explicitPayload) {
+                                        void handleReportDelay(jobToDelay.id, {
+                                            ...explicitPayload,
+                                            dispatch_job_id: jobToDelay.id,
+                                            job_version:
+                                                explicitPayload.job_version ??
+                                                jobToDelay.version,
+                                        });
+
+                                        return;
+                                    }
+
+                                    let reasonCode: DelayReasonCode = 'other';
+                                    const lower = delayReason.toLowerCase();
+
+                                    if (lower.includes('clearance')) {
+                                        reasonCode = 'low_clearance';
+                                    } else if (
+                                        lower.includes('traffic') ||
+                                        lower.includes('escort')
+                                    ) {
+                                        reasonCode = 'traffic';
+                                    } else if (
+                                        lower.includes('detour') ||
+                                        lower.includes('road') ||
+                                        lower.includes('closure')
+                                    ) {
+                                        reasonCode = 'road_closure';
+                                    } else if (
+                                        lower.includes('access') ||
+                                        lower.includes('gate')
+                                    ) {
+                                        reasonCode = 'site_access_restricted';
+                                    } else if (
+                                        lower.includes('weather') ||
+                                        lower.includes('rain')
+                                    ) {
+                                        reasonCode = 'weather';
+                                    } else if (
+                                        lower.includes('equipment') ||
+                                        lower.includes('mechanical')
+                                    ) {
+                                        reasonCode = 'equipment_issue';
+                                    }
+
+                                    const payload: ReportDelayPayload = {
+                                        dispatch_job_id: jobToDelay.id,
+                                        context: 'transit',
+                                        reason: reasonCode,
+                                        operational_asset_id:
+                                            jobToDelay.asset_assignments?.[0]
+                                                ?.operational_asset_id ?? null,
+                                        estimated_minutes: 30,
+                                        notes: delayReason,
+                                        job_version: jobToDelay.version,
+                                        reported_at: new Date().toISOString(),
+                                    };
+                                    void handleReportDelay(
+                                        jobToDelay.id,
+                                        payload,
+                                    );
+                                }}
                                 operatorName={resolvedOperatorName}
                             />
                         ) : activeAppView === 'rental' ? (
@@ -1947,6 +2054,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 onAcceptAssignment={handleAcceptAssignment}
                                 onAcceptServerState={handleAcceptServerState}
                                 onRejectAssignment={handleRejectAssignment}
+                                onReportDelay={handleReportDelay}
                                 onRetryNewVersion={handleRetryNewVersion}
                                 onTransitionStatus={handleTransitionStatus}
                                 onSyncNow={() => void syncQueue()}

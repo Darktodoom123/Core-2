@@ -598,6 +598,7 @@ export const OperatorDashboardScreen: React.FC<
                         }
                     }}
                     ratedCapacity="50T All-Terrain"
+                    latestDelay={primaryAsset?.latest_delay}
                 />
 
                 {error && isOnline !== false && !isFetchError(error) ? (

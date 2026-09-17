@@ -10,21 +10,30 @@ use App\Modules\Assignment\Models\DispatchPersonnelAssignment;
 use App\Modules\Dispatch\Actions\TransitionDispatchJob;
 use App\Modules\Dispatch\Commands\DispatchV2Commands;
 use App\Modules\Dispatch\Data\DispatchV2Mutation;
+use App\Modules\Dispatch\Enums\DelayContext;
 use App\Modules\Dispatch\Enums\DispatchAssignmentOfferStatus;
 use App\Modules\Dispatch\Enums\DispatchAttemptStatus;
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Enums\DispatchV2CommandCode;
 use App\Modules\Dispatch\Exceptions\DispatchV2CommandException;
+use App\Modules\Dispatch\Http\Requests\ReportDispatchJobDelayRequest;
 use App\Modules\Dispatch\Http\Requests\TransitionDispatchJobRequest;
 use App\Modules\Dispatch\Http\Resources\V1\DispatchJobResource;
 use App\Modules\Dispatch\Models\DispatchExecutionAttempt;
 use App\Modules\Dispatch\Models\DispatchJob;
+use App\Modules\Dispatch\Models\DispatchJobDelay;
+use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Idempotency\Services\IdempotentCommandService;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
+use App\Platform\Notifications\DispatchDelayNotification;
+use App\Platform\Notifications\Jobs\SendQueuedNotificationJob;
+use App\Platform\Workspace\Events\WorkspaceUpdated;
 use App\Shared\Http\Exceptions\VersionConflictException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
@@ -335,8 +344,169 @@ final class FieldDispatchJobController extends Controller
         ]);
     }
 
+    public function reportDelay(
+        ReportDispatchJobDelayRequest $request,
+        DispatchJob $dispatchJob,
+        IdempotentCommandService $idempotency,
+        RecordAuditEvent $audit,
+    ): JsonResponse {
+        $actor = $request->user();
+
+        // 1. Authorization: user must have managerial dispatch permissions OR be an assigned worker on this job with dispatch permissions
+        $isManager = $actor->can(PermissionName::DispatchUpdate->value);
+        $isAssignedWorker = $actor->can(PermissionName::DispatchUpdateOwnStatus->value)
+            && $dispatchJob->personnelAssignments()->open()->where('user_id', $actor->id)->exists();
+
+        if (! $isManager && ! $isAssignedWorker) {
+            abort(403, 'You are not authorized to report delays for this dispatch job.');
+        }
+
+        // 2. State eligibility check: delays cannot be reported for draft, cancelled, or completed jobs
+        if (in_array($dispatchJob->status, [DispatchStatus::Draft, DispatchStatus::Cancelled, DispatchStatus::Completed], true)) {
+            throw ValidationException::withMessages([
+                'status' => ['Delays cannot be reported for this dispatch job status.'],
+            ]);
+        }
+
+        $commandId = $idempotency->resolveCommandId($request, required: true);
+        $expectedVersion = $request->validated('version') !== null ? (int) $request->validated('version') : null;
+
+        $execute = function () use ($request, $dispatchJob, $actor, $expectedVersion, $audit, $commandId): JsonResponse {
+            $lockedJob = DispatchJob::query()->lockForUpdate()->findOrFail($dispatchJob->id);
+
+            if (in_array($lockedJob->status, [DispatchStatus::Draft, DispatchStatus::Cancelled, DispatchStatus::Completed], true)) {
+                throw ValidationException::withMessages([
+                    'status' => ['Delays cannot be reported for this dispatch job status.'],
+                ]);
+            }
+
+            if ($expectedVersion !== null && $expectedVersion > 0 && $lockedJob->version !== $expectedVersion) {
+                $this->loadAssignmentRelations($lockedJob, $actor);
+                throw new VersionConflictException(
+                    'This dispatch changed after you opened it. Refresh and review before trying again.',
+                    $lockedJob->version,
+                    (new DispatchJobResource($lockedJob))->resolve($request),
+                );
+            }
+
+            $context = DelayContext::from((string) $request->validated('context'));
+            $reasonEnum = $request->resolvedDelayReason($context);
+            $reasonLabel = (string) ($request->validated('reason_label') ?: $reasonEnum->label());
+            $assetId = $request->resolvedAssetId();
+            $attempt = $lockedJob->currentAttempt ?? $this->resolveV2Attempt($lockedJob);
+            $reportedAt = $request->validated('reported_at')
+                ? Carbon::parse((string) $request->validated('reported_at'))
+                : now();
+
+            $delay = DispatchJobDelay::query()->create([
+                'workspace_key' => 'operations',
+                'dispatch_job_id' => $lockedJob->id,
+                'dispatch_execution_attempt_id' => $attempt?->id,
+                'operational_asset_id' => $assetId,
+                'reported_by' => $actor->id,
+                'context' => $context,
+                'reason' => $reasonEnum->value,
+                'reason_label' => $reasonLabel,
+                'estimated_minutes' => $request->validated('estimated_minutes'),
+                'notes' => $request->validated('notes'),
+                'job_version' => $lockedJob->version,
+                'reported_at' => $reportedAt,
+                'command_id' => $commandId,
+            ]);
+
+            // Append timeline audit event
+            $audit->handle(
+                $actor,
+                $lockedJob,
+                'dispatch.delay_reported',
+                null,
+                [
+                    'delay_id' => $delay->id,
+                    'context' => $context->value,
+                    'reason' => $reasonEnum->value,
+                    'reason_label' => $reasonLabel,
+                    'estimated_minutes' => $delay->estimated_minutes,
+                    'notes' => $delay->notes,
+                    'operational_asset_id' => $delay->operational_asset_id,
+                    'reported_at' => $delay->reported_at->toIso8601String(),
+                ]
+            );
+
+            // Send notification and broadcast after transaction successfully commits
+            $delay->loadMissing('operationalAsset:id,code,name');
+            $assetCode = $delay->operationalAsset?->code;
+
+            DB::afterCommit(function () use ($actor, $lockedJob, $reasonLabel, $context, $delay, $assetCode): void {
+                $dispatchers = User::query()
+                    ->where('is_active', true)
+                    ->where('id', '!=', $actor->id)
+                    ->permission(PermissionName::DispatchViewAll->value)
+                    ->get();
+
+                foreach ($dispatchers as $dispatcher) {
+                    SendQueuedNotificationJob::dispatch(
+                        $dispatcher,
+                        new DispatchDelayNotification(
+                            job: $lockedJob,
+                            reason: $reasonLabel,
+                            context: $context->value,
+                            estimatedMinutes: $delay->estimated_minutes,
+                            notes: $delay->notes,
+                            assetCode: $assetCode,
+                            reporterName: $actor->name,
+                        )
+                    );
+                }
+
+                WorkspaceUpdated::dispatch('job', 'updated');
+            });
+
+            $freshJob = DispatchJob::query()
+                ->with($this->assignmentRelations($actor))
+                ->findOrFail($lockedJob->id);
+
+            return response()->json([
+                'data' => [
+                    'delay' => [
+                        'id' => $delay->id,
+                        'dispatch_job_id' => $delay->dispatch_job_id,
+                        'context' => $delay->context->value,
+                        'context_label' => $delay->context->label(),
+                        'reason' => $delay->reason,
+                        'reason_label' => $delay->reason_label,
+                        'estimated_minutes' => $delay->estimated_minutes,
+                        'notes' => $delay->notes,
+                        'operational_asset_id' => $delay->operational_asset_id,
+                        'reported_by' => [
+                            'id' => $actor->id,
+                            'name' => $actor->name,
+                        ],
+                        'reported_at' => $delay->reported_at->toIso8601String(),
+                        'created_at' => $delay->created_at->toIso8601String(),
+                    ],
+                    'job' => new DispatchJobResource($freshJob),
+                ],
+            ], 201);
+        };
+
+        $response = $idempotency->process(
+            $actor,
+            $commandId,
+            'dispatch.delay_reported',
+            $expectedVersion,
+            $execute,
+            [
+                'dispatch_job_id' => $dispatchJob->id,
+                ...$request->validated(),
+            ],
+        );
+        assert($response instanceof JsonResponse);
+
+        return $response;
+    }
+
     /**
-     * @return array<string, \Closure>
+     * @return array<int|string, \Closure|string>
      */
     private function assignmentRelations(User $user): array
     {
@@ -351,6 +521,10 @@ final class FieldDispatchJobController extends Controller
             'assetAssignments' => fn ($query) => $query
                 ->open()
                 ->with('asset'),
+            'latestJobLevelDelay',
+            'latestJobLevelDelay.reporter',
+            'delays',
+            'delays.reporter',
         ];
     }
 

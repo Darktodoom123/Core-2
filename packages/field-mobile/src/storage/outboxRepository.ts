@@ -43,6 +43,7 @@ const commandTypes: OutboxCommandType[] = [
     'submit_sales_delivery',
     'submit_equipment_inspection',
     'submit_maintenance_work_order',
+    'report_delay',
 ];
 const commandStates: OutboxCommandState[] = [
     'queued',

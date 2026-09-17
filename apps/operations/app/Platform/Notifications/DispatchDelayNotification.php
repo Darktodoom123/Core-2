@@ -12,7 +12,12 @@ class DispatchDelayNotification extends Notification
 
     public function __construct(
         public readonly DispatchJob $job,
-        public readonly string $reason
+        public readonly string $reason,
+        public readonly ?string $context = null,
+        public readonly ?int $estimatedMinutes = null,
+        public readonly ?string $notes = null,
+        public readonly ?string $assetCode = null,
+        public readonly ?string $reporterName = null,
     ) {}
 
     /** @return list<string> */
@@ -30,6 +35,11 @@ class DispatchDelayNotification extends Notification
             'reference' => $this->job->reference,
             'title' => $this->job->title,
             'reason' => $this->reason,
+            'context' => $this->context,
+            'estimated_minutes' => $this->estimatedMinutes,
+            'notes' => $this->notes,
+            'asset_code' => $this->assetCode,
+            'reporter_name' => $this->reporterName,
             'message' => "Delay reported for dispatch {$this->job->reference}: {$this->reason}",
         ];
     }

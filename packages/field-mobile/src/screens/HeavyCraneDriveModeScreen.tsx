@@ -5,6 +5,7 @@ import {
     ScrollView,
     StyleSheet,
     Text,
+    TextInput,
     View,
 } from 'react-native';
 import type { IconName } from '../components/common/Icon';
@@ -23,7 +24,13 @@ import {
     PROJECT_SITE_PRESETS,
 } from '../services/routingService';
 import { useTheme } from '../theme';
-import type { DispatchJob, HeavyRouteInstruction } from '../types/index';
+import type {
+    DelayContextType,
+    DelayReasonCode,
+    DispatchJob,
+    HeavyRouteInstruction,
+    ReportDelayPayload,
+} from '../types/index';
 
 export interface HeavyCraneDriveModeScreenProps {
     activeJob?: DispatchJob | null;
@@ -34,7 +41,7 @@ export interface HeavyCraneDriveModeScreenProps {
     stadiaApiKey?: string;
     onBack?: () => void;
     onArrived?: (jobId: number, version: number) => void;
-    onReportDelay?: (delayReason: string) => void;
+    onReportDelay?: (delayReason: string, payload?: ReportDelayPayload) => void;
 }
 
 export interface TurnManeuverStep {
@@ -285,11 +292,31 @@ const DEFAULT_INSTRUCTIONS: HeavyRouteInstruction[] = [
     },
 ];
 
-const DELAY_REASONS = [
-    'Heavy traffic / escort delay',
-    'Low clearance detour required',
-    'Site gate locked / check-in queue',
-    'Road construction barrier',
+interface DriveDelayReasonItem {
+    code: DelayReasonCode;
+    label: string;
+}
+
+const TRANSIT_DELAY_REASONS: DriveDelayReasonItem[] = [
+    { code: 'traffic', label: 'Heavy traffic / escort delay' },
+    { code: 'low_clearance', label: 'Low clearance detour required' },
+    { code: 'road_closure', label: 'Road construction barrier' },
+    {
+        code: 'site_access_restricted',
+        label: 'Site gate locked / check-in queue',
+    },
+    { code: 'weather', label: 'Adverse weather / rain hold' },
+    { code: 'equipment_issue', label: 'Equipment issue (in-transit)' },
+    { code: 'other', label: 'Other transit delay' },
+];
+
+const ON_SITE_DELAY_REASONS: DriveDelayReasonItem[] = [
+    { code: 'site_not_ready', label: 'Site not ready / pad unlevel' },
+    { code: 'materials_unavailable', label: 'Materials / rigging unavailable' },
+    { code: 'awaiting_clearance', label: 'Awaiting safety clearance / permit' },
+    { code: 'weather', label: 'Adverse weather / rain hold' },
+    { code: 'equipment_issue', label: 'Equipment issue (on-site)' },
+    { code: 'other', label: 'Other on-site delay' },
 ];
 
 export const HeavyCraneDriveModeScreen: React.FC<
@@ -311,6 +338,11 @@ export const HeavyCraneDriveModeScreen: React.FC<
     const [isSimulatingDrive, setIsSimulatingDrive] = useState(false);
     const [showDelayPicker, setShowDelayPicker] = useState(false);
     const [delayReported, setDelayReported] = useState<string | null>(null);
+    const [delayContext, setDelayContext] =
+        useState<DelayContextType>('transit');
+    const [delayAssetId, setDelayAssetId] = useState<number | null>(null);
+    const [delayMinutes, setDelayMinutes] = useState<number | null>(null);
+    const [delayNotes, setDelayNotes] = useState<string>('');
     const [showCorridorSheet, setShowCorridorSheet] = useState(false);
     const [showRouteSetupModal, setShowRouteSetupModal] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
@@ -525,10 +557,82 @@ export const HeavyCraneDriveModeScreen: React.FC<
         return `${assetCode} · ${assetName}`;
     }, [activeJob, assetCode, assetName]);
 
-    const handleConfirmDelay = (reason: string) => {
-        setDelayReported(reason);
+    const handleConfirmDelay = (
+        reasonLabel: string,
+        reasonCode?: DelayReasonCode,
+    ) => {
+        setDelayReported(reasonLabel);
         setShowDelayPicker(false);
-        onReportDelay?.(reason);
+
+        const code: DelayReasonCode =
+            reasonCode ||
+            (() => {
+                const lower = reasonLabel.toLowerCase();
+
+                if (lower.includes('clearance')) {
+                    return 'low_clearance';
+                }
+
+                if (lower.includes('traffic') || lower.includes('escort')) {
+                    return 'traffic';
+                }
+
+                if (
+                    lower.includes('barrier') ||
+                    lower.includes('closure') ||
+                    lower.includes('construction')
+                ) {
+                    return 'road_closure';
+                }
+
+                if (
+                    lower.includes('gate') ||
+                    lower.includes('queue') ||
+                    lower.includes('access')
+                ) {
+                    return 'site_access_restricted';
+                }
+
+                if (lower.includes('weather') || lower.includes('rain')) {
+                    return 'weather';
+                }
+
+                if (
+                    lower.includes('equipment') ||
+                    lower.includes('mechanical')
+                ) {
+                    return 'equipment_issue';
+                }
+
+                if (lower.includes('ready') || lower.includes('pad')) {
+                    return 'site_not_ready';
+                }
+
+                if (lower.includes('material') || lower.includes('rigging')) {
+                    return 'materials_unavailable';
+                }
+
+                if (lower.includes('safety') || lower.includes('clearance')) {
+                    return 'awaiting_clearance';
+                }
+
+                return 'other';
+            })();
+
+        const payload: ReportDelayPayload | undefined = activeJob
+            ? {
+                  dispatch_job_id: activeJob.id,
+                  job_version: activeJob.version,
+                  context: delayContext,
+                  reason: code,
+                  estimated_minutes: delayMinutes,
+                  notes: delayNotes.trim() ? delayNotes.trim() : null,
+                  operational_asset_id: delayAssetId,
+                  reported_at: new Date().toISOString(),
+              }
+            : undefined;
+
+        onReportDelay?.(reasonLabel, payload);
     };
 
     const handleConfirmArrival = () => {
@@ -1395,31 +1499,238 @@ export const HeavyCraneDriveModeScreen: React.FC<
                         </View>
 
                         <Text style={styles.delayPickerSubtitle}>
-                            Notifies dispatcher and adjusts heavy escort
-                            corridor ETA:
+                            Queues delay report for dispatch notification
+                            without altering Hours of Service duty status or
+                            scheduled times.
                         </Text>
 
-                        {DELAY_REASONS.map((reason) => (
+                        {/* Job Reference Indicator */}
+                        <View style={styles.jobRefBanner}>
+                            <Icon color="#60A5FA" name="clipboard" size={15} />
+                            <Text style={styles.jobRefText} numberOfLines={1}>
+                                {activeJob
+                                    ? `Job: ${activeJob.reference} · ${activeJob.title}`
+                                    : 'No active dispatch job selected'}
+                            </Text>
+                        </View>
+
+                        {/* Operational Stage Toggle */}
+                        <View style={styles.stageToggleRow}>
                             <Pressable
-                                key={reason}
-                                accessibilityLabel={`Report: ${reason}`}
                                 accessibilityRole="button"
-                                onPress={() => handleConfirmDelay(reason)}
-                                style={({ pressed }) => [
-                                    styles.delayOptionCard,
-                                    pressed && styles.pressed,
+                                onPress={() => setDelayContext('transit')}
+                                style={[
+                                    styles.stageToggleBtn,
+                                    delayContext === 'transit' &&
+                                        styles.stageToggleBtnActive,
                                 ]}
                             >
-                                <Text style={styles.delayOptionTitle}>
-                                    {reason}
-                                </Text>
                                 <Icon
-                                    color="#38BDF8"
-                                    name="chevron-right"
-                                    size={18}
+                                    color={
+                                        delayContext === 'transit'
+                                            ? '#FFFFFF'
+                                            : '#94A3B8'
+                                    }
+                                    name="truck"
+                                    size={14}
                                 />
+                                <Text
+                                    style={[
+                                        styles.stageToggleBtnText,
+                                        delayContext === 'transit' &&
+                                            styles.stageToggleBtnTextActive,
+                                    ]}
+                                >
+                                    Transit Delay
+                                </Text>
                             </Pressable>
-                        ))}
+                            <Pressable
+                                accessibilityRole="button"
+                                onPress={() => setDelayContext('on_site')}
+                                style={[
+                                    styles.stageToggleBtn,
+                                    delayContext === 'on_site' &&
+                                        styles.stageToggleBtnActive,
+                                ]}
+                            >
+                                <Icon
+                                    color={
+                                        delayContext === 'on_site'
+                                            ? '#FFFFFF'
+                                            : '#94A3B8'
+                                    }
+                                    name="pin"
+                                    size={14}
+                                />
+                                <Text
+                                    style={[
+                                        styles.stageToggleBtnText,
+                                        delayContext === 'on_site' &&
+                                            styles.stageToggleBtnTextActive,
+                                    ]}
+                                >
+                                    On-Site Delay
+                                </Text>
+                            </Pressable>
+                        </View>
+
+                        {/* Multi-asset selector if applicable */}
+                        {activeJob?.asset_assignments &&
+                        activeJob.asset_assignments.length > 1 ? (
+                            <View style={styles.assetChipsSection}>
+                                <Text style={styles.sectionLabel}>
+                                    Applicable Equipment:
+                                </Text>
+                                <ScrollView
+                                    horizontal
+                                    showsHorizontalScrollIndicator={false}
+                                    contentContainerStyle={
+                                        styles.assetChipsScroll
+                                    }
+                                >
+                                    <Pressable
+                                        onPress={() => setDelayAssetId(null)}
+                                        style={[
+                                            styles.assetChip,
+                                            delayAssetId === null &&
+                                                styles.assetChipActive,
+                                        ]}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.assetChipText,
+                                                delayAssetId === null &&
+                                                    styles.assetChipTextActive,
+                                            ]}
+                                        >
+                                            All Assets (Whole Job)
+                                        </Text>
+                                    </Pressable>
+                                    {activeJob.asset_assignments.map(
+                                        (assignment) => (
+                                            <Pressable
+                                                key={
+                                                    assignment.operational_asset_id
+                                                }
+                                                onPress={() =>
+                                                    setDelayAssetId(
+                                                        assignment.operational_asset_id,
+                                                    )
+                                                }
+                                                style={[
+                                                    styles.assetChip,
+                                                    delayAssetId ===
+                                                        assignment.operational_asset_id &&
+                                                        styles.assetChipActive,
+                                                ]}
+                                            >
+                                                <Text
+                                                    style={[
+                                                        styles.assetChipText,
+                                                        delayAssetId ===
+                                                            assignment.operational_asset_id &&
+                                                            styles.assetChipTextActive,
+                                                    ]}
+                                                >
+                                                    {assignment.asset_code}
+                                                </Text>
+                                            </Pressable>
+                                        ),
+                                    )}
+                                </ScrollView>
+                            </View>
+                        ) : null}
+
+                        {/* Estimated Duration Chips */}
+                        <View style={styles.minutesSection}>
+                            <Text style={styles.sectionLabel}>
+                                Estimated Delay Duration:
+                            </Text>
+                            <View style={styles.minutesRow}>
+                                {[15, 30, 45, 60].map((mins) => (
+                                    <Pressable
+                                        key={mins}
+                                        onPress={() =>
+                                            setDelayMinutes(
+                                                delayMinutes === mins
+                                                    ? null
+                                                    : mins,
+                                            )
+                                        }
+                                        style={[
+                                            styles.minuteChip,
+                                            delayMinutes === mins &&
+                                                styles.minuteChipActive,
+                                        ]}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.minuteChipText,
+                                                delayMinutes === mins &&
+                                                    styles.minuteChipTextActive,
+                                            ]}
+                                        >
+                                            +{mins}m
+                                        </Text>
+                                    </Pressable>
+                                ))}
+                            </View>
+                        </View>
+
+                        {/* Optional Notes */}
+                        <View style={styles.notesSection}>
+                            <TextInput
+                                accessibilityLabel="Delay details note"
+                                onChangeText={setDelayNotes}
+                                placeholder="Add details for dispatcher (optional)..."
+                                placeholderTextColor="#64748B"
+                                style={styles.notesInput}
+                                value={delayNotes}
+                            />
+                        </View>
+
+                        {/* DVIR notice banner */}
+                        <View style={styles.dvirNoticeBanner}>
+                            <Icon color="#38BDF8" name="tools" size={14} />
+                            <Text style={styles.dvirNoticeText}>
+                                Equipment delays alert dispatch without
+                                automatic lockout. Record defect details in
+                                DVIR.
+                            </Text>
+                        </View>
+
+                        {/* Reasons List */}
+                        <ScrollView style={styles.reasonsListScroll}>
+                            {(delayContext === 'transit'
+                                ? TRANSIT_DELAY_REASONS
+                                : ON_SITE_DELAY_REASONS
+                            ).map((item) => (
+                                <Pressable
+                                    key={item.label}
+                                    accessibilityLabel={`Report: ${item.label}`}
+                                    accessibilityRole="button"
+                                    onPress={() =>
+                                        handleConfirmDelay(
+                                            item.label,
+                                            item.code,
+                                        )
+                                    }
+                                    style={({ pressed }) => [
+                                        styles.delayOptionCard,
+                                        pressed && styles.pressed,
+                                    ]}
+                                >
+                                    <Text style={styles.delayOptionTitle}>
+                                        {item.label}
+                                    </Text>
+                                    <Icon
+                                        color="#38BDF8"
+                                        name="chevron-right"
+                                        size={18}
+                                    />
+                                </Pressable>
+                            ))}
+                        </ScrollView>
                     </View>
                 </View>
             </Modal>
@@ -2260,10 +2571,149 @@ const styles = StyleSheet.create({
         borderTopRightRadius: 20,
         borderWidth: 1,
         gap: 10,
+        maxHeight: '85%',
         padding: 18,
         paddingBottom: 32,
         width: '100%',
         ...shadows.lg,
+    },
+    jobRefBanner: {
+        alignItems: 'center',
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
+        borderRadius: 8,
+        borderWidth: 1,
+        flexDirection: 'row',
+        gap: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+    },
+    jobRefText: {
+        color: '#E2E8F0',
+        flex: 1,
+        fontSize: 12.5,
+        fontWeight: '700',
+    },
+    stageToggleRow: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    stageToggleBtn: {
+        alignItems: 'center',
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
+        borderRadius: 8,
+        borderWidth: 1,
+        flex: 1,
+        flexDirection: 'row',
+        gap: 6,
+        justifyContent: 'center',
+        paddingVertical: 8,
+    },
+    stageToggleBtnActive: {
+        backgroundColor: '#0369A1',
+        borderColor: '#38BDF8',
+    },
+    stageToggleBtnText: {
+        color: '#94A3B8',
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    stageToggleBtnTextActive: {
+        color: '#FFFFFF',
+    },
+    assetChipsSection: {
+        gap: 6,
+    },
+    sectionLabel: {
+        color: '#94A3B8',
+        fontSize: 11.5,
+        fontWeight: '700',
+    },
+    assetChipsScroll: {
+        flexDirection: 'row',
+        gap: 6,
+    },
+    assetChip: {
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
+        borderRadius: 6,
+        borderWidth: 1,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+    },
+    assetChipActive: {
+        backgroundColor: '#0369A1',
+        borderColor: '#38BDF8',
+    },
+    assetChipText: {
+        color: '#94A3B8',
+        fontSize: 11,
+        fontWeight: '600',
+    },
+    assetChipTextActive: {
+        color: '#FFFFFF',
+    },
+    minutesSection: {
+        gap: 6,
+    },
+    minutesRow: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    minuteChip: {
+        alignItems: 'center',
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
+        borderRadius: 6,
+        borderWidth: 1,
+        flex: 1,
+        paddingVertical: 6,
+    },
+    minuteChipActive: {
+        backgroundColor: '#F59E0B',
+        borderColor: '#FCD34D',
+    },
+    minuteChipText: {
+        color: '#94A3B8',
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    minuteChipTextActive: {
+        color: '#0F172A',
+    },
+    notesSection: {
+        marginTop: 2,
+    },
+    notesInput: {
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
+        borderRadius: 8,
+        borderWidth: 1,
+        color: '#F8FAFC',
+        fontSize: 12.5,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+    },
+    dvirNoticeBanner: {
+        alignItems: 'center',
+        backgroundColor: '#0C4A6E',
+        borderColor: '#0284C7',
+        borderRadius: 8,
+        borderWidth: 1,
+        flexDirection: 'row',
+        gap: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+    },
+    dvirNoticeText: {
+        color: '#BAE6FD',
+        flex: 1,
+        fontSize: 11,
+        fontWeight: '600',
+    },
+    reasonsListScroll: {
+        maxHeight: 220,
     },
     delayOptionCard: {
         alignItems: 'center',
@@ -2273,6 +2723,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         flexDirection: 'row',
         justifyContent: 'space-between',
+        marginBottom: 8,
         minHeight: 50,
         paddingHorizontal: 14,
         paddingVertical: 12,

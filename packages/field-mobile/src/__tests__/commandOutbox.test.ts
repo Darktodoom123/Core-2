@@ -1129,4 +1129,64 @@ describe('CommandOutboxManager', () => {
             await rm(directory, { force: true, recursive: true });
         }
     });
+
+    test('enqueues report_delay command, preserves across restart, and processes with apiClient.reportDelay', async () => {
+        const repository = new MemoryOutboxRepository();
+        const outbox = await createOutbox(12, { repository });
+
+        let reportedJobId: number | null = null;
+        let reportedPayload: Record<string, unknown> | null = null;
+        let reportedCommandId: string | null = null;
+
+        const fakeClient = {
+            reportDelay: async (
+                jobId: number,
+                payload: Record<string, unknown>,
+                commandId?: string,
+            ) => {
+                reportedJobId = jobId;
+                reportedPayload = payload;
+                reportedCommandId = commandId ?? null;
+
+                return {
+                    message: 'Delay reported successfully.',
+                    delay: { id: 88, ...payload },
+                };
+            },
+        } as unknown as FieldApiClient;
+
+        const cmd = await outbox.enqueueReportDelay(
+            {
+                dispatch_job_id: 101,
+                context: 'transit',
+                reason: 'traffic',
+                estimated_minutes: 30,
+                notes: 'Congestion on South Luzon Expressway',
+                operational_asset_id: 50,
+            },
+            2,
+        );
+
+        assert.equal(cmd.type, 'report_delay');
+        assert.equal(cmd.jobId, 101);
+        assert.equal(cmd.expectedVersion, 2);
+        assert.equal(cmd.state, 'queued');
+
+        // Restart simulation
+        const restartedOutbox = await createOutbox(12, { repository });
+        const restored = restartedOutbox.getCommand(cmd.id);
+        assert.ok(restored);
+        assert.equal(restored.state, 'queued');
+
+        // Process queue
+        const result = await restartedOutbox.processQueue(fakeClient);
+        assert.equal(result.completed, 1);
+        assert.equal(reportedJobId, 101);
+        assert.equal(reportedCommandId, cmd.id);
+        assert.equal(reportedPayload?.['reason'], 'traffic');
+        assert.equal(reportedPayload?.['context'], 'transit');
+
+        const completedCmd = restartedOutbox.getCommand(cmd.id);
+        assert.equal(completedCmd?.state, 'completed');
+    });
 });

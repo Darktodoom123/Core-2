@@ -52,6 +52,7 @@ final class DispatchExecutionViewModel
 
         $milestones = self::milestones($statusEvents);
         $reports = self::reports($job, $user);
+        $delays = self::delays($job, $user);
         $location = self::latestLocation($job, $user);
 
         return [
@@ -61,7 +62,7 @@ final class DispatchExecutionViewModel
             ],
             'updated_at' => $job->updated_at?->toIso8601String(),
             'milestones' => $milestones,
-            'issues' => self::issues($reports),
+            'issues' => self::issues($reports, $delays),
             'site' => [
                 'name' => $job->site,
                 'notes' => $job->site_notes,
@@ -72,8 +73,9 @@ final class DispatchExecutionViewModel
                 'latest_location' => $location,
             ],
             'reports' => $reports,
+            'delays' => $delays,
             'handoff_evidence' => self::handoffEvidence($job, $user),
-            'activity' => self::activity($milestones, $reports, $location),
+            'activity' => self::activity($milestones, $reports, $location, $delays),
         ];
     }
 
@@ -208,9 +210,10 @@ final class DispatchExecutionViewModel
     }
 
     /** @param list<array<string, mixed>> $reports
+     * @param  list<array<string, mixed>>  $delays
      * @return list<array{kind: string, title: string, detail: string}>
      */
-    private static function issues(array $reports): array
+    private static function issues(array $reports, array $delays = []): array
     {
         /** @var list<array{kind: string, title: string, detail: string}> $issues */
         $issues = [];
@@ -227,15 +230,66 @@ final class DispatchExecutionViewModel
             ];
         }
 
+        foreach ($delays as $delay) {
+            $reason = $delay['reason_label'] ?? $delay['reason'] ?? 'Delay';
+            $issues[] = [
+                'kind' => 'delay',
+                'title' => 'Delay reported: '.$reason,
+                'detail' => trim((string) ($delay['notes'] ?? '')) ?: ($delay['estimated_minutes'] ? "Estimated impact: {$delay['estimated_minutes']}m" : 'Field operator reported a delay.'),
+                'reported_at' => $delay['reported_at'],
+            ];
+        }
+
         return $issues;
+    }
+
+    /** @return list<array<string, mixed>> */
+    private static function delays(DispatchJob $job, User $user): array
+    {
+        /** @var list<array<string, mixed>> $delays */
+        $delays = [];
+        $records = $job->delays()
+            ->with(['reporter:id,name', 'operationalAsset:id,code,name'])
+            ->latest('reported_at')
+            ->limit(20)
+            ->get();
+
+        foreach ($records as $delay) {
+            $delays[] = [
+                'id' => (int) $delay->getKey(),
+                'context' => [
+                    'value' => $delay->context->value,
+                    'label' => $delay->context->label(),
+                ],
+                'reason' => $delay->reason->value,
+                'reason_label' => $delay->reason_label ?? $delay->reason->label(),
+                'estimated_minutes' => $delay->estimated_minutes,
+                'notes' => $delay->notes,
+                'reported_at' => $delay->reported_at->toIso8601String(),
+                'created_at' => $delay->created_at->toIso8601String(),
+                'operational_asset_id' => $delay->operational_asset_id,
+                'reporter' => $delay->reporter === null ? null : [
+                    'id' => (int) $delay->reporter->id,
+                    'name' => $delay->reporter->name,
+                ],
+                'asset' => $delay->operationalAsset === null ? null : [
+                    'id' => (int) $delay->operationalAsset->id,
+                    'code' => $delay->operationalAsset->code,
+                    'name' => $delay->operationalAsset->name,
+                ],
+            ];
+        }
+
+        return $delays;
     }
 
     /** @param list<array<string, mixed>> $milestones
      * @param  list<array<string, mixed>>  $reports
      * @param  array<string, mixed>|null  $location
+     * @param  list<array<string, mixed>>  $delays
      * @return list<array<string, mixed>>
      */
-    private static function activity(array $milestones, array $reports, ?array $location): array
+    private static function activity(array $milestones, array $reports, ?array $location, array $delays = []): array
     {
         /** @var list<array<string, mixed>> $activity */
         $activity = [];
@@ -247,6 +301,16 @@ final class DispatchExecutionViewModel
                 'title' => 'Status recorded: '.$milestone['status']['label'],
                 'detail' => 'Field status update recorded for this dispatch.',
                 'recorded_at' => $milestone['recorded_at'],
+            ];
+        }
+
+        foreach ($delays as $delay) {
+            $activity[] = [
+                'id' => 'delay-'.$delay['id'],
+                'kind' => 'delay',
+                'title' => 'Delay reported: '.$delay['reason_label'],
+                'detail' => trim((string) ($delay['notes'] ?? '')) ?: ($delay['estimated_minutes'] ? "Estimated delay: {$delay['estimated_minutes']} min" : 'Operational delay reported by field operator.'),
+                'recorded_at' => $delay['reported_at'],
             ];
         }
 

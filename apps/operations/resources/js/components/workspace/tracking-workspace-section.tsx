@@ -414,6 +414,32 @@ function SynchronizedLocationList({
                                                 getAssetKind(loc),
                                             )}{' '}
                                         · {availabilityLabel} · {assignmentText}
+                                        {Boolean(
+                                            loc.job?.latest_delay &&
+                                            (!loc.job.latest_delay
+                                                .operational_asset_id ||
+                                                loc.job.latest_delay
+                                                    .operational_asset_id ===
+                                                    loc.asset?.id),
+                                        ) &&
+                                            loc.job?.latest_delay && (
+                                                <span
+                                                    title={`Operational delay: ${loc.job.latest_delay.reason_label}${loc.job.latest_delay.estimated_minutes ? ` (+${loc.job.latest_delay.estimated_minutes}m)` : ''} (Distinct from GPS telemetry)`}
+                                                    className="ml-2 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-900 dark:border-amber-700 dark:bg-amber-900/60 dark:text-amber-200"
+                                                >
+                                                    <AlertTriangle
+                                                        className="size-2.5 text-amber-700 dark:text-amber-400"
+                                                        aria-hidden="true"
+                                                    />
+                                                    <span>
+                                                        Delay:{' '}
+                                                        {
+                                                            loc.job.latest_delay
+                                                                .reason_label
+                                                        }
+                                                    </span>
+                                                </span>
+                                            )}
                                     </div>
                                 </TableCell>
                                 <TableCell className="text-xs text-ink-soft">

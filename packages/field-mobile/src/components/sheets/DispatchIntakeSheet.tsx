@@ -31,6 +31,7 @@ export interface DispatchIntakeSheetProps {
         version: number,
     ) => void;
     onOpenRoutes?: () => void;
+    onReportDelay?: (job: DispatchJob) => void;
     conflictedCommands?: OutboxCommand[];
     onAcceptServerState?: (commandId: string) => void;
     onRetryNewVersion?: (commandId: string, newVersion: number) => void;
@@ -45,6 +46,7 @@ export const DispatchIntakeSheet: React.FC<DispatchIntakeSheetProps> = ({
     onSelectJob,
     onTransitionStatus,
     onOpenRoutes,
+    onReportDelay,
     conflictedCommands,
     onAcceptServerState,
     onRetryNewVersion,
@@ -79,6 +81,7 @@ export const DispatchIntakeSheet: React.FC<DispatchIntakeSheetProps> = ({
                         onBack={onClose}
                         onOpenRoutes={onOpenRoutes}
                         onRejectAssignment={onRejectAssignment}
+                        onReportDelay={onReportDelay}
                         onRetryNewVersion={onRetryNewVersion}
                         onSelectJob={(jobId) => {
                             onSelectJob?.(jobId);

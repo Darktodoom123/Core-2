@@ -1,7 +1,8 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../../theme';
-import type { DispatchJob } from '../../types/index';
+import type { DispatchJob, OutboxCommand } from '../../types/index';
+import { formatPHT } from '../../utils/formatters';
 import { Icon } from '../common/Icon';
 import type { IconName } from '../common/Icon';
 import { colors, shadows } from '../nativeStyles';
@@ -15,13 +16,15 @@ export interface AssetVehicleCardProps {
     ratedCapacity?: string;
     attachments?: string[] | string;
     dvirStatus?: DvirReadinessStatus;
-    activeJob?: DispatchJob | null;
     dispatchPrefix?: string;
     engineHours?: string | number;
     fuelPercent?: number;
+    activeJob?: DispatchJob | null;
     onChangeUnit?: () => void;
     onPress?: () => void;
     variant?: 'detailed' | 'hero';
+    latestDelay?: any | null;
+    queuedDelayCommand?: OutboxCommand | null;
 }
 
 export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
@@ -38,6 +41,8 @@ export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
     onChangeUnit,
     onPress,
     variant = 'detailed',
+    latestDelay = null,
+    queuedDelayCommand = null,
 }) => {
     const { isDarkHud } = useTheme();
 
@@ -473,6 +478,87 @@ export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
                     </View>
                 )}
             </View>
+
+            {queuedDelayCommand ? (
+                <View
+                    style={[
+                        styles.reportedDelayBanner,
+                        isDarkHud && styles.darkReportedDelayBanner,
+                        { opacity: 0.8 },
+                    ]}
+                    testID="asset-card-queued-delay-banner"
+                >
+                    <View style={styles.reportedDelayHeader}>
+                        <Icon color="#94A3B8" name="clock" size={14} />
+                        <Text
+                            style={[
+                                styles.reportedDelayTitle,
+                                isDarkHud && styles.darkReportedDelayTitle,
+                                { color: isDarkHud ? '#94A3B8' : '#475569' },
+                            ]}
+                        >
+                            Queued Delay:{' '}
+                            {(queuedDelayCommand.payload as any).reason_label ||
+                                (queuedDelayCommand.payload as any).reason}
+                            {(queuedDelayCommand.payload as any)
+                                .estimated_minutes
+                                ? ` (+${(queuedDelayCommand.payload as any).estimated_minutes}m)`
+                                : ''}
+                        </Text>
+                    </View>
+                    {(queuedDelayCommand.payload as any).notes ? (
+                        <Text
+                            numberOfLines={2}
+                            style={[
+                                styles.reportedDelayNotes,
+                                isDarkHud && styles.darkReportedDelayNotes,
+                                { color: isDarkHud ? '#94A3B8' : '#475569' },
+                            ]}
+                        >
+                            {(queuedDelayCommand.payload as any).notes}
+                        </Text>
+                    ) : null}
+                </View>
+            ) : latestDelay ? (
+                <View
+                    style={[
+                        styles.reportedDelayBanner,
+                        isDarkHud && styles.darkReportedDelayBanner,
+                    ]}
+                    testID="asset-card-delay-banner"
+                >
+                    <View style={styles.reportedDelayHeader}>
+                        <Icon color="#F59E0B" name="alert" size={14} />
+                        <Text
+                            style={[
+                                styles.reportedDelayTitle,
+                                isDarkHud && styles.darkReportedDelayTitle,
+                            ]}
+                        >
+                            Delay Reported:{' '}
+                            {latestDelay.reason_label || latestDelay.reason}
+                            {latestDelay.estimated_delay_minutes ||
+                            latestDelay.estimated_minutes
+                                ? ` (+${latestDelay.estimated_delay_minutes ?? latestDelay.estimated_minutes}m)`
+                                : ''}
+                            {latestDelay.reported_at
+                                ? ` · ${formatPHT(latestDelay.reported_at, 'time')}`
+                                : ''}
+                        </Text>
+                    </View>
+                    {latestDelay.notes ? (
+                        <Text
+                            numberOfLines={2}
+                            style={[
+                                styles.reportedDelayNotes,
+                                isDarkHud && styles.darkReportedDelayNotes,
+                            ]}
+                        >
+                            {latestDelay.notes}
+                        </Text>
+                    ) : null}
+                </View>
+            ) : null}
 
             {/* Telemetry & Action Footer */}
             <View style={[styles.footerRow, isDarkHud && styles.darkFooterRow]}>
@@ -928,5 +1014,40 @@ const styles = StyleSheet.create({
     },
     lightHeroTeleLabel: {
         color: colors.muted,
+    },
+    reportedDelayBanner: {
+        backgroundColor: '#FFFBEB',
+        borderColor: '#FDE68A',
+        borderRadius: 8,
+        borderWidth: 1,
+        padding: 10,
+        marginBottom: 8,
+    },
+    darkReportedDelayBanner: {
+        backgroundColor: 'rgba(245, 158, 11, 0.12)',
+        borderColor: 'rgba(245, 158, 11, 0.3)',
+    },
+    reportedDelayHeader: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 6,
+    },
+    reportedDelayTitle: {
+        color: '#B45309',
+        fontSize: 12,
+        fontWeight: '700',
+        flexShrink: 1,
+        flexWrap: 'wrap',
+    },
+    darkReportedDelayTitle: {
+        color: '#FCD34D',
+    },
+    reportedDelayNotes: {
+        color: '#78350F',
+        fontSize: 11,
+        marginTop: 4,
+    },
+    darkReportedDelayNotes: {
+        color: '#FDE68A',
     },
 });

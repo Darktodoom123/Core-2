@@ -33,6 +33,7 @@ export interface DispatchOrdersScreenProps {
         version: number,
     ) => void;
     onOpenRoutes?: () => void;
+    onReportDelay?: (job: DispatchJob) => void;
     conflictedCommands?: OutboxCommand[];
     onAcceptServerState?: (commandId: string) => void;
     onRetryNewVersion?: (commandId: string, newVersion: number) => void;
@@ -48,6 +49,7 @@ export const DispatchOrdersScreen: React.FC<DispatchOrdersScreenProps> = ({
     onSelectJob,
     onTransitionStatus,
     onOpenRoutes,
+    onReportDelay,
     conflictedCommands,
     onAcceptServerState,
     onRetryNewVersion,
@@ -271,6 +273,7 @@ export const DispatchOrdersScreen: React.FC<DispatchOrdersScreenProps> = ({
                                             ? undefined
                                             : onRejectAssignment
                                     }
+                                    onReportDelay={onReportDelay}
                                     onRetryNewVersion={onRetryNewVersion}
                                     onSelectJob={onSelectJob}
                                     onTransitionStatus={onTransitionStatus}

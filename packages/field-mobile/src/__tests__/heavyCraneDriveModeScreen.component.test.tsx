@@ -144,6 +144,11 @@ describe('HeavyCraneDriveModeScreen Component & Workflows', () => {
 
         expect(onReportDelay).toHaveBeenCalledWith(
             'Low clearance detour required',
+            expect.objectContaining({
+                context: 'transit',
+                reason: 'low_clearance',
+                dispatch_job_id: 101,
+            }),
         );
         expect(view.getByText('✓ Delay reported to Dispatch:')).toBeTruthy();
     });

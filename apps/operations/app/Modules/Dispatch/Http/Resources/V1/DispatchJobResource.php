@@ -81,7 +81,27 @@ final class DispatchJobResource extends JsonResource
                 'assigned_at' => $myAssignment->created_at?->toIso8601String(),
             ] : null,
             'personnel_assignments' => $personnelAssignments,
-            'asset_assignments' => DispatchAssetAssignmentResource::collection($this->whenLoaded('assetAssignments')),
+            'asset_assignments' => $this->whenLoaded('assetAssignments', function () {
+                $this->assetAssignments->each(function ($assignment) {
+                    $assignment->setRelation('job', $this->resource);
+                });
+
+                return DispatchAssetAssignmentResource::collection($this->assetAssignments);
+            }),
+            'latest_delay' => ($latestDelay = $this->relationLoaded('latestJobLevelDelay') ? $this->latestJobLevelDelay : null) !== null ? [
+                'id' => $latestDelay->id,
+                'context' => $latestDelay->context->value,
+                'context_label' => $latestDelay->context->label(),
+                'reason' => $latestDelay->reason->value,
+                'reason_label' => $latestDelay->reason_label ?? $latestDelay->reason->label(),
+                'estimated_delay_minutes' => $latestDelay->estimated_minutes,
+                'notes' => $latestDelay->notes,
+                'reported_at' => $latestDelay->reported_at->toIso8601String(),
+                'reported_by' => $latestDelay->relationLoaded('reporter') && $latestDelay->reporter ? [
+                    'id' => $latestDelay->reporter->id,
+                    'name' => $latestDelay->reporter->name,
+                ] : null,
+            ] : null,
             'progression' => $canUpdateOwnStatus ? DispatchFieldProgressionViewModel::make($this->resource) : null,
             'capabilities' => [
                 'can_respond' => $canRespondAssignment,

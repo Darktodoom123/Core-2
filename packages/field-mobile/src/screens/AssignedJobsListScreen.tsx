@@ -31,6 +31,7 @@ import { OnSiteConfirmationModal } from '../components/sheets/OnSiteConfirmation
 import { PreTripDefectFallbackModal } from '../components/sheets/PreTripDefectFallbackModal';
 import { ProfileSheet } from '../components/sheets/profile-sheet';
 import { ReliefHandoverModal } from '../components/sheets/ReliefHandoverModal';
+import { ReportDelayModal } from '../components/sheets/ReportDelayModal';
 import { isFetchError } from '../connectivity/networkMonitor';
 import type { FieldApiClient } from '../services/apiClient';
 import { useTheme } from '../theme';
@@ -39,6 +40,7 @@ import type {
     DispatchStatus,
     DutyStatus,
     OutboxCommand,
+    ReportDelayPayload,
     ShiftInfo,
     ShiftStatus,
     StandbyReason,
@@ -103,6 +105,10 @@ export interface AssignedJobsListScreenProps {
     onDiscardCommand?: (commandId: string) => void;
     onAcceptServerState?: (commandId: string) => void;
     onRetryNewVersion?: (commandId: string, newVersion: number) => void;
+    onReportDelay?: (
+        jobId: number,
+        payload: ReportDelayPayload,
+    ) => Promise<void> | void;
     weather?: WeatherTelemetry | null;
     isLoadingWeather?: boolean;
     weatherError?: string | null;
@@ -182,6 +188,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     onDiscardCommand,
     onAcceptServerState,
     onRetryNewVersion,
+    onReportDelay,
     weather,
     isLoadingWeather = false,
     weatherError,
@@ -189,6 +196,9 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     apiClient,
 }) => {
     const { isDarkHud } = useTheme();
+    const [delayModalJob, setDelayModalJob] = useState<DispatchJob | null>(
+        null,
+    );
     const [dutyModalOpen, setDutyModalOpen] = useState(false);
     const [profileSheetOpen, setProfileSheetOpen] = useState(false);
     const [notificationsSheetOpen, setNotificationsSheetOpen] = useState(false);
@@ -854,6 +864,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                     onPress={onOpenVehicle}
                     ratedCapacity={primaryAsset?.rated_capacity || '--'}
                     variant="hero"
+                    latestDelay={primaryAsset?.latest_delay}
                 />
 
                 {/* Dynamic Button Transition on Link / DVIR Lifecycle */}
@@ -1387,11 +1398,22 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                                     jobs.length === 1)),
                                     );
 
+                                const queuedDelayCommand = outboxCommands.find(
+                                    (command) =>
+                                        command.type === 'report_delay' &&
+                                        (command.state === 'queued' ||
+                                            command.state === 'syncing') &&
+                                        (command.jobId === job.id ||
+                                            (command.payload as any)
+                                                ?.dispatch_job_id === job.id),
+                                );
+
                                 return (
                                     <JobListItemCard
                                         conflictedCommands={
                                             jobConflictedCommands
                                         }
+                                        queuedDelayCommand={queuedDelayCommand}
                                         job={job}
                                         key={job.id}
                                         onAcceptAssignment={onAcceptAssignment}
@@ -1400,6 +1422,9 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                         }
                                         onOpenDriveRoutes={onOpenRoutes}
                                         onRejectAssignment={onRejectAssignment}
+                                        onReportDelay={(jobToDelay) =>
+                                            setDelayModalJob(jobToDelay)
+                                        }
                                         onRetryNewVersion={onRetryNewVersion}
                                         onSelectJob={onSelectJob}
                                         onTransitionStatus={onTransitionStatus}
@@ -1464,6 +1489,10 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 onClose={() => setDispatchIntakeOpen(false)}
                 onOpenRoutes={onOpenRoutes}
                 onRejectAssignment={onRejectAssignment}
+                onReportDelay={(jobToDelay) => {
+                    setDispatchIntakeOpen(false);
+                    setDelayModalJob(jobToDelay);
+                }}
                 onRetryNewVersion={onRetryNewVersion}
                 onSelectJob={(jobId) => {
                     onSelectJob?.(jobId);
@@ -1608,6 +1637,20 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 }}
                 visible={defectFallbackModalOpen}
             />
+
+            {/* Operational Delay Reporting Modal */}
+            {delayModalJob ? (
+                <ReportDelayModal
+                    job={delayModalJob}
+                    onClose={() => setDelayModalJob(null)}
+                    onNavigateDvir={onOpenDvir}
+                    onSubmit={async (payload) => {
+                        await onReportDelay?.(delayModalJob.id, payload);
+                        setDelayModalJob(null);
+                    }}
+                    visible={!!delayModalJob}
+                />
+            ) : null}
         </View>
     );
 };

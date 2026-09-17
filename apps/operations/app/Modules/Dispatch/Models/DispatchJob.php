@@ -155,6 +155,26 @@ class DispatchJob extends Model
         return $this->hasMany(SalesDeliveryEvidence::class);
     }
 
+    /** @return HasMany<DispatchJobDelay, $this> */
+    public function delays(): HasMany
+    {
+        return $this->hasMany(DispatchJobDelay::class, 'dispatch_job_id');
+    }
+
+    /** @return HasOne<DispatchJobDelay, $this> */
+    public function latestDelay(): HasOne
+    {
+        return $this->hasOne(DispatchJobDelay::class, 'dispatch_job_id')->latestOfMany('reported_at');
+    }
+
+    /** @return HasOne<DispatchJobDelay, $this> */
+    public function latestJobLevelDelay(): HasOne
+    {
+        return $this->hasOne(DispatchJobDelay::class, 'dispatch_job_id')
+            ->whereNull('operational_asset_id')
+            ->latestOfMany('reported_at');
+    }
+
     /**
      * @param  Builder<DispatchJob>  $query
      * @return Builder<DispatchJob>

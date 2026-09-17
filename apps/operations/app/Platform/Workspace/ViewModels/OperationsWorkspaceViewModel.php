@@ -173,6 +173,29 @@ final class OperationsWorkspaceViewModel
                         ? (int) $assignment->asset->specifications['jib_length_meters']
                         : 60,
                 ])->values()->all(),
+            'latest_delay' => ($latestDelay = $job->relationLoaded('latestDelay') ? $job->latestDelay : null) !== null ? [
+                'id' => (int) $latestDelay->getKey(),
+                'context' => [
+                    'value' => $latestDelay->context->value,
+                    'label' => $latestDelay->context->label(),
+                ],
+                'reason' => $latestDelay->reason->value,
+                'reason_label' => $latestDelay->reason_label ?? $latestDelay->reason->label(),
+                'estimated_minutes' => $latestDelay->estimated_minutes,
+                'notes' => $latestDelay->notes,
+                'reported_at' => $latestDelay->reported_at->toIso8601String(),
+                'created_at' => $latestDelay->created_at->toIso8601String(),
+                'operational_asset_id' => $latestDelay->operational_asset_id,
+                'reporter' => $latestDelay->relationLoaded('reporter') && $latestDelay->reporter !== null ? [
+                    'id' => (int) $latestDelay->reporter->id,
+                    'name' => $latestDelay->reporter->name,
+                ] : null,
+                'asset' => $latestDelay->relationLoaded('operationalAsset') && $latestDelay->operationalAsset !== null ? [
+                    'id' => (int) $latestDelay->operationalAsset->id,
+                    'code' => $latestDelay->operationalAsset->code,
+                    'name' => $latestDelay->operationalAsset->name,
+                ] : null,
+            ] : null,
         ];
     }
 
@@ -727,6 +750,20 @@ final class OperationsWorkspaceViewModel
                     'reference' => $location->job->reference,
                     'title' => $location->job->title,
                     'site' => $location->job->site,
+                    'latest_delay' => ($latestDelay = $location->job->relationLoaded('latestDelay') ? $location->job->latestDelay : null) !== null ? [
+                        'id' => (int) $latestDelay->getKey(),
+                        'context' => [
+                            'value' => $latestDelay->context->value,
+                            'label' => $latestDelay->context->label(),
+                        ],
+                        'reason' => $latestDelay->reason->value,
+                        'reason_label' => $latestDelay->reason_label ?? $latestDelay->reason->label(),
+                        'estimated_minutes' => $latestDelay->estimated_minutes,
+                        'notes' => $latestDelay->notes,
+                        'reported_at' => $latestDelay->reported_at->toIso8601String(),
+                        'created_at' => $latestDelay->created_at->toIso8601String(),
+                        'operational_asset_id' => $latestDelay->operational_asset_id,
+                    ] : null,
                 ],
                 'latitude' => $location->latitude !== null ? (float) $location->latitude : null,
                 'longitude' => $location->longitude !== null ? (float) $location->longitude : null,

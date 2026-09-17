@@ -32,6 +32,28 @@ final class DispatchAssetAssignmentResource extends JsonResource
                 : 60,
             'assigned_at' => $this->created_at?->toIso8601String(),
             'active_until' => $this->active_until?->toIso8601String(),
+            'latest_delay' => $this->whenLoaded('job', function () {
+                $latestDelay = $this->job->delays
+                    ->where('operational_asset_id', $this->operational_asset_id)
+                    ->sortByDesc('reported_at')
+                    ->first();
+                if (! $latestDelay) {
+                    return null;
+                }
+
+                return [
+                    'id' => $latestDelay->id,
+                    'dispatch_job_id' => $latestDelay->dispatch_job_id,
+                    'operational_asset_id' => $latestDelay->operational_asset_id,
+                    'context' => $latestDelay->context->value,
+                    'context_label' => $latestDelay->context_label ?? $latestDelay->context->label(),
+                    'reason' => $latestDelay->reason->value,
+                    'reason_label' => $latestDelay->reason_label ?? $latestDelay->reason->label(),
+                    'estimated_delay_minutes' => $latestDelay->estimated_minutes,
+                    'notes' => $latestDelay->notes,
+                    'reported_at' => $latestDelay->reported_at->toIso8601String(),
+                ];
+            }),
         ];
     }
 }

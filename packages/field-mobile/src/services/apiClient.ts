@@ -1390,4 +1390,26 @@ export class FieldApiClient {
 
         return this.handleResponse<any>(response);
     }
+
+    public async reportDelay(
+        jobId: number,
+        payload: Record<string, unknown>,
+        commandId?: string,
+    ): Promise<{ message: string; delay: Record<string, unknown> }> {
+        const url = `${this.baseUrl}/api/v1/dispatch-jobs/${jobId}/delays`;
+        const body = commandId
+            ? { ...payload, command_id: commandId }
+            : payload;
+
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(commandId),
+            body: JSON.stringify(body),
+        });
+
+        return this.handleResponse<{
+            message: string;
+            delay: Record<string, unknown>;
+        }>(response);
+    }
 }
