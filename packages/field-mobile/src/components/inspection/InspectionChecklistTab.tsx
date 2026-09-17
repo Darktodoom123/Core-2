@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../../theme';
-import type { TechnicianInspectionCheck } from '../../types/index';
+import type {
+    MaintenanceWorkOrder,
+    TechnicianInspectionCheck,
+} from '../../types/index';
 import { colors, shadows } from '../nativeStyles';
 
 export interface InspectionChecklistTabProps {
@@ -9,10 +12,15 @@ export interface InspectionChecklistTabProps {
     onToggleCheck: (id: string) => void;
     onSaveInspection: () => void;
     isSaved: boolean;
+    onOpenDvir?: () => void;
     onSetCheckStatus?: (
         id: string,
         status: 'good' | 'attention' | 'critical',
     ) => void;
+    selectedWorkOrder?: MaintenanceWorkOrder | null;
+    availableWorkOrders?: MaintenanceWorkOrder[];
+    onSelectWorkOrder?: (woId: string) => void;
+    onBackToWorkOrders?: () => void;
 }
 
 export const InspectionChecklistTab: React.FC<InspectionChecklistTabProps> = ({
@@ -20,7 +28,10 @@ export const InspectionChecklistTab: React.FC<InspectionChecklistTabProps> = ({
     onToggleCheck,
     onSaveInspection,
     isSaved,
+    onOpenDvir,
     onSetCheckStatus,
+    selectedWorkOrder,
+    onBackToWorkOrders,
 }) => {
     const { isDarkHud } = useTheme();
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -57,6 +68,57 @@ export const InspectionChecklistTab: React.FC<InspectionChecklistTabProps> = ({
             style={[styles.sectionCard, isDarkHud && styles.darkSectionCard]}
             testID="checklist-section"
         >
+            {/* Canonical DVIR Redirect Card for routine inspections */}
+            <View
+                style={[
+                    styles.canonicalDvirCard,
+                    isDarkHud && styles.darkCanonicalDvirCard,
+                ]}
+                testID="canonical-dvir-redirect-card"
+            >
+                <View style={styles.canonicalDvirTextWrap}>
+                    <Text
+                        style={[
+                            styles.canonicalDvirTitle,
+                            isDarkHud && styles.darkCanonicalDvirTitle,
+                        ]}
+                    >
+                        Routine Daily Inspection
+                    </Text>
+                    <Text
+                        style={[
+                            styles.canonicalDvirSubtitle,
+                            isDarkHud && styles.darkCanonicalDvirSubtitle,
+                        ]}
+                    >
+                        Daily Pre-Trip & Post-Trip operator inspections have
+                        moved to Create DVIR.
+                    </Text>
+                </View>
+                {onOpenDvir ? (
+                    <Pressable
+                        accessibilityLabel="Open Create DVIR"
+                        accessibilityRole="button"
+                        onPress={onOpenDvir}
+                        style={({ pressed }) => [
+                            styles.openDvirBtn,
+                            isDarkHud && styles.darkOpenDvirBtn,
+                            pressed && styles.pressed,
+                        ]}
+                        testID="open-canonical-dvir-btn"
+                    >
+                        <Text
+                            style={[
+                                styles.openDvirBtnText,
+                                isDarkHud && styles.darkOpenDvirBtnText,
+                            ]}
+                        >
+                            Open Create DVIR
+                        </Text>
+                    </Pressable>
+                ) : null}
+            </View>
+
             <View style={styles.headerRow}>
                 <View>
                     <Text
@@ -66,7 +128,7 @@ export const InspectionChecklistTab: React.FC<InspectionChecklistTabProps> = ({
                             isDarkHud && styles.darkCardHeading,
                         ]}
                     >
-                        PRE-OP SAFETY & MECHANICAL INSPECTION
+                        POST-REPAIR SAFETY & MECHANICAL VERIFICATION
                     </Text>
                     <Text
                         style={[
@@ -74,10 +136,122 @@ export const InspectionChecklistTab: React.FC<InspectionChecklistTabProps> = ({
                             isDarkHud && styles.darkCardHelper,
                         ]}
                     >
-                        DOLE-OSHC Certified Daily Pre-Operational Inspection
+                        Work-Order Linked Verification Required for Safe Release
                     </Text>
                 </View>
             </View>
+
+            {/* Linked Work Order Status Banner */}
+            {selectedWorkOrder ? (
+                <View
+                    style={[
+                        styles.linkedWoBanner,
+                        isDarkHud && styles.darkLinkedWoBanner,
+                    ]}
+                    testID="linked-work-order-badge"
+                >
+                    <View style={styles.linkedWoTextWrap}>
+                        <Text
+                            style={[
+                                styles.linkedWoTag,
+                                isDarkHud && styles.darkLinkedWoTag,
+                            ]}
+                        >
+                            LINKED WORK ORDER (REPAIRED)
+                        </Text>
+                        <Text
+                            style={[
+                                styles.linkedWoTitle,
+                                isDarkHud && styles.darkLinkedWoTitle,
+                            ]}
+                        >
+                            {selectedWorkOrder.id}:{' '}
+                            {selectedWorkOrder.defectTitle}
+                        </Text>
+                        <Text
+                            style={[
+                                styles.linkedWoSubtitle,
+                                isDarkHud && styles.darkLinkedWoSubtitle,
+                            ]}
+                        >
+                            Status: REPAIRED · Post-repair sign-off required for
+                            release
+                        </Text>
+                    </View>
+                    {onBackToWorkOrders ? (
+                        <Pressable
+                            accessibilityLabel="Change linked work order"
+                            accessibilityRole="button"
+                            onPress={onBackToWorkOrders}
+                            style={({ pressed }) => [
+                                styles.changeWoBtn,
+                                isDarkHud && styles.darkChangeWoBtn,
+                                pressed && styles.pressed,
+                            ]}
+                            testID="change-work-order-btn"
+                        >
+                            <Text
+                                style={[
+                                    styles.changeWoBtnText,
+                                    isDarkHud && styles.darkChangeWoBtnText,
+                                ]}
+                            >
+                                Change
+                            </Text>
+                        </Pressable>
+                    ) : null}
+                </View>
+            ) : (
+                <View
+                    style={[
+                        styles.noWoBanner,
+                        isDarkHud && styles.darkNoWoBanner,
+                    ]}
+                    testID="no-work-order-banner"
+                >
+                    <View style={styles.noWoTextWrap}>
+                        <Text
+                            style={[
+                                styles.noWoTitle,
+                                isDarkHud && styles.darkNoWoTitle,
+                            ]}
+                        >
+                            No Repaired Work Order Selected
+                        </Text>
+                        <Text
+                            style={[
+                                styles.noWoSubtitle,
+                                isDarkHud && styles.darkNoWoSubtitle,
+                            ]}
+                        >
+                            Post-repair verification requires a completed repair
+                            work order. Select a repaired work order to proceed.
+                        </Text>
+                    </View>
+                    {onBackToWorkOrders ? (
+                        <Pressable
+                            accessibilityLabel="Go to work orders"
+                            accessibilityRole="button"
+                            onPress={onBackToWorkOrders}
+                            style={({ pressed }) => [
+                                styles.goToWoBtn,
+                                isDarkHud && styles.darkGoToWoBtn,
+                                pressed && styles.pressed,
+                            ]}
+                            testID="go-to-work-orders-btn"
+                        >
+                            <Text
+                                style={[
+                                    styles.goToWoBtnText,
+                                    isDarkHud && styles.darkGoToWoBtnText,
+                                ]}
+                            >
+                                View Work Orders
+                            </Text>
+                        </Pressable>
+                    ) : null}
+                </View>
+            )}
 
             {/* Horizontal Category Selector Rail */}
             <View style={styles.categoryRail}>
@@ -347,11 +521,17 @@ export const InspectionChecklistTab: React.FC<InspectionChecklistTabProps> = ({
             <Pressable
                 accessibilityLabel="Save asset inspection results"
                 accessibilityRole="button"
-                onPress={onSaveInspection}
+                accessibilityState={{ disabled: !selectedWorkOrder }}
+                disabled={!selectedWorkOrder}
+                onPress={selectedWorkOrder ? onSaveInspection : undefined}
                 style={({ pressed }) => [
                     styles.saveButton,
                     isDarkHud && styles.darkSaveButton,
-                    pressed && styles.pressed,
+                    !selectedWorkOrder && styles.saveButtonDisabled,
+                    isDarkHud &&
+                        !selectedWorkOrder &&
+                        styles.darkSaveButtonDisabled,
+                    pressed && selectedWorkOrder && styles.pressed,
                 ]}
                 testID="save-inspection-btn"
             >
@@ -359,11 +539,14 @@ export const InspectionChecklistTab: React.FC<InspectionChecklistTabProps> = ({
                     style={[
                         styles.saveButtonText,
                         isDarkHud && styles.darkSaveButtonText,
+                        !selectedWorkOrder && styles.saveButtonDisabledText,
                     ]}
                 >
                     {isSaved
                         ? '✓ Inspection Saved & Synchronized'
-                        : 'SAVE INSPECTION CHECKLIST'}
+                        : selectedWorkOrder
+                          ? 'SAVE POST-REPAIR INSPECTION'
+                          : 'SELECT REPAIRED WORK ORDER TO SAVE'}
                 </Text>
             </Pressable>
         </View>
@@ -634,5 +817,193 @@ const styles = StyleSheet.create({
     },
     pressed: {
         opacity: 0.85,
+    },
+    canonicalDvirCard: {
+        alignItems: 'center',
+        backgroundColor: colors.surfaceMuted,
+        borderColor: colors.border,
+        borderRadius: 12,
+        borderWidth: 1,
+        flexDirection: 'row',
+        gap: 12,
+        justifyContent: 'space-between',
+        marginBottom: 16,
+        padding: 14,
+    },
+    darkCanonicalDvirCard: {
+        backgroundColor: colors.surfaceDark,
+        borderColor: colors.hudBorder,
+    },
+    canonicalDvirTextWrap: {
+        flex: 1,
+    },
+    canonicalDvirTitle: {
+        color: colors.text,
+        fontSize: 13,
+        fontWeight: '800',
+    },
+    darkCanonicalDvirTitle: {
+        color: colors.hudText,
+    },
+    canonicalDvirSubtitle: {
+        color: colors.muted,
+        fontSize: 11,
+        lineHeight: 15,
+        marginTop: 2,
+    },
+    darkCanonicalDvirSubtitle: {
+        color: colors.hudTextDim,
+    },
+    openDvirBtn: {
+        alignItems: 'center',
+        backgroundColor: colors.amber,
+        borderRadius: 8,
+        justifyContent: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+    },
+    darkOpenDvirBtn: {
+        backgroundColor: colors.hudAmber,
+    },
+    openDvirBtnText: {
+        color: '#FFFFFF',
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    darkOpenDvirBtnText: {
+        color: colors.surfaceDark,
+        fontSize: 12,
+        fontWeight: '800',
+    },
+    linkedWoBanner: {
+        alignItems: 'center',
+        backgroundColor: colors.surfaceMuted,
+        borderColor: colors.border,
+        borderRadius: 10,
+        borderWidth: 1,
+        flexDirection: 'row',
+        gap: 12,
+        justifyContent: 'space-between',
+        marginBottom: 14,
+        padding: 12,
+    },
+    darkLinkedWoBanner: {
+        backgroundColor: colors.surfaceDark,
+        borderColor: colors.hudBorder,
+    },
+    linkedWoTextWrap: {
+        flex: 1,
+    },
+    linkedWoTag: {
+        color: colors.blueDark,
+        fontSize: 10,
+        fontWeight: '800',
+        letterSpacing: 0.5,
+    },
+    darkLinkedWoTag: {
+        color: '#60A5FA',
+    },
+    linkedWoTitle: {
+        color: colors.text,
+        fontSize: 13,
+        fontWeight: '700',
+        marginTop: 2,
+    },
+    darkLinkedWoTitle: {
+        color: colors.hudText,
+    },
+    linkedWoSubtitle: {
+        color: colors.secondary,
+        fontSize: 11,
+        marginTop: 2,
+    },
+    darkLinkedWoSubtitle: {
+        color: colors.hudTextDim,
+    },
+    changeWoBtn: {
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
+        borderRadius: 6,
+        borderWidth: 1,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+    },
+    darkChangeWoBtn: {
+        backgroundColor: colors.hudSurface,
+        borderColor: colors.hudBorder,
+    },
+    changeWoBtnText: {
+        color: colors.text,
+        fontSize: 11,
+        fontWeight: '700',
+    },
+    darkChangeWoBtnText: {
+        color: colors.hudText,
+    },
+    noWoBanner: {
+        alignItems: 'center',
+        backgroundColor: '#FEF3C7',
+        borderColor: '#F59E0B',
+        borderRadius: 10,
+        borderWidth: 1,
+        flexDirection: 'row',
+        gap: 12,
+        justifyContent: 'space-between',
+        marginBottom: 14,
+        padding: 12,
+    },
+    darkNoWoBanner: {
+        backgroundColor: 'rgba(245, 158, 11, 0.15)',
+        borderColor: 'rgba(245, 158, 11, 0.4)',
+    },
+    noWoTextWrap: {
+        flex: 1,
+    },
+    noWoTitle: {
+        color: '#92400E',
+        fontSize: 13,
+        fontWeight: '700',
+    },
+    darkNoWoTitle: {
+        color: '#FBBF24',
+    },
+    noWoSubtitle: {
+        color: '#B45309',
+        fontSize: 11,
+        marginTop: 2,
+    },
+    darkNoWoSubtitle: {
+        color: colors.hudTextDim,
+    },
+    goToWoBtn: {
+        backgroundColor: '#D97706',
+        borderRadius: 6,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+    },
+    darkGoToWoBtn: {
+        backgroundColor: '#B45309',
+    },
+    goToWoBtnText: {
+        color: '#FFFFFF',
+        fontSize: 11,
+        fontWeight: '700',
+    },
+    darkGoToWoBtnText: {
+        color: '#FFFFFF',
+    },
+    saveButtonDisabled: {
+        backgroundColor: colors.surfaceMuted,
+        borderColor: colors.border,
+        borderWidth: 1,
+        opacity: 0.6,
+    },
+    darkSaveButtonDisabled: {
+        backgroundColor: colors.surfaceDark,
+        borderColor: colors.hudBorder,
+        opacity: 0.5,
+    },
+    saveButtonDisabledText: {
+        color: colors.muted,
     },
 });

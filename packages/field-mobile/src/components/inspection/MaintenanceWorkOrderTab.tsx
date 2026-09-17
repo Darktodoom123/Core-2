@@ -23,11 +23,23 @@ export interface MaintenanceWorkOrderTabProps {
     technicianName: string;
     workOrders: MaintenanceWorkOrder[];
     onLogWorkOrder: (workOrder: MaintenanceWorkOrder) => void;
+    onOpenDvir?: () => void;
+    onStartPostRepair?: (workOrderId: string) => void;
+    verifiedWorkOrderIds?: string[];
 }
 
 export const MaintenanceWorkOrderTab: React.FC<
     MaintenanceWorkOrderTabProps
-> = ({ assetCode, assetName, technicianName, workOrders, onLogWorkOrder }) => {
+> = ({
+    assetCode,
+    assetName,
+    technicianName,
+    workOrders,
+    onLogWorkOrder,
+    onOpenDvir,
+    onStartPostRepair,
+    verifiedWorkOrderIds,
+}) => {
     const { isDarkHud } = useTheme();
     const [title, setTitle] = useState('');
     const [desc, setDesc] = useState('');
@@ -69,6 +81,57 @@ export const MaintenanceWorkOrderTab: React.FC<
 
     return (
         <View style={styles.tabRoot} testID="work-orders-section">
+            {/* Canonical DVIR Banner for Routine Operator Inspections */}
+            <View
+                style={[
+                    styles.canonicalDvirCard,
+                    isDarkHud && styles.darkCanonicalDvirCard,
+                ]}
+                testID="maintenance-canonical-dvir-banner"
+            >
+                <View style={styles.canonicalDvirTextWrap}>
+                    <Text
+                        style={[
+                            styles.canonicalDvirTitle,
+                            isDarkHud && styles.darkCanonicalDvirTitle,
+                        ]}
+                    >
+                        Routine Daily Inspection
+                    </Text>
+                    <Text
+                        style={[
+                            styles.canonicalDvirSubtitle,
+                            isDarkHud && styles.darkCanonicalDvirSubtitle,
+                        ]}
+                    >
+                        Daily Pre-Trip & Post-Trip walkaround inspections are
+                        performed in Create DVIR.
+                    </Text>
+                </View>
+                {onOpenDvir ? (
+                    <Pressable
+                        accessibilityLabel="Open Create DVIR"
+                        accessibilityRole="button"
+                        onPress={onOpenDvir}
+                        style={({ pressed }) => [
+                            styles.openDvirBtn,
+                            isDarkHud && styles.darkOpenDvirBtn,
+                            pressed && styles.pressed,
+                        ]}
+                        testID="maintenance-open-dvir-btn"
+                    >
+                        <Text
+                            style={[
+                                styles.openDvirBtnText,
+                                isDarkHud && styles.darkOpenDvirBtnText,
+                            ]}
+                        >
+                            Open Create DVIR
+                        </Text>
+                    </Pressable>
+                ) : null}
+            </View>
+
             {/* 1. Log New Work Order Card */}
             <View
                 style={[
@@ -586,6 +649,118 @@ export const MaintenanceWorkOrderTab: React.FC<
                                             ).toLocaleDateString()}
                                         </Text>
                                     </View>
+
+                                    {/* Post-Repair Action & Verification Status */}
+                                    <View
+                                        style={[
+                                            styles.postRepairRow,
+                                            isDarkHud &&
+                                                styles.darkPostRepairRow,
+                                        ]}
+                                    >
+                                        {isRepaired ? (
+                                            verifiedWorkOrderIds?.includes(
+                                                wo.id,
+                                            ) ? (
+                                                <View
+                                                    style={[
+                                                        styles.postRepairVerifiedBadge,
+                                                        isDarkHud &&
+                                                            styles.darkPostRepairVerifiedBadge,
+                                                    ]}
+                                                    testID={`post-repair-verified-${wo.id}`}
+                                                >
+                                                    <Icon
+                                                        color={
+                                                            isDarkHud
+                                                                ? '#34D399'
+                                                                : colors.greenDark
+                                                        }
+                                                        name="check-circle"
+                                                        size={14}
+                                                    />
+                                                    <Text
+                                                        style={[
+                                                            styles.postRepairVerifiedText,
+                                                            isDarkHud &&
+                                                                styles.darkPostRepairVerifiedText,
+                                                        ]}
+                                                    >
+                                                        Post-Repair: Verified
+                                                    </Text>
+                                                </View>
+                                            ) : (
+                                                <View
+                                                    style={
+                                                        styles.postRepairPendingRow
+                                                    }
+                                                >
+                                                    <View
+                                                        style={[
+                                                            styles.postRepairPendingBadge,
+                                                            isDarkHud &&
+                                                                styles.darkPostRepairPendingBadge,
+                                                        ]}
+                                                        testID={`post-repair-pending-${wo.id}`}
+                                                    >
+                                                        <Text
+                                                            style={[
+                                                                styles.postRepairPendingText,
+                                                                isDarkHud &&
+                                                                    styles.darkPostRepairPendingText,
+                                                            ]}
+                                                        >
+                                                            Awaiting Post-Repair
+                                                            Inspection
+                                                        </Text>
+                                                    </View>
+                                                    {onStartPostRepair ? (
+                                                        <Pressable
+                                                            accessibilityLabel={`Perform post-repair inspection for ${wo.id}`}
+                                                            accessibilityRole="button"
+                                                            onPress={() =>
+                                                                onStartPostRepair(
+                                                                    wo.id,
+                                                                )
+                                                            }
+                                                            style={({
+                                                                pressed,
+                                                            }) => [
+                                                                styles.postRepairBtn,
+                                                                isDarkHud &&
+                                                                    styles.darkPostRepairBtn,
+                                                                pressed &&
+                                                                    styles.pressed,
+                                                            ]}
+                                                            testID={`post-repair-btn-${wo.id}`}
+                                                        >
+                                                            <Text
+                                                                style={[
+                                                                    styles.postRepairBtnText,
+                                                                    isDarkHud &&
+                                                                        styles.darkPostRepairBtnText,
+                                                                ]}
+                                                            >
+                                                                Perform
+                                                                Inspection
+                                                            </Text>
+                                                        </Pressable>
+                                                    ) : null}
+                                                </View>
+                                            )
+                                        ) : (
+                                            <Text
+                                                style={[
+                                                    styles.postRepairHelperNote,
+                                                    isDarkHud &&
+                                                        styles.darkPostRepairHelperNote,
+                                                ]}
+                                            >
+                                                Repair completion required
+                                                before post-repair verification.
+                                            </Text>
+                                        )}
+                                    </View>
                                 </View>
                             );
                         })}
@@ -1079,5 +1254,145 @@ const styles = StyleSheet.create({
     },
     pressed: {
         opacity: 0.85,
+    },
+    canonicalDvirCard: {
+        alignItems: 'center',
+        backgroundColor: colors.blueLight,
+        borderColor: colors.blueBorder,
+        borderRadius: 10,
+        borderWidth: 1,
+        flexDirection: 'row',
+        gap: 12,
+        justifyContent: 'space-between',
+        padding: 14,
+    },
+    darkCanonicalDvirCard: {
+        backgroundColor: 'rgba(59, 130, 246, 0.12)',
+        borderColor: 'rgba(59, 130, 246, 0.3)',
+    },
+    canonicalDvirTextWrap: {
+        flex: 1,
+    },
+    canonicalDvirTitle: {
+        color: colors.blueDark,
+        fontSize: 14,
+        fontWeight: '700',
+    },
+    darkCanonicalDvirTitle: {
+        color: '#60A5FA',
+    },
+    canonicalDvirSubtitle: {
+        color: colors.secondary,
+        fontSize: 12,
+        marginTop: 2,
+    },
+    darkCanonicalDvirSubtitle: {
+        color: colors.hudTextDim,
+    },
+    openDvirBtn: {
+        alignItems: 'center',
+        backgroundColor: colors.blue,
+        borderRadius: 8,
+        justifyContent: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+    },
+    darkOpenDvirBtn: {
+        backgroundColor: '#2563EB',
+    },
+    openDvirBtnText: {
+        color: '#FFFFFF',
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    darkOpenDvirBtnText: {
+        color: '#FFFFFF',
+    },
+    postRepairRow: {
+        borderTopColor: colors.border,
+        borderTopWidth: StyleSheet.hairlineWidth,
+        marginTop: 10,
+        paddingTop: 10,
+    },
+    darkPostRepairRow: {
+        borderTopColor: colors.hudBorder,
+    },
+    postRepairVerifiedBadge: {
+        alignItems: 'center',
+        alignSelf: 'flex-start',
+        backgroundColor: colors.greenLight,
+        borderColor: colors.greenBorder,
+        borderRadius: 6,
+        borderWidth: 1,
+        flexDirection: 'row',
+        gap: 6,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+    },
+    darkPostRepairVerifiedBadge: {
+        backgroundColor: 'rgba(5, 150, 105, 0.2)',
+        borderColor: '#059669',
+    },
+    postRepairVerifiedText: {
+        color: colors.greenDark,
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    darkPostRepairVerifiedText: {
+        color: '#34D399',
+    },
+    postRepairPendingRow: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        justifyContent: 'space-between',
+    },
+    postRepairPendingBadge: {
+        backgroundColor: colors.amberLight,
+        borderColor: colors.amberBorder,
+        borderRadius: 6,
+        borderWidth: 1,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+    },
+    darkPostRepairPendingBadge: {
+        backgroundColor: 'rgba(245, 158, 11, 0.2)',
+        borderColor: 'rgba(245, 158, 11, 0.4)',
+    },
+    postRepairPendingText: {
+        color: colors.amberDark,
+        fontSize: 11,
+        fontWeight: '700',
+    },
+    darkPostRepairPendingText: {
+        color: '#FBBF24',
+    },
+    postRepairBtn: {
+        alignItems: 'center',
+        backgroundColor: colors.blue,
+        borderRadius: 6,
+        justifyContent: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+    },
+    darkPostRepairBtn: {
+        backgroundColor: '#2563EB',
+    },
+    postRepairBtnText: {
+        color: '#FFFFFF',
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    darkPostRepairBtnText: {
+        color: '#FFFFFF',
+    },
+    postRepairHelperNote: {
+        color: colors.muted,
+        fontSize: 11,
+        fontStyle: 'italic',
+    },
+    darkPostRepairHelperNote: {
+        color: colors.hudTextDim,
     },
 });

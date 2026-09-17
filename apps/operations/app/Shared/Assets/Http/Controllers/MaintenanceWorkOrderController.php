@@ -3,7 +3,6 @@
 namespace App\Shared\Assets\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Dvir\Enums\DvirInspectionType;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Idempotency\Services\IdempotentCommandService;
 use App\Platform\Identity\Enums\PermissionName;
@@ -266,37 +265,18 @@ final class MaintenanceWorkOrderController extends Controller
                     ->latest('id')
                     ->first();
 
-                $latestPassingDvir = $asset->dvirInspections()
-                    ->where('has_defects', false)
-                    ->where('critical_defects_count', 0)
-                    ->where('completed_at', '>=', $repairThreshold)
-                    ->where('inspection_type', DvirInspectionType::POST_TRIP->value)
-                    ->latest('completed_at')
-                    ->latest('id')
-                    ->first();
-
-                $hasLegacyPassing = $latestPassingLegacy !== null;
-                $hasPassingDvir = $latestPassingDvir !== null;
-                $hasPassingInspection = $hasLegacyPassing || $hasPassingDvir;
-
-                $latestPassingTimestamp = max(
-                    $latestPassingLegacy ? Carbon::parse($latestPassingLegacy->completed_at)->timestamp : 0,
-                    $latestPassingDvir ? Carbon::parse($latestPassingDvir->completed_at)->timestamp : 0,
-                );
-
+                $hasPassingInspection = $latestPassingLegacy !== null;
                 $hasSubsequentDefect = false;
-                if ($latestPassingTimestamp > 0) {
-                    $passingCarbon = Carbon::createFromTimestamp($latestPassingTimestamp);
+                if ($latestPassingLegacy !== null) {
+                    $passingCarbon = Carbon::parse($latestPassingLegacy->completed_at);
                     $hasSubsequentLegacyDefect = $asset->inspections()
                         ->where('result', '!=', 'passed')
                         ->where(function ($q) use ($passingCarbon, $latestPassingLegacy): void {
                             $q->where('completed_at', '>', $passingCarbon);
-                            if ($latestPassingLegacy) {
-                                $q->orWhere(function ($q2) use ($latestPassingLegacy): void {
-                                    $q2->where('completed_at', $latestPassingLegacy->completed_at)
-                                        ->where('id', '>', $latestPassingLegacy->id);
-                                });
-                            }
+                            $q->orWhere(function ($q2) use ($latestPassingLegacy): void {
+                                $q2->where('completed_at', $latestPassingLegacy->completed_at)
+                                    ->where('id', '>', $latestPassingLegacy->id);
+                            });
                         })
                         ->exists();
 
@@ -304,14 +284,8 @@ final class MaintenanceWorkOrderController extends Controller
                         ->where(function ($q): void {
                             $q->where('has_defects', true)->orWhere('critical_defects_count', '>', 0);
                         })
-                        ->where(function ($q) use ($passingCarbon, $latestPassingDvir): void {
+                        ->where(function ($q) use ($passingCarbon): void {
                             $q->where('completed_at', '>', $passingCarbon);
-                            if ($latestPassingDvir) {
-                                $q->orWhere(function ($q2) use ($latestPassingDvir): void {
-                                    $q2->where('completed_at', $latestPassingDvir->completed_at)
-                                        ->where('id', '>', $latestPassingDvir->id);
-                                });
-                            }
                         })
                         ->exists();
 

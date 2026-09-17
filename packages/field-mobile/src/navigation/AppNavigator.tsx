@@ -1322,7 +1322,11 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     );
 
     const handleSaveInspection = useCallback(
-        async (checks: TechnicianInspectionCheck[], targetAssetId?: number) => {
+        async (
+            checks: TechnicianInspectionCheck[],
+            targetAssetId?: number,
+            workOrderId?: string,
+        ) => {
             const linkedJob = activeJob;
             const assignments = linkedJob?.asset_assignments || [];
             const assetId =
@@ -1365,10 +1369,13 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                 await commandOutbox.enqueueSubmitEquipmentInspection({
                     operational_asset_id: assetId,
                     dispatch_job_id: linkedJob.id,
-                    type: 'maintenance',
+                    type: 'post_repair',
                     result: passed ? 'passed' : 'failed',
                     checklist: checks,
-                    findings: 'Completed from mobile',
+                    findings: workOrderId
+                        ? `Completed from mobile post-repair verification for work order ${workOrderId}`
+                        : 'Completed from mobile post-repair verification',
+                    work_order_id: workOrderId ?? null,
                 });
                 await syncQueue();
             } catch (error: unknown) {
@@ -1477,16 +1484,29 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         activeJob?.asset_assignments?.find(
             (a) => a.operational_asset_id === selectedAssetId,
         ) ||
-        activeJob?.asset_assignments?.[0] ||
-        jobs[0]?.asset_assignments?.[0] ||
+        (activeJob?.asset_assignments &&
+        activeJob.asset_assignments.length === 1
+            ? activeJob.asset_assignments[0]
+            : null) ||
+        (jobs.length === 1 && jobs[0]?.asset_assignments?.length === 1
+            ? jobs[0].asset_assignments[0]
+            : null) ||
         null;
     const resolvedAssetCode =
         overriddenAssetCode ||
         currentAsset?.asset_code ||
-        (jobs.length > 0 ? 'Assigned Unit' : 'UNASSIGNED');
+        (activeJob?.asset_assignments && activeJob.asset_assignments.length > 1
+            ? ''
+            : jobs.length > 0
+              ? 'Assigned Unit'
+              : 'UNASSIGNED');
     const resolvedAssetName =
         currentAsset?.asset_name ||
-        (jobs.length > 0 ? 'Heavy Equipment Unit' : 'No Equipment Assigned');
+        (activeJob?.asset_assignments && activeJob.asset_assignments.length > 1
+            ? ''
+            : jobs.length > 0
+              ? 'Heavy Equipment Unit'
+              : 'No Equipment Assigned');
     const resolvedOperatorName = user?.name || 'Field Operator';
     const resolvedJobReference =
         activeJob?.reference || jobs[0]?.reference || 'NO-DISPATCH';
@@ -1763,6 +1783,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                             <DvirScreen
                                 activeJobReference={resolvedJobReference}
                                 apiClient={apiClient}
+                                assetAssignments={activeJob?.asset_assignments}
                                 assetCode={resolvedAssetCode}
                                 assetKind={
                                     currentAsset?.asset_kind || 'mobile_crane'
@@ -1796,6 +1817,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 onPreTripPassed={() => {
                                     setDvirStatus('cleared');
                                 }}
+                                onSelectAsset={(id) => setSelectedAssetId(id)}
                                 onSwapUnit={(newUnitCode) => {
                                     setOverriddenAssetCode(newUnitCode);
                                     setIsUnitLinked(true);
@@ -1810,6 +1832,8 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                     );
                                     setActiveAppView('main');
                                 }}
+                                operationalAssetId={selectedAssetId}
+                                selectedAssetId={selectedAssetId}
                             />
                         ) : activeAppView === 'documents' ? (
                             <DocumentsWalletScreen

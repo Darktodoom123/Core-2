@@ -330,6 +330,74 @@ it('rejects work order release when inspection is pre_operation rather than post
     expect($asset->fresh()->status)->toBe(AssetStatus::UnderMaintenance);
 });
 
+it('rejects work order release when only routine post-trip dvir is present and requires authoritative post_repair inspection', function (): void {
+    $user = User::factory()->create(['is_active' => true]);
+    $user->givePermissionTo('equipment.maintain');
+    $user->givePermissionTo('equipment.inspect');
+    $token = $user->createToken('Mobile Token')->plainTextToken;
+
+    $asset = OperationalAsset::query()->create([
+        'code' => 'CRN-TEST-DVIR-REL',
+        'name' => 'Test Crane DVIR',
+        'kind' => 'crane',
+        'status' => AssetStatus::ReadyForService->value,
+    ]);
+
+    $woResponse = $this->withToken($token)
+        ->postJson("/api/v1/assets/{$asset->id}/maintenance", [
+            'defect' => 'Hydraulic line split',
+            'dispatch_blocking' => true,
+        ]);
+    $woResponse->assertCreated();
+    $woId = $woResponse->json('data.id');
+
+    // Complete repair
+    $this->withToken($token)
+        ->postJson("/api/v1/maintenance/{$woId}/complete", [
+            'work_performed' => ['Replaced hydraulic pressure hose'],
+        ])
+        ->assertOk();
+
+    // Create a clean routine post_trip DVIR inspection after repair completion
+    $asset->dvirInspections()->create([
+        'user_id' => $user->id,
+        'inspection_type' => DvirInspectionType::POST_TRIP->value,
+        'inspector_name' => $user->name,
+        'has_defects' => false,
+        'critical_defects_count' => 0,
+        'completed_at' => now()->addMinutes(1),
+        'signature_captured' => true,
+        'reference' => 'DVIR-ROUTINE-999',
+    ]);
+
+    // Routine post-trip DVIR must NOT authorize release
+    $releaseResponse = $this->withToken($token)
+        ->postJson("/api/v1/maintenance/{$woId}/release", [
+            'work_performed' => ['Replaced hydraulic pressure hose'],
+        ]);
+    $releaseResponse->assertUnprocessable();
+    $releaseResponse->assertJsonValidationErrors(['inspection']);
+    expect($asset->fresh()->status)->toBe(AssetStatus::UnderMaintenance);
+
+    // Now submit authoritative post_repair inspection
+    $this->withToken($token)
+        ->postJson("/api/v1/assets/{$asset->id}/inspections", [
+            'type' => 'post_repair',
+            'result' => 'passed',
+            'checklist' => [['id' => 'hyd-01', 'status' => 'good']],
+            'findings' => 'Post-repair hydraulic pressure verification passed',
+        ])
+        ->assertCreated();
+
+    // Authoritative post_repair inspection authorizes release
+    $releaseResponse = $this->withToken($token)
+        ->postJson("/api/v1/maintenance/{$woId}/release", [
+            'work_performed' => ['Replaced hydraulic pressure hose'],
+        ]);
+    $releaseResponse->assertOk();
+    expect($asset->fresh()->status)->toBe(AssetStatus::ReadyForService);
+});
+
 it('forbids managerial override release when user lacks maintenance permission for asset kind', function (): void {
     $fleetTech = User::factory()->create(['is_active' => true]);
     $fleetTech->givePermissionTo('fleet.maintain');

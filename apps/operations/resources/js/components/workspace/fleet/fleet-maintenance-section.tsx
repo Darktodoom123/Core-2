@@ -179,6 +179,22 @@ export function FleetMaintenanceSection({
                         const isUnreleased = !order.released_at;
                         const isCompletingThis = completingOrderId === order.id;
                         const isReleasingThis = releasingOrderId === order.id;
+                        const qualifyingInspection = order.completed_at
+                            ? (asset.inspections ?? []).find(
+                                  (i) =>
+                                      i.result === 'passed' &&
+                                      [
+                                          'maintenance',
+                                          'safety',
+                                          'post_repair',
+                                      ].includes(i.type) &&
+                                      i.completed_at &&
+                                      new Date(i.completed_at).getTime() >=
+                                          new Date(
+                                              order.completed_at!,
+                                          ).getTime(),
+                              )
+                            : null;
 
                         return (
                             <li key={order.id} className="space-y-2 py-4">
@@ -193,12 +209,24 @@ export function FleetMaintenanceSection({
                                             </span>
                                         )}
                                         {order.completed_at ? (
-                                            <span className="bg-positive-soft text-positive-strong inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium">
-                                                Repair Completed:{' '}
-                                                {formatDateTime(
-                                                    order.completed_at,
+                                            <>
+                                                <span className="bg-positive-soft text-positive-strong inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium">
+                                                    Repair Completed:{' '}
+                                                    {formatDateTime(
+                                                        order.completed_at,
+                                                    )}
+                                                </span>
+                                                {qualifyingInspection ? (
+                                                    <span className="bg-positive-soft text-positive-strong inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium">
+                                                        Post-Repair: Verified
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center rounded-md bg-warning-soft px-1.5 py-0.5 text-xs font-medium text-warning-strong">
+                                                        Post-Repair: Awaiting
+                                                        Verification
+                                                    </span>
                                                 )}
-                                            </span>
+                                            </>
                                         ) : (
                                             <span className="inline-flex items-center rounded-md bg-warning-soft px-1.5 py-0.5 text-xs font-medium text-warning-strong">
                                                 Pending Repair Completion

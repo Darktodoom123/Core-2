@@ -13,6 +13,7 @@ import { EquipmentInspectionScreen } from '../screens/EquipmentInspectionScreen'
 import type {
     AssetAssignment,
     DispatchJob,
+    MaintenanceWorkOrder,
     TechnicianInspectionCheck,
 } from '../types/index';
 
@@ -270,23 +271,73 @@ describe('Native Field Workflows Component Tests', () => {
                 },
             ];
 
+            const sampleWorkOrder: MaintenanceWorkOrder = {
+                id: 'WO-8041',
+                assetCode: 'CRN-01',
+                assetName: 'Crane 1',
+                defectTitle: 'Boom slider wear pad adjustment',
+                description: 'Adjusted pads',
+                severity: 'minor',
+                status: 'repaired',
+                reportedBy: 'Alex Rivera',
+                createdAt: new Date().toISOString(),
+            };
+
             const view = await render(
                 <InspectionChecklistTab
                     checks={sampleChecks}
                     isSaved={false}
                     onSaveInspection={onSave}
                     onToggleCheck={onToggle}
+                    selectedWorkOrder={sampleWorkOrder}
                 />,
             );
 
             expect(
                 view.getByText('Hydraulic cylinders & outrigger rams'),
             ).toBeTruthy();
+            expect(
+                view.getByText('WO-8041: Boom slider wear pad adjustment'),
+            ).toBeTruthy();
             await fireEvent.press(view.getByTestId('check-item-hyd-01'));
             expect(onToggle).toHaveBeenCalledWith('hyd-01');
 
             await fireEvent.press(view.getByTestId('save-inspection-btn'));
             expect(onSave).toHaveBeenCalledTimes(1);
+        });
+
+        it('blocks saving post-repair inspection when no repaired work order is selected', async () => {
+            const onSave = jest.fn();
+            const onToggle = jest.fn();
+
+            const sampleChecks: TechnicianInspectionCheck[] = [
+                {
+                    id: 'hyd-01',
+                    category: 'hydraulics',
+                    label: 'Hydraulic cylinders & outrigger rams',
+                    status: 'good',
+                    statusLabel: 'Pass',
+                    icon: '',
+                },
+            ];
+
+            const view = await render(
+                <InspectionChecklistTab
+                    checks={sampleChecks}
+                    isSaved={false}
+                    onSaveInspection={onSave}
+                    onToggleCheck={onToggle}
+                    selectedWorkOrder={null}
+                />,
+            );
+
+            expect(view.getByTestId('no-work-order-banner')).toBeTruthy();
+            expect(
+                view.getByText('No Repaired Work Order Selected'),
+            ).toBeTruthy();
+
+            await fireEvent.press(view.getByTestId('save-inspection-btn'));
+            expect(onSave).not.toHaveBeenCalled();
         });
 
         it('logs maintenance work orders with severity and defect details', async () => {
@@ -587,10 +638,11 @@ describe('Native Field Workflows Component Tests', () => {
             await fireEvent.press(view.getByTestId('tab-checklist'));
             await fireEvent.press(view.getByTestId('save-inspection-btn'));
 
-            // Must be bound explicitly to TRK-202 (id: 202)
+            // Must be bound explicitly to TRK-202 (id: 202) and linked work order WO-8041
             expect(onSaveInspection).toHaveBeenCalledWith(
                 expect.any(Array),
                 202,
+                'WO-8041',
             );
         });
 
@@ -668,7 +720,60 @@ describe('Native Field Workflows Component Tests', () => {
             expect(onSaveInspection).toHaveBeenCalledWith(
                 expect.any(Array),
                 101,
+                'WO-8041',
             );
+        });
+
+        it('supports end-to-end post-repair verification workflow from work orders tab to checklist and safe release', async () => {
+            const onSaveInspection = jest.fn();
+            const onOpenDvir = jest.fn();
+
+            const view = await render(
+                <EquipmentInspectionScreen
+                    assetCode="CRN-07"
+                    assetName="50-Ton Mobile All-Terrain Crane"
+                    onOpenDvir={onOpenDvir}
+                    onSaveInspection={onSaveInspection}
+                    technicianName="Alex Rivera"
+                />,
+            );
+
+            // 1. Verify canonical DVIR banner on Work Orders tab
+            expect(
+                view.getByTestId('maintenance-canonical-dvir-banner'),
+            ).toBeTruthy();
+            await fireEvent.press(
+                view.getByTestId('maintenance-open-dvir-btn'),
+            );
+            expect(onOpenDvir).toHaveBeenCalled();
+
+            // 2. Verify repaired work order card has post-repair action button
+            expect(view.getByTestId('post-repair-btn-WO-8041')).toBeTruthy();
+            expect(
+                view.getByTestId('post-repair-pending-WO-8041'),
+            ).toBeTruthy();
+
+            // 3. Tapping post-repair routes to checklist tab with linked work order badge
+            await fireEvent.press(view.getByTestId('post-repair-btn-WO-8041'));
+            expect(view.getByTestId('linked-work-order-badge')).toBeTruthy();
+            expect(
+                view.getByText('WO-8041: Boom slider wear pad adjustment'),
+            ).toBeTruthy();
+
+            // 4. Save post-repair inspection
+            await fireEvent.press(view.getByTestId('save-inspection-btn'));
+            expect(onSaveInspection).toHaveBeenCalledWith(
+                expect.any(Array),
+                undefined,
+                'WO-8041',
+            );
+
+            // 5. Navigate back to Work Orders tab and confirm verified badge
+            await fireEvent.press(view.getByTestId('tab-work-orders'));
+            expect(
+                view.getByTestId('post-repair-verified-WO-8041'),
+            ).toBeTruthy();
+            expect(view.getByText('Post-Repair: Verified')).toBeTruthy();
         });
     });
 });

@@ -5,6 +5,7 @@ import { Alert } from 'react-native';
 import { DvirScreen } from '../screens/DvirScreen';
 import { FieldApiClient } from '../services/apiClient';
 import { ThemeProvider } from '../theme';
+import type { AssetAssignment } from '../types/index';
 
 describe('DvirScreen Component & Workflows', () => {
     jest.setTimeout(15000);
@@ -926,5 +927,156 @@ describe('DvirScreen Component & Workflows', () => {
 
         // Fresh inspection initiated: remarks input is cleared
         expect(view.getByTestId('dvir-remarks-input').props.value).toBe('');
+    });
+
+    it('supports multi-asset selection, blocks submission until an asset is selected, and allows selection', async () => {
+        const onSelectAsset = jest.fn();
+        const onPreTripPassed = jest.fn();
+
+        const assetAssignments = [
+            {
+                id: 1,
+                operational_asset_id: 101,
+                asset_code: 'CRN-50',
+                asset_name: '50-Ton Mobile Crane',
+                asset_kind: 'mobile_crane',
+            },
+            {
+                id: 2,
+                operational_asset_id: 102,
+                asset_code: 'TRK-20',
+                asset_name: 'Support Flatbed Truck',
+                asset_kind: 'truck',
+            },
+        ];
+
+        const view = await render(
+            <DvirScreen
+                assetAssignments={assetAssignments}
+                initialMode="pre_trip"
+                onPreTripPassed={onPreTripPassed}
+                onSelectAsset={onSelectAsset}
+            />,
+        );
+
+        // Verify selector bar and prompt banner render
+        expect(view.getByTestId('dvir-asset-selector')).toBeTruthy();
+        expect(view.getByTestId('dvir-no-asset-selected-banner')).toBeTruthy();
+
+        // Attempting to submit is blocked
+        await fireEvent.press(view.getByTestId('complete-dvir-button'));
+        expect(onPreTripPassed).not.toHaveBeenCalled();
+
+        // Select the crane
+        await fireEvent.press(view.getByTestId('dvir-select-asset-101'));
+        expect(onSelectAsset).toHaveBeenCalledWith(101);
+
+        // Banner should disappear and submission should succeed
+        expect(view.queryByTestId('dvir-no-asset-selected-banner')).toBeNull();
+        await fireEvent.press(view.getByTestId('complete-dvir-button'));
+        expect(onPreTripPassed).toHaveBeenCalledWith(
+            'CRN-50',
+            expect.objectContaining({
+                type: 'pre_trip',
+            }),
+        );
+    });
+
+    it('renders unassigned banner and blocks submission when operator is unassigned', async () => {
+        const onPreTripPassed = jest.fn();
+
+        const view = await render(
+            <DvirScreen
+                assetCode="UNASSIGNED"
+                initialMode="pre_trip"
+                onPreTripPassed={onPreTripPassed}
+            />,
+        );
+
+        expect(view.getByTestId('dvir-unassigned-banner')).toBeTruthy();
+        expect(
+            view.getByText(
+                'No operational equipment assigned to this shift or dispatch.',
+            ),
+        ).toBeTruthy();
+
+        // Pressing submit button is blocked
+        await fireEvent.press(view.getByTestId('complete-dvir-button'));
+        expect(onPreTripPassed).not.toHaveBeenCalled();
+    });
+
+    it('allows standalone inspection without dispatch linkage when activeJobReference is NO-DISPATCH', async () => {
+        const onPreTripPassed = jest.fn();
+
+        const view = await render(
+            <DvirScreen
+                activeJobReference="NO-DISPATCH"
+                assetCode="CRN-101"
+                initialMode="pre_trip"
+                onPreTripPassed={onPreTripPassed}
+            />,
+        );
+
+        expect(view.queryByTestId('dvir-unassigned-banner')).toBeNull();
+        expect(view.getByText('Inspection Checklist')).toBeTruthy();
+
+        await fireEvent.press(view.getByTestId('complete-dvir-button'));
+        expect(onPreTripPassed).toHaveBeenCalledWith(
+            'CRN-101',
+            expect.objectContaining({
+                type: 'pre_trip',
+            }),
+        );
+    });
+
+    it('resets captured defects and remarks when switching between assigned assets on a multi-asset job', async () => {
+        const onSave = jest.fn();
+        const assignments: AssetAssignment[] = [
+            {
+                id: 1,
+                dispatch_job_id: 88,
+                operational_asset_id: 101,
+                asset_code: 'CRN-101',
+                asset_name: 'Liebherr 100T',
+                asset_kind: 'mobile_crane',
+            },
+            {
+                id: 2,
+                dispatch_job_id: 88,
+                operational_asset_id: 202,
+                asset_code: 'TRK-202',
+                asset_name: 'Support Truck B',
+                asset_kind: 'truck',
+            },
+        ];
+
+        const view = await render(
+            <DvirScreen
+                assetAssignments={assignments}
+                initialMode="pre_trip"
+                onSaveInspectionRecord={onSave}
+                selectedAssetId={101}
+            />,
+        );
+
+        // Add a defect to CRN-101
+        await fireEvent.press(view.getByTestId('add-defects-button'));
+        await fireEvent.press(
+            view.getByTestId('defect-item-crane_telescopic_boom'),
+        );
+        await fireEvent.press(view.getByTestId('defects-apply-btn'));
+
+        // Defect chip for CRN-101 is displayed
+        expect(
+            view.getByText('Telescopic Boom Sections & Wear Pads'),
+        ).toBeTruthy();
+
+        // Switch to TRK-202
+        await fireEvent.press(view.getByTestId('dvir-select-asset-202'));
+
+        // The defect from CRN-101 must NOT be present on TRK-202
+        expect(
+            view.queryByText('Telescopic Boom Sections & Wear Pads'),
+        ).toBeNull();
     });
 });

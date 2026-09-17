@@ -49,7 +49,9 @@ vi.mock('@inertiajs/react', () => {
     };
 });
 
-function createMockAsset(overrides: Partial<AssetViewModel> = {}): AssetViewModel {
+function createMockAsset(
+    overrides: Partial<AssetViewModel> = {},
+): AssetViewModel {
     return {
         id: 1,
         code: 'CRN-001',
@@ -95,8 +97,12 @@ describe('FleetMaintenanceSection UI', () => {
 
         render(<FleetMaintenanceSection asset={asset} canMaintain={true} />);
 
-        expect(screen.getByText('Hydraulic boom seal leak')).toBeInTheDocument();
-        expect(screen.getByText('Pending Repair Completion')).toBeInTheDocument();
+        expect(
+            screen.getByText('Hydraulic boom seal leak'),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByText('Pending Repair Completion'),
+        ).toBeInTheDocument();
 
         const recordBtn = screen.getByRole('button', {
             name: /record repair completion/i,
@@ -128,12 +134,17 @@ describe('FleetMaintenanceSection UI', () => {
         fireEvent.click(recordBtn);
 
         expect(
-            screen.getByText(/authoritatively record physical repair completion/i),
+            screen.getByText(
+                /authoritatively record physical repair completion/i,
+            ),
         ).toBeInTheDocument();
 
-        const workPerformedTextarea = screen.getByLabelText(/work performed \*/i);
+        const workPerformedTextarea =
+            screen.getByLabelText(/work performed \*/i);
         fireEvent.change(workPerformedTextarea, {
-            target: { value: 'Replaced boom hydraulic seal\nPressure tested at 250 bar' },
+            target: {
+                value: 'Replaced boom hydraulic seal\nPressure tested at 250 bar',
+            },
         });
 
         const partsInput = screen.getByLabelText(/parts used/i);
@@ -156,7 +167,10 @@ describe('FleetMaintenanceSection UI', () => {
             '/operations/maintenance/101/complete',
             expect.objectContaining({
                 data: expect.objectContaining({
-                    work_performed: ['Replaced boom hydraulic seal', 'Pressure tested at 250 bar'],
+                    work_performed: [
+                        'Replaced boom hydraulic seal',
+                        'Pressure tested at 250 bar',
+                    ],
                     parts: ['SEAL-HYD-99', 'O-RING-22'],
                     completed_at: '2026-09-17 10:30:00',
                 }),
@@ -191,6 +205,73 @@ describe('FleetMaintenanceSection UI', () => {
         ).toBeInTheDocument();
         expect(
             screen.queryByRole('button', { name: /record repair completion/i }),
+        ).not.toBeInTheDocument();
+    });
+
+    it('displays "Post-Repair: Awaiting Verification" when repair completed but no qualifying inspection exists', () => {
+        const asset = createMockAsset({
+            maintenance_work_orders: [
+                {
+                    id: 102,
+                    defect: 'Brake cylinder failure',
+                    status: 'repair_completed',
+                    dispatch_blocking: true,
+                    scheduled_at: null,
+                    next_due_at: null,
+                    completed_at: '2026-09-17T10:30:00.000Z',
+                    work_performed: ['Replaced master cylinder'],
+                    parts: ['CYL-900'],
+                    released_at: null,
+                    remarks: null,
+                },
+            ],
+            inspections: [],
+        });
+
+        render(<FleetMaintenanceSection asset={asset} canMaintain={true} />);
+
+        expect(
+            screen.getByText('Post-Repair: Awaiting Verification'),
+        ).toBeInTheDocument();
+        expect(
+            screen.queryByText('Post-Repair: Verified'),
+        ).not.toBeInTheDocument();
+    });
+
+    it('displays "Post-Repair: Verified" when an authoritative post_repair inspection occurred after repair completion', () => {
+        const asset = createMockAsset({
+            maintenance_work_orders: [
+                {
+                    id: 102,
+                    defect: 'Brake cylinder failure',
+                    status: 'repair_completed',
+                    dispatch_blocking: true,
+                    scheduled_at: null,
+                    next_due_at: null,
+                    completed_at: '2026-09-17T10:30:00.000Z',
+                    work_performed: ['Replaced master cylinder'],
+                    parts: ['CYL-900'],
+                    released_at: null,
+                    remarks: null,
+                },
+            ],
+            inspections: [
+                {
+                    id: 501,
+                    type: 'post_repair',
+                    result: 'passed',
+                    checklist: { brakes: true },
+                    findings: 'Certified safe for service',
+                    completed_at: '2026-09-17T11:00:00.000Z',
+                },
+            ],
+        });
+
+        render(<FleetMaintenanceSection asset={asset} canMaintain={true} />);
+
+        expect(screen.getByText('Post-Repair: Verified')).toBeInTheDocument();
+        expect(
+            screen.queryByText('Post-Repair: Awaiting Verification'),
         ).not.toBeInTheDocument();
     });
 });

@@ -248,6 +248,14 @@ export function getDefaultInspectionChecks(
                     icon: '',
                 },
                 {
+                    id: 'chk-tower-rope-01',
+                    category: 'structural',
+                    label: 'Hoist wire rope, hook block & safety latch',
+                    status: 'good',
+                    statusLabel: 'Pass · Wire rope & safety latch intact',
+                    icon: '',
+                },
+                {
                     id: 'chk-tower-elec-01',
                     category: 'electrical',
                     label: 'Load Moment Indicator (LMI), A2B & anemometer',
@@ -334,6 +342,14 @@ export function getDefaultInspectionChecks(
                     label: 'Telescopic boom & wear pads',
                     status: 'good',
                     statusLabel: 'Pass · Structural integrity intact',
+                    icon: '',
+                },
+                {
+                    id: 'chk-rope-01',
+                    category: 'structural',
+                    label: 'Hoist wire rope, winch & main hook block',
+                    status: 'good',
+                    statusLabel: 'Pass · Wire rope & safety latch intact',
                     icon: '',
                 },
                 {

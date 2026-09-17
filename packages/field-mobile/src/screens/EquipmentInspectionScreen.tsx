@@ -28,6 +28,7 @@ export interface EquipmentInspectionScreenProps {
     onSaveInspection?: (
         checks: TechnicianInspectionCheck[],
         assetId?: number,
+        workOrderId?: string,
     ) => void;
     onLogWorkOrder?: (
         workOrder: MaintenanceWorkOrder,
@@ -86,6 +87,7 @@ export const EquipmentInspectionScreen: React.FC<
     selectedAssetId,
     onSelectAsset,
     onBack,
+    onOpenDvir,
     onSaveInspection,
     onLogWorkOrder,
     onLogFuelReceipt,
@@ -143,6 +145,12 @@ export const EquipmentInspectionScreen: React.FC<
             createdAt: new Date().toISOString(),
         },
     ]);
+    const [selectedWorkOrderId, setSelectedWorkOrderId] = useState<
+        string | null
+    >(() => workOrders.find((wo) => wo.status === 'repaired')?.id ?? null);
+    const [verifiedWorkOrderIds, setVerifiedWorkOrderIds] = useState<string[]>(
+        [],
+    );
     const [fuelLogs, setFuelLogs] = useState<FuelReceiptLog[]>([
         {
             id: 'FL-301',
@@ -197,8 +205,27 @@ export const EquipmentInspectionScreen: React.FC<
             return;
         }
 
+        const eligibleWorkOrder =
+            workOrders.find(
+                (wo) =>
+                    wo.id === selectedWorkOrderId && wo.status === 'repaired',
+            ) ?? workOrders.find((wo) => wo.status === 'repaired');
+
+        if (!eligibleWorkOrder) {
+            return;
+        }
+
         setIsSaved(true);
-        onSaveInspection?.(checks, activeSelectedAssetId ?? undefined);
+        setVerifiedWorkOrderIds((prev) =>
+            prev.includes(eligibleWorkOrder.id)
+                ? prev
+                : [...prev, eligibleWorkOrder.id],
+        );
+        onSaveInspection?.(
+            checks,
+            activeSelectedAssetId ?? undefined,
+            eligibleWorkOrder.id,
+        );
     };
 
     const handleLogWorkOrder = (wo: MaintenanceWorkOrder) => {
@@ -515,7 +542,7 @@ export const EquipmentInspectionScreen: React.FC<
                     </Pressable>
 
                     <Pressable
-                        accessibilityLabel="Inspection checklist"
+                        accessibilityLabel="Post-repair inspection checklist"
                         accessibilityRole="tab"
                         accessibilityState={{
                             selected: activeTab === 'checklist',
@@ -543,7 +570,7 @@ export const EquipmentInspectionScreen: React.FC<
                                     styles.darkTabPillTextActive,
                             ]}
                         >
-                            Inspection
+                            Post-Repair
                         </Text>
                     </Pressable>
                 </ScrollView>
@@ -564,7 +591,13 @@ export const EquipmentInspectionScreen: React.FC<
                         assetCode={currentAssetCode}
                         assetName={currentAssetName}
                         onLogWorkOrder={handleLogWorkOrder}
+                        onOpenDvir={onOpenDvir}
+                        onStartPostRepair={(woId: string) => {
+                            setSelectedWorkOrderId(woId);
+                            setActiveTab('checklist');
+                        }}
                         technicianName={technicianName}
+                        verifiedWorkOrderIds={verifiedWorkOrderIds}
                         workOrders={workOrders}
                     />
                 ) : null}
@@ -621,13 +654,24 @@ export const EquipmentInspectionScreen: React.FC<
                     />
                 ) : null}
 
-                {/* Backwards compatibility fallback if checklist tab selected */}
+                {/* Dedicated Post-Repair Verification tab */}
                 {activeTab === 'checklist' ? (
                     <InspectionChecklistTab
+                        availableWorkOrders={workOrders}
                         checks={checks}
                         isSaved={isSaved}
+                        onBackToWorkOrders={() => setActiveTab('work_order')}
+                        onOpenDvir={onOpenDvir}
                         onSaveInspection={handleSaveInspection}
+                        onSelectWorkOrder={(woId) =>
+                            setSelectedWorkOrderId(woId)
+                        }
                         onToggleCheck={handleToggleCheck}
+                        selectedWorkOrder={
+                            workOrders.find(
+                                (wo) => wo.id === selectedWorkOrderId,
+                            ) ?? null
+                        }
                     />
                 ) : null}
             </ScrollView>

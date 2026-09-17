@@ -29,6 +29,7 @@ import type { FieldApiClient } from '../services/apiClient';
 import type { CommandOutboxManager } from '../services/commandOutbox';
 import { useTheme } from '../theme';
 import type {
+    AssetAssignment,
     DvirInspectionRecord,
     TechnicianInspectionCheck,
 } from '../types/index';
@@ -48,6 +49,10 @@ export interface DvirScreenProps {
     initialMode?: 'pre_trip' | 'post_trip' | 'history';
     apiClient?: FieldApiClient;
     commandOutbox?: CommandOutboxManager;
+    assetAssignments?: AssetAssignment[];
+    selectedAssetId?: number | null;
+    operationalAssetId?: number | null;
+    onSelectAsset?: (assetId: number) => void;
     onBack?: () => void;
     onSaveInspectionRecord?: (record: DvirInspectionRecord) => void;
     onDefectLockout?: (assetCode: string, record: DvirInspectionRecord) => void;
@@ -79,6 +84,14 @@ const DEFAULT_CHECKS: TechnicianInspectionCheck[] = [
         label: 'Telescopic boom & wear pads',
         status: 'good',
         statusLabel: 'Pass · Structural integrity intact',
+        icon: '',
+    },
+    {
+        id: 'chk-rope-01',
+        category: 'structural',
+        label: 'Hoist wire rope, winch & main hook block',
+        status: 'good',
+        statusLabel: 'Pass · Wire rope & safety latch intact',
         icon: '',
     },
     {
@@ -214,6 +227,10 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     initialMode = 'pre_trip',
     apiClient,
     commandOutbox,
+    assetAssignments,
+    selectedAssetId,
+    operationalAssetId,
+    onSelectAsset,
     onBack,
     onSaveInspectionRecord,
     onDefectLockout,
@@ -222,14 +239,65 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     onPreTripPassed,
 }) => {
     const { isDarkHud } = useTheme();
+
+    const [uncontrolledAssetId, setUncontrolledAssetId] = useState<
+        number | null
+    >(
+        assetAssignments && assetAssignments.length === 1
+            ? assetAssignments[0].operational_asset_id
+            : (operationalAssetId ?? null),
+    );
+
+    const [userSelectedAssetId, setUserSelectedAssetId] = useState<
+        number | null
+    >(null);
+    const [prevPropAssetId, setPrevPropAssetId] = useState<
+        number | null | undefined
+    >(selectedAssetId);
+
+    if (selectedAssetId !== prevPropAssetId) {
+        setPrevPropAssetId(selectedAssetId);
+        setUserSelectedAssetId(null);
+    }
+
+    const activeSelectedAssetId =
+        userSelectedAssetId ??
+        (selectedAssetId !== undefined && selectedAssetId !== null
+            ? selectedAssetId
+            : uncontrolledAssetId);
+
+    const activeAssignment =
+        assetAssignments?.find(
+            (a) => a.operational_asset_id === activeSelectedAssetId,
+        ) ??
+        (assetAssignments && assetAssignments.length === 1
+            ? assetAssignments[0]
+            : null);
+
+    const currentAssetCode = activeAssignment?.asset_code || assetCode;
+    const currentAssetName = activeAssignment?.asset_name || assetName;
+    const currentAssetKind = activeAssignment?.asset_kind || assetKind;
+
     const [overriddenAssetCode, setOverriddenAssetCode] = useState<{
         propCode: string;
         localCode: string;
     } | null>(null);
     const localAssetCode =
-        overriddenAssetCode && overriddenAssetCode.propCode === assetCode
+        overriddenAssetCode && overriddenAssetCode.propCode === currentAssetCode
             ? overriddenAssetCode.localCode
-            : assetCode;
+            : currentAssetCode;
+
+    const isUnassigned =
+        !localAssetCode ||
+        localAssetCode === 'UNASSIGNED' ||
+        (assetAssignments !== undefined && assetAssignments.length === 0);
+
+    const hasUnselectedMultiAsset = Boolean(
+        assetAssignments &&
+        assetAssignments.length > 1 &&
+        !activeSelectedAssetId,
+    );
+
     const [defectFallbackModalOpen, setDefectFallbackModalOpen] =
         useState(false);
     const [changeUnitModalOpen, setChangeUnitModalOpen] = useState(false);
@@ -254,6 +322,23 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     const [showOlderArchive, setShowOlderArchive] = useState(false);
     const [isHistoryLoading, setIsHistoryLoading] = useState(false);
     const [syncError, setSyncError] = useState<string | null>(null);
+
+    const [prevTrackedAssetKey, setPrevTrackedAssetKey] = useState<
+        string | null
+    >(activeSelectedAssetId ? String(activeSelectedAssetId) : localAssetCode);
+
+    const currentTrackedAssetKey = activeSelectedAssetId
+        ? String(activeSelectedAssetId)
+        : localAssetCode;
+
+    if (currentTrackedAssetKey !== prevTrackedAssetKey) {
+        setPrevTrackedAssetKey(currentTrackedAssetKey);
+        setSelectedDefectIds([]);
+        setWalkaroundPhotos({});
+        setSafetyStatus('safe');
+        setRemarks('');
+        setIsSaved(false);
+    }
 
     useEffect(() => {
         if (!apiClient) {
@@ -343,11 +428,11 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
         () =>
             resolveDesignatedEquipmentType({
                 assetCode: localAssetCode,
-                assetName,
-                assetKind,
+                assetName: currentAssetName,
+                assetKind: currentAssetKind,
                 equipmentType,
             }),
-        [localAssetCode, assetName, assetKind, equipmentType],
+        [localAssetCode, currentAssetName, currentAssetKind, equipmentType],
     );
 
     const presentation = useMemo(
@@ -484,7 +569,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
             id: `DVIR-${Date.now().toString(36).toUpperCase()}`,
             type: mode === 'post_trip' ? 'post_trip' : 'pre_trip',
             assetCode: localAssetCode,
-            assetName,
+            assetName: currentAssetName,
             inspectorName,
             startingOdometerKm:
                 mode === 'pre_trip' ? parseFloat(odometerKm) || 0 : undefined,
@@ -552,7 +637,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                 ? 'post_trip'
                 : 'pre_trip') as 'pre_trip' | 'post_trip',
             asset_code: localAssetCode,
-            asset_name: assetName,
+            asset_name: currentAssetName,
             inspector_name: inspectorName,
             starting_odometer_km:
                 record.type === 'pre_trip'
@@ -612,6 +697,10 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
         if (isSaved) {
             onBack?.();
 
+            return;
+        }
+
+        if (isUnassigned || hasUnselectedMultiAsset) {
             return;
         }
 
@@ -677,12 +766,152 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                     </Pressable>
                 }
                 subtitle={
-                    activeJobReference
+                    activeJobReference && activeJobReference !== 'NO-DISPATCH'
                         ? `Inspection Checklist · Ref: ${activeJobReference}`
                         : 'Inspection Checklist'
                 }
                 title="Create DVIR"
             />
+
+            {/* Explicit Multi-Asset Selector Bar */}
+            {assetAssignments && assetAssignments.length > 1 ? (
+                <View
+                    accessibilityLabel="Select assigned equipment"
+                    accessibilityRole="radiogroup"
+                    style={[
+                        styles.assetSelectorContainer,
+                        isDarkHud && styles.darkAssetSelectorContainer,
+                    ]}
+                    testID="dvir-asset-selector"
+                >
+                    <Text
+                        style={[
+                            styles.assetSelectorLabel,
+                            isDarkHud && styles.darkAssetSelectorLabel,
+                        ]}
+                    >
+                        Assigned Equipment:
+                    </Text>
+                    <ScrollView
+                        contentContainerStyle={styles.assetSelectorScroll}
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                    >
+                        {assetAssignments.map((assignment) => {
+                            const isSelected =
+                                assignment.operational_asset_id ===
+                                activeSelectedAssetId;
+
+                            return (
+                                <Pressable
+                                    key={assignment.operational_asset_id}
+                                    accessibilityLabel={`Select ${assignment.asset_code} ${assignment.asset_name}`}
+                                    accessibilityRole="radio"
+                                    accessibilityState={{
+                                        selected: isSelected,
+                                    }}
+                                    onPress={() => {
+                                        setUserSelectedAssetId(
+                                            assignment.operational_asset_id,
+                                        );
+                                        setUncontrolledAssetId(
+                                            assignment.operational_asset_id,
+                                        );
+                                        onSelectAsset?.(
+                                            assignment.operational_asset_id,
+                                        );
+                                        setIsSaved(false);
+                                    }}
+                                    style={({ pressed }) => [
+                                        styles.assetPill,
+                                        isDarkHud && styles.darkAssetPill,
+                                        isSelected && styles.assetPillActive,
+                                        isDarkHud &&
+                                            isSelected &&
+                                            styles.darkAssetPillActive,
+                                        pressed && styles.pressed,
+                                    ]}
+                                    testID={`dvir-select-asset-${assignment.operational_asset_id}`}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.assetPillCode,
+                                            isDarkHud &&
+                                                styles.darkAssetPillCode,
+                                            isSelected &&
+                                                styles.assetPillCodeActive,
+                                            isDarkHud &&
+                                                isSelected &&
+                                                styles.darkAssetPillCodeActive,
+                                        ]}
+                                    >
+                                        {assignment.asset_code}
+                                    </Text>
+                                    <Text
+                                        numberOfLines={1}
+                                        style={[
+                                            styles.assetPillName,
+                                            isDarkHud &&
+                                                styles.darkAssetPillName,
+                                            isSelected &&
+                                                styles.assetPillNameActive,
+                                            isDarkHud &&
+                                                isSelected &&
+                                                styles.darkAssetPillNameActive,
+                                        ]}
+                                    >
+                                        {assignment.asset_name}
+                                    </Text>
+                                </Pressable>
+                            );
+                        })}
+                    </ScrollView>
+                </View>
+            ) : null}
+
+            {/* Prompt banner when multiple assets assigned but none explicitly selected */}
+            {hasUnselectedMultiAsset ? (
+                <View
+                    accessibilityRole="alert"
+                    style={[
+                        styles.noAssetBanner,
+                        isDarkHud && styles.darkNoAssetBanner,
+                    ]}
+                    testID="dvir-no-asset-selected-banner"
+                >
+                    <Text
+                        style={[
+                            styles.noAssetBannerText,
+                            isDarkHud && styles.darkNoAssetBannerText,
+                        ]}
+                    >
+                        Multiple assets assigned. Select an asset above before
+                        completing inspection.
+                    </Text>
+                </View>
+            ) : null}
+
+            {/* Prompt banner when unassigned */}
+            {isUnassigned ? (
+                <View
+                    accessibilityRole="alert"
+                    style={[
+                        styles.noAssetBanner,
+                        isDarkHud && styles.darkNoAssetBanner,
+                    ]}
+                    testID="dvir-unassigned-banner"
+                >
+                    <Text
+                        style={[
+                            styles.noAssetBannerText,
+                            isDarkHud && styles.darkNoAssetBannerText,
+                        ]}
+                    >
+                        No operational equipment assigned to this shift or
+                        dispatch.
+                    </Text>
+                </View>
+            ) : null}
 
             {/* Main Content Area */}
             <ScrollView
@@ -1532,6 +1761,20 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                     </Text>
                                 </Pressable>
                             </View>
+
+                            <Text
+                                style={[
+                                    styles.safetyHelperNotice,
+                                    isDarkHud && styles.darkSafetyHelperNotice,
+                                ]}
+                                testID="dvir-safety-disclaimer"
+                            >
+                                Pre-trip verification of transit roadworthiness
+                                and visible mechanical safety. Note: Routine
+                                DVIR certification does not override open
+                                maintenance work orders or specialized lift
+                                certifications.
+                            </Text>
                         </View>
 
                         {/* Critical Dispatch Lockout Warning if Unsafe */}
@@ -1880,11 +2123,19 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                     <Pressable
                         accessibilityLabel="Next"
                         accessibilityRole="button"
+                        accessibilityState={{
+                            disabled: isUnassigned || hasUnselectedMultiAsset,
+                        }}
+                        disabled={isUnassigned || hasUnselectedMultiAsset}
                         onPress={handleNextOrSubmit}
                         style={({ pressed }) => [
                             styles.nextButton,
                             isDarkHud && styles.darkNextButton,
-                            pressed && styles.pressed,
+                            (isUnassigned || hasUnselectedMultiAsset) &&
+                                styles.nextButtonDisabled,
+                            pressed &&
+                                !(isUnassigned || hasUnselectedMultiAsset) &&
+                                styles.pressed,
                         ]}
                         testID="complete-dvir-button"
                     >
@@ -2627,5 +2878,117 @@ const styles = StyleSheet.create({
     pressed: {
         opacity: 0.82,
         transform: [{ scale: 0.96 }],
+    },
+    safetyHelperNotice: {
+        color: colors.textSecondary,
+        fontSize: 12,
+        lineHeight: 16,
+        marginTop: 8,
+    },
+    darkSafetyHelperNotice: {
+        color: '#94A3B8',
+    },
+    assetSelectorContainer: {
+        backgroundColor: colors.surface,
+        borderBottomColor: colors.border,
+        borderBottomWidth: 1,
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+    },
+    darkAssetSelectorContainer: {
+        backgroundColor: colors.hudSurface,
+        borderBottomColor: colors.hudBorder,
+    },
+    assetSelectorLabel: {
+        color: colors.muted,
+        fontSize: 12,
+        fontWeight: '700',
+        marginBottom: 8,
+        textTransform: 'uppercase',
+    },
+    darkAssetSelectorLabel: {
+        color: colors.hudTextDim,
+    },
+    assetSelectorScroll: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    assetPill: {
+        alignItems: 'center',
+        backgroundColor: colors.surfaceMuted,
+        borderColor: colors.border,
+        borderRadius: 8,
+        borderWidth: 1,
+        flexDirection: 'row',
+        gap: 6,
+        minHeight: 36,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+    },
+    darkAssetPill: {
+        backgroundColor: colors.surfaceDark,
+        borderColor: colors.hudBorder,
+    },
+    assetPillActive: {
+        backgroundColor: colors.amberDark,
+        borderColor: colors.amberDark,
+    },
+    darkAssetPillActive: {
+        backgroundColor: colors.hudAmber,
+        borderColor: colors.hudAmber,
+    },
+    assetPillCode: {
+        color: colors.primary,
+        fontSize: 13,
+        fontWeight: '800',
+    },
+    darkAssetPillCode: {
+        color: colors.hudText,
+    },
+    assetPillCodeActive: {
+        color: '#FFFFFF',
+    },
+    darkAssetPillCodeActive: {
+        color: colors.surfaceDark,
+    },
+    assetPillName: {
+        color: colors.muted,
+        fontSize: 12,
+        fontWeight: '500',
+        maxWidth: 160,
+    },
+    darkAssetPillName: {
+        color: colors.hudTextDim,
+    },
+    assetPillNameActive: {
+        color: '#FFFFFF',
+    },
+    darkAssetPillNameActive: {
+        color: colors.surfaceDark,
+    },
+    noAssetBanner: {
+        backgroundColor: '#FEF3C7',
+        borderColor: '#F59E0B',
+        borderRadius: 8,
+        borderWidth: 1,
+        marginHorizontal: 16,
+        marginTop: 10,
+        padding: 12,
+    },
+    darkNoAssetBanner: {
+        backgroundColor: '#78350F',
+        borderColor: '#D97706',
+    },
+    noAssetBannerText: {
+        color: '#92400E',
+        fontSize: 13,
+        fontWeight: '600',
+        textAlign: 'center',
+    },
+    darkNoAssetBannerText: {
+        color: '#FEF3C7',
+    },
+    nextButtonDisabled: {
+        opacity: 0.45,
     },
 });

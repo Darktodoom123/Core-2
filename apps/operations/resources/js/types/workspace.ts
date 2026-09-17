@@ -271,7 +271,11 @@ export interface SalesDispatchHandoffViewModel extends CommercialDispatchHandoff
 }
 
 export type InspectionTypeValue =
-    'pre_operation' | 'post_operation' | 'maintenance' | 'safety';
+    | 'pre_operation'
+    | 'post_operation'
+    | 'maintenance'
+    | 'safety'
+    | 'post_repair';
 
 export type InspectionResultValue = 'passed' | 'failed' | 'conditional';
 
