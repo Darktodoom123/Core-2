@@ -16,10 +16,14 @@ if not exist "%EMULATOR%" (
     exit /b 1
 )
 
-:: Clear stale multiinstance lock if present
+:: Clear stale AVD locks if present
 if exist "%USERPROFILE%\.android\avd\core2_api_36.avd\multiinstance.lock" (
     echo [INFO] Removing stale multiinstance lock...
     del /f /q "%USERPROFILE%\.android\avd\core2_api_36.avd\multiinstance.lock" >nul 2>&1
+)
+if exist "%USERPROFILE%\.android\avd\core2_api_36.avd\hardware-qemu.ini.lock" (
+    echo [INFO] Removing stale hardware-qemu lock...
+    rd /s /q "%USERPROFILE%\.android\avd\core2_api_36.avd\hardware-qemu.ini.lock" >nul 2>&1
 )
 
 echo [1/3] Starting Android emulator window...
