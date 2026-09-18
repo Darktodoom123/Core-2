@@ -115,6 +115,7 @@ export default [
     },
     {
         ignores: [
+            '.artemis/**',
             'vendor',
             'third_party/**',
             'node_modules',

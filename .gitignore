@@ -3,6 +3,7 @@
 /apps/operations/bootstrap/ssr
 node_modules/
 /.nx/
+/.artemis/
 /.npm-cache
 /apps/operations/.npm-cache
 /.expo
