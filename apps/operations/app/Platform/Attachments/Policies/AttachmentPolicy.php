@@ -3,10 +3,12 @@
 namespace App\Platform\Attachments\Policies;
 
 use App\Modules\Dispatch\Models\DispatchJob;
+use App\Modules\Fleet\Models\AssetDocument;
 use App\Modules\Fuel\Models\FuelLog;
 use App\Modules\Fuel\Models\FuelRequest;
 use App\Platform\Attachments\Models\Attachment;
 use App\Platform\Identity\Enums\PermissionName;
+use App\Platform\Identity\Models\PersonnelCredential;
 use App\Platform\Identity\Models\User;
 use App\Platform\Reporting\Models\JobReport;
 use App\Shared\Assets\Models\OperationalAsset;
@@ -61,6 +63,8 @@ class AttachmentPolicy
             $owner instanceof OperationalAsset => $user->can('view', $owner),
             $owner instanceof FuelRequest => $user->can('view', $owner),
             $owner instanceof FuelLog => $user->can('view', $owner),
+            $owner instanceof PersonnelCredential => $user->can('view', $owner),
+            $owner instanceof AssetDocument => $user->can('view', $owner),
             default => false,
         };
     }

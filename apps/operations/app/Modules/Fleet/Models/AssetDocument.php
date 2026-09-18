@@ -1,8 +1,11 @@
 <?php
 
-namespace App\Platform\Identity\Models;
+namespace App\Modules\Fleet\Models;
 
 use App\Platform\Attachments\Models\Attachment;
+use App\Platform\Identity\Enums\PermissionName;
+use App\Platform\Identity\Models\User;
+use App\Shared\Assets\Models\OperationalAsset;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -13,50 +16,66 @@ use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
- * @property int $user_id
- * @property string $kind
- * @property string $credential_number
- * @property string $credential_type
- * @property string|null $issuing_authority
+ * @property int $operational_asset_id
+ * @property string $category
+ * @property string $document_type
+ * @property string $title
+ * @property string $document_number
+ * @property string $issuing_authority
  * @property Carbon|null $issued_at
  * @property Carbon|null $expires_at
  * @property string $status
  * @property string|null $notes
- * @property int|null $verified_by
- * @property Carbon|null $verified_at
+ * @property int|null $created_by
+ * @property int|null $updated_by
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ * @property-read OperationalAsset $operationalAsset
  * @property-read Attachment|null $latestAttachment
+ * @property-read User|null $creator
+ * @property-read User|null $updater
  */
-class PersonnelCredential extends Model
+class AssetDocument extends Model
 {
     protected $fillable = [
-        'user_id',
-        'kind',
-        'credential_number',
-        'credential_type',
+        'operational_asset_id',
+        'category',
+        'document_type',
+        'title',
+        'document_number',
         'issuing_authority',
         'issued_at',
         'expires_at',
         'status',
         'notes',
-        'verified_by',
-        'verified_at',
+        'created_by',
+        'updated_by',
     ];
 
     protected function casts(): array
     {
-        return ['issued_at' => 'date', 'expires_at' => 'date', 'verified_at' => 'datetime'];
+        return [
+            'issued_at' => 'date',
+            'expires_at' => 'date',
+        ];
+    }
+
+    /** @return BelongsTo<OperationalAsset, $this> */
+    public function operationalAsset(): BelongsTo
+    {
+        return $this->belongsTo(OperationalAsset::class, 'operational_asset_id');
     }
 
     /** @return BelongsTo<User, $this> */
-    public function user(): BelongsTo
+    public function creator(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     /** @return BelongsTo<User, $this> */
-    public function verifier(): BelongsTo
+    public function updater(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'verified_by');
+        return $this->belongsTo(User::class, 'updated_by');
     }
 
     /** @return MorphMany<Attachment, $this> */
@@ -122,16 +141,32 @@ class PersonnelCredential extends Model
         return 'valid';
     }
 
-    /**
-     * @param  Builder<PersonnelCredential>  $query
-     * @return Builder<PersonnelCredential>
-     */
-    public function scopeValidAt(Builder $query, CarbonInterface $at): Builder
+    public function categoryLabel(): string
     {
-        return $query->where('status', 'active')
-            ->where(fn (Builder $credentials): Builder => $credentials
-                ->whereNull('issued_at')->orWhere('issued_at', '<=', $at->toDateString()))
-            ->where(fn (Builder $credentials): Builder => $credentials
-                ->whereNull('expires_at')->orWhere('expires_at', '>=', $at->toDateString()));
+        return match ($this->category) {
+            'road_permits' => 'Road Transit Permit',
+            'load_test_certs' => 'Load Test Certificate',
+            'insurance' => 'Comprehensive Insurance',
+            'registrations' => 'Registration / LTO',
+            default => ucwords(str_replace('_', ' ', $this->category)),
+        };
+    }
+
+    /**
+     * Scope documents visible to a user based on asset authorization
+     *
+     * @param  Builder<AssetDocument>  $query
+     * @return Builder<AssetDocument>
+     */
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        if ($user->can(PermissionName::FleetViewAll->value) || $user->can(PermissionName::EquipmentViewAll->value)) {
+            return $query;
+        }
+
+        return $query->whereHas('operationalAsset', function (Builder $assetQuery) use ($user) {
+            /** @var Builder<OperationalAsset> $assetQuery */
+            $assetQuery->visibleTo($user);
+        });
     }
 }

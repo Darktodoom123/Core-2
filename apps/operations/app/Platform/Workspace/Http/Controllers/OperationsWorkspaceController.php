@@ -724,7 +724,7 @@ final class OperationsWorkspaceController extends Controller
         }
 
         return User::query()
-            ->with(['roles:id,name', 'personnelProfile', 'personnelCredentials'])
+            ->with(['roles:id,name', 'personnelProfile', 'personnelCredentials.latestAttachment'])
             ->orderBy('name')
             ->limit($limit)
             ->get();

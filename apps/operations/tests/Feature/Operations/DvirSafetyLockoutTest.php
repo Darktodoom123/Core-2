@@ -214,7 +214,7 @@ it('triggers lockout when inspection contains an attention check', function (): 
     expect($workOrder?->dispatch_blocking)->toBeTrue();
 });
 
-it('releases lockout and restores asset to ReadyForService after a post-repair passing DVIR inspection', function (): void {
+it('requires post-repair verification to release a lockout even after a passing routine DVIR', function (): void {
     $manager = User::factory()->create(['is_active' => true]);
     $manager->syncRoles([RoleName::OperationsManager->value]);
 
@@ -244,7 +244,7 @@ it('releases lockout and restores asset to ReadyForService after a post-repair p
         'work_performed' => ['Replaced brake pads'],
     ])->assertOk();
 
-    // Submit post-repair passing DVIR inspection
+    // A routine DVIR does not certify the repair.
     DvirInspection::query()->create([
         'user_id' => $manager->id,
         'operational_asset_id' => $asset->id,
@@ -254,7 +254,19 @@ it('releases lockout and restores asset to ReadyForService after a post-repair p
         'completed_at' => now(),
     ]);
 
-    // Release after passing DVIR inspection succeeds
+    $this->actingAs($manager)->postJson("/operations/maintenance/{$workOrder->id}/release", [
+        'work_performed' => ['Replaced brake pads'],
+    ])->assertUnprocessable()->assertJsonValidationErrors(['inspection']);
+    expect($workOrder->refresh()->released_at)->toBeNull();
+    expect($asset->refresh()->status)->toBe(AssetStatus::UnderMaintenance);
+
+    $this->actingAs($manager)->postJson("/operations/assets/{$asset->id}/inspections", [
+        'type' => 'post_repair',
+        'result' => 'passed',
+        'checklist' => ['brakes' => true],
+    ])->assertCreated();
+
+    // Release after dedicated post-repair verification succeeds.
     $this->actingAs($manager)->postJson("/operations/maintenance/{$workOrder->id}/release", [
         'work_performed' => ['Replaced brake pads and tested calipers'],
         'parts' => ['BP-500'],

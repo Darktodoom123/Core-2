@@ -223,7 +223,7 @@ it('handles maintenance order creation and verified release after post-repair pa
     // Inspection AFTER repair allows successful release
     $asset->inspections()->create([
         'technician_id' => $technician->id,
-        'type' => 'maintenance',
+        'type' => 'post_repair',
         'result' => 'passed',
         'checklist' => ['winch' => true],
         'completed_at' => now(),

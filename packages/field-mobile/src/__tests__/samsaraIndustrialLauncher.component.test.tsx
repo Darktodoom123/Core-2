@@ -9,6 +9,55 @@ import React from 'react';
 import { DutyStatusSelectorModal } from '../components/sheets/DutyStatusSelectorModal';
 import { AssignedJobsListScreen } from '../screens/AssignedJobsListScreen';
 import { DocumentsWalletScreen } from '../screens/DocumentsWalletScreen';
+
+const mockAuthUser = { id: 1, name: 'Alex Rivera' };
+const mockApiClient = {};
+jest.mock('../auth/AuthContext', () => ({
+    useAuth: () => ({
+        apiClient: mockApiClient,
+        user: mockAuthUser,
+    }),
+}));
+
+jest.mock('../services/walletService', () => ({
+    WalletService: {
+        getDocuments: jest.fn().mockResolvedValue([
+            {
+                id: 'doc-permit-01',
+                category: 'road_permits',
+                title: 'DPWH Special Heavy-Load Road Transit Permit',
+                documentNumber: 'DPWH-NCR-2026-SP-8821',
+                issuingAuthority:
+                    'Department of Public Works and Highways (DPWH)',
+                isExpired: false,
+                status: 'valid',
+                fileUri: 'test.pdf',
+                isAvailableOffline: true,
+            },
+            {
+                id: '2',
+                category: 'load_test_certs',
+                title: 'DOLE-OSHC 3rd-Party Annual Crane Load Test Certificate',
+                documentNumber: 'DOLE-OSHC-2026',
+                issuingAuthority: 'DOLE-OSHC',
+                isExpired: false,
+                status: 'valid',
+                fileUri: 'test2.pdf',
+                isAvailableOffline: false,
+            },
+        ]),
+        makeAvailableOffline: jest
+            .fn()
+            .mockImplementation((doc) =>
+                Promise.resolve({ ...doc, isAvailableOffline: true }),
+            ),
+        removeOfflineCopy: jest
+            .fn()
+            .mockImplementation((doc) =>
+                Promise.resolve({ ...doc, isAvailableOffline: false }),
+            ),
+    },
+}));
 import { DvirScreen } from '../screens/DvirScreen';
 import { OperatorDashboardScreen } from '../screens/OperatorDashboardScreen';
 import type { DispatchJob } from '../types/index';
@@ -748,10 +797,12 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
 
             expect(view.getByText('Documents & Permits')).toBeTruthy();
             expect(
-                view.getByText('DPWH Special Heavy-Load Road Transit Permit'),
+                await view.findByText(
+                    'DPWH Special Heavy-Load Road Transit Permit',
+                ),
             ).toBeTruthy();
             expect(
-                view.getByText(
+                await view.findByText(
                     'DOLE-OSHC 3rd-Party Annual Crane Load Test Certificate',
                 ),
             ).toBeTruthy();
@@ -759,15 +810,19 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
             // Filter by road permits
             await fireEvent.press(view.getByTestId('filter-road_permits'));
             expect(
-                view.getByText('DPWH Special Heavy-Load Road Transit Permit'),
+                await view.findByText(
+                    'DPWH Special Heavy-Load Road Transit Permit',
+                ),
             ).toBeTruthy();
 
             // Open digital certificate modal
             await fireEvent.press(
                 view.getByTestId('view-doc-btn-doc-permit-01'),
             );
-            expect(view.getByTestId('certificate-modal')).toBeTruthy();
-            expect(view.getByText('REPUBLIC OF THE PHILIPPINES')).toBeTruthy();
+            expect(await view.findByTestId('certificate-modal')).toBeTruthy();
+            expect(
+                await view.findByText('REPUBLIC OF THE PHILIPPINES'),
+            ).toBeTruthy();
             expect(
                 view.getAllByText('DPWH-NCR-2026-SP-8821').length,
             ).toBeGreaterThanOrEqual(1);

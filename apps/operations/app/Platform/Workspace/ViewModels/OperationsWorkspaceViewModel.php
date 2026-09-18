@@ -10,6 +10,7 @@ use App\Modules\Dispatch\Models\Client;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dispatch\Models\ServiceRequest;
 use App\Modules\Dvir\Models\DvirInspection;
+use App\Modules\Fleet\Models\AssetDocument;
 use App\Modules\Fuel\Models\FuelRequest;
 use App\Modules\Fuel\ViewModels\FuelWorkspaceViewModel;
 use App\Modules\HoursOfService\Enums\DutyStatus;
@@ -537,6 +538,29 @@ final class OperationsWorkspaceViewModel
                     'released_at' => $order->released_at?->toIso8601String(),
                     'remarks' => $order->remarks,
                 ])->values()->all(),
+                'documents' => ($asset->relationLoaded('documents') ? $asset->documents : collect())->map(static fn (AssetDocument $doc): array => [
+                    'id' => (int) $doc->getKey(),
+                    'category' => $doc->category,
+                    'category_label' => $doc->categoryLabel(),
+                    'document_type' => $doc->document_type,
+                    'title' => $doc->title,
+                    'document_number' => $doc->document_number,
+                    'issuing_authority' => $doc->issuing_authority,
+                    'issued_at' => $doc->issued_at?->toDateString(),
+                    'expires_at' => $doc->expires_at?->toDateString(),
+                    'status' => $doc->status,
+                    'validity_status' => $doc->validityStatus(),
+                    'is_expired' => $doc->isExpired(),
+                    'expires_soon' => $doc->expiresSoon(),
+                    'notes' => $doc->notes,
+                    'attachment' => $doc->relationLoaded('latestAttachment') && $doc->latestAttachment !== null ? [
+                        'id' => (int) $doc->latestAttachment->getKey(),
+                        'original_filename' => $doc->latestAttachment->original_filename,
+                        'mime_type' => $doc->latestAttachment->mime_type,
+                        'size_bytes' => (int) $doc->latestAttachment->size_bytes,
+                        'download_url' => "/operations/attachments/{$doc->latestAttachment->getKey()}/download",
+                    ] : null,
+                ])->values()->all(),
             ];
         })->values()->all();
     }
@@ -629,7 +653,7 @@ final class OperationsWorkspaceViewModel
     {
         $today = Carbon::now()->startOfDay();
 
-        return $users->map(static function (User $user) use ($today): array {
+        return $users->map(static function (User $user): array {
             $profile = $user->relationLoaded('personnelProfile') ? $user->personnelProfile : null;
             $credentials = $user->relationLoaded('personnelCredentials') ? $user->personnelCredentials : collect();
 
@@ -649,22 +673,28 @@ final class OperationsWorkspaceViewModel
                     'emergency_contact_name' => $profile->emergency_contact_name,
                     'emergency_contact_phone' => $profile->emergency_contact_phone,
                 ],
-                'credentials' => $credentials->map(static function ($cred) use ($today): array {
-                    $expiresAt = $cred->expires_at ? Carbon::parse($cred->expires_at)->startOfDay() : null;
-                    $isExpired = $expiresAt !== null && $expiresAt->isPast();
-                    $expiresSoon = $expiresAt !== null && ! $isExpired && $today->diffInDays($expiresAt, false) <= 30;
-
+                'credentials' => $credentials->map(static function ($cred): array {
                     return [
                         'id' => (int) $cred->id,
                         'kind' => $cred->kind,
                         'credential_number' => $cred->credential_number,
                         'credential_type' => $cred->credential_type,
+                        'issuing_authority' => $cred->issuing_authority,
                         'issued_at' => $cred->issued_at?->toDateString(),
                         'expires_at' => $cred->expires_at?->toDateString(),
                         'status' => $cred->status,
-                        'is_expired' => $isExpired,
-                        'expires_soon' => $expiresSoon,
+                        'validity_status' => $cred->validityStatus(),
+                        'is_expired' => $cred->isExpired(),
+                        'expires_soon' => $cred->expiresSoon(),
+                        'notes' => $cred->notes,
                         'verified_at' => $cred->verified_at?->toIso8601String(),
+                        'attachment' => $cred->relationLoaded('latestAttachment') && $cred->latestAttachment !== null ? [
+                            'id' => (int) $cred->latestAttachment->getKey(),
+                            'original_filename' => $cred->latestAttachment->original_filename,
+                            'mime_type' => $cred->latestAttachment->mime_type,
+                            'size_bytes' => (int) $cred->latestAttachment->size_bytes,
+                            'download_url' => "/operations/attachments/{$cred->latestAttachment->getKey()}/download",
+                        ] : null,
                     ];
                 })->values()->all(),
             ];
@@ -923,6 +953,7 @@ final class OperationsWorkspaceViewModel
             'restore_dispatch' => $user->can(PermissionName::ArchiveManage->value),
             'view_sos' => $user->can('sos.view'),
             'respond_sos' => $user->can('sos.respond'),
+            'manage_users' => $user->can(PermissionName::UsersManage->value),
         ];
     }
 

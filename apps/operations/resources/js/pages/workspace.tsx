@@ -791,6 +791,7 @@ export default function Workspace(props: WorkspacePageProps) {
                         archivedJobs={props.archivedJobs}
                         gptRecommendations={props.gptRecommendations}
                         jobs={props.jobs ?? []}
+                        users={props.users ?? []}
                         activeSosIncidents={props.activeSosIncidents}
                         onSectionChange={changeSection}
                     />

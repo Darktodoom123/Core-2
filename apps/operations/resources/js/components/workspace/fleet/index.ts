@@ -46,4 +46,8 @@ export {
     FleetMaintenanceSection,
     type FleetMaintenanceSectionProps,
 } from './fleet-maintenance-section';
+export {
+    FleetDocumentsSection,
+    type FleetDocumentsSectionProps,
+} from './fleet-documents-section';
 export { FleetInput, type FleetInputProps } from './fleet-input';

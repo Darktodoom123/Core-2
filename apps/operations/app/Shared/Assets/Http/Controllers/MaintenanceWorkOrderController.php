@@ -242,7 +242,7 @@ final class MaintenanceWorkOrderController extends Controller
                     if ($work->completed_at === null) {
                         throw ValidationException::withMessages([
                             'completed_at' => 'A persisted repair completion record is required before releasing a blocking maintenance order.',
-                            'inspection' => 'A passing inspection completed after the repair is required before releasing a blocking maintenance order.',
+                            'inspection' => 'A passing post-repair verification completed after the repair is required before releasing a maintenance order.',
                         ]);
                     }
 
@@ -259,7 +259,7 @@ final class MaintenanceWorkOrderController extends Controller
 
                 $latestPassingLegacy = $asset->inspections()
                     ->where('result', 'passed')
-                    ->whereIn('type', ['maintenance', 'safety', 'post_repair'])
+                    ->where('type', 'post_repair')
                     ->where('completed_at', '>=', $repairThreshold)
                     ->latest('completed_at')
                     ->latest('id')
@@ -296,13 +296,13 @@ final class MaintenanceWorkOrderController extends Controller
 
                 if (! $hasPassingInspection && ! $isManagerOverride) {
                     throw ValidationException::withMessages([
-                        'inspection' => 'A passing inspection completed after the repair is required before releasing a blocking maintenance order.',
+                        'inspection' => 'A passing post-repair verification completed after the repair is required before releasing a maintenance order.',
                     ]);
                 }
 
                 if ($hasSubsequentDefect && ! $isManagerOverride) {
                     throw ValidationException::withMessages([
-                        'inspection' => 'A subsequent inspection reported defects on this asset after the post-repair inspection. A new passing inspection is required before release.',
+                        'inspection' => 'A subsequent inspection reported defects after post-repair verification. A new passing post-repair verification is required before release.',
                     ]);
                 }
 

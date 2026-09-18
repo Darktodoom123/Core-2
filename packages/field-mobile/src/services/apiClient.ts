@@ -9,6 +9,7 @@ import type {
 import type {
     ActivateSosIncidentPayload,
     ApiErrorResponse,
+    ComplianceDocument,
     CurrentHosShiftResponse,
     DispatchJob,
     EquipmentHandoverClaimResponse,
@@ -116,7 +117,7 @@ export class FieldApiClient {
         this.fetchFn = config.fetchFn ?? globalThis.fetch;
     }
 
-    private getHeaders(commandId?: string): Record<string, string> {
+    public getHeaders(commandId?: string): Record<string, string> {
         const token = this.getToken();
         const headers: Record<string, string> = {
             Accept: 'application/json',
@@ -1523,5 +1524,27 @@ export class FieldApiClient {
             message: string;
             delay: Record<string, unknown>;
         }>(response);
+    }
+
+    public async fetchPersonnelCredentials(): Promise<ComplianceDocument[]> {
+        const url = `${this.baseUrl}/api/v1/personnel/credentials`;
+        const response = await this.fetchFn(url, {
+            method: 'GET',
+            headers: this.getHeaders(),
+        });
+
+        return this.handleResponse<ComplianceDocument[]>(response);
+    }
+
+    public async fetchAssetPermits(
+        assetCode: string,
+    ): Promise<ComplianceDocument[]> {
+        const url = `${this.baseUrl}/api/v1/fleet/assets/${encodeURIComponent(assetCode)}/permits`;
+        const response = await this.fetchFn(url, {
+            method: 'GET',
+            headers: this.getHeaders(),
+        });
+
+        return this.handleResponse<ComplianceDocument[]>(response);
     }
 }

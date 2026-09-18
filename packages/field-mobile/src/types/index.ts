@@ -554,8 +554,20 @@ export interface ComplianceDocument {
     operatorName?: string | null;
     fileUri?: string | null;
     fileSizeLabel?: string;
-    status: 'valid' | 'expiring_soon' | 'expired';
+    fileType?: string | null;
+    status:
+        | 'valid'
+        | 'expiring_soon'
+        | 'expired'
+        | 'revoked'
+        | 'superseded'
+        | 'permanent'
+        | 'no_expiration';
     notes?: string | null;
+    isAvailableOffline?: boolean;
+    localFileUri?: string | null;
+    lastSynchronized?: string | null;
+    version?: number | string | null;
 }
 
 // ==========================================

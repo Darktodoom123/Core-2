@@ -14,6 +14,7 @@ import {
 } from '../services/apiClient';
 import type { LoginChallengeResult } from '../services/apiClient';
 import { getInstallationId } from '../services/notificationService';
+import { WalletService } from '../services/walletService';
 import type { User } from '../types/index';
 import { resolveApiBaseUrl } from './config';
 import { isAuthorizedFieldRole } from './fieldRoles';
@@ -679,6 +680,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
                     await tokenStorage.clearOfflineSession();
                 }
 
+                if (user?.id) {
+                    await WalletService.clearWalletCache(user.id).catch(
+                        () => {},
+                    );
+                }
+
                 let deviceTrustToken: string | null = null;
 
                 if (options?.forgetDevice && tokenStorage.getDeviceTrustToken) {
@@ -734,6 +741,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
             stageAndRevokeToken,
             token,
             tokenStorage,
+            user,
         ],
     );
 

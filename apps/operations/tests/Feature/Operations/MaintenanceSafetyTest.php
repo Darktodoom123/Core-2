@@ -21,10 +21,44 @@ it('requires post-repair passing inspection before a blocking work order can rel
     $workId = $response->json('data.id');
     $this->actingAs($technician)->postJson("/operations/maintenance/{$workId}/release", ['work_performed' => ['Replaced hose']])->assertUnprocessable();
     $this->actingAs($technician)->postJson("/operations/maintenance/{$workId}/complete", ['work_performed' => ['Replaced hose']])->assertOk();
-    $this->actingAs($technician)->postJson("/operations/assets/{$asset->id}/inspections", ['type' => 'safety', 'result' => 'passed', 'checklist' => ['hydraulics' => true]])->assertCreated();
+    $this->actingAs($technician)->postJson("/operations/assets/{$asset->id}/inspections", ['type' => 'post_repair', 'result' => 'passed', 'checklist' => ['hydraulics' => true]])->assertCreated();
     $this->actingAs($technician)->postJson("/operations/maintenance/{$workId}/release", ['work_performed' => ['Replaced hose'], 'parts' => ['H-100']])->assertOk();
     expect($asset->refresh()->status)->toBe(AssetStatus::ReadyForService);
 });
+
+it('requires dedicated post-repair verification instead of a routine or workshop inspection', function (string $prefix, string $type): void {
+    $manager = User::factory()->create(['is_active' => true]);
+    $manager->syncRoles([RoleName::OperationsManager->value]);
+    $asset = OperationalAsset::query()->create(['code' => 'TR-VERIFY', 'name' => 'Verification truck', 'kind' => 'truck', 'status' => AssetStatus::Available]);
+    if ($prefix === '/api/v1') {
+        $this->withToken($manager->createToken('Verification test')->plainTextToken);
+    } else {
+        $this->actingAs($manager);
+    }
+    $workId = $this->postJson("{$prefix}/assets/{$asset->id}/maintenance", [
+        'defect' => 'Brake wear', 'dispatch_blocking' => true,
+    ])->assertCreated()->json('data.id');
+    $this->postJson("{$prefix}/maintenance/{$workId}/complete", [
+        'work_performed' => ['Replaced brakes'],
+    ])->assertOk();
+    $this->postJson("{$prefix}/assets/{$asset->id}/inspections", [
+        'type' => $type, 'result' => 'passed', 'checklist' => ['brakes' => true],
+    ])->assertCreated();
+
+    $this->postJson("{$prefix}/maintenance/{$workId}/release", [
+        'work_performed' => ['Replaced brakes'],
+    ])->assertUnprocessable()->assertJsonValidationErrors('inspection');
+    expect($asset->refresh()->status)->toBe(AssetStatus::UnderMaintenance);
+    expect($asset->maintenanceWorkOrders()->findOrFail($workId)->released_at)->toBeNull();
+
+    $this->postJson("{$prefix}/assets/{$asset->id}/inspections", [
+        'type' => 'post_repair', 'result' => 'passed', 'checklist' => ['brakes' => true],
+    ])->assertCreated();
+    $this->postJson("{$prefix}/maintenance/{$workId}/release", [
+        'work_performed' => ['Replaced brakes'],
+    ])->assertOk();
+    expect($asset->refresh()->status)->toBe(AssetStatus::ReadyForService);
+})->with(['/operations', '/api/v1'])->with(['pre_operation', 'post_operation', 'safety', 'maintenance']);
 
 it('rejects web release of blocking work order when persisted repair completion is missing', function (): void {
     $technician = User::factory()->create();

@@ -42,8 +42,23 @@ final class UploadAttachmentAction
             $requestId = (string) Str::uuid();
         }
 
+        $checksum = hash_file('sha256', $file->getRealPath());
+        $relativeDir = sprintf('attachments/%s/%s', date('Y'), date('m'));
+        $filename = sprintf('%s.%s', (string) Str::uuid(), $extension);
+        $path = sprintf('%s/%s', $relativeDir, $filename);
+        $originalFilename = str_replace(["\0", '/', '\\'], '_', $file->getClientOriginalName());
+
+        // Perform external storage I/O outside database transaction to prevent long-lived row locks on network I/O
+        $storedPath = Storage::disk($disk)->putFileAs($relativeDir, $file, $filename);
+        if ($storedPath !== $path) {
+            if (is_string($storedPath) && Storage::disk($disk)->exists($storedPath)) {
+                Storage::disk($disk)->delete($storedPath);
+            }
+            throw new \RuntimeException('Unable to store attachment in private storage.');
+        }
+
         try {
-            return DB::transaction(function () use ($uploader, $owner, $file, $kind, $mimeType, $extension, $retentionUntil, $sizeBytes, $disk, $requestId, &$storedPath): Attachment {
+            return DB::transaction(function () use ($uploader, $owner, $kind, $mimeType, $retentionUntil, $sizeBytes, $disk, $requestId, $checksum, $path, $originalFilename): Attachment {
                 // Serialize uploads per owner by locking its concrete row. PostgreSQL
                 // does not permit FOR UPDATE on an aggregate COUNT query, and locking
                 // only existing attachments would leave the zero-attachment case open.
@@ -56,17 +71,6 @@ final class UploadAttachmentAction
 
                 if ($existingCount >= (int) config('attachments.max_count_per_owner')) {
                     throw new InvalidArgumentException('Maximum attachment limit reached for this item.');
-                }
-
-                $checksum = hash_file('sha256', $file->getRealPath());
-                $relativeDir = sprintf('attachments/%s/%s', date('Y'), date('m'));
-                $filename = sprintf('%s.%s', (string) Str::uuid(), $extension);
-                $path = sprintf('%s/%s', $relativeDir, $filename);
-                $originalFilename = str_replace(["\0", '/', '\\'], '_', $file->getClientOriginalName());
-
-                $storedPath = Storage::disk($disk)->putFileAs($relativeDir, $file, $filename);
-                if ($storedPath !== $path) {
-                    throw new \RuntimeException('Unable to store attachment in private storage.');
                 }
 
                 $attachment = Attachment::query()->create([
@@ -104,7 +108,8 @@ final class UploadAttachmentAction
                 return $attachment;
             });
         } catch (\Throwable $exception) {
-            if (is_string($storedPath) && Storage::disk($disk)->exists($storedPath)) {
+            // Failure compensation: remove uploaded file from external storage if database persistence fails
+            if (Storage::disk($disk)->exists($storedPath)) {
                 Storage::disk($disk)->delete($storedPath);
             }
 

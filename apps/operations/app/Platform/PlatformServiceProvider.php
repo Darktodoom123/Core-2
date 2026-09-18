@@ -8,6 +8,8 @@ use App\Modules\Dispatch\Models\ApprovalRequest;
 use App\Modules\Dispatch\Models\Client;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dispatch\Models\ServiceRequest;
+use App\Modules\Fleet\Models\AssetDocument;
+use App\Modules\Fleet\Policies\AssetDocumentPolicy;
 use App\Modules\Fuel\Models\FuelLog;
 use App\Modules\Fuel\Models\FuelRequest;
 use App\Modules\Rental\Models\RentalReservation;
@@ -21,6 +23,7 @@ use App\Platform\Idempotency\Models\CommandLog;
 use App\Platform\Identity\Models\PersonnelCredential;
 use App\Platform\Identity\Models\PersonnelProfile;
 use App\Platform\Identity\Models\User;
+use App\Platform\Identity\Policies\PersonnelCredentialPolicy;
 use App\Platform\Notifications\Models\Notification;
 use App\Platform\Notifications\Policies\NotificationPolicy;
 use App\Platform\Reporting\Models\JobReport;
@@ -59,6 +62,8 @@ final class PlatformServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::policy(Attachment::class, AttachmentPolicy::class);
+        Gate::policy(AssetDocument::class, AssetDocumentPolicy::class);
+        Gate::policy(PersonnelCredential::class, PersonnelCredentialPolicy::class);
         Gate::policy(GptRecommendation::class, GptRecommendationPolicy::class);
         Gate::policy(JobReport::class, JobReportPolicy::class);
         Gate::policy(Notification::class, NotificationPolicy::class);
@@ -93,6 +98,9 @@ final class PlatformServiceProvider extends ServiceProvider
             'App\\Models\\Notification' => Notification::class,
             'App\\Models\\OperationalAsset' => OperationalAsset::class,
             'App\\Models\\PersonnelCredential' => PersonnelCredential::class,
+            'personnel_credential' => PersonnelCredential::class,
+            'App\\Models\\AssetDocument' => AssetDocument::class,
+            'asset_document' => AssetDocument::class,
             'App\\Models\\PersonnelProfile' => PersonnelProfile::class,
             'App\\Models\\ServiceRequest' => ServiceRequest::class,
             'App\\Models\\User' => User::class,

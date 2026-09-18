@@ -95,8 +95,9 @@ export function FleetInspectionsSection({
                             Fleet Inspection Audit Trail
                         </h3>
                         <p className="text-xs text-ink-soft">
-                            Field mobile DVIR submissions &amp; dispatch shop
-                            records
+                            Routine pre-trip and post-trip checks use DVIR.
+                            Record workshop checks and post-repair verification
+                            here.
                         </p>
                     </div>
                     <Button
@@ -118,7 +119,7 @@ export function FleetInspectionsSection({
                     noValidate
                 >
                     <h4 className="font-semibold text-ink">
-                        Submit Safety / Pre-Op Inspection
+                        Workshop / Post-Repair Verification
                     </h4>
                     <div className="grid gap-4 sm:grid-cols-2">
                         <label className="text-sm font-medium text-ink">
@@ -133,11 +134,8 @@ export function FleetInspectionsSection({
                                 }
                                 className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-xs text-ink transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                             >
-                                <option value="pre_operation">
-                                    Pre-operation
-                                </option>
-                                <option value="post_operation">
-                                    Post-operation
+                                <option value="post_repair">
+                                    Post-repair verification
                                 </option>
                                 <option value="maintenance">Maintenance</option>
                                 <option value="safety">Safety</option>

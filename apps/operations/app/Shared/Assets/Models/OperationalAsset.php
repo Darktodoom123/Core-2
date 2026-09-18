@@ -3,6 +3,7 @@
 namespace App\Shared\Assets\Models;
 
 use App\Modules\Dvir\Models\DvirInspection;
+use App\Modules\Fleet\Models\AssetDocument;
 use App\Modules\HoursOfService\Enums\ShiftStatus;
 use App\Modules\HoursOfService\Models\OperatorShift;
 use App\Platform\Identity\Enums\PermissionName;
@@ -62,6 +63,12 @@ class OperationalAsset extends Model
     public function inspections(): HasMany
     {
         return $this->hasMany(Inspection::class);
+    }
+
+    /** @return HasMany<AssetDocument, $this> */
+    public function documents(): HasMany
+    {
+        return $this->hasMany(AssetDocument::class, 'operational_asset_id');
     }
 
     /** @return HasMany<DvirInspection, $this> */

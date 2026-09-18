@@ -180,21 +180,60 @@ export function FleetMaintenanceSection({
                         const isCompletingThis = completingOrderId === order.id;
                         const isReleasingThis = releasingOrderId === order.id;
                         const qualifyingInspection = order.completed_at
-                            ? (asset.inspections ?? []).find(
-                                  (i) =>
-                                      i.result === 'passed' &&
-                                      [
-                                          'maintenance',
-                                          'safety',
-                                          'post_repair',
-                                      ].includes(i.type) &&
-                                      i.completed_at &&
-                                      new Date(i.completed_at).getTime() >=
+                            ? [...(asset.inspections ?? [])]
+                                  .sort(
+                                      (a, b) =>
                                           new Date(
-                                              order.completed_at!,
-                                          ).getTime(),
-                              )
+                                              b.completed_at ?? 0,
+                                          ).getTime() -
+                                              new Date(
+                                                  a.completed_at ?? 0,
+                                              ).getTime() || b.id - a.id,
+                                  )
+                                  .find(
+                                      (i) =>
+                                          i.result === 'passed' &&
+                                          i.type === 'post_repair' &&
+                                          i.completed_at &&
+                                          new Date(i.completed_at).getTime() >=
+                                              new Date(
+                                                  order.completed_at!,
+                                              ).getTime(),
+                                  )
                             : null;
+                        const verifiedAt = qualifyingInspection?.completed_at
+                            ? new Date(
+                                  qualifyingInspection.completed_at,
+                              ).getTime()
+                            : null;
+                        const hasSubsequentDefect =
+                            verifiedAt !== null &&
+                            (asset.inspections.some(
+                                (inspection) =>
+                                    inspection.result !== 'passed' &&
+                                    inspection.completed_at &&
+                                    (new Date(
+                                        inspection.completed_at,
+                                    ).getTime() > verifiedAt ||
+                                        (new Date(
+                                            inspection.completed_at,
+                                        ).getTime() === verifiedAt &&
+                                            inspection.id >
+                                                qualifyingInspection!.id)),
+                            ) ||
+                                [
+                                    ...(asset.dvir_inspections ?? []),
+                                    ...(asset.latest_dvir
+                                        ? [asset.latest_dvir]
+                                        : []),
+                                ].some(
+                                    (dvir) =>
+                                        (dvir.has_defects ||
+                                            dvir.critical_defects_count > 0) &&
+                                        dvir.completed_at &&
+                                        new Date(dvir.completed_at).getTime() >
+                                            verifiedAt,
+                                ));
 
                         return (
                             <li key={order.id} className="space-y-2 py-4">
@@ -216,7 +255,8 @@ export function FleetMaintenanceSection({
                                                         order.completed_at,
                                                     )}
                                                 </span>
-                                                {qualifyingInspection ? (
+                                                {qualifyingInspection &&
+                                                !hasSubsequentDefect ? (
                                                     <span className="bg-positive-soft text-positive-strong inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium">
                                                         Post-Repair: Verified
                                                     </span>
@@ -239,6 +279,18 @@ export function FleetMaintenanceSection({
                                             : 'Open / In progress'}
                                     </span>
                                 </div>
+
+                                {isUnreleased &&
+                                    order.completed_at &&
+                                    (!qualifyingInspection ||
+                                        hasSubsequentDefect) && (
+                                        <p className="text-xs text-ink-soft">
+                                            In Inspections, record a passing
+                                            Post-repair verification before
+                                            releasing this work order. Routine
+                                            DVIRs do not verify repairs.
+                                        </p>
+                                    )}
 
                                 {order.work_performed.length > 0 && (
                                     <p className="text-xs text-ink-soft">
@@ -304,7 +356,7 @@ export function FleetMaintenanceSection({
                                                     record physical repair
                                                     completion details before
                                                     conducting post-repair
-                                                    safety inspection.
+                                                    verification in Inspections.
                                                 </div>
                                                 <label className="block text-sm font-medium text-ink">
                                                     Work performed * (One task

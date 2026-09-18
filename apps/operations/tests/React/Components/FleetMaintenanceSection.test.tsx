@@ -92,6 +92,101 @@ describe('FleetMaintenanceSection UI', () => {
         vi.clearAllMocks();
     });
 
+    it.each([
+        'safety',
+        'maintenance',
+        'pre_operation',
+        'post_operation',
+    ] as const)(
+        'does not treat a passing %s inspection as post-repair verification',
+        (type) => {
+            const asset = createMockAsset();
+            asset.maintenance_work_orders[0].completed_at =
+                '2026-09-17T10:30:00Z';
+            asset.inspections = [
+                {
+                    id: 1,
+                    type,
+                    result: 'passed',
+                    checklist: { brakes: true },
+                    findings: null,
+                    completed_at: '2026-09-17T11:00:00Z',
+                },
+            ];
+            render(
+                <FleetMaintenanceSection asset={asset} canMaintain={true} />,
+            );
+            expect(
+                screen.getByText('Post-Repair: Awaiting Verification'),
+            ).toBeInTheDocument();
+            expect(
+                screen.queryByText('Post-Repair: Verified'),
+            ).not.toBeInTheDocument();
+        },
+    );
+
+    it.each(['workshop', 'dvir'] as const)(
+        'invalidates verification after a later %s defect and accepts a fresh verification',
+        (source) => {
+            const asset = createMockAsset();
+            asset.maintenance_work_orders[0].completed_at =
+                '2026-09-17T10:30:00Z';
+            asset.inspections = [
+                {
+                    id: 1,
+                    type: 'post_repair',
+                    result: 'passed',
+                    checklist: { brakes: true },
+                    findings: null,
+                    completed_at: '2026-09-17T11:00:00Z',
+                },
+            ];
+            if (source === 'workshop') {
+                asset.inspections.push({
+                    id: 2,
+                    type: 'safety',
+                    result: 'failed',
+                    checklist: { brakes: false },
+                    findings: 'Brake defect',
+                    completed_at: '2026-09-17T11:05:00Z',
+                });
+            } else {
+                asset.dvir_inspections = [
+                    {
+                        id: 2,
+                        reference: 'DVIR-2',
+                        type: 'post_trip',
+                        status: 'defect_flagged',
+                        has_defects: true,
+                        critical_defects_count: 0,
+                        completed_at: '2026-09-17T11:05:00Z',
+                        inspector_name: 'Driver',
+                        photos: [],
+                    },
+                ];
+            }
+            const { rerender } = render(
+                <FleetMaintenanceSection asset={asset} canMaintain={true} />,
+            );
+            expect(
+                screen.getByText('Post-Repair: Awaiting Verification'),
+            ).toBeInTheDocument();
+
+            // Keep the older pass first to verify that ordering is not assumed.
+            asset.inspections.push({
+                ...asset.inspections[0],
+                id: 3,
+                completed_at: '2026-09-17T11:10:00Z',
+            });
+            rerender(
+                <FleetMaintenanceSection asset={asset} canMaintain={true} />,
+            );
+            expect(
+                screen.getByText('Post-Repair: Verified'),
+            ).toBeInTheDocument();
+        },
+    );
+
     it('displays "Pending Repair Completion" and provides "Record repair completion" action for authorized maintainers', () => {
         const asset = createMockAsset();
 

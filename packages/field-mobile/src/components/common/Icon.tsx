@@ -47,6 +47,9 @@ export type IconName =
     | 'search'
     | 'sun'
     | 'moon'
+    | 'cloud'
+    | 'download'
+    | 'trash'
     | 'chevron-up';
 
 export interface IconProps {
@@ -233,6 +236,18 @@ export const Icon: React.FC<IconProps> = ({
             return <Ionicons name="sunny-outline" size={size} color={color} />;
         case 'moon':
             return <Ionicons name="moon-outline" size={size} color={color} />;
+        case 'cloud':
+            return <Ionicons name="cloud-outline" size={size} color={color} />;
+        case 'download':
+            return (
+                <Ionicons
+                    name="cloud-download-outline"
+                    size={size}
+                    color={color}
+                />
+            );
+        case 'trash':
+            return <Ionicons name="trash-outline" size={size} color={color} />;
         case 'chevron-up':
             return <Ionicons name="chevron-up" size={size} color={color} />;
         default:

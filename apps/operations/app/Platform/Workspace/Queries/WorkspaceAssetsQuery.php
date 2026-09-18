@@ -71,6 +71,7 @@ final class WorkspaceAssetsQuery
         $paginator = $query
             ->withCount(['maintenanceWorkOrders as blocking_work_orders_count' => fn ($q) => $q->where('dispatch_blocking', true)->whereNull('released_at')])
             ->with([
+                'documents.latestAttachment',
                 'inspections' => fn ($q) => $q->latest('completed_at')->limit(10),
                 'maintenanceWorkOrders' => fn ($q) => $q->latest('created_at')->limit(10),
                 'activeOperatorShift.user:id,name',

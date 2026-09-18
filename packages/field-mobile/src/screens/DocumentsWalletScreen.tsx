@@ -1,5 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
+    ActivityIndicator,
+    Alert,
+    Image,
     Modal,
     Pressable,
     ScrollView,
@@ -8,9 +11,11 @@ import {
     TextInput,
     View,
 } from 'react-native';
+import { useAuth } from '../auth/AuthContext';
 import { Icon } from '../components/common/Icon';
 import { TileScreenHeader } from '../components/layout/tile-screen-header';
 import { colors, shadows } from '../components/nativeStyles';
+import { WalletService } from '../services/walletService';
 import { useTheme } from '../theme';
 import type { ComplianceDocument, DocumentCategory } from '../types/index';
 
@@ -18,75 +23,8 @@ export interface DocumentsWalletScreenProps {
     onBack?: () => void;
     assetCode?: string;
     operatorName?: string;
+    assignedAssets?: Array<{ assetCode: string; assetName?: string }>;
 }
-
-const DEFAULT_DOCUMENTS: ComplianceDocument[] = [
-    {
-        id: 'doc-permit-01',
-        category: 'road_permits',
-        title: 'DPWH Special Heavy-Load Road Transit Permit',
-        documentNumber: 'DPWH-NCR-2026-SP-8821',
-        issuingAuthority: 'Department of Public Works and Highways (DPWH)',
-        issuedDate: '2026-08-01',
-        expiryDate: '2026-11-30',
-        assetCode: 'ALB-CRN-050',
-        status: 'valid',
-        fileSizeLabel: '1.4 MB · PDF',
-        notes: 'Permits 50-Ton all-terrain crane transit along C-5, EDSA, and NLEX during designated off-peak travel window (10:00 PM – 4:00 AM).',
-    },
-    {
-        id: 'doc-loadtest-01',
-        category: 'load_test_certs',
-        title: 'DOLE-OSHC 3rd-Party Annual Crane Load Test Certificate',
-        documentNumber: 'DOLE-BWC-CRN-99120',
-        issuingAuthority: 'Bureau of Working Conditions (DOLE-OSHC Accredited)',
-        issuedDate: '2026-03-15',
-        expiryDate: '2027-03-14',
-        assetCode: 'ALB-CRN-050',
-        status: 'valid',
-        fileSizeLabel: '2.8 MB · PDF',
-        notes: 'Passed 125% overload proof test. Wire ropes, outrigger rams, and boom sections certified operational.',
-    },
-    {
-        id: 'doc-license-01',
-        category: 'operator_licenses',
-        title: 'TESDA Heavy Equipment Operator (Mobile Crane) NC-III',
-        documentNumber: 'TESDA-NC3-CRN-449102',
-        issuingAuthority:
-            'Technical Education and Skills Development Authority (TESDA)',
-        issuedDate: '2025-05-10',
-        expiryDate: '2030-05-09',
-        operatorName: 'Alex Rivera',
-        status: 'valid',
-        fileSizeLabel: '850 KB · PDF',
-        notes: 'Certified for hydraulic mobile cranes up to 100 metric tons capacity.',
-    },
-    {
-        id: 'doc-insurance-01',
-        category: 'road_permits',
-        title: 'Comprehensive Machinery & Third-Party Liability Insurance',
-        documentNumber: 'MAPFRE-INS-2026-CRN050',
-        issuingAuthority: 'Mapfre Insular Insurance Corp.',
-        issuedDate: '2026-01-01',
-        expiryDate: '2026-12-31',
-        assetCode: 'ALB-CRN-050',
-        status: 'valid',
-        fileSizeLabel: '1.1 MB · PDF',
-        notes: 'Full commercial site liability and machine hull damage coverage across Philippine territory.',
-    },
-    {
-        id: 'doc-dr-01',
-        category: 'delivery_receipts',
-        title: 'Job Dispatch Delivery Receipt & Work Ticket',
-        documentNumber: 'DR-2026-0891-DMCI',
-        issuingAuthority: 'Alibaton Heavy Equipment Operations',
-        issuedDate: '2026-08-31',
-        assetCode: 'ALB-CRN-050',
-        status: 'valid',
-        fileSizeLabel: '640 KB · PDF',
-        notes: 'Dispatched for DMCI Power & Infra project. Dual-party site sign-off pending.',
-    },
-];
 
 const CATEGORIES: Array<{ key: DocumentCategory | 'all'; label: string }> = [
     { key: 'all', label: 'All Documents' },
@@ -100,8 +38,15 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
     onBack,
     assetCode = 'ALB-CRN-050',
     operatorName = 'Alex Rivera',
+    assignedAssets,
 }) => {
     const { isDarkHud } = useTheme();
+    const [activeAssetCode, setActiveAssetCode] = useState<string>(
+        assetCode ||
+            (assignedAssets && assignedAssets.length > 0
+                ? assignedAssets[0].assetCode
+                : ''),
+    );
     const [selectedCategory, setSelectedCategory] = useState<
         DocumentCategory | 'all'
     >('all');
@@ -112,24 +57,169 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
     const [modalViewMode, setModalViewMode] = useState<'pdf' | 'summary'>(
         'pdf',
     );
+    const { apiClient, user } = useAuth();
+    const [documents, setDocuments] = useState<ComplianceDocument[]>([]);
+    const [isLoading, setIsLoading] = useState(Boolean(user?.id));
+    const [isDownloading, setIsDownloading] = useState(false);
+
+    const userId = user?.id;
+
+    useEffect(() => {
+        let isMounted = true;
+
+        if (!userId) {
+            return;
+        }
+
+        const loadDocs = async () => {
+            setIsLoading(true);
+
+            try {
+                let docs: ComplianceDocument[] = [];
+
+                if (activeAssetCode) {
+                    const assetDocs = await WalletService.getDocuments(
+                        apiClient,
+                        userId,
+                        activeAssetCode,
+                    );
+
+                    docs = [...assetDocs];
+                }
+
+                const personnelDocs = await WalletService.getDocuments(
+                    apiClient,
+                    userId,
+                );
+
+                const seen = new Set<string>();
+                const combined: ComplianceDocument[] = [];
+
+                for (const d of [...docs, ...personnelDocs]) {
+                    const key = `${d.assetCode ? `asset_${d.assetCode}` : 'personnel'}_${d.id}`;
+
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        combined.push(d);
+                    }
+                }
+
+                if (isMounted) {
+                    setDocuments(combined);
+                }
+            } catch (err) {
+                console.error(
+                    '[DocumentsWalletScreen] Failed to load documents:',
+                    err,
+                );
+            } finally {
+                if (isMounted) {
+                    setIsLoading(false);
+                }
+            }
+        };
+
+        void loadDocs();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [userId, activeAssetCode, apiClient]);
+
+    const handleMakeOffline = async (doc: ComplianceDocument) => {
+        if (!user || !doc.fileUri) {
+            return;
+        }
+
+        try {
+            setIsDownloading(true);
+
+            const targetScope =
+                doc.assetCode ||
+                (doc.operatorName ? undefined : activeAssetCode);
+
+            const updated = await WalletService.makeAvailableOffline(
+                doc,
+                user.id,
+                apiClient,
+                targetScope,
+            );
+
+            setDocuments((prev) =>
+                prev.map((d) =>
+                    (d.assetCode ?? '') === (updated.assetCode ?? '') &&
+                    d.id === updated.id
+                        ? updated
+                        : d,
+                ),
+            );
+            setViewingDoc(updated);
+            Alert.alert('Success', 'Document is now available offline');
+        } catch {
+            Alert.alert(
+                'Download Failed',
+                'Could not make document available offline',
+            );
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
+    const handleRemoveOffline = async (doc: ComplianceDocument) => {
+        if (!user) {
+            return;
+        }
+
+        try {
+            const targetScope =
+                doc.assetCode ||
+                (doc.operatorName ? undefined : activeAssetCode);
+
+            const updated = await WalletService.removeOfflineCopy(
+                doc,
+                user.id,
+                targetScope,
+            );
+
+            setDocuments((prev) =>
+                prev.map((d) =>
+                    (d.assetCode ?? '') === (updated.assetCode ?? '') &&
+                    d.id === updated.id
+                        ? updated
+                        : d,
+                ),
+            );
+            setViewingDoc(updated);
+            Alert.alert('Success', 'Offline copy removed from device');
+        } catch {
+            Alert.alert('Error', 'Failed to remove local copy');
+        }
+    };
 
     const filteredDocs = useMemo(() => {
-        return DEFAULT_DOCUMENTS.filter((doc) => {
+        return documents.filter((doc) => {
             const matchesCategory =
                 selectedCategory === 'all' || doc.category === selectedCategory;
             const query = searchQuery.trim().toLowerCase();
             const matchesQuery =
                 !query ||
-                doc.title.toLowerCase().includes(query) ||
-                doc.documentNumber.toLowerCase().includes(query) ||
-                doc.issuingAuthority.toLowerCase().includes(query);
+                (doc.title && doc.title.toLowerCase().includes(query)) ||
+                (doc.documentNumber &&
+                    doc.documentNumber.toLowerCase().includes(query)) ||
+                (doc.issuingAuthority &&
+                    doc.issuingAuthority.toLowerCase().includes(query));
 
             return matchesCategory && matchesQuery;
         });
-    }, [selectedCategory, searchQuery]);
+    }, [selectedCategory, searchQuery, documents]);
 
-    const getStatusStyle = (status: ComplianceDocument['status']) => {
-        switch (status) {
+    const getStatusStyle = (statusInput: any) => {
+        const rawStatus =
+            typeof statusInput === 'object' && statusInput !== null
+                ? (statusInput.value || statusInput.label || '').toLowerCase()
+                : String(statusInput || '').toLowerCase();
+
+        switch (rawStatus) {
             case 'valid':
                 return {
                     label: 'Valid',
@@ -158,6 +248,43 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                     bg: isDarkHud ? 'rgba(239, 68, 68, 0.2)' : colors.redLight,
                     border: isDarkHud ? '#DC2626' : colors.redBorder,
                 };
+            case 'revoked':
+                return {
+                    label: 'Revoked',
+                    icon: 'close' as const,
+                    color: isDarkHud ? '#F87171' : colors.redDark,
+                    bg: isDarkHud ? 'rgba(239, 68, 68, 0.2)' : colors.redLight,
+                    border: isDarkHud ? '#DC2626' : colors.redBorder,
+                };
+            case 'superseded':
+                return {
+                    label: 'Superseded',
+                    icon: 'clock' as const,
+                    color: isDarkHud ? '#94A3B8' : '#64748B',
+                    bg: isDarkHud ? 'rgba(148, 163, 184, 0.15)' : '#F1F5F9',
+                    border: isDarkHud ? '#475569' : '#CBD5E1',
+                };
+            case 'no_expiration':
+                return {
+                    label: 'No Expiry Date',
+                    icon: 'document' as const,
+                    color: isDarkHud ? '#94A3B8' : '#64748B',
+                    bg: isDarkHud ? 'rgba(148, 163, 184, 0.15)' : '#F1F5F9',
+                    border: isDarkHud ? '#475569' : '#CBD5E1',
+                };
+            default:
+                return {
+                    label:
+                        typeof statusInput === 'object' && statusInput?.label
+                            ? statusInput.label
+                            : 'Valid',
+                    icon: 'check' as const,
+                    color: isDarkHud ? '#34D399' : colors.greenDark,
+                    bg: isDarkHud
+                        ? 'rgba(5, 150, 105, 0.2)'
+                        : colors.greenLight,
+                    border: isDarkHud ? '#059669' : colors.greenBorder,
+                };
         }
     };
 
@@ -172,9 +299,67 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                 backTestID="docs-back-button"
                 category="Permits & Certs"
                 onBack={onBack}
-                subtitle={`${assetCode} · ${operatorName}`}
+                subtitle={`${activeAssetCode || 'Unit'} · ${operatorName}`}
                 title="Documents & Permits"
             />
+
+            {/* Multi-Asset Selector Bar */}
+            {assignedAssets && assignedAssets.length > 1 ? (
+                <View style={styles.assetSelectorSection}>
+                    <ScrollView
+                        contentContainerStyle={styles.assetSelectorRail}
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                    >
+                        {assignedAssets.map((asset) => {
+                            const isSelected =
+                                activeAssetCode === asset.assetCode;
+
+                            return (
+                                <Pressable
+                                    accessibilityRole="button"
+                                    key={asset.assetCode}
+                                    onPress={() =>
+                                        setActiveAssetCode(asset.assetCode)
+                                    }
+                                    style={[
+                                        styles.assetChip,
+                                        isDarkHud && styles.assetChipDark,
+                                        isSelected && styles.assetChipActive,
+                                        isDarkHud &&
+                                            isSelected &&
+                                            styles.assetChipActiveDark,
+                                    ]}
+                                    testID={`asset-selector-${asset.assetCode}`}
+                                >
+                                    <Icon
+                                        color={
+                                            isSelected
+                                                ? '#FFFFFF'
+                                                : isDarkHud
+                                                  ? colors.hudTextDim
+                                                  : colors.muted
+                                        }
+                                        name="truck"
+                                        size={12}
+                                    />
+                                    <Text
+                                        style={[
+                                            styles.assetChipText,
+                                            isDarkHud &&
+                                                styles.assetChipTextDark,
+                                            isSelected &&
+                                                styles.assetChipTextActive,
+                                        ]}
+                                    >
+                                        {asset.assetCode}
+                                    </Text>
+                                </Pressable>
+                            );
+                        })}
+                    </ScrollView>
+                </View>
+            ) : null}
 
             {/* Integrated Search Input */}
             <View style={styles.searchSection}>
@@ -234,10 +419,9 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                         const isSelected = selectedCategory === cat.key;
                         const isAll = cat.key === 'all';
                         const count = isAll
-                            ? DEFAULT_DOCUMENTS.length
-                            : DEFAULT_DOCUMENTS.filter(
-                                  (d) => d.category === cat.key,
-                              ).length;
+                            ? documents.length
+                            : documents.filter((d) => d.category === cat.key)
+                                  .length;
 
                         return (
                             <Pressable
@@ -329,216 +513,293 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
             </View>
 
             {/* Streamlined Industrial Document Cards */}
-            <ScrollView
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-                style={styles.scrollView}
-            >
-                {filteredDocs.length === 0 ? (
-                    <View
-                        style={[
-                            styles.emptyCard,
-                            isDarkHud && styles.emptyCardDark,
-                        ]}
-                    >
-                        <Icon
-                            color={isDarkHud ? '#64748B' : colors.muted}
-                            name="document"
-                            size={32}
-                        />
-                        <Text
+            {isLoading ? (
+                <View
+                    style={{
+                        flex: 1,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                    }}
+                >
+                    <ActivityIndicator size="large" color={colors.blueDark} />
+                </View>
+            ) : (
+                <ScrollView
+                    contentContainerStyle={styles.scrollContent}
+                    showsVerticalScrollIndicator={false}
+                    style={styles.scrollView}
+                >
+                    {filteredDocs.length === 0 ? (
+                        <View
                             style={[
-                                styles.emptyTitle,
-                                isDarkHud && styles.emptyTitleDark,
+                                styles.emptyCard,
+                                isDarkHud && styles.emptyCardDark,
                             ]}
                         >
-                            No Records Found
-                        </Text>
-                        <Text
-                            style={[
-                                styles.emptySubtitle,
-                                isDarkHud && styles.emptySubtitleDark,
-                            ]}
-                        >
-                            {searchQuery
-                                ? `No permits matching "${searchQuery}".`
-                                : 'No documents in this category.'}
-                        </Text>
-                    </View>
-                ) : (
-                    filteredDocs.map((doc) => {
-                        const status = getStatusStyle(doc.status);
-
-                        return (
-                            <View
-                                key={doc.id}
+                            <Icon
+                                color={isDarkHud ? '#64748B' : colors.muted}
+                                name="document"
+                                size={32}
+                            />
+                            <Text
                                 style={[
-                                    styles.docCardContainer,
-                                    isDarkHud && styles.docCardContainerDark,
+                                    styles.emptyTitle,
+                                    isDarkHud && styles.emptyTitleDark,
                                 ]}
-                                testID={`doc-card-${doc.id}`}
                             >
-                                <Pressable
-                                    accessibilityLabel={`View ${doc.title}`}
-                                    accessibilityRole="button"
-                                    onPress={() => {
-                                        setViewingDoc(doc);
-                                        setModalViewMode('pdf');
-                                    }}
-                                    style={({ pressed }) => [
-                                        styles.docCardPressable,
-                                        pressed && styles.cardPressed,
+                                No Records Found
+                            </Text>
+                            <Text
+                                style={[
+                                    styles.emptySubtitle,
+                                    isDarkHud && styles.emptySubtitleDark,
+                                ]}
+                            >
+                                {searchQuery
+                                    ? `No permits matching "${searchQuery}".`
+                                    : 'No documents in this category.'}
+                            </Text>
+                        </View>
+                    ) : (
+                        filteredDocs.map((doc) => {
+                            const status = getStatusStyle(doc.status);
+
+                            return (
+                                <View
+                                    key={`${doc.assetCode ? `asset_${doc.assetCode}` : 'personnel'}_${doc.id}`}
+                                    style={[
+                                        styles.docCardContainer,
+                                        isDarkHud &&
+                                            styles.docCardContainerDark,
                                     ]}
-                                    testID={`view-doc-btn-${doc.id}`}
+                                    testID={`doc-card-${doc.id}`}
                                 >
-                                    {/* Top Metadata Row: Status & Mono ID */}
-                                    <View style={styles.cardTopRow}>
+                                    <Pressable
+                                        accessibilityLabel={`View ${doc.title}`}
+                                        accessibilityRole="button"
+                                        onPress={() => {
+                                            setViewingDoc(doc);
+                                            setModalViewMode('pdf');
+                                        }}
+                                        style={({ pressed }) => [
+                                            styles.docCardPressable,
+                                            pressed && styles.cardPressed,
+                                        ]}
+                                        testID={`view-doc-btn-${doc.id}`}
+                                    >
+                                        {/* Top Metadata Row: Status & Mono ID */}
+                                        <View style={styles.cardTopRow}>
+                                            <Text
+                                                style={[
+                                                    styles.docNumberMono,
+                                                    isDarkHud &&
+                                                        styles.docNumberMonoDark,
+                                                ]}
+                                            >
+                                                {doc.documentNumber}
+                                            </Text>
+
+                                            <View
+                                                style={{
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center',
+                                                    gap: 6,
+                                                }}
+                                            >
+                                                <View
+                                                    style={[
+                                                        styles.offlineBadge,
+                                                        doc.isAvailableOffline
+                                                            ? styles.offlineBadgeReady
+                                                            : styles.offlineBadgeCloud,
+                                                        isDarkHud &&
+                                                            (doc.isAvailableOffline
+                                                                ? styles.offlineBadgeReadyDark
+                                                                : styles.offlineBadgeCloudDark),
+                                                    ]}
+                                                >
+                                                    <Icon
+                                                        color={
+                                                            doc.isAvailableOffline
+                                                                ? isDarkHud
+                                                                    ? '#34D399'
+                                                                    : colors.greenDark
+                                                                : isDarkHud
+                                                                  ? colors.hudTextDim
+                                                                  : colors.muted
+                                                        }
+                                                        name={
+                                                            doc.isAvailableOffline
+                                                                ? 'check'
+                                                                : 'cloud'
+                                                        }
+                                                        size={10}
+                                                    />
+                                                    <Text
+                                                        style={[
+                                                            styles.offlineBadgeText,
+                                                            {
+                                                                color: doc.isAvailableOffline
+                                                                    ? isDarkHud
+                                                                        ? '#34D399'
+                                                                        : colors.greenDark
+                                                                    : isDarkHud
+                                                                      ? colors.hudTextDim
+                                                                      : colors.muted,
+                                                            },
+                                                        ]}
+                                                    >
+                                                        {doc.isAvailableOffline
+                                                            ? 'Offline'
+                                                            : 'Online'}
+                                                    </Text>
+                                                </View>
+
+                                                <View
+                                                    style={[
+                                                        styles.statusPill,
+                                                        {
+                                                            backgroundColor:
+                                                                status.bg,
+                                                            borderColor:
+                                                                status.border,
+                                                        },
+                                                    ]}
+                                                >
+                                                    <Icon
+                                                        color={status.color}
+                                                        name={status.icon}
+                                                        size={10}
+                                                    />
+                                                    <Text
+                                                        style={[
+                                                            styles.statusPillText,
+                                                            {
+                                                                color: status.color,
+                                                            },
+                                                        ]}
+                                                    >
+                                                        {status.label}
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                        </View>
+
+                                        {/* Document Title */}
                                         <Text
+                                            numberOfLines={2}
                                             style={[
-                                                styles.docNumberMono,
+                                                styles.docCardTitle,
                                                 isDarkHud &&
-                                                    styles.docNumberMonoDark,
+                                                    styles.docCardTitleDark,
                                             ]}
                                         >
-                                            {doc.documentNumber}
+                                            {doc.title}
                                         </Text>
 
+                                        {/* Authority & Validity */}
+                                        <View style={styles.metaRow}>
+                                            <Text
+                                                numberOfLines={1}
+                                                style={[
+                                                    styles.authorityText,
+                                                    isDarkHud &&
+                                                        styles.authorityTextDark,
+                                                ]}
+                                            >
+                                                {doc.issuingAuthority}
+                                            </Text>
+                                            <Text
+                                                style={[
+                                                    styles.validityDate,
+                                                    isDarkHud &&
+                                                        styles.validityDateDark,
+                                                ]}
+                                            >
+                                                Exp:{' '}
+                                                {doc.expiryDate ||
+                                                    'No Expiry Date'}
+                                            </Text>
+                                        </View>
+
+                                        {/* Operational Restrictions Callout */}
+                                        {doc.notes ? (
+                                            <View
+                                                style={[
+                                                    styles.conditionStrip,
+                                                    isDarkHud &&
+                                                        styles.conditionStripDark,
+                                                ]}
+                                            >
+                                                <Text
+                                                    numberOfLines={2}
+                                                    style={[
+                                                        styles.conditionText,
+                                                        isDarkHud &&
+                                                            styles.conditionTextDark,
+                                                    ]}
+                                                >
+                                                    {doc.notes}
+                                                </Text>
+                                            </View>
+                                        ) : null}
+
+                                        {/* Bottom Action Footer: Clean file tag and tap prompt */}
                                         <View
                                             style={[
-                                                styles.statusPill,
-                                                {
-                                                    backgroundColor: status.bg,
-                                                    borderColor: status.border,
-                                                },
-                                            ]}
-                                        >
-                                            <Icon
-                                                color={status.color}
-                                                name={status.icon}
-                                                size={10}
-                                            />
-                                            <Text
-                                                style={[
-                                                    styles.statusPillText,
-                                                    { color: status.color },
-                                                ]}
-                                            >
-                                                {status.label}
-                                            </Text>
-                                        </View>
-                                    </View>
-
-                                    {/* Document Title */}
-                                    <Text
-                                        numberOfLines={2}
-                                        style={[
-                                            styles.docCardTitle,
-                                            isDarkHud &&
-                                                styles.docCardTitleDark,
-                                        ]}
-                                    >
-                                        {doc.title}
-                                    </Text>
-
-                                    {/* Authority & Validity */}
-                                    <View style={styles.metaRow}>
-                                        <Text
-                                            numberOfLines={1}
-                                            style={[
-                                                styles.authorityText,
+                                                styles.cardFooter,
                                                 isDarkHud &&
-                                                    styles.authorityTextDark,
+                                                    styles.cardFooterDark,
                                             ]}
                                         >
-                                            {doc.issuingAuthority}
-                                        </Text>
-                                        <Text
-                                            style={[
-                                                styles.validityDate,
-                                                isDarkHud &&
-                                                    styles.validityDateDark,
-                                            ]}
-                                        >
-                                            Exp: {doc.expiryDate || 'Permanent'}
-                                        </Text>
-                                    </View>
-
-                                    {/* Operational Restrictions Callout */}
-                                    {doc.notes ? (
-                                        <View
-                                            style={[
-                                                styles.conditionStrip,
-                                                isDarkHud &&
-                                                    styles.conditionStripDark,
-                                            ]}
-                                        >
-                                            <Text
-                                                numberOfLines={2}
-                                                style={[
-                                                    styles.conditionText,
-                                                    isDarkHud &&
-                                                        styles.conditionTextDark,
-                                                ]}
-                                            >
-                                                {doc.notes}
-                                            </Text>
+                                            <View style={styles.fileTag}>
+                                                <Icon
+                                                    color={
+                                                        isDarkHud
+                                                            ? colors.hudAmber
+                                                            : colors.amberDark
+                                                    }
+                                                    name="file-text"
+                                                    size={13}
+                                                />
+                                                <Text
+                                                    style={[
+                                                        styles.fileTagText,
+                                                        isDarkHud &&
+                                                            styles.fileTagTextDark,
+                                                    ]}
+                                                >
+                                                    {doc.fileSizeLabel || 'PDF'}
+                                                </Text>
+                                            </View>
+                                            <View style={styles.tapPrompt}>
+                                                <Text
+                                                    style={[
+                                                        styles.tapPromptText,
+                                                        isDarkHud &&
+                                                            styles.tapPromptTextDark,
+                                                    ]}
+                                                >
+                                                    Inspect
+                                                </Text>
+                                                <Icon
+                                                    color={
+                                                        isDarkHud
+                                                            ? colors.hudTextDim
+                                                            : colors.muted
+                                                    }
+                                                    name="chevron-right"
+                                                    size={14}
+                                                />
+                                            </View>
                                         </View>
-                                    ) : null}
-
-                                    {/* Bottom Action Footer: Clean file tag and tap prompt */}
-                                    <View
-                                        style={[
-                                            styles.cardFooter,
-                                            isDarkHud && styles.cardFooterDark,
-                                        ]}
-                                    >
-                                        <View style={styles.fileTag}>
-                                            <Icon
-                                                color={
-                                                    isDarkHud
-                                                        ? colors.hudAmber
-                                                        : colors.amberDark
-                                                }
-                                                name="file-text"
-                                                size={13}
-                                            />
-                                            <Text
-                                                style={[
-                                                    styles.fileTagText,
-                                                    isDarkHud &&
-                                                        styles.fileTagTextDark,
-                                                ]}
-                                            >
-                                                {doc.fileSizeLabel || 'PDF'}
-                                            </Text>
-                                        </View>
-                                        <View style={styles.tapPrompt}>
-                                            <Text
-                                                style={[
-                                                    styles.tapPromptText,
-                                                    isDarkHud &&
-                                                        styles.tapPromptTextDark,
-                                                ]}
-                                            >
-                                                Inspect
-                                            </Text>
-                                            <Icon
-                                                color={
-                                                    isDarkHud
-                                                        ? colors.hudTextDim
-                                                        : colors.muted
-                                                }
-                                                name="chevron-right"
-                                                size={14}
-                                            />
-                                        </View>
-                                    </View>
-                                </Pressable>
-                            </View>
-                        );
-                    })
-                )}
-            </ScrollView>
+                                    </Pressable>
+                                </View>
+                            );
+                        })
+                    )}
+                </ScrollView>
+            )}
 
             {/* DOT / DOLE Official PDF Inspection Modal Bottom Sheet */}
             {viewingDoc ? (
@@ -634,6 +895,88 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                         size={18}
                                     />
                                 </Pressable>
+                            </View>
+
+                            {/* Make Available Offline / Remove Offline Copy Actions */}
+                            <View style={styles.modalOfflineActionsBar}>
+                                {viewingDoc.isAvailableOffline ? (
+                                    <View style={styles.offlineActionRow}>
+                                        <View style={styles.offlineStatusTag}>
+                                            <Icon
+                                                color="#059669"
+                                                name="check"
+                                                size={14}
+                                            />
+                                            <Text
+                                                style={
+                                                    styles.offlineStatusTagText
+                                                }
+                                            >
+                                                Cached on Device (Offline Ready)
+                                            </Text>
+                                        </View>
+                                        <Pressable
+                                            accessibilityLabel="Remove offline copy"
+                                            accessibilityRole="button"
+                                            onPress={() =>
+                                                handleRemoveOffline(viewingDoc)
+                                            }
+                                            style={
+                                                styles.removeOfflineActionBtn
+                                            }
+                                            testID="remove-offline-copy-btn"
+                                        >
+                                            <Icon
+                                                color="#DC2626"
+                                                name="trash"
+                                                size={13}
+                                            />
+                                            <Text
+                                                style={
+                                                    styles.removeOfflineActionText
+                                                }
+                                            >
+                                                Remove Copy
+                                            </Text>
+                                        </Pressable>
+                                    </View>
+                                ) : viewingDoc.fileUri ? (
+                                    <Pressable
+                                        accessibilityLabel="Make document available offline"
+                                        accessibilityRole="button"
+                                        disabled={isDownloading}
+                                        onPress={() =>
+                                            handleMakeOffline(viewingDoc)
+                                        }
+                                        style={[
+                                            styles.makeOfflineActionBtn,
+                                            isDownloading && { opacity: 0.6 },
+                                        ]}
+                                        testID="make-offline-btn"
+                                    >
+                                        {isDownloading ? (
+                                            <ActivityIndicator
+                                                color="#FFFFFF"
+                                                size="small"
+                                            />
+                                        ) : (
+                                            <>
+                                                <Icon
+                                                    color="#FFFFFF"
+                                                    name="download"
+                                                    size={14}
+                                                />
+                                                <Text
+                                                    style={
+                                                        styles.makeOfflineActionText
+                                                    }
+                                                >
+                                                    Make Available Offline
+                                                </Text>
+                                            </>
+                                        )}
+                                    </Pressable>
+                                ) : null}
                             </View>
 
                             {/* Segmented Mode Switcher: Official PDF vs Field Summary */}
@@ -740,6 +1083,50 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                                 styles.pdfReaderCanvasDark,
                                         ]}
                                     >
+                                        {!viewingDoc.isAvailableOffline ? (
+                                            <View
+                                                style={
+                                                    styles.offlineNoticeBanner
+                                                }
+                                            >
+                                                <Icon
+                                                    name="alert"
+                                                    size={16}
+                                                    color="#92400E"
+                                                />
+                                                <Text
+                                                    style={
+                                                        styles.offlineNoticeText
+                                                    }
+                                                >
+                                                    Viewing cached document
+                                                    details. Tap &quot;Save
+                                                    Offline&quot; below to make
+                                                    available without network
+                                                    connectivity.
+                                                </Text>
+                                            </View>
+                                        ) : null}
+
+                                        {viewingDoc.localFileUri &&
+                                        (viewingDoc.localFileUri.endsWith(
+                                            '.png',
+                                        ) ||
+                                            viewingDoc.localFileUri.endsWith(
+                                                '.jpg',
+                                            ) ||
+                                            viewingDoc.localFileUri.endsWith(
+                                                '.jpeg',
+                                            )) ? (
+                                            <Image
+                                                source={{
+                                                    uri: viewingDoc.localFileUri,
+                                                }}
+                                                style={styles.offlineDocImage}
+                                                resizeMode="contain"
+                                            />
+                                        ) : null}
+
                                         <View
                                             style={[
                                                 styles.pdfPaperSheet,
@@ -858,15 +1245,10 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                                         styles.pdfPreambleText
                                                     }
                                                 >
-                                                    This certifies that the
-                                                    heavy equipment unit
-                                                    designated below has
-                                                    fulfilled all technical
-                                                    standards pursuant to
-                                                    Philippine Highway &
-                                                    Equipment Safety Regulations
-                                                    and is authorized for active
-                                                    field operation.
+                                                    {viewingDoc.operatorName &&
+                                                    !viewingDoc.assetCode
+                                                        ? 'This certifies that the personnel credential holder designated below is duly qualified and authorized under operating safety standards.'
+                                                        : 'This certifies that the operational unit designated below has fulfilled all technical standards pursuant to applicable safety regulations and is authorized for active field operation.'}
                                                 </Text>
 
                                                 {/* Formal Government Spec Grid */}
@@ -1009,7 +1391,7 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                                                 ]}
                                                             >
                                                                 {viewingDoc.expiryDate ||
-                                                                    'Permanent'}
+                                                                    'No Expiry Date'}
                                                             </Text>
                                                         </View>
                                                     </View>
@@ -1061,16 +1443,16 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                                                 styles.pdfSigName
                                                             }
                                                         >
-                                                            ENGR. RAMON VELASCO,
-                                                            PE
+                                                            {viewingDoc.issuingAuthority ||
+                                                                'AUTHORIZED REGISTRAR'}
                                                         </Text>
                                                         <Text
                                                             style={
                                                                 styles.pdfSigTitle
                                                             }
                                                         >
-                                                            Chief Highway Safety
-                                                            Inspector
+                                                            Certification
+                                                            Authority
                                                         </Text>
                                                     </View>
 
@@ -1137,9 +1519,21 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                                                 styles.pdfVerifySub
                                                             }
                                                         >
-                                                            Synchronized with
-                                                            DPWH & DOLE-OSHC
-                                                            registry
+                                                            {viewingDoc.lastSynchronized
+                                                                ? `Synchronized with operations on ${new Date(viewingDoc.lastSynchronized).toLocaleDateString()}`
+                                                                : 'Synchronized with Operations System'}
+                                                        </Text>
+                                                        <Text
+                                                            style={
+                                                                styles.pdfRevocationNotice
+                                                            }
+                                                        >
+                                                            Note: Offline
+                                                            verification copy.
+                                                            Real-time
+                                                            supersessions or
+                                                            revocations require
+                                                            active connection.
                                                         </Text>
                                                     </View>
                                                 </View>
@@ -1153,9 +1547,9 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                                             styles.pdfFooterText
                                                         }
                                                     >
-                                                        PAGE 1 OF 1 • OFFICIAL
-                                                        ELECTRONIC CERTIFICATE •
-                                                        AUTHENTICATED VIA CORE-2
+                                                        {viewingDoc.localFileUri
+                                                            ? `LOCAL DURABLE STORAGE • ${viewingDoc.localFileUri.split('/').pop()} • VERIFIED`
+                                                            : 'PAGE 1 OF 1 • OFFICIAL ELECTRONIC CERTIFICATE • AUTHENTICATED VIA CORE-2'}
                                                     </Text>
                                                 </View>
                                             </View>
@@ -1339,7 +1733,7 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                                 >
                                                     {viewingDoc.issuedDate} ➔{' '}
                                                     {viewingDoc.expiryDate ||
-                                                        'Permanent'}
+                                                        'No Expiry Date'}
                                                 </Text>
                                             </View>
                                         </View>
@@ -2151,6 +2545,36 @@ const styles = StyleSheet.create({
         fontSize: 8,
         marginTop: 1,
     },
+    pdfRevocationNotice: {
+        color: '#92400E',
+        fontSize: 7.5,
+        fontStyle: 'italic',
+        marginTop: 2,
+    },
+    offlineNoticeBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        backgroundColor: '#FEF3C7',
+        borderColor: '#FDE68A',
+        borderWidth: 1,
+        borderRadius: 8,
+        padding: 10,
+        marginBottom: 12,
+    },
+    offlineNoticeText: {
+        flex: 1,
+        fontSize: 11,
+        color: '#92400E',
+        fontWeight: '600',
+    },
+    offlineDocImage: {
+        width: '100%',
+        height: 350,
+        borderRadius: 8,
+        marginBottom: 12,
+        backgroundColor: '#0F172A',
+    },
     pdfPageFooter: {
         alignItems: 'center',
         borderTopColor: '#E2E8F0',
@@ -2376,5 +2800,135 @@ const styles = StyleSheet.create({
     pressed: {
         opacity: 0.82,
         transform: [{ scale: 0.96 }],
+    },
+    assetSelectorSection: {
+        paddingHorizontal: 16,
+        paddingBottom: 8,
+    },
+    assetSelectorRail: {
+        gap: 8,
+    },
+    assetChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 8,
+        backgroundColor: '#F1F5F9',
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+    },
+    assetChipDark: {
+        backgroundColor: colors.surfaceDark,
+        borderColor: colors.hudBorder,
+    },
+    assetChipActive: {
+        backgroundColor: colors.blueDark,
+        borderColor: colors.blueDark,
+    },
+    assetChipActiveDark: {
+        backgroundColor: colors.blueDark,
+        borderColor: colors.blueDark,
+    },
+    assetChipText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: colors.muted,
+    },
+    assetChipTextDark: {
+        color: colors.hudTextDim,
+    },
+    assetChipTextActive: {
+        color: '#FFFFFF',
+    },
+    offlineBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 6,
+        borderWidth: 1,
+    },
+    offlineBadgeReady: {
+        backgroundColor: colors.greenLight,
+        borderColor: colors.greenBorder,
+    },
+    offlineBadgeReadyDark: {
+        backgroundColor: 'rgba(5, 150, 105, 0.2)',
+        borderColor: '#059669',
+    },
+    offlineBadgeCloud: {
+        backgroundColor: '#F1F5F9',
+        borderColor: '#E2E8F0',
+    },
+    offlineBadgeCloudDark: {
+        backgroundColor: 'rgba(148, 163, 184, 0.12)',
+        borderColor: colors.hudBorder,
+    },
+    offlineBadgeText: {
+        fontSize: 9,
+        fontWeight: '700',
+    },
+    syncLabelText: {
+        fontSize: 11,
+        color: colors.muted,
+        marginLeft: 4,
+    },
+    syncLabelTextDark: {
+        color: colors.hudTextDim,
+    },
+    modalOfflineActionsBar: {
+        paddingHorizontal: 16,
+        paddingBottom: 12,
+    },
+    offlineActionRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: '#ECFDF5',
+        borderRadius: 8,
+        padding: 10,
+        borderWidth: 1,
+        borderColor: '#A7F3D0',
+    },
+    offlineStatusTag: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    offlineStatusTagText: {
+        color: '#065F46',
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    removeOfflineActionBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
+        backgroundColor: '#FEE2E2',
+    },
+    removeOfflineActionText: {
+        color: '#DC2626',
+        fontSize: 11,
+        fontWeight: '700',
+    },
+    makeOfflineActionBtn: {
+        backgroundColor: colors.blueDark,
+        paddingVertical: 12,
+        borderRadius: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+    },
+    makeOfflineActionText: {
+        color: '#FFFFFF',
+        fontSize: 13,
+        fontWeight: '800',
     },
 });

@@ -745,8 +745,21 @@ describe('FleetSurface & Modular Fleet Components', () => {
             fireEvent.click(openFormBtn);
 
             expect(
-                screen.getByText('Submit Safety / Pre-Op Inspection'),
+                screen.getByText('Workshop / Post-Repair Verification'),
             ).toBeInTheDocument();
+
+            expect(
+                screen.queryByRole('option', { name: 'Pre-operation' }),
+            ).not.toBeInTheDocument();
+            expect(
+                screen.queryByRole('option', { name: 'Post-operation' }),
+            ).not.toBeInTheDocument();
+            fireEvent.change(screen.getByLabelText('Inspection type'), {
+                target: { value: 'post_repair' },
+            });
+            expect(screen.getByLabelText('Inspection type')).toHaveValue(
+                'post_repair',
+            );
 
             const remarksInput = screen.getByLabelText(/findings \/ remarks/i);
             fireEvent.change(remarksInput, {

@@ -3,6 +3,7 @@ import {
     ArrowLeft,
     Camera,
     ClipboardCheck,
+    FileText,
     Gauge,
     Radio,
     ShieldAlert,
@@ -15,6 +16,7 @@ import { Button, Panel } from '@/components/ui';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import { DvirStatusBadge } from '@/components/workspace/fleet/dvir-status-badge';
 import { DvirWalkaroundModal } from '@/components/workspace/fleet/dvir-walkaround-modal';
+import { FleetDocumentsSection } from '@/components/workspace/fleet/fleet-documents-section';
 import { FleetInspectionsSection } from '@/components/workspace/fleet/fleet-inspections-section';
 import { FleetMaintenanceSection } from '@/components/workspace/fleet/fleet-maintenance-section';
 import { FleetQuickActionToolbar } from '@/components/workspace/fleet/fleet-quick-action-toolbar';
@@ -49,7 +51,7 @@ export function FleetDetailPane({
     onBackToList,
 }: FleetDetailPaneProps) {
     const [activeTab, setActiveTab] = useState<
-        'overview' | 'status' | 'inspections' | 'maintenance'
+        'overview' | 'status' | 'inspections' | 'maintenance' | 'documents'
     >('overview');
 
     const [showDvirModal, setShowDvirModal] = useState(false);
@@ -456,6 +458,34 @@ export function FleetDetailPane({
                         {asset.maintenance_work_orders.length}
                     </span>
                 </button>
+                <button
+                    type="button"
+                    role="tab"
+                    id={`asset-tab-documents-${asset.id}`}
+                    aria-controls={`asset-tabpanel-documents-${asset.id}`}
+                    aria-selected={activeTab === 'documents'}
+                    tabIndex={activeTab === 'documents' ? 0 : -1}
+                    onClick={() => setActiveTab('documents')}
+                    className={cn(
+                        'flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden md:text-sm',
+                        activeTab === 'documents'
+                            ? 'border-brand-strong font-semibold text-brand-strong'
+                            : 'border-transparent text-ink-soft hover:text-ink',
+                    )}
+                >
+                    <FileText className="h-4 w-4" />
+                    Permits &amp; Docs
+                    <span
+                        className={cn(
+                            'rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums',
+                            (asset.documents?.length ?? 0) > 0
+                                ? 'bg-brand-soft text-brand-strong'
+                                : 'border border-line bg-surface-subtle text-ink-soft',
+                        )}
+                    >
+                        {asset.documents?.length ?? 0}
+                    </span>
+                </button>
             </div>
 
             {activeTab === 'overview' && (
@@ -651,6 +681,22 @@ export function FleetDetailPane({
                     <FleetMaintenanceSection
                         asset={asset}
                         canMaintain={capabilities.maintain_asset}
+                    />
+                </div>
+            )}
+
+            {activeTab === 'documents' && (
+                <div
+                    role="tabpanel"
+                    id={`asset-tabpanel-documents-${asset.id}`}
+                    aria-labelledby={`asset-tab-documents-${asset.id}`}
+                >
+                    <FleetDocumentsSection
+                        asset={asset}
+                        canManage={
+                            capabilities.maintain_asset ||
+                            capabilities.update_asset_status
+                        }
                     />
                 </div>
             )}

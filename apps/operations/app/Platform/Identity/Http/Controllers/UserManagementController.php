@@ -24,7 +24,12 @@ final class UserManagementController extends Controller
     {
         Gate::authorize(PermissionName::UsersManage->value);
 
-        return response()->json(['data' => User::query()->with('roles:id,name')->orderBy('name')->paginate(50)]);
+        return response()->json([
+            'data' => User::query()
+                ->with(['roles:id,name', 'personnelProfile', 'personnelCredentials.latestAttachment'])
+                ->orderBy('name')
+                ->paginate(50),
+        ]);
     }
 
     public function store(Request $request, RecordAuditEvent $audit): JsonResponse

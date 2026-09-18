@@ -99,6 +99,8 @@ Route::middleware(['auth', 'active', ValidateActiveSession::class, 'verified', '
     Route::post('/users/{user}/reset-password', [UserManagementController::class, 'resetPassword']);
     Route::patch('/users/{user}/personnel-profile', [PersonnelController::class, 'updateProfile']);
     Route::post('/users/{user}/credentials', [PersonnelController::class, 'storeCredential']);
+    Route::patch('/users/{user}/credentials/{credential}', [PersonnelController::class, 'updateCredential']);
+    Route::post('/users/{user}/credentials/{credential}/replace', [PersonnelController::class, 'replaceCredential']);
     Route::delete('/users/{user}/credentials/{credential}', [PersonnelController::class, 'destroyCredential']);
 });
 

@@ -24,6 +24,7 @@ import { FleetSurface } from '@/components/workspace/fleet';
 import { FuelSurface } from '@/components/workspace/fuel';
 import { GptRecommendationsSurface } from '@/components/workspace/gpt-workspace-section';
 import { NotificationsSurface } from '@/components/workspace/notifications-workspace-section';
+import { PersonnelWorkspaceSection } from '@/components/workspace/personnel/personnel-workspace-section';
 import { ReportsSurface } from '@/components/workspace/reports-workspace-section';
 import { formatDateTime } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
@@ -45,6 +46,7 @@ import type {
     SosIncidentViewModel,
     WorkspaceCapabilities,
     WorkspaceSection,
+    WorkspaceUserViewModel,
 } from '@/types/workspace';
 
 export function LiveWorkspaceSection({
@@ -69,6 +71,7 @@ export function LiveWorkspaceSection({
     archivedJobs = [],
     gptRecommendations = [],
     jobs = [],
+    users = [],
     activeSosIncidents,
     onSectionChange,
 }: {
@@ -93,6 +96,7 @@ export function LiveWorkspaceSection({
     archivedJobs?: ArchivedJobViewModel[];
     gptRecommendations?: GptRecommendationViewModel[];
     jobs?: DispatchJobViewModel[];
+    users?: WorkspaceUserViewModel[];
     activeSosIncidents?: SosIncidentViewModel[];
     onSectionChange?: (section: WorkspaceSection) => void;
 }) {
@@ -168,6 +172,14 @@ export function LiveWorkspaceSection({
                     recommendations={gptRecommendations}
                     capabilities={capabilities}
                     onSectionChange={onSectionChange}
+                />
+            );
+        case 'users':
+            return (
+                <PersonnelWorkspaceSection
+                    users={users ?? []}
+                    capabilities={capabilities}
+                    auditEvents={auditEvents}
                 />
             );
         case 'audit':

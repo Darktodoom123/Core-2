@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Dvir\Enums\DvirInspectionType;
+use App\Modules\Dvir\Models\DvirInspection;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
 use App\Shared\Assets\Enums\AssetStatus;
@@ -84,7 +85,7 @@ it('allows creating and releasing a maintenance work order via mobile api', func
 
     $this->withToken($token)
         ->postJson("/api/v1/assets/{$asset->id}/inspections", [
-            'type' => 'maintenance',
+            'type' => 'post_repair',
             'result' => 'passed',
             'checklist' => [
                 ['id' => '1', 'status' => 'good'],
@@ -274,7 +275,7 @@ it('keeps asset locked in maintenance if another blocking work order exists', fu
     // Perform passing inspection
     $this->withToken($token)
         ->postJson("/api/v1/assets/{$asset->id}/inspections", [
-            'type' => 'maintenance',
+            'type' => 'post_repair',
             'result' => 'passed',
             'checklist' => [['id' => '1', 'status' => 'good']],
         ]);
@@ -291,7 +292,7 @@ it('keeps asset locked in maintenance if another blocking work order exists', fu
     expect($asset->fresh()->status)->toBe(AssetStatus::UnderMaintenance);
 });
 
-it('rejects work order release when inspection is pre_operation rather than post-repair or maintenance', function (): void {
+it('rejects work order release when inspection is pre_operation rather than post-repair verification', function (): void {
     $user = User::factory()->create(['is_active' => true]);
     $user->givePermissionTo('equipment.maintain');
     $user->givePermissionTo('equipment.inspect');
@@ -519,7 +520,7 @@ it('allows authorized technician to release with managerial override and valid r
     expect($wo->fresh()->dispatch_blocking)->toBeFalse();
 });
 
-it('blocks work order release when a subsequent defect inspection occurred after post-repair inspection', function (): void {
+it('blocks work order release when a subsequent defect inspection occurred after post-repair inspection', function (string $source): void {
     $tech = User::factory()->create(['is_active' => true]);
     $tech->givePermissionTo('equipment.maintain');
     $tech->givePermissionTo('equipment.inspect');
@@ -539,6 +540,10 @@ it('blocks work order release when a subsequent defect inspection occurred after
         ]);
     $woId = $woResponse->json('data.id');
 
+    $this->withToken($token)->postJson("/api/v1/maintenance/{$woId}/complete", [
+        'work_performed' => ['Replaced wire rope'],
+    ])->assertOk();
+
     // 1. Post-repair inspection at T1 passes
     $this->withToken($token)
         ->postJson("/api/v1/assets/{$asset->id}/inspections", [
@@ -546,16 +551,28 @@ it('blocks work order release when a subsequent defect inspection occurred after
             'result' => 'passed',
             'checklist' => [['id' => '1', 'status' => 'good']],
             'findings' => 'Cable replaced and inspected',
-        ]);
+        ])->assertCreated();
 
     // 2. Subsequent inspection at T2 reports a new defect
-    $this->withToken($token)
-        ->postJson("/api/v1/assets/{$asset->id}/inspections", [
-            'type' => 'safety',
-            'result' => 'failed',
-            'checklist' => [['id' => '1', 'status' => 'bad']],
-            'findings' => 'Hook latch snapped during load test',
+    $this->travel(1)->minutes();
+    if ($source === 'dvir') {
+        DvirInspection::query()->create([
+            'user_id' => $tech->id,
+            'operational_asset_id' => $asset->id,
+            'inspection_type' => 'post_trip',
+            'has_defects' => true,
+            'critical_defects_count' => 0,
+            'completed_at' => now(),
         ]);
+    } else {
+        $this->withToken($token)
+            ->postJson("/api/v1/assets/{$asset->id}/inspections", [
+                'type' => 'safety',
+                'result' => 'failed',
+                'checklist' => [['id' => '1', 'status' => 'bad']],
+                'findings' => 'Hook latch snapped during load test',
+            ])->assertCreated();
+    }
 
     // 3. Attempt to release work order should be blocked due to subsequent unaddressed defect
     $releaseResponse = $this->withToken($token)
@@ -565,8 +582,9 @@ it('blocks work order release when a subsequent defect inspection occurred after
 
     $releaseResponse->assertUnprocessable();
     $releaseResponse->assertJsonValidationErrors(['inspection']);
+    $releaseResponse->assertJsonPath('errors.inspection.0', 'A subsequent inspection reported defects after post-repair verification. A new passing post-repair verification is required before release.');
     expect($asset->fresh()->status)->toBe(AssetStatus::UnderMaintenance);
-});
+})->with(['workshop', 'dvir']);
 
 it('rejects pre-trip DVIR from authorizing maintenance work order release', function (): void {
     $tech = User::factory()->create(['is_active' => true]);

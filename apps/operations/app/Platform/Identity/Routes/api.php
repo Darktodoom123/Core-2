@@ -2,6 +2,7 @@
 
 use App\Platform\Identity\Http\Controllers\Api\V1\AuthController;
 use App\Platform\Identity\Http\Controllers\Api\V1\DeviceTokenController;
+use App\Platform\Identity\Http\Controllers\Api\V1\PersonnelCredentialController;
 use App\Platform\Identity\Http\Resources\V1\UserResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -31,5 +32,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/auth/device-tokens', [DeviceTokenController::class, 'register'])->name('auth.device-tokens.register');
         Route::delete('/auth/device-tokens', [DeviceTokenController::class, 'revoke'])->name('auth.device-tokens.revoke');
         Route::post('/push-deliveries/opened', [DeviceTokenController::class, 'recordOpened'])->name('push-deliveries.opened');
+
+        Route::get('/personnel/credentials', [PersonnelCredentialController::class, 'index'])->name('personnel.credentials.index');
+        Route::get('/personnel/credentials/{credential}/download', [PersonnelCredentialController::class, 'download'])->name('personnel.credentials.download');
     });
 });

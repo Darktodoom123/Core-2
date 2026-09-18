@@ -1855,6 +1855,31 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     const resolvedClientName =
         activeJob?.client || jobs[0]?.client || 'Client Account';
 
+    const availableAssets = useMemo(() => {
+        const map = new Map<string, string>();
+
+        if (
+            resolvedAssetCode &&
+            resolvedAssetCode !== 'UNASSIGNED' &&
+            resolvedAssetCode !== 'Assigned Unit'
+        ) {
+            map.set(resolvedAssetCode, resolvedAssetName || resolvedAssetCode);
+        }
+
+        jobs.forEach((j) => {
+            j.asset_assignments?.forEach((a) => {
+                if (a.asset_code) {
+                    map.set(a.asset_code, a.asset_name || a.asset_code);
+                }
+            });
+        });
+
+        return Array.from(map.entries()).map(([code, name]) => ({
+            assetCode: code,
+            assetName: name,
+        }));
+    }, [jobs, resolvedAssetCode, resolvedAssetName]);
+
     useEffect(() => {
         if (
             !activeTrackingJob ||
@@ -2183,6 +2208,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                         ) : activeAppView === 'documents' ? (
                             <DocumentsWalletScreen
                                 assetCode={resolvedAssetCode}
+                                assignedAssets={availableAssets}
                                 onBack={() => setActiveAppView('main')}
                                 operatorName={resolvedOperatorName}
                             />

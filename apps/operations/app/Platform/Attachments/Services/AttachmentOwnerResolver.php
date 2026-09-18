@@ -3,8 +3,10 @@
 namespace App\Platform\Attachments\Services;
 
 use App\Modules\Dispatch\Models\DispatchJob;
+use App\Modules\Fleet\Models\AssetDocument;
 use App\Modules\Fuel\Models\FuelLog;
 use App\Modules\Fuel\Models\FuelRequest;
+use App\Platform\Identity\Models\PersonnelCredential;
 use App\Platform\Reporting\Models\JobReport;
 use App\Shared\Assets\Models\OperationalAsset;
 use Illuminate\Database\Eloquent\Model;
@@ -29,6 +31,12 @@ final class AttachmentOwnerResolver
         'fuel_log' => FuelLog::class,
         'FuelLog' => FuelLog::class,
         'fuel_logs' => FuelLog::class,
+        'personnel_credential' => PersonnelCredential::class,
+        'PersonnelCredential' => PersonnelCredential::class,
+        'personnel_credentials' => PersonnelCredential::class,
+        'asset_document' => AssetDocument::class,
+        'AssetDocument' => AssetDocument::class,
+        'asset_documents' => AssetDocument::class,
     ];
 
     /** @return list<string> */

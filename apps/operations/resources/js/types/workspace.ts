@@ -430,6 +430,38 @@ export interface AssetViewModel {
     lockout?: AssetLockoutViewModel | null;
     inspections: InspectionViewModel[];
     maintenance_work_orders: MaintenanceWorkOrderViewModel[];
+    documents?: AssetDocumentViewModel[];
+}
+
+export interface AssetDocumentViewModel {
+    id: number;
+    category: string;
+    category_label: string;
+    document_type?: string | null;
+    title: string;
+    document_number?: string | null;
+    issuing_authority?: string | null;
+    issued_at?: string | null;
+    expires_at?: string | null;
+    status: string;
+    validity_status:
+        | 'valid'
+        | 'expiring_soon'
+        | 'expired'
+        | 'revoked'
+        | 'superseded'
+        | 'permanent'
+        | 'no_expiration';
+    is_expired: boolean;
+    expires_soon: boolean;
+    notes?: string | null;
+    attachment?: {
+        id: number;
+        original_filename: string;
+        mime_type: string;
+        size_bytes: number;
+        download_url: string;
+    } | null;
 }
 
 export interface FuelLogViewModel {
@@ -554,12 +586,31 @@ export interface PersonnelCredentialViewModel {
         'driver_license' | 'operator_certification' | 'qualification' | string;
     credential_number: string;
     credential_type: string;
+    issuing_authority?: string | null;
     issued_at: string | null;
     expires_at: string | null;
-    status: 'active' | 'expired' | 'suspended' | string;
+    status:
+        'active' | 'expired' | 'suspended' | 'revoked' | 'superseded' | string;
+    validity_status?:
+        | 'valid'
+        | 'expiring_soon'
+        | 'expired'
+        | 'revoked'
+        | 'superseded'
+        | 'permanent'
+        | 'no_expiration'
+        | string;
     is_expired?: boolean;
     expires_soon?: boolean;
+    notes?: string | null;
     verified_at?: string | null;
+    attachment?: {
+        id: number;
+        original_filename: string;
+        mime_type: string;
+        size_bytes: number;
+        download_url: string;
+    } | null;
 }
 
 export interface PersonnelProfileViewModel {
@@ -828,6 +879,7 @@ export interface WorkspaceCapabilities {
     restore_dispatch: boolean;
     view_sos: boolean;
     respond_sos: boolean;
+    manage_users?: boolean;
 }
 
 export interface SosPersonViewModel {

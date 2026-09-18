@@ -12,6 +12,20 @@ export function formatDateTime(
     }).format(new Date(value));
 }
 
+export function formatDate(value: string | null, emptyLabel = 'N/A'): string {
+    if (value === null || !value) {
+        return emptyLabel;
+    }
+
+    try {
+        return new Intl.DateTimeFormat(undefined, {
+            dateStyle: 'medium',
+        }).format(new Date(value));
+    } catch {
+        return value;
+    }
+}
+
 export function humanize(value: string): string {
     return value.replaceAll('_', ' ');
 }
