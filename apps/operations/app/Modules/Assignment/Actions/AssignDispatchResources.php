@@ -10,6 +10,8 @@ use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dispatch\Planning\Models\ProjectShift;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Models\User;
+use App\Platform\Notifications\DispatchAssignmentNotification;
+use App\Platform\Notifications\Jobs\SendQueuedNotificationJob;
 use App\Shared\Assets\Models\OperationalAsset;
 use App\Shared\Assets\Services\OperationalAssetAvailability;
 use Illuminate\Database\Eloquent\Collection;
@@ -74,6 +76,18 @@ final class AssignDispatchResources
             $this->requestExceptionalApproval($actor, $job, $personnel, $assets);
             $this->audit->handle($actor, $job, 'dispatch.resources_assigned', null, ['personnel' => $personnel, 'assets' => $assets]);
             $job->update(['version' => $job->version + 1]);
+
+            DB::afterCommit(function () use ($job, $personnel): void {
+                foreach ($personnel as $assignment) {
+                    $user = User::query()->find($assignment['user_id']);
+                    if ($user && $user->is_active) {
+                        SendQueuedNotificationJob::dispatch(
+                            $user,
+                            new DispatchAssignmentNotification($job, $assignment['assignment_type'])
+                        );
+                    }
+                }
+            });
 
             return $job->load(['personnelAssignments.user', 'assetAssignments.asset']);
         });

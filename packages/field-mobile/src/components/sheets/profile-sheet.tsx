@@ -26,6 +26,8 @@ export interface ProfileSheetProps {
     onStartSignOut: () => void;
     onCancelSignOut: () => void;
     onLogout?: () => void;
+    pushNotificationsEnabled?: boolean;
+    onRequestPushPermissions?: () => void;
 }
 
 const initialsFor = (userName?: string | null): string => {
@@ -53,6 +55,8 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
     onStartSignOut,
     onCancelSignOut,
     onLogout,
+    pushNotificationsEnabled = true,
+    onRequestPushPermissions,
 }) => {
     const insets = useContext(SafeAreaInsetsContext);
     const bottomInset = insets?.bottom ?? 0;
@@ -561,6 +565,63 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
                                         v1.0.0 (Core-2 Field Mobile)
                                     </Text>
                                 </View>
+                                <View style={styles.healthRow}>
+                                    <Text
+                                        style={[
+                                            styles.healthLabel,
+                                            isDarkHud && styles.darkHealthLabel,
+                                        ]}
+                                    >
+                                        Push Alerts:
+                                    </Text>
+                                    <View style={styles.statusPill}>
+                                        <View
+                                            style={[
+                                                styles.statusDot,
+                                                pushNotificationsEnabled ===
+                                                false
+                                                    ? styles.statusDotOffline
+                                                    : styles.statusDotOnline,
+                                            ]}
+                                        />
+                                        <Text
+                                            style={[
+                                                styles.healthValue,
+                                                isDarkHud &&
+                                                    styles.darkHealthValue,
+                                            ]}
+                                        >
+                                            {pushNotificationsEnabled === false
+                                                ? 'Disabled'
+                                                : 'Active'}
+                                        </Text>
+                                    </View>
+                                </View>
+                                {pushNotificationsEnabled === false &&
+                                onRequestPushPermissions ? (
+                                    <Pressable
+                                        accessibilityLabel="Enable push notifications"
+                                        accessibilityRole="button"
+                                        onPress={onRequestPushPermissions}
+                                        style={({ pressed }) => [
+                                            styles.quickSyncButton,
+                                            isDarkHud &&
+                                                styles.darkQuickSyncButton,
+                                            pressed && styles.pressed,
+                                        ]}
+                                        testID="enable-push-button"
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.quickSyncButtonText,
+                                                isDarkHud &&
+                                                    styles.darkQuickSyncButtonText,
+                                            ]}
+                                        >
+                                            Enable Push Alerts
+                                        </Text>
+                                    </Pressable>
+                                ) : null}
                                 {queuedCount > 0 &&
                                 isOnline !== false &&
                                 onSyncNow ? (

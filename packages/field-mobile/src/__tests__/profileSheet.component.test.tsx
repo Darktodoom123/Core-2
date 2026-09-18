@@ -212,4 +212,59 @@ describe('ProfileSheet component tests', () => {
 
         expect(onClose).toHaveBeenCalledTimes(1);
     });
+
+    it('renders active push notification status when pushNotificationsEnabled is true', async () => {
+        const view = await render(
+            <ThemeProvider initialMode="dark_hud">
+                <ProfileSheet
+                    isOnline={true}
+                    onCancelSignOut={jest.fn()}
+                    onClose={jest.fn()}
+                    onStartSignOut={jest.fn()}
+                    signOutConfirmationOpen={false}
+                    userName="Dev Crane Operator"
+                    userRole="crane_operator"
+                    visible={true}
+                    pushNotificationsEnabled={true}
+                />
+            </ThemeProvider>,
+        );
+
+        expect(view.getByText('Push Alerts:')).toBeTruthy();
+        expect(view.getByText('Active')).toBeTruthy();
+    });
+
+    it('renders disabled push notification status with enable button and calls onRequestPushPermissions when clicked', async () => {
+        const onRequestPushPermissions = jest.fn();
+
+        const view = await render(
+            <ThemeProvider initialMode="dark_hud">
+                <ProfileSheet
+                    isOnline={true}
+                    onCancelSignOut={jest.fn()}
+                    onClose={jest.fn()}
+                    onStartSignOut={jest.fn()}
+                    signOutConfirmationOpen={false}
+                    userName="Dev Crane Operator"
+                    userRole="crane_operator"
+                    visible={true}
+                    pushNotificationsEnabled={false}
+                    onRequestPushPermissions={onRequestPushPermissions}
+                />
+            </ThemeProvider>,
+        );
+
+        expect(view.getByText('Push Alerts:')).toBeTruthy();
+        expect(view.getByText('Disabled')).toBeTruthy();
+
+        const enableBtn = view.getByTestId('enable-push-button');
+        expect(enableBtn).toBeTruthy();
+        expect(view.getByText('Enable Push Alerts')).toBeTruthy();
+
+        await act(async () => {
+            fireEvent.press(enableBtn);
+        });
+
+        expect(onRequestPushPermissions).toHaveBeenCalledTimes(1);
+    });
 });

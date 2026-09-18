@@ -35,7 +35,14 @@
             "./plugins/with-gradle-build-memory.cjs",
             "./plugins/with-gradle-problems-report.cjs",
             "./plugins/with-detox-android.cjs",
-            "expo-splash-screen"
+            "expo-splash-screen",
+            [
+                "expo-notifications",
+                {
+                    "icon": "./assets/icon.png",
+                    "color": "#ef4444"
+                }
+            ]
         ],
         "android": {
             "package": "com.core2.fieldmobile",
@@ -49,8 +56,14 @@
                 "ACCESS_BACKGROUND_LOCATION",
                 "CAMERA",
                 "READ_EXTERNAL_STORAGE",
-                "WRITE_EXTERNAL_STORAGE"
+                "WRITE_EXTERNAL_STORAGE",
+                "POST_NOTIFICATIONS"
             ]
+        },
+        "extra": {
+            "eas": {
+                "projectId": "157849b3-e318-4892-88e6-3f705394d299"
+            }
         }
     }
 }

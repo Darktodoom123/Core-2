@@ -114,6 +114,8 @@ export interface AssignedJobsListScreenProps {
     weatherError?: string | null;
     onRefreshWeather?: () => void;
     apiClient?: FieldApiClient;
+    pushNotificationsEnabled?: boolean;
+    onRequestPushPermissions?: () => void;
 }
 
 interface TileItem {
@@ -194,6 +196,8 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     weatherError,
     onRefreshWeather,
     apiClient,
+    pushNotificationsEnabled,
+    onRequestPushPermissions,
 }) => {
     const { isDarkHud } = useTheme();
     const [delayModalJob, setDelayModalJob] = useState<DispatchJob | null>(
@@ -1542,6 +1546,8 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 userName={userName}
                 userRole={userRole}
                 visible={profileSheetOpen}
+                pushNotificationsEnabled={pushNotificationsEnabled}
+                onRequestPushPermissions={onRequestPushPermissions}
             />
 
             {/* On-Site Confirmation Modal */}

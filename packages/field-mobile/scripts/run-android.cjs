@@ -308,6 +308,10 @@ function ensureEmulatorRunning() {
                 `Notice: Android emulator (${readyDevice.serial}) is running without a visible desktop window. Gracefully stopping it to relaunch with a visible window...`,
             );
             gracefullyStopEmulator(readyDevice.serial);
+
+            // Re-fetch attached devices after killing it so we don't use stale state
+            initialDevices.length = 0;
+            initialDevices.push(...getAttachedDevices());
         } else {
             return;
         }

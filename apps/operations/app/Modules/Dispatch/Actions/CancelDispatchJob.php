@@ -6,6 +6,8 @@ use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Models\User;
+use App\Platform\Notifications\DispatchCancellationNotification;
+use App\Platform\Notifications\Jobs\SendQueuedNotificationJob;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -41,10 +43,12 @@ final class CancelDispatchJob
             }
 
             $now = now();
-            $job->personnelAssignments()
+            $affectedPersonnel = $job->personnelAssignments()
                 ->whereNull('active_until')
                 ->lockForUpdate()
+                ->with('user')
                 ->get();
+
             $job->personnelAssignments()
                 ->whereNull('active_until')
                 ->update(['active_until' => $now]);
@@ -73,6 +77,18 @@ final class CancelDispatchJob
                 $job->only(['status', 'version', 'cancelled_by', 'cancellation_reason']),
                 $trimmedReason,
             );
+
+            DB::afterCommit(function () use ($job, $affectedPersonnel, $trimmedReason): void {
+                foreach ($affectedPersonnel as $assignment) {
+                    $user = $assignment->user;
+                    if ($user && $user->is_active) {
+                        SendQueuedNotificationJob::dispatch(
+                            $user,
+                            new DispatchCancellationNotification($job, $trimmedReason)
+                        );
+                    }
+                }
+            });
 
             return $job->refresh();
         });

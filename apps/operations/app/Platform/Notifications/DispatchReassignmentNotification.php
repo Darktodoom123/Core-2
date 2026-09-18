@@ -8,13 +8,14 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notification;
 
-class DispatchScheduleChangeNotification extends Notification
+class DispatchReassignmentNotification extends Notification
 {
     use Queueable;
 
     public function __construct(
         public readonly DispatchJob $job,
-        public readonly string $changeDescription
+        public readonly string $action, // 'assigned' | 'released'
+        public readonly ?string $reason = null,
     ) {}
 
     /** @return list<string> */
@@ -26,15 +27,16 @@ class DispatchScheduleChangeNotification extends Notification
     /** @return array<string, mixed> */
     public function toArray(object $notifiable): array
     {
+        $actionText = $this->action === 'released' ? 'released from' : 'reassigned to';
+
         return [
-            'event' => 'dispatch.schedule_changed',
+            'event' => 'dispatch.reassigned',
+            'action' => $this->action,
             'dispatch_job_id' => $this->job->id,
             'reference' => $this->job->reference,
             'title' => $this->job->title,
-            'description' => $this->changeDescription,
-            'scheduled_start' => $this->job->scheduled_start?->toIso8601String(),
-            'scheduled_end' => $this->job->scheduled_end?->toIso8601String(),
-            'message' => "Schedule update for dispatch {$this->job->reference}: {$this->changeDescription}",
+            'reason' => $this->reason,
+            'message' => "You have been {$actionText} dispatch job {$this->job->reference}.",
         ];
     }
 
@@ -42,21 +44,27 @@ class DispatchScheduleChangeNotification extends Notification
     {
         $recipientId = $notifiable instanceof Model ? $notifiable->getKey() : null;
 
+        $title = $this->action === 'released'
+            ? 'Dispatch Assignment Updated'
+            : 'New Dispatch Assignment';
+        $body = $this->action === 'released'
+            ? "You have been released from dispatch job {$this->job->reference}."
+            : "You have been assigned to dispatch job {$this->job->reference}.";
+
         return new PushPayload(
-            title: 'Schedule Update',
-            body: "Schedule updated for dispatch job {$this->job->reference}.",
+            title: $title,
+            body: $body,
             data: [
-                'event' => 'dispatch.schedule_changed',
+                'event' => 'dispatch.reassigned',
                 'recipient_id' => $recipientId,
+                'action' => $this->action,
                 'job_id' => $this->job->id,
                 'dispatch_job_id' => $this->job->id,
                 'reference' => $this->job->reference,
-                'scheduled_start' => $this->job->scheduled_start?->toIso8601String(),
-                'scheduled_end' => $this->job->scheduled_end?->toIso8601String(),
             ],
-            channelId: 'dispatch-updates',
-            priority: 'default',
-            ttl: 43200,
+            channelId: 'dispatch-urgent',
+            priority: 'high',
+            ttl: 86400,
         );
     }
 }

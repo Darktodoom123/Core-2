@@ -1,4 +1,3 @@
-import type { ErrorInfo, ReactNode } from 'react';
 import React, {
     Component,
     useCallback,
@@ -7,11 +6,13 @@ import React, {
     useRef,
     useState,
 } from 'react';
+import type { ErrorInfo, ReactNode } from 'react';
 import type { AppStateStatus } from 'react-native';
 import {
     ActivityIndicator,
     AppState,
     BackHandler,
+    Platform,
     Pressable,
     StatusBar,
     StyleSheet,
@@ -59,6 +60,19 @@ import {
 } from '../services/commandOutbox';
 import { durableAttachmentStorage } from '../services/durableAttachmentStorage';
 import { LocationSharingService } from '../services/locationService';
+import {
+    checkNotificationPermissions,
+    clearNotificationTokenCache,
+    configureNotificationHandler,
+    extractEventFromNotification,
+    extractJobIdFromNotification,
+    extractTicketIdFromNotification,
+    getLastNotificationResponseAsync,
+    registerDevicePushToken,
+    requestNotificationPermissions,
+    revokeDevicePushToken,
+    setupNotificationListeners,
+} from '../services/notificationService';
 import { createDefaultOutboxRepository } from '../storage/outboxRepository';
 import type {
     OutboxRepository,
@@ -152,6 +166,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
             console.error('Uncaught mobile boundary error', {
                 componentStack: errorInfo.componentStack,
                 name: error.name,
+                message: error.message,
             });
         }
     }
@@ -260,7 +275,62 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     const [weather, setWeather] = useState<WeatherTelemetry | null>(null);
     const [isLoadingWeather, setIsLoadingWeather] = useState(false);
     const [weatherError, setWeatherError] = useState<string | null>(null);
+    const [pushNotificationsEnabled, setPushNotificationsEnabled] =
+        useState<boolean>(true);
+    const [sosResponderNotice, setSosResponderNotice] = useState<{
+        incidentId: string;
+        reporterName: string;
+        category: string;
+        dispatchReference?: string;
+        receivedAt?: string;
+    } | null>(null);
+    const hasHandledColdStartRef = useRef<boolean>(false);
     const previousOnlineRef = useRef<boolean | null>(null);
+    const lastAuthenticatedUserIdRef = useRef<number | null>(null);
+
+    // Reset push token cache, selected job, and responder notices across logout or account switches
+    useEffect(() => {
+        if (status !== 'authenticated') {
+            queueMicrotask(() => {
+                setSosResponderNotice(null);
+                setSelectedJobId(null);
+                setJobs([]);
+                setJobsError(null);
+                setActiveAppView((prev) =>
+                    prev === 'dispatch' ? 'main' : prev,
+                );
+            });
+            clearNotificationTokenCache();
+        } else if (
+            user?.id &&
+            lastAuthenticatedUserIdRef.current !== null &&
+            lastAuthenticatedUserIdRef.current !== user.id
+        ) {
+            // Account switch while remaining authenticated
+            queueMicrotask(() => {
+                setSosResponderNotice(null);
+                setSelectedJobId(null);
+                setJobs([]);
+                setJobsError(null);
+                setActiveAppView((prev) =>
+                    prev === 'dispatch' ? 'main' : prev,
+                );
+            });
+            clearNotificationTokenCache();
+        }
+
+        lastAuthenticatedUserIdRef.current = user?.id ?? null;
+    }, [status, user?.id]);
+
+    const handleLogout = useCallback(async () => {
+        try {
+            await revokeDevicePushToken(apiClient);
+        } catch {
+            // Best effort push token revocation
+        }
+
+        await logout();
+    }, [apiClient, logout]);
     const { width } = useWindowDimensions();
     const isCompact = width < 600;
 
@@ -411,7 +481,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                 err instanceof ApiClientError &&
                 (err.status === 401 || err.status === 403)
             ) {
-                await logout();
+                await handleLogout();
 
                 return;
             }
@@ -423,7 +493,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
 
             setJobsError(err instanceof Error ? err.message : fallback);
         },
-        [isOnline, logout],
+        [handleLogout, isOnline],
     );
 
     const fetchJobs = useCallback(async () => {
@@ -441,7 +511,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                 error instanceof ApiClientError &&
                 (error.status === 401 || error.status === 403)
             ) {
-                await logout();
+                await handleLogout();
 
                 return;
             }
@@ -458,7 +528,273 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         } finally {
             setIsLoadingJobs(false);
         }
-    }, [apiClient, handleRequestFailure, isOnline, logout, status]);
+    }, [apiClient, handleLogout, handleRequestFailure, isOnline, status]);
+
+    // Native mobile push notifications: token lifecycle, foreground data refresh, and authorized notification-tap navigation
+    useEffect(() => {
+        if (status !== 'authenticated') {
+            return;
+        }
+
+        configureNotificationHandler();
+
+        // Check permission state and update status
+        void checkNotificationPermissions().then((granted) => {
+            setPushNotificationsEnabled(granted);
+        });
+
+        // Register device push token with backend
+        void registerDevicePushToken(
+            apiClient,
+            undefined,
+            Platform.OS === 'ios' ? 'ios' : 'android',
+        ).then((res) => {
+            if (res.status === 'registered') {
+                setPushNotificationsEnabled(true);
+            } else if (res.status === 'permission_denied') {
+                setPushNotificationsEnabled(false);
+            }
+        });
+
+        const handleNotificationNavigation = async (
+            data: Record<string, unknown> | undefined,
+        ) => {
+            if (!data) {
+                return;
+            }
+
+            if (status !== 'authenticated' || !user?.id) {
+                return;
+            }
+
+            // Verify recipient isolation if recipient_id is present
+            const recipientId =
+                typeof data.recipient_id === 'number' ||
+                typeof data.recipient_id === 'string'
+                    ? Number(data.recipient_id)
+                    : null;
+
+            if (recipientId !== null && recipientId !== user.id) {
+                setJobsError(
+                    'This notification was intended for a different user account.',
+                );
+
+                return;
+            }
+
+            // Best-effort record push opened with backend for audit and lifecycle tracking
+            const ticketId = extractTicketIdFromNotification(data);
+
+            if (ticketId) {
+                void apiClient
+                    .recordPushOpened(ticketId)
+                    .catch(() => undefined);
+            }
+
+            const event = extractEventFromNotification(data);
+
+            // Handle Emergency SOS alert tap separately from dispatch navigation
+            if (event === 'safety.sos_received') {
+                const incidentId =
+                    typeof data.incident_id === 'string'
+                        ? data.incident_id
+                        : typeof data.relevance_id === 'string'
+                          ? data.relevance_id
+                          : null;
+
+                if (!incidentId) {
+                    setJobsError(
+                        'Emergency incident reference is missing from notification.',
+                    );
+
+                    return;
+                }
+
+                try {
+                    const incident =
+                        await apiClient.fetchSosIncident(incidentId);
+
+                    if (!incident) {
+                        setJobsError(
+                            'Emergency incident was not found or has been removed.',
+                        );
+
+                        return;
+                    }
+
+                    if (
+                        incident.status === 'resolved' ||
+                        incident.status === 'cancelled'
+                    ) {
+                        setJobsError(
+                            `Emergency incident #${incident.id.slice(0, 8)} is already ${incident.status}.`,
+                        );
+
+                        return;
+                    }
+
+                    // DO NOT open operator EmergencySosSheet (that is for reporting SOS, not responding)
+                    // DO NOT automatically acknowledge the incident
+                    // Set authorized responder notice directing user to Central Safety Desk
+                    setSosResponderNotice({
+                        incidentId: incident.id,
+                        reporterName:
+                            incident.reporter?.name || 'Field Operator',
+                        category: incident.category || 'Emergency',
+                        dispatchReference: incident.dispatch?.reference,
+                        receivedAt: incident.received_at ?? undefined,
+                    });
+                } catch (err: unknown) {
+                    const errorStatus =
+                        err instanceof ApiClientError ? err.status : null;
+
+                    if (errorStatus === 403) {
+                        setJobsError(
+                            'You are not authorized to view this emergency incident.',
+                        );
+                    } else if (errorStatus === 404) {
+                        setJobsError(
+                            'Emergency incident was not found or has been removed.',
+                        );
+                    } else {
+                        setJobsError(
+                            'Failed to fetch emergency incident state. Verify network connection.',
+                        );
+                    }
+                }
+
+                return;
+            }
+
+            const targetJobId = extractJobIdFromNotification(data);
+
+            if (targetJobId === null) {
+                return;
+            }
+
+            // Handle cancellation or release notification taps
+            if (
+                event === 'dispatch.cancelled' ||
+                (event === 'dispatch.reassigned' && data.action === 'released')
+            ) {
+                if (isOnline === true) {
+                    void fetchJobs();
+                }
+
+                const ref =
+                    typeof data.reference === 'string'
+                        ? data.reference
+                        : `JOB-${targetJobId}`;
+                setJobsError(
+                    event === 'dispatch.cancelled'
+                        ? `Dispatch job ${ref} was cancelled.`
+                        : `You have been released from dispatch job ${ref}.`,
+                );
+
+                return;
+            }
+
+            try {
+                // Verify server state and authorization
+                const assignedJobs = await apiClient.fetchAssignedJobs();
+                setJobs(assignedJobs || []);
+
+                const isAssigned = (assignedJobs || []).some(
+                    (j) => j.id === targetJobId,
+                );
+
+                if (isAssigned) {
+                    setSelectedJobId(targetJobId);
+                    setActiveAppView('dispatch');
+                } else {
+                    setJobsError(
+                        'You are no longer assigned to this dispatch job or it has been cancelled.',
+                    );
+                }
+            } catch {
+                // Fallback to currently loaded jobs if offline or network failure
+                setJobs((currentJobs) => {
+                    const localMatch = currentJobs.some(
+                        (j) => j.id === targetJobId,
+                    );
+
+                    if (localMatch) {
+                        setSelectedJobId(targetJobId);
+                        setActiveAppView('dispatch');
+                    } else {
+                        setJobsError(
+                            'Unable to open dispatch job. Check connection or verify your assignment.',
+                        );
+                    }
+
+                    return currentJobs;
+                });
+            }
+        };
+
+        // Check if cold started from a notification response tap (guarded to run once per app launch)
+        if (!hasHandledColdStartRef.current) {
+            hasHandledColdStartRef.current = true;
+            void getLastNotificationResponseAsync()
+                .then((response) => {
+                    if (response?.notification?.request?.content?.data) {
+                        void handleNotificationNavigation(
+                            response.notification.request.content
+                                .data as Record<string, unknown>,
+                        );
+                    }
+                })
+                .catch(() => {
+                    // Tolerate cold start check failures
+                });
+        }
+
+        // Listen for foreground pushes and background/lock-screen notification taps
+        const unsubscribe = setupNotificationListeners({
+            onNotificationReceived: () => {
+                // Foreground push received: quietly reconcile assigned jobs data without disruptive alerts
+                if (isOnline === true) {
+                    void fetchJobs();
+                }
+            },
+            onNotificationResponse: (response) => {
+                const data = response?.notification?.request?.content?.data as
+                    Record<string, unknown> | undefined;
+                void handleNotificationNavigation(data);
+            },
+            onTokenRefresh: () => {
+                void registerDevicePushToken(
+                    apiClient,
+                    undefined,
+                    Platform.OS === 'ios' ? 'ios' : 'android',
+                );
+            },
+        });
+
+        return () => {
+            unsubscribe();
+        };
+    }, [
+        apiClient,
+        fetchJobs,
+        isOnline,
+        refreshActiveSosIncident,
+        status,
+        user?.id,
+    ]);
+
+    const handleRequestPushPermissions = useCallback(async () => {
+        const granted = await requestNotificationPermissions();
+        setPushNotificationsEnabled(granted);
+
+        if (granted) {
+            void registerDevicePushToken(
+                apiClient,
+                undefined,
+                Platform.OS === 'ios' ? 'ios' : 'android',
+            );
+        }
+    }, [apiClient]);
 
     const refreshWeather = useCallback(async () => {
         setIsLoadingWeather(true);
@@ -599,7 +935,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         const result = await commandOutbox.processQueue(apiClient);
 
         if (result.requiresAuthentication) {
-            await logout();
+            await handleLogout();
 
             return;
         }
@@ -611,9 +947,9 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         apiClient,
         commandOutbox,
         fetchJobs,
+        handleLogout,
         isOnline,
         isOutboxReady,
-        logout,
         status,
     ]);
 
@@ -635,7 +971,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                 const result = await processPromise;
 
                 if (result?.requiresAuthentication) {
-                    await logout();
+                    await handleLogout();
 
                     return;
                 }
@@ -676,9 +1012,9 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
             apiClient,
             commandOutbox,
             getCurrentLocation,
+            handleLogout,
             handleRequestFailure,
             isOnline,
-            logout,
         ],
     );
 
@@ -1086,7 +1422,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                 .retryCommand(commandId, apiClient)
                 .then(async (result) => {
                     if (result.requiresAuthentication) {
-                        await logout();
+                        await handleLogout();
                     } else if (result.completed > 0) {
                         await fetchJobs();
                     }
@@ -1098,7 +1434,13 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                     ),
                 );
         },
-        [apiClient, commandOutbox, fetchJobs, handleRequestFailure, logout],
+        [
+            apiClient,
+            commandOutbox,
+            fetchJobs,
+            handleLogout,
+            handleRequestFailure,
+        ],
     );
 
     const handleDiscardCommand = useCallback(
@@ -1625,7 +1967,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                     <Pressable
                         accessibilityLabel="Back to sign in"
                         accessibilityRole="button"
-                        onPress={() => void logout()}
+                        onPress={() => void handleLogout()}
                         style={styles.actionButton}
                     >
                         <Text style={sharedStyles.buttonText}>
@@ -1657,7 +1999,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                     <Pressable
                         accessibilityLabel="Sign out of field app"
                         accessibilityRole="button"
-                        onPress={() => void logout()}
+                        onPress={() => void handleLogout()}
                         style={styles.actionButton}
                         testID="logout-button"
                     >
@@ -1693,7 +2035,10 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                       : 'sending'
                 : 'preparing';
     const emergencyActions =
-        activeSosIncident?.available_actions ?? sosConfiguration.actions;
+        activeSosIncident?.available_actions ??
+        (Array.isArray(sosConfiguration?.actions)
+            ? sosConfiguration.actions
+            : []);
 
     return (
         <ErrorBoundary>
@@ -2030,86 +2375,187 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 onTransitionStatus={handleTransitionStatus}
                             />
                         ) : (
-                            <AssignedJobsListScreen
-                                apiClient={apiClient}
-                                onSosHoldComplete={handleGlobalSosHold}
-                                sosDisabled={isSosActivating}
-                                error={jobsError}
-                                isLoading={isLoadingJobs}
-                                isOnline={isOnline}
-                                jobs={jobs}
-                                isUnitLinked={isUnitLinked}
-                                onLinkUnit={() => {
-                                    setIsUnitLinked(true);
-                                    setLocationSharingActive(true);
-                                }}
-                                dvirStatus={dvirStatus}
-                                preTripDefectLockout={dvirStatus === 'defect'}
-                                onSwapUnit={(newUnitCode) => {
-                                    setOverriddenAssetCode(newUnitCode);
-                                    setIsUnitLinked(true);
-                                    setDvirStatus('pending');
-                                    setLocationSharingActive(true);
-                                }}
-                                locationSharingActive={locationSharingActive}
-                                onChangeDutyStatus={handleChangeDutyStatus}
-                                onDiscardCommand={handleDiscardCommand}
-                                onLogout={() => void logout()}
-                                onOpenDocuments={() =>
-                                    setActiveAppView('documents')
-                                }
-                                onOpenDvir={() => setActiveAppView('dvir')}
-                                onOpenForms={() => setActiveAppView('dispatch')}
-                                onOpenHos={() => setActiveAppView('hos')}
-                                onOpenRental={() => setActiveAppView('rental')}
-                                onOpenRoutes={() => setActiveAppView('routes')}
-                                onOpenSales={() => setActiveAppView('sales')}
-                                onOpenVehicle={() =>
-                                    setActiveAppView('inspection')
-                                }
-                                onOpenFuel={() => setActiveAppView('fuel')}
-                                onRefresh={() => {
-                                    void fetchJobs();
-                                    void refreshWeather();
-                                    void refreshHosClocks();
-                                }}
-                                onRetryCommand={handleRetryCommand}
-                                onSelectJob={handleSelectJob}
-                                onAcceptAssignment={handleAcceptAssignment}
-                                onAcceptServerState={handleAcceptServerState}
-                                onRejectAssignment={handleRejectAssignment}
-                                onReportDelay={handleReportDelay}
-                                onRetryNewVersion={handleRetryNewVersion}
-                                onTransitionStatus={handleTransitionStatus}
-                                onSyncNow={() => void syncQueue()}
-                                onToggleLocationSharing={
-                                    handleToggleLocationSharing
-                                }
-                                onReleaseUnit={() => {
-                                    setIsUnitLinked(false);
-                                    setLocationSharingActive(false);
-                                    locationService.stopAutoTracking();
-                                    void stopBackgroundLocationUpdates().catch(
-                                        () => undefined,
-                                    );
-
-                                    if (user && activeTrackingJob) {
-                                        void locationService.pauseSharing(
-                                            user,
-                                            activeTrackingJob,
-                                        );
+                            <View style={{ flex: 1 }}>
+                                {sosResponderNotice && (
+                                    <View
+                                        testID="sos-responder-notice-banner"
+                                        style={{
+                                            backgroundColor: '#fef2f2',
+                                            borderColor: '#dc2626',
+                                            borderWidth: 1,
+                                            borderRadius: 8,
+                                            padding: 12,
+                                            marginHorizontal: 16,
+                                            marginTop: 8,
+                                            marginBottom: 4,
+                                        }}
+                                    >
+                                        <Text
+                                            style={{
+                                                fontWeight: 'bold',
+                                                color: '#b91c1c',
+                                                fontSize: 14,
+                                            }}
+                                        >
+                                            EMERGENCY SOS ALERT
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                color: '#7f1d1d',
+                                                marginTop: 4,
+                                                fontSize: 13,
+                                            }}
+                                        >
+                                            Active incident reported by{' '}
+                                            {sosResponderNotice.reporterName} (
+                                            {sosResponderNotice.category}).
+                                            {sosResponderNotice.dispatchReference
+                                                ? ` Dispatch: ${sosResponderNotice.dispatchReference}.`
+                                                : ''}
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                color: '#991b1b',
+                                                marginTop: 4,
+                                                fontSize: 12,
+                                                fontStyle: 'italic',
+                                            }}
+                                        >
+                                            Please use the Central Web Safety
+                                            Operations Desk
+                                            (/operations/sos-incidents) to
+                                            triage, acknowledge, and resolve
+                                            this emergency.
+                                        </Text>
+                                        <Pressable
+                                            testID="dismiss-sos-responder-notice"
+                                            onPress={() =>
+                                                setSosResponderNotice(null)
+                                            }
+                                            style={{
+                                                alignSelf: 'flex-end',
+                                                marginTop: 8,
+                                                paddingHorizontal: 10,
+                                                paddingVertical: 5,
+                                                backgroundColor: '#dc2626',
+                                                borderRadius: 4,
+                                            }}
+                                        >
+                                            <Text
+                                                style={{
+                                                    color: '#ffffff',
+                                                    fontSize: 12,
+                                                    fontWeight: '600',
+                                                }}
+                                            >
+                                                Dismiss Notice
+                                            </Text>
+                                        </Pressable>
+                                    </View>
+                                )}
+                                <AssignedJobsListScreen
+                                    apiClient={apiClient}
+                                    onSosHoldComplete={handleGlobalSosHold}
+                                    sosDisabled={isSosActivating}
+                                    error={jobsError}
+                                    isLoading={isLoadingJobs}
+                                    isOnline={isOnline}
+                                    jobs={jobs}
+                                    isUnitLinked={isUnitLinked}
+                                    onLinkUnit={() => {
+                                        setIsUnitLinked(true);
+                                        setLocationSharingActive(true);
+                                    }}
+                                    dvirStatus={dvirStatus}
+                                    preTripDefectLockout={
+                                        dvirStatus === 'defect'
                                     }
-                                }}
-                                onToggleShift={handleToggleShift}
-                                outboxCommands={outboxCommands}
-                                shiftInfo={shiftInfo}
-                                userName={user?.name}
-                                userRole={user?.role.replaceAll('_', ' ')}
-                                weather={weather}
-                                isLoadingWeather={isLoadingWeather}
-                                weatherError={weatherError}
-                                onRefreshWeather={() => void refreshWeather()}
-                            />
+                                    onSwapUnit={(newUnitCode) => {
+                                        setOverriddenAssetCode(newUnitCode);
+                                        setIsUnitLinked(true);
+                                        setDvirStatus('pending');
+                                        setLocationSharingActive(true);
+                                    }}
+                                    locationSharingActive={
+                                        locationSharingActive
+                                    }
+                                    onChangeDutyStatus={handleChangeDutyStatus}
+                                    onDiscardCommand={handleDiscardCommand}
+                                    onLogout={() => void handleLogout()}
+                                    onOpenDocuments={() =>
+                                        setActiveAppView('documents')
+                                    }
+                                    onOpenDvir={() => setActiveAppView('dvir')}
+                                    onOpenForms={() =>
+                                        setActiveAppView('dispatch')
+                                    }
+                                    onOpenHos={() => setActiveAppView('hos')}
+                                    onOpenRental={() =>
+                                        setActiveAppView('rental')
+                                    }
+                                    onOpenRoutes={() =>
+                                        setActiveAppView('routes')
+                                    }
+                                    onOpenSales={() =>
+                                        setActiveAppView('sales')
+                                    }
+                                    onOpenVehicle={() =>
+                                        setActiveAppView('inspection')
+                                    }
+                                    onOpenFuel={() => setActiveAppView('fuel')}
+                                    onRefresh={() => {
+                                        void fetchJobs();
+                                        void refreshWeather();
+                                        void refreshHosClocks();
+                                    }}
+                                    onRetryCommand={handleRetryCommand}
+                                    onSelectJob={handleSelectJob}
+                                    onAcceptAssignment={handleAcceptAssignment}
+                                    onAcceptServerState={
+                                        handleAcceptServerState
+                                    }
+                                    onRejectAssignment={handleRejectAssignment}
+                                    onReportDelay={handleReportDelay}
+                                    onRetryNewVersion={handleRetryNewVersion}
+                                    onTransitionStatus={handleTransitionStatus}
+                                    onSyncNow={() => void syncQueue()}
+                                    onToggleLocationSharing={
+                                        handleToggleLocationSharing
+                                    }
+                                    onReleaseUnit={() => {
+                                        setIsUnitLinked(false);
+                                        setLocationSharingActive(false);
+                                        locationService.stopAutoTracking();
+                                        void stopBackgroundLocationUpdates().catch(
+                                            () => undefined,
+                                        );
+
+                                        if (user && activeTrackingJob) {
+                                            void locationService.pauseSharing(
+                                                user,
+                                                activeTrackingJob,
+                                            );
+                                        }
+                                    }}
+                                    onToggleShift={handleToggleShift}
+                                    outboxCommands={outboxCommands}
+                                    shiftInfo={shiftInfo}
+                                    userName={user?.name}
+                                    userRole={user?.role.replaceAll('_', ' ')}
+                                    weather={weather}
+                                    isLoadingWeather={isLoadingWeather}
+                                    weatherError={weatherError}
+                                    onRefreshWeather={() =>
+                                        void refreshWeather()
+                                    }
+                                    pushNotificationsEnabled={
+                                        pushNotificationsEnabled
+                                    }
+                                    onRequestPushPermissions={
+                                        handleRequestPushPermissions
+                                    }
+                                />
+                            </View>
                         )}
                     </View>
                 </View>

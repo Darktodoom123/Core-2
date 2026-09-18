@@ -239,6 +239,10 @@ export interface SosIncident {
     } | null;
     location?: SosLocationSnapshot | null;
     responder?: SosIncidentResponderSummary | null;
+    reporter?: {
+        id: number;
+        name: string;
+    } | null;
     worker_note?: string | null;
     note?: string | null;
     available_actions?: SosEmergencyAction[];

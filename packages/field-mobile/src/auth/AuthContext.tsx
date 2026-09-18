@@ -13,6 +13,7 @@ import {
     isLoginChallenge,
 } from '../services/apiClient';
 import type { LoginChallengeResult } from '../services/apiClient';
+import { getInstallationId } from '../services/notificationService';
 import type { User } from '../types/index';
 import { resolveApiBaseUrl } from './config';
 import { isAuthorizedFieldRole } from './fieldRoles';
@@ -31,8 +32,16 @@ export type AuthStatus =
 export const offlineSessionVerificationError =
     'Unable to verify your session. Check your connection and try again.';
 
+export interface LogoutOptions {
+    forgetDevice?: boolean;
+    deviceTrustToken?: string | null;
+    installationId?: string | null;
+    registeredBefore?: string | null;
+}
+
 export interface AuthState {
     user: User | null;
+    token?: string | null;
     status: AuthStatus;
     error: string | null;
     isInitializing: boolean;
@@ -55,7 +64,7 @@ export interface AuthContextType extends AuthState {
     ) => Promise<void>;
     resendChallenge: () => Promise<void>;
     cancelChallenge: () => void;
-    logout: (options?: { forgetDevice?: boolean }) => Promise<boolean>;
+    logout: (options?: LogoutOptions) => Promise<boolean>;
     bootstrap: () => Promise<void>;
     clearError: () => void;
     apiClient: FieldApiClient;
@@ -110,10 +119,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     const revokeStagedToken = useCallback(
         async (
             tokenToRevoke: string,
-            logoutOptions?: {
-                forgetDevice?: boolean;
-                deviceTrustToken?: string | null;
-            },
+            logoutOptions?: LogoutOptions,
         ): Promise<boolean> => {
             const revocationClient = new FieldApiClient({
                 baseUrl,
@@ -122,7 +128,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
             });
 
             try {
-                await revocationClient.logout(logoutOptions);
+                let instId = logoutOptions?.installationId;
+
+                if (!instId) {
+                    try {
+                        instId = await getInstallationId();
+                    } catch {
+                        instId = undefined;
+                    }
+                }
+
+                await revocationClient.logout({
+                    ...logoutOptions,
+                    installationId: instId,
+                    registeredBefore:
+                        logoutOptions?.registeredBefore ??
+                        new Date().toISOString(),
+                });
             } catch (err: unknown) {
                 if (!(err instanceof ApiClientError && err.status === 401)) {
                     setHasPendingRevocation(true);
@@ -157,10 +179,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     const stageAndRevokeToken = useCallback(
         async (
             tokenToRevoke: string,
-            logoutOptions?: {
-                forgetDevice?: boolean;
-                deviceTrustToken?: string | null;
-            },
+            logoutOptions?: LogoutOptions,
         ): Promise<boolean> => {
             try {
                 if (tokenStorage.clearOfflineSession) {
@@ -652,7 +671,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     }, []);
 
     const logout = useCallback(
-        async (options?: { forgetDevice?: boolean }): Promise<boolean> => {
+        async (options?: LogoutOptions): Promise<boolean> => {
             setError(null);
 
             try {
@@ -683,9 +702,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
                     return true;
                 }
 
-                const logoutOptions = {
+                const logoutOptions: LogoutOptions = {
                     forgetDevice: options?.forgetDevice,
                     deviceTrustToken,
+                    installationId: options?.installationId,
+                    registeredBefore: options?.registeredBefore,
                 };
 
                 if (pendingToken && !token) {

@@ -81,6 +81,8 @@ export interface OperatorDashboardScreenProps {
     onSyncNow?: () => void;
     onRetryCommand?: (commandId: string) => void;
     onDiscardCommand?: (commandId: string) => void;
+    pushNotificationsEnabled?: boolean;
+    onRequestPushPermissions?: () => void;
 }
 
 interface DashboardTileConfig {
@@ -143,6 +145,8 @@ export const OperatorDashboardScreen: React.FC<
     onLogout,
     onSyncNow,
     onRetryCommand,
+    pushNotificationsEnabled = true,
+    onRequestPushPermissions,
 }) => {
     const { isDarkHud } = useTheme();
     const { width } = useWindowDimensions();
@@ -854,6 +858,8 @@ export const OperatorDashboardScreen: React.FC<
                 userName={userName}
                 userRole={userRole}
                 visible={profileSheetOpen}
+                pushNotificationsEnabled={pushNotificationsEnabled}
+                onRequestPushPermissions={onRequestPushPermissions}
             />
         </View>
     );

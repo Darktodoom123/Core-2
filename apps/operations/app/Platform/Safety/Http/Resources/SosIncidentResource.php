@@ -34,6 +34,10 @@ final class SosIncidentResource extends JsonResource
                 'id' => $this->acknowledgedBy->id,
                 'name' => $this->acknowledgedBy->name,
             ]),
+            'reporter' => $this->when($this->relationLoaded('reporter') && $this->reporter !== null, fn (): array => [
+                'id' => $this->reporter->id,
+                'name' => $this->reporter->name,
+            ]),
             'responder' => $this->when($this->relationLoaded('acknowledgedBy') && $this->acknowledgedBy !== null, fn (): array => [
                 'name' => $this->acknowledgedBy->name,
                 'acknowledged_at' => $this->acknowledged_at?->toIso8601String(),

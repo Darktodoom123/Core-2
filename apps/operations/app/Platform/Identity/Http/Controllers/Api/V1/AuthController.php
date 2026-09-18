@@ -6,12 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Platform\Identity\Http\Resources\V1\UserResource;
 use App\Platform\Identity\Models\EmailOneTimeCode;
 use App\Platform\Identity\Models\User;
+use App\Platform\Identity\Models\UserDeviceToken;
 use App\Platform\Identity\Services\DeviceTrustService;
 use App\Platform\Identity\Services\EmailOtpService;
 use App\Platform\Identity\Support\Username;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
@@ -286,6 +288,33 @@ final class AuthController extends Controller
         $user = $request->user();
 
         if ($user !== null) {
+            $installationId = $request->input('installation_id') ?? $request->header('X-Installation-Id');
+            $token = $request->input('token');
+            $registeredBefore = $request->input('registered_before');
+
+            if (is_string($installationId) && trim($installationId) !== '') {
+                $tokenQuery = UserDeviceToken::query()
+                    ->where('user_id', $user->id)
+                    ->where('installation_id', trim($installationId))
+                    ->where('is_active', true);
+
+                if (is_string($token) && trim($token) !== '') {
+                    $tokenQuery->where('token', trim($token));
+                }
+
+                if (is_string($registeredBefore) && trim($registeredBefore) !== '') {
+                    try {
+                        $tokenQuery->where('last_registered_at', '<=', Carbon::parse($registeredBefore));
+                    } catch (\Throwable) {
+                    }
+                }
+
+                $tokenQuery->update([
+                    'is_active' => false,
+                    'revoked_at' => now(),
+                ]);
+            }
+
             // If requested, also forget device trust
             $forgetDevice = $request->boolean('forget_device') || $request->hasHeader('X-Forget-Device');
             if ($forgetDevice) {

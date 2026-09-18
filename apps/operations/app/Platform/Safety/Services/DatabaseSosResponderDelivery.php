@@ -2,6 +2,8 @@
 
 namespace App\Platform\Safety\Services;
 
+use App\Platform\Notifications\Data\PushPayload;
+use App\Platform\Notifications\Jobs\SendPushNotificationJob;
 use App\Platform\Notifications\Models\Notification;
 use App\Platform\Safety\Contracts\SosResponderDelivery;
 use App\Platform\Safety\Enums\SosDeliveryAttemptStatus;
@@ -58,6 +60,30 @@ final class DatabaseSosResponderDelivery implements SosResponderDelivery
         if ($attempt->wasRecentlyCreated) {
             $recipient->forceFill(['notified_at' => now()])->save();
             WorkspaceUpdated::dispatch('sos', 'received');
+
+            $pushPayload = new PushPayload(
+                title: 'EMERGENCY SOS ALERT',
+                body: 'Emergency SOS alert received for active operations.',
+                data: [
+                    'event' => 'safety.sos_received',
+                    'incident_id' => $incident->id,
+                    'recipient_id' => $recipient->user_id,
+                    'dispatch_job_id' => $incident->dispatch_job_id,
+                    'status' => $incident->status->value,
+                ],
+                channelId: 'sos-emergency',
+                priority: 'high',
+                sound: 'emergency',
+                ttl: 1800,
+            );
+
+            SendPushNotificationJob::dispatch(
+                recipient: $recipient->user,
+                payload: $pushPayload,
+                deduplicationKey: 'sos_push:'.$incident->id.':'.$recipient->user_id,
+                relevanceType: 'sos_incident',
+                relevanceId: $incident->id,
+            );
         }
 
         unset($notification);

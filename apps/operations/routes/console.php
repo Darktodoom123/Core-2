@@ -6,6 +6,7 @@ use App\Platform\Gpt\Models\GptRecommendationMetric;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\EmailOneTimeCode;
 use App\Platform\Identity\Models\User;
+use App\Platform\Notifications\Services\PushNotificationService;
 use App\Platform\Reporting\Jobs\PruneExpiredExportsJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Carbon;
@@ -47,6 +48,19 @@ Artisan::command('attachments:prune-expired', function (): void {
     PruneExpiredAttachmentsJob::dispatchSync();
     $this->info('Expired attachments pruned successfully.');
 })->purpose('Purge attachments that have reached end-of-retention (statutory 7 years)');
+
+Artisan::command('push:process-receipts', function (PushNotificationService $pushService): int {
+    $this->info('Processing pending push delivery receipts...');
+    $result = $pushService->processPendingReceipts(100);
+    $this->line("Receipts checked: {$result['checked']}, Delivered: {$result['delivered']}, Failed: {$result['failed']}, Deactivated: {$result['deactivated']}");
+    $pruned = $pushService->pruneOldDeliveries(30);
+    if ($pruned > 0) {
+        $this->line("Pruned {$pruned} expired push deliveries.");
+    }
+    $this->info('Push receipt reconciliation complete.');
+
+    return 0;
+})->purpose('Reconcile pending push notification receipts and prune old delivery records');
 
 Artisan::command('user:recover-admin {identifier? : Username or email of the administrator} {--password= : Set a new password} {--reset-factors : Reset trusted devices and active verification challenges}', function (): int {
     $identifier = $this->argument('identifier');

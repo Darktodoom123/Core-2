@@ -274,8 +274,8 @@ export const LocationWeatherCard: React.FC<LocationWeatherCardProps> = ({
 
     const safetyTheme = getSafetyTheme(safetyLevel);
 
-    const getWeatherIcon = (desc: string): IconName => {
-        const lower = desc.toLowerCase();
+    const getWeatherIcon = (desc: string = ''): IconName => {
+        const lower = (desc || '').toLowerCase();
 
         if (lower.includes('thunder') || lower.includes('lightning')) {
             return 'alert';

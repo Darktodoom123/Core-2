@@ -408,6 +408,9 @@ export class FieldApiClient {
     public async logout(options?: {
         forgetDevice?: boolean;
         deviceTrustToken?: string | null;
+        installationId?: string | null;
+        token?: string | null;
+        registeredBefore?: string | null;
     }): Promise<{ message: string }> {
         const url = `${this.baseUrl}/api/v1/auth/logout`;
         const headers = this.getHeaders();
@@ -420,12 +423,33 @@ export class FieldApiClient {
             headers['X-Device-Trust'] = options.deviceTrustToken;
         }
 
-        const body = options?.forgetDevice
-            ? JSON.stringify({
-                  forget_device: true,
-                  device_trust_token: options.deviceTrustToken,
-              })
-            : undefined;
+        if (options?.installationId) {
+            headers['X-Installation-Id'] = options.installationId;
+        }
+
+        const payload: Record<string, unknown> = {};
+
+        if (options?.forgetDevice) {
+            payload.forget_device = true;
+            payload.device_trust_token = options.deviceTrustToken;
+        }
+
+        if (options?.installationId) {
+            payload.installation_id = options.installationId;
+        }
+
+        if (options?.token) {
+            payload.token = options.token;
+        }
+
+        if (options?.registeredBefore) {
+            payload.registered_before = options.registeredBefore;
+        }
+
+        const body =
+            Object.keys(payload).length > 0
+                ? JSON.stringify(payload)
+                : undefined;
 
         const response = await this.fetchFn(url, {
             method: 'POST',
@@ -434,6 +458,78 @@ export class FieldApiClient {
         });
 
         return this.handleResponse<{ message: string }>(response);
+    }
+
+    public async registerDeviceToken(payload: {
+        token: string;
+        installation_id: string;
+        platform: 'android' | 'ios';
+        provider?: 'expo' | 'fcm';
+        app_version?: string;
+    }): Promise<{ status: string; installation_id: string }> {
+        const url = `${this.baseUrl}/api/v1/auth/device-tokens`;
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(),
+            body: JSON.stringify(payload),
+        });
+
+        return this.handleResponse<{ status: string; installation_id: string }>(
+            response,
+        );
+    }
+
+    public async revokeDeviceToken(
+        installationId: string,
+        token?: string | null,
+        registeredBefore?: string | null,
+    ): Promise<{ status: string }> {
+        const url = `${this.baseUrl}/api/v1/auth/device-tokens`;
+        const headers = this.getHeaders();
+        headers['X-Installation-Id'] = installationId;
+        const payload: Record<string, unknown> = {
+            installation_id: installationId,
+        };
+
+        if (token) {
+            payload.token = token;
+        }
+
+        if (registeredBefore) {
+            payload.registered_before = registeredBefore;
+        }
+
+        const response = await this.fetchFn(url, {
+            method: 'DELETE',
+            headers,
+            body: JSON.stringify(payload),
+        });
+
+        return this.handleResponse<{ status: string }>(response);
+    }
+
+    public async recordPushOpened(
+        ticketOrDeliveryId: string,
+        deliveryId?: number,
+    ): Promise<{ status: string }> {
+        const url = `${this.baseUrl}/api/v1/push-deliveries/opened`;
+        const payload: Record<string, unknown> = {};
+
+        if (ticketOrDeliveryId) {
+            payload.ticket_id = ticketOrDeliveryId;
+        }
+
+        if (deliveryId) {
+            payload.delivery_id = deliveryId;
+        }
+
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(),
+            body: JSON.stringify(payload),
+        });
+
+        return this.handleResponse<{ status: string }>(response);
     }
 
     public async fetchAssignedJobs(): Promise<DispatchJob[]> {
@@ -874,6 +970,22 @@ export class FieldApiClient {
 
     public async fetchActiveSosIncident(): Promise<SosIncident | null> {
         const url = `${this.baseUrl}/api/v1/sos-incidents/active`;
+        const response = await this.fetchFn(url, {
+            method: 'GET',
+            headers: this.getHeaders(),
+        });
+
+        if (response.status === 404) {
+            return null;
+        }
+
+        return this.handleResponse<SosIncident | null>(response);
+    }
+
+    public async fetchSosIncident(
+        incidentId: string,
+    ): Promise<SosIncident | null> {
+        const url = `${this.baseUrl}/api/v1/sos-incidents/${encodeURIComponent(incidentId)}`;
         const response = await this.fetchFn(url, {
             method: 'GET',
             headers: this.getHeaders(),

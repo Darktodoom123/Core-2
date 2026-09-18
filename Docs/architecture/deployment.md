@@ -156,6 +156,16 @@ TRACKING_DB_READ_HOST=<tracking-replica-db-host-1>,<tracking-replica-db-host-2>
 TRACKING_DB_PORT=5432
 TRACKING_DB_DATABASE=core2_ms_tracking
 
+# Push Notifications Configuration (Milestone 4)
+PUSH_NOTIFICATIONS_ENABLED=true
+PUSH_PROVIDER=expo
+EXPO_PUSH_URL=https://exp.host/--/api/v2/push/send
+EXPO_PUSH_RECEIPTS_URL=https://exp.host/--/api/v2/push/getReceipts
+# Required only if "Enhanced Push Security" is enabled on the EAS Dashboard
+EXPO_PUSH_ACCESS_TOKEN=<eas-personal-access-token-or-empty>
+PUSH_TIMEOUT_SECONDS=5.0
+PUSH_QUEUE=default
+
 # Deployment Lifecycle Flags
 RUN_MIGRATIONS=true
 CACHE_CONFIG=true
@@ -227,7 +237,52 @@ All API communications target `https://core-2.alibaton-ph.com/api/v1` with Sanct
 
 ---
 
-## 5. Security & TLS Checklist
+## 5. Push Notifications Infrastructure & Credentials (Milestone 4)
+
+Native field mobile push notifications (`expo-notifications` via Expo Push Service and Firebase Cloud Messaging HTTP v1) are implemented with runtime verification pending live FCM credentials.
+
+### 5.1. Android Client App Configuration vs. FCM V1 Server Credentials
+
+It is critical to distinguish client-side app configuration from server-side sending credentials:
+
+1. **Client-Side Android Configuration (`google-services.json`)**:
+   - **What it is**: An identity configuration file downloaded from the Firebase Console (**Project Settings > General > Your apps > Android app**) registering package `com.core2.fieldmobile`.
+   - **Where it lives**: Placed in `packages/field-mobile/` and referenced in `packages/field-mobile/app.json` under `expo.android.googleServicesFile`.
+   - **Role**: Instructs the Android client runtime and Google Play Services library on how to communicate with Firebase for registration and device token allocation.
+   - **Important**: `google-services.json` contains public identifiers (client API keys, app IDs, project numbers). It does **NOT** grant push sending permissions from a backend server.
+
+2. **Server-Side Sending Credentials (Google Service Account Key for FCM V1)**:
+   - **What it is**: A private Google Service Account key in JSON format generated from the Firebase Console (**Project Settings > Service accounts > Generate New Private Key**) with the Firebase Cloud Messaging API enabled.
+   - **Where it lives**: Uploaded to Expo Application Services (EAS) via the EAS CLI (`eas credentials` -> **Android > Google Service Account > Manage FCM V1 Key**) or EAS web dashboard. It is **never** committed to version control or included in the mobile client bundle.
+   - **Role**: Allows the Expo Push Service backend to authenticate directly to Google's FCM HTTP v1 API (`https://fcm.googleapis.com/v1/projects/{project_id}/messages:send`) to relay push notifications on behalf of the application.
+   - **Bypassing Expo (Direct FCM)**: If bypassing Expo's relay service, this service account key would reside on the Operations server to mint Google OAuth 2.0 access tokens.
+
+### 5.2. Expo Access Token & Rate Limits (Official Documentation Clarification)
+
+- **Rate Limits**: Expo Push Service rate limits are strictly **project-scoped** (default: 600 notifications per second per project). Providing an access token does **not** grant enhanced rate limits or higher throughput tiers.
+- **Enhanced Push Security**: The `EXPO_PUSH_ACCESS_TOKEN` setting in `apps/operations` is used exclusively for **Enhanced Push Security**. When enabled in the EAS Dashboard, Expo requires that all HTTP requests to `/--/api/v2/push/send` and `/getReceipts` contain `Authorization: Bearer <access_token>`. Any unauthenticated request is rejected with `HTTP 401 UNAUTHORIZED`. This protects against unauthorized push injection in the event that device push tokens are inadvertently exposed.
+
+### 5.3. Provider Delivery Receipts vs. Physical Device Display
+
+- **Provider Receipt (`PushDelivery::STATUS_DELIVERED`)**:
+  - Queried via `/--/api/v2/push/getReceipts` using ticket IDs.
+  - An `ok` receipt confirms that Expo successfully handed the message off to the upstream push service (Google FCM or Apple APNs).
+  - **Critical Invariant**: Provider receipts do **NOT** prove that the notification was physically displayed on the device lock screen. Device-level display can be suppressed or delayed by Android battery optimizations, Doze mode, manufacturer-specific background restrictions, user-disabled notification channels, or Do Not Disturb (DND) modes.
+- **Device Opened Acknowledgment (`PushDelivery::STATUS_OPENED`)**:
+  - The client application records an explicit tap response via `POST /api/v1/push-deliveries/opened` upon authorized user engagement.
+  - Physical lock-screen display verification requires runtime observation on an isolated test device or Android emulator with Google Play Services.
+
+### 5.4. Authoritative Documentation Citations
+
+- [Expo Push Notifications Overview & Sending](https://docs.expo.dev/push-notifications/sending-notifications/)
+- [Expo Enhanced Push Security Specification](https://docs.expo.dev/push-notifications/sending-notifications/#enhanced-push-security)
+- [Expo Push API Rate Limits FAQ](https://docs.expo.dev/push-notifications/faq/#what-are-the-rate-limits-for-expo-push-notifications)
+- [Expo Firebase Cloud Messaging (FCM) Credentials](https://docs.expo.dev/push-notifications/fcm-credentials/)
+- [Firebase Cloud Messaging HTTP v1 Migration Guide](https://firebase.google.com/docs/cloud-messaging/migrate-v1)
+
+---
+
+## 6. Security & TLS Checklist
 
 1. **Domain Verification**: Ensure DNS `A` or `CNAME` records for `core-2.alibaton-ph.com` point to the HostForge ingress IP/host.
 2. **TLS 1.3 Encryption**: Enforce HTTPS on all routes; plain HTTP requests must redirect with HTTP `301 Moved Permanently`.
@@ -238,3 +293,4 @@ All API communications target `https://core-2.alibaton-ph.com/api/v1` with Sanct
 5. **Asset Optimization**:
    - Operations: Run `php artisan config:cache`, `php artisan route:cache`, and `php artisan view:cache`.
    - Tracking: Run `php artisan config:cache` and `php artisan route:cache` (`view:cache` is intentionally omitted).
+

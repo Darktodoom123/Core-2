@@ -25,7 +25,14 @@ class UserFactory extends Factory
     {
         return $this->afterMaking(static function (User $user): void {
             if ($user->getAttribute('username') === null) {
-                $user->username = Username::fromEmail($user->email, $user->id);
+                $base = Username::fromEmail($user->email, $user->id);
+                $candidate = $base;
+                $suffix = 2;
+                while (User::query()->where('username', $candidate)->exists()) {
+                    $candidate = Username::withSuffix($base, $suffix);
+                    $suffix++;
+                }
+                $user->username = $candidate;
             }
         });
     }

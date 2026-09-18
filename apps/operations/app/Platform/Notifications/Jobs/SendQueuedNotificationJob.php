@@ -3,6 +3,7 @@
 namespace App\Platform\Notifications\Jobs;
 
 use App\Platform\Identity\Models\User;
+use App\Platform\Notifications\Data\PushPayload;
 use App\Platform\Notifications\Models\Notification as NotificationModel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -80,5 +81,18 @@ class SendQueuedNotificationJob implements ShouldQueue
             'status' => 'unread',
             'data' => $data,
         ]);
+
+        if (method_exists($this->notification, 'toPush')) {
+            $pushPayload = $this->notification->toPush($this->recipient);
+            if ($pushPayload instanceof PushPayload) {
+                SendPushNotificationJob::dispatch(
+                    recipient: $this->recipient,
+                    payload: $pushPayload,
+                    deduplicationKey: $dedupKey,
+                    relevanceType: $dispatchJobId !== null ? 'dispatch_job' : null,
+                    relevanceId: $dispatchJobId,
+                );
+            }
+        }
     }
 }

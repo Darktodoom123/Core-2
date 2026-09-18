@@ -61,7 +61,7 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
     jobs,
     activeIncident,
     deliveryState,
-    actions,
+    actions = [],
     onClose,
     onActivate,
     onClassify,
@@ -498,7 +498,7 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
                     {((activeIncident &&
                         activeIncident.status !== 'resolved' &&
                         activeIncident.status !== 'cancelled') ||
-                        (actions.length > 0 &&
+                        ((actions?.length ?? 0) > 0 &&
                             deliveryState !== 'preparing')) && (
                         <View
                             style={[

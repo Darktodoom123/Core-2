@@ -605,6 +605,11 @@ it('consolidates scheduled jobs with zero duplicates and overlapping protection'
     expect($locationPrune)->not->toBeNull();
     expect($locationPrune->expression)->toBe('15 2 * * *');
 
-    // Verify exactly 7 events are registered in schedule (no duplicates)
-    expect($events->count())->toBe(7);
+    $pushReceipts = $events->first(fn ($e) => str_contains((string) $e->description, 'push:process-receipts'));
+    expect($pushReceipts)->not->toBeNull();
+    expect($pushReceipts->expression)->toBe('*/15 * * * *');
+    expect($pushReceipts->withoutOverlapping)->toBeTrue();
+
+    // Verify exactly 8 events are registered in schedule (no duplicates)
+    expect($events->count())->toBe(8);
 });

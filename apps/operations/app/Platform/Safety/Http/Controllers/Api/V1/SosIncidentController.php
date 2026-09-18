@@ -18,6 +18,7 @@ use App\Platform\Safety\Http\Resources\SosIncidentResource;
 use App\Platform\Safety\Models\SosIncident;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 final class SosIncidentController extends Controller
 {
@@ -46,6 +47,17 @@ final class SosIncidentController extends Controller
             ->first();
 
         return response()->json(['data' => $incident === null ? null : new SosIncidentResource($incident)]);
+    }
+
+    public function show(Request $request, SosIncident $sosIncident): JsonResponse
+    {
+        Gate::authorize('view', $sosIncident);
+
+        return response()->json([
+            'data' => new SosIncidentResource(
+                $sosIncident->load(['reporter', 'dispatchJob', 'operationalAsset', 'acknowledgedBy'])
+            ),
+        ]);
     }
 
     public function classify(ClassifySosIncidentRequest $request, SosIncident $sosIncident, ClassifySosIncident $action): JsonResponse

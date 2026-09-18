@@ -8,13 +8,13 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notification;
 
-class DispatchScheduleChangeNotification extends Notification
+class DispatchCancellationNotification extends Notification
 {
     use Queueable;
 
     public function __construct(
         public readonly DispatchJob $job,
-        public readonly string $changeDescription
+        public readonly string $reason,
     ) {}
 
     /** @return list<string> */
@@ -27,14 +27,12 @@ class DispatchScheduleChangeNotification extends Notification
     public function toArray(object $notifiable): array
     {
         return [
-            'event' => 'dispatch.schedule_changed',
+            'event' => 'dispatch.cancelled',
             'dispatch_job_id' => $this->job->id,
             'reference' => $this->job->reference,
             'title' => $this->job->title,
-            'description' => $this->changeDescription,
-            'scheduled_start' => $this->job->scheduled_start?->toIso8601String(),
-            'scheduled_end' => $this->job->scheduled_end?->toIso8601String(),
-            'message' => "Schedule update for dispatch {$this->job->reference}: {$this->changeDescription}",
+            'reason' => $this->reason,
+            'message' => "Dispatch job {$this->job->reference} has been cancelled: {$this->reason}",
         ];
     }
 
@@ -43,19 +41,18 @@ class DispatchScheduleChangeNotification extends Notification
         $recipientId = $notifiable instanceof Model ? $notifiable->getKey() : null;
 
         return new PushPayload(
-            title: 'Schedule Update',
-            body: "Schedule updated for dispatch job {$this->job->reference}.",
+            title: 'Dispatch Job Cancelled',
+            body: "Dispatch job {$this->job->reference} has been cancelled.",
             data: [
-                'event' => 'dispatch.schedule_changed',
+                'event' => 'dispatch.cancelled',
                 'recipient_id' => $recipientId,
                 'job_id' => $this->job->id,
                 'dispatch_job_id' => $this->job->id,
                 'reference' => $this->job->reference,
-                'scheduled_start' => $this->job->scheduled_start?->toIso8601String(),
-                'scheduled_end' => $this->job->scheduled_end?->toIso8601String(),
+                'reason' => $this->reason,
             ],
             channelId: 'dispatch-updates',
-            priority: 'default',
+            priority: 'high',
             ttl: 43200,
         );
     }

@@ -13,6 +13,9 @@ use App\Modules\Dispatch\Planning\Models\ProjectShift;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
+use App\Platform\Notifications\DispatchAssignmentNotification;
+use App\Platform\Notifications\DispatchReassignmentNotification;
+use App\Platform\Notifications\Jobs\SendQueuedNotificationJob;
 use App\Shared\Assets\Models\OperationalAsset;
 use App\Shared\Assets\Services\OperationalAssetAvailability;
 use Illuminate\Database\Eloquent\Collection;
@@ -157,6 +160,29 @@ final class ReassignDispatchResources
                 $reason,
             );
 
+            $endedAssignments = $prepared['personnel_assignments'];
+            DB::afterCommit(function () use ($job, $endedAssignments, $newPersonnel, $reason): void {
+                foreach ($endedAssignments as $assignment) {
+                    $user = $assignment->user ?? User::query()->find($assignment->user_id);
+                    if ($user && $user->is_active) {
+                        SendQueuedNotificationJob::dispatch(
+                            $user,
+                            new DispatchReassignmentNotification($job, 'released', $reason)
+                        );
+                    }
+                }
+
+                foreach ($newPersonnel as $assignment) {
+                    $user = User::query()->find($assignment['user_id']);
+                    if ($user && $user->is_active) {
+                        SendQueuedNotificationJob::dispatch(
+                            $user,
+                            new DispatchAssignmentNotification($job, $assignment['assignment_type'])
+                        );
+                    }
+                }
+            });
+
             return new ReassignmentResult(
                 $job->load(['personnelAssignments.user', 'assetAssignments.asset']),
             );
@@ -222,6 +248,30 @@ final class ReassignDispatchResources
             ],
             $decisionReason,
         );
+
+        $endedAssignments = $prepared['personnel_assignments'];
+        $newPersonnel = $changes['new_personnel'];
+        DB::afterCommit(function () use ($job, $endedAssignments, $newPersonnel, $decisionReason): void {
+            foreach ($endedAssignments as $assignment) {
+                $user = $assignment->user ?? User::query()->find($assignment->user_id);
+                if ($user && $user->is_active) {
+                    SendQueuedNotificationJob::dispatch(
+                        $user,
+                        new DispatchReassignmentNotification($job, 'released', $decisionReason)
+                    );
+                }
+            }
+
+            foreach ($newPersonnel as $assignment) {
+                $user = User::query()->find($assignment['user_id']);
+                if ($user && $user->is_active) {
+                    SendQueuedNotificationJob::dispatch(
+                        $user,
+                        new DispatchAssignmentNotification($job, $assignment['assignment_type'])
+                    );
+                }
+            }
+        });
 
         return $job->load(['personnelAssignments.user', 'assetAssignments.asset']);
     }

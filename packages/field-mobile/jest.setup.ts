@@ -146,3 +146,60 @@ const mockFileSystem = {
 
 jest.mock('expo-file-system', () => mockFileSystem);
 jest.mock('expo-file-system/legacy', () => mockFileSystem);
+
+const mockExpoNotifications = {
+    getPermissionsAsync: jest.fn(async () => ({
+        status: 'granted',
+        granted: true,
+        canAskAgain: true,
+        expires: 'never',
+    })),
+    requestPermissionsAsync: jest.fn(async () => ({
+        status: 'granted',
+        granted: true,
+        canAskAgain: true,
+        expires: 'never',
+    })),
+    getExpoPushTokenAsync: jest.fn(async () => ({
+        data: 'ExponentPushToken[mock-field-device-token]',
+        type: 'expo',
+    })),
+    setNotificationChannelAsync: jest.fn(async () => null),
+    setNotificationHandler: jest.fn(),
+    addNotificationReceivedListener: jest.fn(() => ({
+        remove: jest.fn(),
+    })),
+    addNotificationResponseReceivedListener: jest.fn(() => ({
+        remove: jest.fn(),
+    })),
+    getLastNotificationResponseAsync: jest.fn(async () => null),
+    addPushTokenListener: jest.fn(() => ({
+        remove: jest.fn(),
+    })),
+    AndroidImportance: {
+        MAX: 5,
+        HIGH: 4,
+        DEFAULT: 3,
+        LOW: 2,
+        MIN: 1,
+        NONE: 0,
+    },
+};
+
+jest.mock('expo-notifications', () => mockExpoNotifications);
+
+jest.mock('expo-constants', () => ({
+    __esModule: true,
+    default: {
+        expoConfig: {
+            extra: {
+                eas: {
+                    projectId: '157849b3-e318-4892-88e6-3f705394d299',
+                },
+            },
+        },
+        easConfig: {
+            projectId: '157849b3-e318-4892-88e6-3f705394d299',
+        },
+    },
+}));
