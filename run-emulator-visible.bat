@@ -27,7 +27,7 @@ if exist "%USERPROFILE%\.android\avd\core2_api_36.avd\hardware-qemu.ini.lock" (
 )
 
 echo [1/3] Starting Android emulator window...
-start "" "%EMULATOR%" -avd core2_api_36
+start "" "%EMULATOR%" -avd core2_api_36 -gpu swiftshader -no-snapshot -no-audio -crash-report-mode never
 
 echo [2/3] Waiting for emulator to boot up...
 "%ADB%" wait-for-device

@@ -141,6 +141,73 @@ function isEmulatorProcessRunning() {
     }
 }
 
+function cleanStaleAvdLocks(avdName) {
+    if (isEmulatorProcessRunning()) {
+        return;
+    }
+
+    const avdHome = process.env.ANDROID_AVD_HOME;
+
+    if (!avdHome) {
+        return;
+    }
+
+    const avdDir = path.join(avdHome, `${avdName}.avd`);
+
+    if (!fs.existsSync(avdDir)) {
+        return;
+    }
+
+    const lockEntries = [
+        'hardware-qemu.ini.lock',
+        'multiinstance.lock',
+        'default.lock',
+    ];
+
+    for (const entry of lockEntries) {
+        const lockPath = path.join(avdDir, entry);
+
+        if (fs.existsSync(lockPath)) {
+            try {
+                fs.rmSync(lockPath, { recursive: true, force: true });
+                console.log(`[INFO] Cleaned stale AVD lock: ${entry}`);
+            } catch {
+                // Best effort lock cleanup
+            }
+        }
+    }
+}
+
+function resolveSafeGpuMode() {
+    if (process.env.CORE2_EMULATOR_GPU) {
+        return process.env.CORE2_EMULATOR_GPU;
+    }
+
+    if (process.platform === 'win32') {
+        try {
+            const check = spawnSync(
+                'powershell.exe',
+                [
+                    '-NoProfile',
+                    '-Command',
+                    'Get-CimInstance Win32_VideoController | Select-Object -ExpandProperty Name',
+                ],
+                { encoding: 'utf8', timeout: 4000 },
+            );
+            const output = String(check.stdout ?? '').toLowerCase();
+
+            if (output.includes('amd') || output.includes('radeon')) {
+                // AMD host Vulkan ICD exhibits crashes inside Android Emulator host GPU translation
+                return 'swiftshader';
+            }
+        } catch {
+            // Fall back to auto
+        }
+    }
+
+    return 'auto';
+}
+
 function gracefullyStopEmulator(serial) {
     try {
         const adb = getAdbPath();
@@ -275,6 +342,8 @@ function ensureEmulatorRunning() {
     const avdName =
         process.env.CORE2_AVD_NAME ?? process.env.ANDROID_AVD ?? 'core2_api_36';
 
+    cleanStaleAvdLocks(avdName);
+
     const initialDevices = getAttachedDevices();
     const readyDevice = initialDevices.find(
         (d) => d.state === 'device' && isBootCompleted(d.serial),
@@ -312,6 +381,7 @@ function ensureEmulatorRunning() {
             // Re-fetch attached devices after killing it so we don't use stale state
             initialDevices.length = 0;
             initialDevices.push(...getAttachedDevices());
+            cleanStaleAvdLocks(avdName);
         } else {
             return;
         }
@@ -320,7 +390,7 @@ function ensureEmulatorRunning() {
     let targetSerial = initialDevices[0]?.serial ?? null;
     const processAlreadyRunning = isEmulatorProcessRunning();
     const logPath = path.resolve(__dirname, '..', '.emulator.log');
-    const gpuMode = process.env.CORE2_EMULATOR_GPU ?? 'auto';
+    const gpuMode = resolveSafeGpuMode();
 
     if (initialDevices.length === 0 && !processAlreadyRunning) {
         ensureAvdExists(avdName);
@@ -346,7 +416,16 @@ function ensureEmulatorRunning() {
             const logFd = fs.openSync(logPath, 'a');
             const emuProc = spawn(
                 emulator,
-                ['-avd', avdName, '-gpu', gpuMode, '-no-snapshot', '-no-audio'],
+                [
+                    '-avd',
+                    avdName,
+                    '-gpu',
+                    gpuMode,
+                    '-no-snapshot',
+                    '-no-audio',
+                    '-crash-report-mode',
+                    'never',
+                ],
                 {
                     detached: true,
                     stdio: ['ignore', logFd, logFd],

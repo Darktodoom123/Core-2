@@ -4,7 +4,7 @@ param(
     [string]$GpuMode = "auto",
     [string]$LogPath = "",
     [string]$Desktop = "WinSta0\Default",
-    [string[]]$ExtraArgs = @("-no-snapshot", "-no-audio"),
+    [string[]]$ExtraArgs = @("-no-snapshot", "-no-audio", "-crash-report-mode", "never"),
     [int]$TargetPid = 0,
     [switch]$CheckVisible,
     [switch]$Wait
@@ -17,6 +17,7 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
+using System.Threading;
 
 public class Win32DesktopLauncher {
     public delegate bool EnumDesktopsDelegate(string desktop, IntPtr lParam);
@@ -116,6 +117,9 @@ public class Win32DesktopLauncher {
     [DllImport("user32.dll")]
     public static extern bool IsWindowVisible(IntPtr hWnd);
 
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern bool SetThreadDesktop(IntPtr hDesktop);
+
     [DllImport("user32.dll")]
     public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
@@ -135,30 +139,61 @@ public class Win32DesktopLauncher {
         // Seek to EOF (FILE_END = 2)
         SetFilePointer(hLog, 0, IntPtr.Zero, 2);
 
-        var si = new STARTUPINFO();
-        si.cb = Marshal.SizeOf(si);
-        si.lpDesktop = string.IsNullOrEmpty(desktop) ? @"WinSta0\Default" : desktop;
-        si.dwFlags = 0x00000100; // STARTF_USESTDHANDLES
-        si.hStdOutput = hLog;
-        si.hStdError = hLog;
-        si.hStdInput = IntPtr.Zero;
+        string deskName = desktop;
+        if (!string.IsNullOrEmpty(deskName) && deskName.Contains("\\")) {
+            deskName = deskName.Substring(deskName.IndexOf('\\') + 1);
+        }
+        if (string.IsNullOrEmpty(deskName)) {
+            deskName = "Default";
+        }
 
-        var pi = new PROCESS_INFORMATION();
-        string cmdLine = "\"" + appExe + "\" " + args;
+        IntPtr hDesk = OpenDesktop(deskName, 0, false, 0x01FF);
 
-        uint flags = 0x00000208; // CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS
-        bool ok = CreateProcess(null, cmdLine, IntPtr.Zero, IntPtr.Zero, true, flags, IntPtr.Zero, null, ref si, out pi);
-        int err = Marshal.GetLastWin32Error();
+        int spawnedPid = 0;
+        int lastErr = 0;
+
+        Thread t = new Thread(() => {
+            if (hDesk != IntPtr.Zero) {
+                SetThreadDesktop(hDesk);
+            }
+
+            var si = new STARTUPINFO();
+            si.cb = Marshal.SizeOf(si);
+            si.lpDesktop = string.IsNullOrEmpty(desktop) ? @"WinSta0\Default" : desktop;
+            si.dwFlags = 0x00000100; // STARTF_USESTDHANDLES
+            si.hStdOutput = hLog;
+            si.hStdError = hLog;
+            si.hStdInput = IntPtr.Zero;
+
+            var pi = new PROCESS_INFORMATION();
+            string cmdLine = "\"" + appExe + "\" " + args;
+
+            uint flags = 0x00000208; // CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS
+            bool ok = CreateProcess(null, cmdLine, IntPtr.Zero, IntPtr.Zero, true, flags, IntPtr.Zero, null, ref si, out pi);
+
+            if (!ok) {
+                lastErr = Marshal.GetLastWin32Error();
+            } else {
+                spawnedPid = pi.dwProcessId;
+                CloseHandle(pi.hProcess);
+                CloseHandle(pi.hThread);
+            }
+        });
+
+        t.Start();
+        t.Join();
+
+        if (hDesk != IntPtr.Zero) {
+            CloseDesktop(hDesk);
+        }
 
         CloseHandle(hLog);
 
-        if (!ok) {
-            return -err;
+        if (spawnedPid <= 0) {
+            return -lastErr;
         }
 
-        CloseHandle(pi.hProcess);
-        CloseHandle(pi.hThread);
-        return pi.dwProcessId;
+        return spawnedPid;
     }
 
     public static string FindEmulatorWindow(string desktop, string avdName, int targetPid = 0) {
@@ -275,6 +310,33 @@ if (-not $LogPath) {
 $logDir = Split-Path -Parent $LogPath
 if ($logDir -and -not (Test-Path $logDir)) {
     New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+}
+
+if (-not $GpuMode -or $GpuMode -eq "auto") {
+    if ($env:CORE2_EMULATOR_GPU) {
+        $GpuMode = $env:CORE2_EMULATOR_GPU
+    } else {
+        $isAmd = (Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue | Where-Object { $_.Name -match "AMD|Radeon" })
+        if ($isAmd) {
+            $GpuMode = "swiftshader"
+        } else {
+            $GpuMode = "auto"
+        }
+    }
+}
+
+$qemuRunning = Get-Process | Where-Object { $_.ProcessName -match "qemu-system|emulator" }
+if (-not $qemuRunning) {
+    $avdHome = if ($env:ANDROID_AVD_HOME) { $env:ANDROID_AVD_HOME } else { "$env:USERPROFILE\.android\avd" }
+    $avdDir = Join-Path $avdHome "$AvdName.avd"
+    if (Test-Path $avdDir) {
+        @("hardware-qemu.ini.lock", "multiinstance.lock", "default.lock") | ForEach-Object {
+            $lockPath = Join-Path $avdDir $_
+            if (Test-Path $lockPath) {
+                Remove-Item -Path $lockPath -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+    }
 }
 
 $argList = @("-avd", $AvdName, "-gpu", $GpuMode) + $ExtraArgs
