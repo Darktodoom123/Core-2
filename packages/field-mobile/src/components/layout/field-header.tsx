@@ -4,46 +4,114 @@ import { useTheme } from '../../theme';
 import { Icon } from '../common/Icon';
 import { colors, shadows } from '../nativeStyles';
 
-export type SyncTone = 'checking' | 'online' | 'attention' | 'offline';
+export type SyncTone =
+    'checking' | 'online' | 'attention' | 'offline' | 'syncing';
 
 export interface SyncStatusPillProps {
     label: string;
     message: string;
     tone: SyncTone;
+    onPress?: () => void;
 }
 
 export const SyncStatusPill: React.FC<SyncStatusPillProps> = ({
     label,
     message,
     tone,
-}) => (
-    <View
-        accessibilityLabel={`Sync status: ${label}, ${message}`}
-        accessibilityRole="summary"
-        style={[
-            styles.syncPill,
-            tone === 'online' && styles.syncPillOnline,
-            tone === 'offline' && styles.syncPillOffline,
-            tone === 'attention' && styles.syncPillAttention,
-        ]}
-        testID="sync-status-pill"
-    >
+    onPress,
+}) => {
+    const { isDarkHud } = useTheme();
+
+    const pillBody = (
         <View
+            accessibilityLabel={`Sync status: ${label}, ${message}`}
+            accessibilityRole={onPress ? 'button' : 'summary'}
             style={[
-                styles.syncMark,
-                tone === 'checking' && styles.syncMarkChecking,
-                tone === 'online' && styles.syncMarkOnline,
-                tone === 'offline' && styles.syncMarkOffline,
-                tone === 'attention' && styles.syncMarkAttention,
+                styles.syncPill,
+                isDarkHud && styles.darkSyncPill,
+                tone === 'online' && styles.syncPillOnline,
+                isDarkHud && tone === 'online' && styles.darkSyncPillOnline,
+                tone === 'offline' && styles.syncPillOffline,
+                isDarkHud && tone === 'offline' && styles.darkSyncPillOffline,
+                tone === 'attention' && styles.syncPillAttention,
+                isDarkHud &&
+                    tone === 'attention' &&
+                    styles.darkSyncPillAttention,
+                tone === 'syncing' && styles.syncPillSyncing,
+                isDarkHud && tone === 'syncing' && styles.darkSyncPillSyncing,
             ]}
-        />
-        <Text style={styles.syncLabel}>{label}</Text>
-        <Text style={styles.syncSeparator}>·</Text>
-        <Text style={styles.syncMessage} selectable>
-            {message}
-        </Text>
-    </View>
-);
+            testID="sync-status-pill"
+        >
+            <View
+                style={[
+                    styles.syncMark,
+                    tone === 'checking' && styles.syncMarkChecking,
+                    tone === 'online' && styles.syncMarkOnline,
+                    tone === 'offline' && styles.syncMarkOffline,
+                    tone === 'attention' && styles.syncMarkAttention,
+                    tone === 'syncing' && styles.syncMarkSyncing,
+                ]}
+            />
+            <Text
+                style={[
+                    styles.syncLabel,
+                    isDarkHud && styles.darkSyncLabel,
+                    tone === 'attention' && styles.syncLabelAttention,
+                ]}
+            >
+                {label}
+            </Text>
+            <Text
+                style={[
+                    styles.syncSeparator,
+                    isDarkHud && styles.darkSyncSeparator,
+                ]}
+            >
+                ·
+            </Text>
+            <Text
+                selectable
+                style={[
+                    styles.syncMessage,
+                    isDarkHud && styles.darkSyncMessage,
+                ]}
+            >
+                {message}
+            </Text>
+            <Icon
+                color={
+                    isDarkHud
+                        ? '#64748B'
+                        : tone === 'attention'
+                          ? colors.amberDark
+                          : colors.muted
+                }
+                name="chevron-right"
+                size={14}
+            />
+        </View>
+    );
+
+    if (onPress) {
+        return (
+            <Pressable
+                accessibilityHint="Opens outbox and synchronization details sheet"
+                accessibilityLabel={`Sync status: ${label}, ${message}. Tap to view synchronization details`}
+                accessibilityRole="button"
+                onPress={onPress}
+                style={({ pressed }) => [
+                    styles.syncPillWrapper,
+                    pressed && styles.pressed,
+                ]}
+                testID="sync-pill-pressable"
+            >
+                {pillBody}
+            </Pressable>
+        );
+    }
+
+    return <View style={styles.syncPillWrapper}>{pillBody}</View>;
+};
 
 export interface BellIconProps {
     color?: string;
@@ -65,6 +133,7 @@ export interface ProfileSummaryProps {
 
     notificationCount?: number;
     onOpenNotifications?: () => void;
+    onOpenSyncSheet?: () => void;
 }
 
 const initialsFor = (userName?: string | null): string => {
@@ -87,6 +156,7 @@ export const ProfileSummary: React.FC<ProfileSummaryProps> = ({
     onOpenProfile,
     notificationCount = 0,
     onOpenNotifications,
+    onOpenSyncSheet,
 }) => {
     const { isDarkHud, toggleMode } = useTheme();
 
@@ -158,7 +228,8 @@ export const ProfileSummary: React.FC<ProfileSummaryProps> = ({
 
             <View style={styles.headerActions}>
                 {/* Connection Status Pill Badge: strictly indicates internet connectivity */}
-                <View
+                <Pressable
+                    accessibilityHint="Opens outbox synchronization status sheet"
                     accessibilityLabel={`Connection status: ${
                         connectionState === 'online'
                             ? 'online'
@@ -166,13 +237,16 @@ export const ProfileSummary: React.FC<ProfileSummaryProps> = ({
                               ? 'checking connection'
                               : 'offline'
                     }`}
-                    style={[
+                    accessibilityRole="button"
+                    onPress={onOpenSyncSheet}
+                    style={({ pressed }) => [
                         styles.onlineSyncedPill,
                         isDarkHud && styles.darkOnlineSyncedPill,
                         connectionState === 'offline' && styles.offlinePill,
                         isDarkHud &&
                             connectionState === 'offline' &&
                             styles.darkOfflinePill,
+                        pressed && styles.pressed,
                     ]}
                     testID="online-synced-pill"
                 >
@@ -201,7 +275,7 @@ export const ProfileSummary: React.FC<ProfileSummaryProps> = ({
                               ? 'checking…'
                               : 'offline'}
                     </Text>
-                </View>
+                </Pressable>
 
                 <Pressable
                     accessibilityHint="Toggles between daylight and cockpit night HUD lighting"
@@ -292,6 +366,7 @@ export interface FieldHeaderProps {
     onOpenProfile: () => void;
     notificationCount?: number;
     onOpenNotifications?: () => void;
+    onOpenSyncSheet?: () => void;
 }
 
 export const FieldHeader: React.FC<FieldHeaderProps> = ({
@@ -305,6 +380,7 @@ export const FieldHeader: React.FC<FieldHeaderProps> = ({
     onOpenProfile,
     notificationCount,
     onOpenNotifications,
+    onOpenSyncSheet,
 }) => {
     const { isDarkHud } = useTheme();
 
@@ -313,24 +389,24 @@ export const FieldHeader: React.FC<FieldHeaderProps> = ({
             style={[styles.header, isDarkHud && styles.darkHeader]}
             testID="field-header"
         >
-            <View style={styles.accessiblePill}>
-                <SyncStatusPill
-                    label={syncStatusLabel}
-                    message={syncStatusMessage}
-                    tone={syncTone}
-                />
-            </View>
+            <SyncStatusPill
+                label={syncStatusLabel}
+                message={syncStatusMessage}
+                onPress={onOpenSyncSheet}
+                tone={syncTone}
+            />
 
             {userName || userRole ? (
                 <ProfileSummary
-                    userName={userName}
-                    userRole={userRole}
                     isOnline={isOnline}
-                    syncTone={syncTone}
-                    profileOpen={profileOpen}
-                    onOpenProfile={onOpenProfile}
                     notificationCount={notificationCount}
                     onOpenNotifications={onOpenNotifications}
+                    onOpenProfile={onOpenProfile}
+                    onOpenSyncSheet={onOpenSyncSheet}
+                    profileOpen={profileOpen}
+                    syncTone={syncTone}
+                    userName={userName}
+                    userRole={userRole}
                 />
             ) : null}
         </View>
@@ -354,10 +430,11 @@ const styles = StyleSheet.create({
         letterSpacing: 1.1,
         textTransform: 'uppercase',
     },
+    syncPillWrapper: {
+        width: '100%',
+    },
     accessiblePill: {
-        height: 1,
-        opacity: 0.01,
-        overflow: 'hidden',
+        width: '100%',
     },
     syncPill: {
         alignItems: 'center',
@@ -373,17 +450,53 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
         ...shadows.sm,
     },
+    darkSyncPill: {
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
+    },
     syncPillOnline: {
         backgroundColor: colors.greenLight,
         borderColor: colors.greenBorder,
+    },
+    darkSyncPillOnline: {
+        backgroundColor: 'rgba(16, 185, 129, 0.12)',
+        borderColor: 'rgba(16, 185, 129, 0.3)',
     },
     syncPillOffline: {
         backgroundColor: colors.warningLight,
         borderColor: colors.warningBorder,
     },
+    darkSyncPillOffline: {
+        backgroundColor: 'rgba(245, 158, 11, 0.12)',
+        borderColor: 'rgba(245, 158, 11, 0.3)',
+    },
     syncPillAttention: {
         backgroundColor: colors.warningSoft,
         borderColor: colors.warningBorder,
+    },
+    darkSyncPillAttention: {
+        backgroundColor: 'rgba(239, 68, 68, 0.15)',
+        borderColor: 'rgba(239, 68, 68, 0.4)',
+    },
+    syncPillSyncing: {
+        backgroundColor: '#EFF6FF',
+        borderColor: '#93C5FD',
+    },
+    darkSyncPillSyncing: {
+        backgroundColor: 'rgba(59, 130, 246, 0.15)',
+        borderColor: 'rgba(59, 130, 246, 0.4)',
+    },
+    syncLabelAttention: {
+        color: '#DC2626',
+    },
+    darkSyncLabel: {
+        color: '#F8FAFC',
+    },
+    darkSyncSeparator: {
+        color: '#64748B',
+    },
+    darkSyncMessage: {
+        color: '#CBD5E1',
     },
     syncMark: {
         borderRadius: 4,
@@ -401,6 +514,9 @@ const styles = StyleSheet.create({
     },
     syncMarkAttention: {
         backgroundColor: colors.warning,
+    },
+    syncMarkSyncing: {
+        backgroundColor: colors.primary,
     },
     syncLabel: {
         color: colors.text,

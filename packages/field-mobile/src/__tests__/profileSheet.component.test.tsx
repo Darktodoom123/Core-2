@@ -299,4 +299,71 @@ describe('ProfileSheet component tests', () => {
         expect(onClose).toHaveBeenCalledTimes(1);
         expect(onOpenAccountSettings).toHaveBeenCalledTimes(1);
     });
+
+    it('renders truthful needs attention state when failed or conflict outbox actions exist even if queuedCount is 0', async () => {
+        const attentionCommands: any[] = [
+            {
+                id: 'cmd-failed-net',
+                actorId: 101,
+                payloadHash: 'hash-1',
+                type: 'submit_dvir',
+                payload: { has_defects: false },
+                createdAt: '2026-09-20T08:00:00Z',
+                updatedAt: '2026-09-20T08:01:00Z',
+                attempts: 2,
+                state: 'failed',
+                error: {
+                    code: 'GATEWAY_TIMEOUT',
+                    message: 'Server connection timed out.',
+                    retryable: true,
+                },
+            },
+        ];
+
+        const view = await render(
+            <ThemeProvider initialMode="light">
+                <ProfileSheet
+                    isOnline={true}
+                    onCancelSignOut={jest.fn()}
+                    onClose={jest.fn()}
+                    onStartSignOut={jest.fn()}
+                    outboxCommands={attentionCommands}
+                    queuedCount={0}
+                    signOutConfirmationOpen={false}
+                    userName="Dev Crane Operator"
+                    userRole="crane_operator"
+                    visible={true}
+                />
+            </ThemeProvider>,
+        );
+
+        // Must NOT falsely report all actions synced
+        expect(view.queryByText('✓ All actions synced')).toBeNull();
+        // Must truthfully display needs attention
+        expect(view.getByText('⚠️ 1 needs attention')).toBeTruthy();
+    });
+
+    it('displays sign in required warning when isAuthenticated is false', async () => {
+        const view = await render(
+            <ThemeProvider initialMode="light">
+                <ProfileSheet
+                    isAuthenticated={false}
+                    isOnline={true}
+                    onCancelSignOut={jest.fn()}
+                    onClose={jest.fn()}
+                    onStartSignOut={jest.fn()}
+                    queuedCount={0}
+                    signOutConfirmationOpen={false}
+                    userName="Dev Crane Operator"
+                    userRole="crane_operator"
+                    visible={true}
+                />
+            </ThemeProvider>,
+        );
+
+        // Must NOT falsely report all actions synced
+        expect(view.queryByText('✓ All actions synced')).toBeNull();
+        // Must truthfully display sign in required
+        expect(view.getByText('⚠️ Sign in required to sync')).toBeTruthy();
+    });
 });

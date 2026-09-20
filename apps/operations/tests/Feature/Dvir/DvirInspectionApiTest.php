@@ -7,6 +7,7 @@ use App\Shared\Assets\Models\OperationalAsset;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
 
@@ -359,6 +360,86 @@ it('stores a dvir inspection with walkaround photos and verifies database and st
         ->assertOk()
         ->assertJsonCount(4, 'data.photos')
         ->assertJsonPath('data.photos.0.angle', 'front');
+});
+
+it('replays the original dvir result for an identical command after response loss', function (): void {
+    config(['filesystems.dvir_disk' => 'public']);
+    Storage::fake('public');
+
+    /** @var User $operator */
+    $operator = User::factory()->create(['is_active' => true]);
+    $token = $operator->createToken('Mobile Token')->plainTextToken;
+    $commandId = (string) Str::uuid();
+    $payload = dvirPayload([
+        'photos' => [[
+            'angle' => 'front',
+            'file_name' => 'front.jpg',
+            'file_size' => 12,
+            'base64' => 'data:image/jpeg;base64,'.base64_encode('same-photo-bytes'),
+            'uri' => 'file:///device/attachments/original-front.jpg',
+        ]],
+    ]);
+
+    $first = $this->withToken($token)
+        ->withHeader('Idempotency-Key', $commandId)
+        ->postJson('/api/v1/dvir/inspections', $payload)
+        ->assertCreated();
+
+    $second = $this->withToken($token)
+        ->withHeader('Idempotency-Key', $commandId)
+        ->postJson('/api/v1/dvir/inspections', $payload)
+        ->assertCreated();
+
+    $second->assertJson($first->json());
+    $this->assertDatabaseCount('dvir_inspections', 1);
+    $this->assertDatabaseCount('dvir_inspection_photos', 1);
+    $this->assertDatabaseCount('command_logs', 1);
+});
+
+it('rejects changed attachment content or local reference under the same command id', function (): void {
+    config(['filesystems.dvir_disk' => 'public']);
+    Storage::fake('public');
+
+    /** @var User $operator */
+    $operator = User::factory()->create(['is_active' => true]);
+    $token = $operator->createToken('Mobile Token')->plainTextToken;
+    $commandId = (string) Str::uuid();
+    $basePayload = dvirPayload([
+        'photos' => [[
+            'angle' => 'front',
+            'file_name' => 'front.jpg',
+            'file_size' => 12,
+            'base64' => 'data:image/jpeg;base64,'.base64_encode('original-photo-bytes'),
+            'uri' => 'file:///device/attachments/original-front.jpg',
+        ]],
+    ]);
+
+    $this->withToken($token)
+        ->withHeader('Idempotency-Key', $commandId)
+        ->postJson('/api/v1/dvir/inspections', $basePayload)
+        ->assertCreated();
+
+    $changedContent = $basePayload;
+    $changedContent['photos'][0]['base64'] = 'data:image/jpeg;base64,'.base64_encode('replacement-photo-bytes');
+
+    $this->withToken($token)
+        ->withHeader('Idempotency-Key', $commandId)
+        ->postJson('/api/v1/dvir/inspections', $changedContent)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['command_id']);
+
+    $changedReference = $basePayload;
+    $changedReference['photos'][0]['uri'] = 'file:///device/attachments/restored-front.jpg';
+
+    $this->withToken($token)
+        ->withHeader('Idempotency-Key', $commandId)
+        ->postJson('/api/v1/dvir/inspections', $changedReference)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['command_id']);
+
+    $this->assertDatabaseCount('dvir_inspections', 1);
+    $this->assertDatabaseCount('dvir_inspection_photos', 1);
+    $this->assertDatabaseCount('command_logs', 1);
 });
 
 it('supports storing dvir inspection photos to configured cloud storage disk', function (): void {

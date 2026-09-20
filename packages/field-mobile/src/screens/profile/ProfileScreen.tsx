@@ -14,6 +14,7 @@ import { Icon } from '../../components/common/Icon';
 import type { FieldApiClient } from '../../services/apiClient';
 import { useTheme } from '../../theme';
 import type { AccountDetailsResponse } from '../../types/account';
+import type { OutboxCommand } from '../../types/index';
 import { ActivityTab } from './components/ActivityTab';
 import { ConfirmPasswordModal } from './components/ConfirmPasswordModal';
 import { EmailChangeModal } from './components/EmailChangeModal';
@@ -30,14 +31,18 @@ export interface ProfileScreenProps {
     assignedAssetLabel?: string | null;
     isOnline?: boolean | null;
     queuedCount?: number;
+    outboxCommands?: OutboxCommand[];
     pushNotificationsEnabled?: boolean;
     onRequestPushPermissions?: () => void;
     onSyncNow?: () => void;
+    onOpenOutboxDetails?: () => void;
     onLogout?: () => void;
     onBack: () => void;
     initialTab?: ProfileTab;
     userName?: string | null;
     userRole?: string | null;
+    isAuthenticated?: boolean;
+    lastSuccessfulSyncAt?: string | null;
 }
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({
@@ -45,10 +50,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     initialAccountData = null,
     assignedAssetLabel,
     isOnline = true,
+    isAuthenticated = true,
+    lastSuccessfulSyncAt,
     queuedCount = 0,
+    outboxCommands,
     pushNotificationsEnabled = true,
     onRequestPushPermissions,
     onSyncNow,
+    onOpenOutboxDetails,
     onLogout,
     onBack,
     initialTab = 'profile',
@@ -572,10 +581,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
                     {activeTab === 'settings' ? (
                         <SettingsSyncTab
+                            isAuthenticated={isAuthenticated}
                             isOnline={isOnline}
+                            lastSuccessfulSyncAt={lastSuccessfulSyncAt}
                             onLogout={onLogout}
+                            onOpenOutboxDetails={onOpenOutboxDetails}
                             onRequestPushPermissions={onRequestPushPermissions}
                             onSyncNow={onSyncNow}
+                            outboxCommands={outboxCommands}
                             pushNotificationsEnabled={pushNotificationsEnabled}
                             queuedCount={queuedCount}
                         />

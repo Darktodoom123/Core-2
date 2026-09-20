@@ -11,6 +11,7 @@ export interface SyncStatusPanelProps {
     failedCount: number;
     conflictCount: number;
     onSyncNow?: () => void;
+    onOpenDetails?: () => void;
     isOnline?: boolean | null;
     failedCommands?: OutboxCommand[];
 }
@@ -23,6 +24,7 @@ export const SyncStatusPanel: React.FC<SyncStatusPanelProps> = ({
     failedCount,
     conflictCount,
     onSyncNow,
+    onOpenDetails,
     isOnline,
 }) => {
     if (!showDetails) {
@@ -41,7 +43,24 @@ export const SyncStatusPanel: React.FC<SyncStatusPanelProps> = ({
             ]}
             testID="outbox-status-bar"
         >
-            <Text style={styles.panelTitle}>Sync details</Text>
+            <View style={styles.panelHeaderRow}>
+                <Text style={styles.panelTitle}>Sync details</Text>
+                {onOpenDetails ? (
+                    <Pressable
+                        accessibilityHint="Opens itemized outbox sheet with recovery controls"
+                        accessibilityLabel="View full outbox details"
+                        accessibilityRole="button"
+                        onPress={onOpenDetails}
+                        style={({ pressed }) => [
+                            styles.viewDetailsBtn,
+                            pressed && styles.pressed,
+                        ]}
+                        testID="open-outbox-details-btn"
+                    >
+                        <Text style={styles.viewDetailsText}>View queue →</Text>
+                    </Pressable>
+                ) : null}
+            </View>
             <View style={styles.details} testID="sync-details">
                 <Text
                     style={[
@@ -150,6 +169,22 @@ const styles = StyleSheet.create({
         color: colors.text,
         fontSize: 15,
         fontWeight: '800',
+    },
+    panelHeaderRow: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+    },
+    viewDetailsBtn: {
+        backgroundColor: colors.background,
+        borderRadius: 6,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+    },
+    viewDetailsText: {
+        color: colors.primary,
+        fontSize: 12,
+        fontWeight: '700',
     },
     details: {
         borderTopColor: colors.borderSubtle,

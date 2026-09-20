@@ -94,6 +94,78 @@ function emptyResult(): OutboxProcessResult {
     };
 }
 
+function isUncertainTransportError(error: unknown): boolean {
+    const errorObject =
+        typeof error === 'object' && error !== null
+            ? (error as Record<string, unknown>)
+            : undefined;
+    const status =
+        error instanceof ApiClientError
+            ? error.status
+            : typeof errorObject?.status === 'number'
+              ? errorObject.status
+              : undefined;
+    const code =
+        error instanceof ApiClientError
+            ? error.errorCode
+            : typeof errorObject?.code === 'string'
+              ? errorObject.code
+              : undefined;
+    const message =
+        error instanceof Error
+            ? error.message
+            : typeof errorObject?.message === 'string'
+              ? errorObject.message
+              : String(error ?? '');
+
+    if (
+        [
+            'TIMEOUT',
+            'NETWORK_TIMEOUT',
+            'GATEWAY_TIMEOUT',
+            'ECONNRESET',
+        ].includes(code ?? '') ||
+        [408, 502, 503, 504].includes(status ?? 0)
+    ) {
+        return true;
+    }
+
+    const normalizedMessage = message.toLowerCase();
+
+    return (
+        normalizedMessage.includes('timeout') ||
+        normalizedMessage.includes('timed out') ||
+        normalizedMessage.includes('gateway') ||
+        normalizedMessage.includes('network request failed') ||
+        normalizedMessage.includes('connection reset') ||
+        normalizedMessage.includes('econnreset')
+    );
+}
+
+function isVerifiedServerRejection(command: OutboxCommand): boolean {
+    if (command.state !== 'failed' || command.error?.retryable === true) {
+        return false;
+    }
+
+    if (
+        typeof command.error?.status === 'number' &&
+        command.error.status >= 400 &&
+        command.error.status < 500
+    ) {
+        return true;
+    }
+
+    return [
+        'AUTHORIZATION_DENIED',
+        'MALFORMED_COMMAND',
+        'UNKNOWN_COMMAND_TYPE',
+        'VALIDATION_FAILED',
+        'UNPROCESSABLE_ENTITY',
+        'LEGACY_RELEASE_DISALLOWED',
+        'QUARANTINED',
+    ].includes(command.error?.code ?? '');
+}
+
 export class CommandOutboxManager {
     private commands = new Map<string, OutboxCommand>();
     private listeners = new Set<OutboxListener>();
@@ -101,6 +173,7 @@ export class CommandOutboxManager {
     private activeActorId: number | null = null;
     private activationSequence = 0;
     private lastCreatedAtMs = 0;
+    private lastSuccessfulSyncAt: string | null = null;
     private readonly repository: OutboxRepository;
     private readonly hasher: PayloadHasher;
     private readonly now: () => Date;
@@ -218,6 +291,10 @@ export class CommandOutboxManager {
                 .map((command) => command.nextAttemptAt!)
                 .sort()[0] ?? null
         );
+    }
+
+    public getLastSuccessfulSyncAt(): string | null {
+        return this.lastSuccessfulSyncAt;
     }
 
     private async payloadHash(
@@ -484,7 +561,18 @@ export class CommandOutboxManager {
                     left.id.localeCompare(right.id)
                 );
             })) {
+                const scope = commandScope(command);
+
                 if (command.state !== 'queued') {
+                    if (
+                        command.state === 'failed' ||
+                        command.state === 'conflict' ||
+                        command.state === 'unresolved' ||
+                        command.state === 'syncing'
+                    ) {
+                        blockedScopes.add(scope);
+                    }
+
                     continue;
                 }
 
@@ -507,7 +595,6 @@ export class CommandOutboxManager {
                     continue;
                 }
 
-                const scope = commandScope(command);
                 const dueAt = command.nextAttemptAt
                     ? Date.parse(command.nextAttemptAt)
                     : 0;
@@ -559,9 +646,23 @@ export class CommandOutboxManager {
 
         if (
             !command ||
+            command.actorId !== this.activeActorId ||
             command.type === 'release_maintenance_work_order' ||
             command.error?.code === 'MALFORMED_COMMAND' ||
             command.error?.code === 'LEGACY_RELEASE_DISALLOWED' ||
+            command.error?.code === 'AUTHORIZATION_DENIED' ||
+            command.error?.code === 'VALIDATION_FAILED' ||
+            command.error?.code === 'UNPROCESSABLE_ENTITY' ||
+            command.error?.code === 'UNKNOWN_COMMAND_TYPE' ||
+            command.error?.code === 'MISSING_ATTACHMENTS' ||
+            command.error?.code === 'SOS_EXPIRED' ||
+            command.error?.code === 'QUARANTINED' ||
+            (command.state === 'unresolved' &&
+                Boolean(command.error?.missingAttachmentUri)) ||
+            (typeof command.error?.status === 'number' &&
+                [400, 401, 403, 404, 405, 422].includes(
+                    command.error.status,
+                )) ||
             command.state === 'completed' ||
             command.state === 'conflict' ||
             command.state === 'syncing' ||
@@ -571,17 +672,247 @@ export class CommandOutboxManager {
             return result;
         }
 
-        command.state = 'queued';
-        command.error = null;
-        command.nextAttemptAt = null;
-        await this.persist(command);
-        await this.executeCommand(command, apiClient, result);
+        // Respect active backoff / Retry-After schedule
+        if (
+            command.nextAttemptAt &&
+            Date.parse(command.nextAttemptAt) > this.now().getTime()
+        ) {
+            result.deferred += 1;
 
-        return result;
+            return result;
+        }
+
+        const actorId = command.actorId;
+
+        if (this.processingActors.has(actorId)) {
+            return result;
+        }
+
+        // Acquire processing mutex immediately before any async yield to prevent concurrent tap races
+        this.processingActors.add(actorId);
+
+        try {
+            command.state = 'queued';
+            command.error = null;
+            command.nextAttemptAt = null;
+            await this.persist(command);
+
+            // If there are earlier uncompleted commands for the same job, execute via processQueue
+            // to preserve strict dependency ordering
+            if (command.jobId !== null && command.jobId !== undefined) {
+                const hasEarlierPending = this.getCommands().some(
+                    (c) =>
+                        c.jobId === command.jobId &&
+                        c.id !== command.id &&
+                        (Date.parse(c.createdAt) <
+                            Date.parse(command.createdAt) ||
+                            (Date.parse(c.createdAt) ===
+                                Date.parse(command.createdAt) &&
+                                c.id.localeCompare(command.id) < 0)) &&
+                        c.state !== 'completed',
+                );
+
+                if (hasEarlierPending) {
+                    this.processingActors.delete(actorId);
+
+                    return this.processQueue(apiClient);
+                }
+            }
+
+            await this.executeCommand(command, apiClient, result);
+
+            return result;
+        } finally {
+            this.processingActors.delete(actorId);
+        }
+    }
+
+    public async retryAllEligible(
+        apiClient: FieldApiClient,
+    ): Promise<OutboxProcessResult> {
+        const actorId = this.activeActorId;
+
+        if (actorId === null || this.processingActors.has(actorId)) {
+            return emptyResult();
+        }
+
+        this.processingActors.add(actorId);
+
+        try {
+            const nowMs = this.now().getTime();
+
+            for (const command of this.getCommands()) {
+                if (
+                    command.state === 'failed' &&
+                    command.error?.retryable === true &&
+                    command.type !== 'release_maintenance_work_order' &&
+                    command.error?.code !== 'MALFORMED_COMMAND' &&
+                    command.error?.code !== 'LEGACY_RELEASE_DISALLOWED' &&
+                    command.error?.code !== 'AUTHORIZATION_DENIED' &&
+                    command.error?.code !== 'VALIDATION_FAILED' &&
+                    command.error?.code !== 'UNPROCESSABLE_ENTITY' &&
+                    command.error?.code !== 'UNKNOWN_COMMAND_TYPE' &&
+                    command.error?.code !== 'MISSING_ATTACHMENTS' &&
+                    command.error?.code !== 'QUARANTINED' &&
+                    command.error?.code !== 'AUTHENTICATION_REQUIRED' &&
+                    (!command.nextAttemptAt ||
+                        Date.parse(command.nextAttemptAt) <= nowMs)
+                ) {
+                    command.state = 'queued';
+                    command.error = null;
+                    command.nextAttemptAt = null;
+                    await this.persist(command);
+                }
+            }
+        } finally {
+            this.processingActors.delete(actorId);
+        }
+
+        return this.processQueue(apiClient);
+    }
+
+    private assertCommandDiscardable(command: OutboxCommand): void {
+        if (command.state === 'syncing') {
+            throw new Error(
+                'Cannot discard an action that is currently syncing.',
+            );
+        }
+
+        if (command.state === 'unresolved') {
+            throw new Error(
+                'This action has an unresolved server outcome and its evidence cannot be discarded until central dispatch reconciles the original command.',
+            );
+        }
+
+        if (command.type === 'activate_sos' && command.state !== 'expired') {
+            throw new Error('Active emergency SOS cannot be discarded.');
+        }
+
+        if (command.state !== 'completed') {
+            // Safety DVIR inspection with critical defects / lockout cannot be discarded
+            if (
+                command.type === 'submit_dvir' &&
+                (command.payload?.has_defects === true ||
+                    command.payload?.hasDefects === true ||
+                    command.payload?.safety_status === 'unsafe' ||
+                    command.payload?.status === 'unsafe' ||
+                    command.payload?.defect_severity === 'critical' ||
+                    command.payload?.has_critical_defects === true ||
+                    (Array.isArray(command.payload?.defects) &&
+                        command.payload.defects.length > 0))
+            ) {
+                throw new Error(
+                    'Safety DVIR inspections reporting critical defects cannot be discarded locally.',
+                );
+            }
+
+            // Failed equipment inspection cannot be discarded
+            if (
+                command.type === 'submit_equipment_inspection' &&
+                (command.payload?.result === 'failed' ||
+                    command.payload?.status === 'failed' ||
+                    command.payload?.passed === false ||
+                    command.payload?.has_defects === true ||
+                    command.payload?.hasDefects === true ||
+                    command.payload?.defect_severity === 'critical' ||
+                    (Array.isArray(command.payload?.defects) &&
+                        command.payload.defects.length > 0))
+            ) {
+                throw new Error(
+                    'Equipment inspections with defects cannot be discarded locally.',
+                );
+            }
+
+            // Maintenance work order cannot be discarded
+            if (command.type === 'submit_maintenance_work_order') {
+                throw new Error(
+                    'Maintenance work orders cannot be discarded locally.',
+                );
+            }
+
+            // Signed customer handovers cannot be discarded
+            if (
+                (command.type === 'submit_rental_handover' ||
+                    command.type === 'submit_sales_delivery') &&
+                Boolean(
+                    command.payload?.signee_name ||
+                    command.payload?.signature_image_path ||
+                    command.payload?.signature,
+                )
+            ) {
+                throw new Error(
+                    'Signed custody handovers cannot be discarded.',
+                );
+            }
+
+            // Check for dependent commands for the same job (queued, syncing, or retryable failed)
+            if (command.jobId !== null && command.jobId !== undefined) {
+                const hasDependent = this.getCommands().some(
+                    (c) =>
+                        c.jobId === command.jobId &&
+                        c.id !== command.id &&
+                        (Date.parse(c.createdAt) >
+                            Date.parse(command.createdAt) ||
+                            (Date.parse(c.createdAt) ===
+                                Date.parse(command.createdAt) &&
+                                c.id.localeCompare(command.id) > 0)) &&
+                        (c.state === 'queued' ||
+                            c.state === 'syncing' ||
+                            (c.state === 'failed' &&
+                                c.error?.retryable === true)),
+                );
+
+                if (hasDependent) {
+                    throw new Error(
+                        'Cannot discard this action because subsequent dependent actions exist for this job.',
+                    );
+                }
+            }
+        }
+    }
+
+    private async cleanupCommandAttachments(
+        command: OutboxCommand,
+        otherCommands: OutboxCommand[],
+    ): Promise<void> {
+        const urisToDelete = durableAttachmentStorage.extractAttachmentUris(
+            command.payload,
+        );
+
+        for (const uri of urisToDelete) {
+            if (
+                durableAttachmentStorage.isDurableUri(uri) ||
+                uri.startsWith('file://')
+            ) {
+                await durableAttachmentStorage.deleteAttachment(
+                    uri,
+                    otherCommands,
+                    command.id,
+                );
+            }
+        }
     }
 
     public async resolveConflictAcceptServer(commandId: string): Promise<void> {
         const actorId = this.requireActor();
+        const command = this.commands.get(commandId);
+
+        if (command) {
+            if (command.actorId !== actorId) {
+                return;
+            }
+
+            // Apply identical command-specific safety and dependency rules as discardCommand.
+            // Critical defects, signed submissions, and prerequisites cannot be silently discarded.
+            this.assertCommandDiscardable(command);
+
+            // Clean up unreferenced attachments safely across all retained commands
+            const otherCommands = this.getCommands().filter(
+                (c) => c.id !== commandId,
+            );
+            await this.cleanupCommandAttachments(command, otherCommands);
+        }
+
         await this.repository.remove(actorId, commandId);
 
         if (this.activeActorId === actorId) {
@@ -602,19 +933,266 @@ export class CommandOutboxManager {
             return null;
         }
 
+        if (conflicted.actorId !== actorId) {
+            return null;
+        }
+
+        // Require verified current server state
+        if (!conflicted.error?.serverSnapshot) {
+            throw new Error(
+                'Cannot retry action without verified server state. Refresh assignments to reconcile.',
+            );
+        }
+
+        if (typeof conflicted.error?.currentVersion !== 'number') {
+            throw new Error(
+                'Cannot retry action without verified current server version.',
+            );
+        }
+
+        if (
+            conflicted.expectedVersion !== null &&
+            conflicted.expectedVersion !== undefined &&
+            newVersion <= conflicted.expectedVersion
+        ) {
+            throw new Error(
+                `New version (${newVersion}) must be greater than conflicted version (${conflicted.expectedVersion}).`,
+            );
+        }
+
+        // Prevent blind version increments - newVersion must match the current server version
+        if (newVersion !== conflicted.error.currentVersion) {
+            throw new Error(
+                `New version (${newVersion}) must match verified server version (${conflicted.error.currentVersion}).`,
+            );
+        }
+
+        const serverStatus = conflicted.error.serverSnapshot.status?.value;
+
+        if (serverStatus === 'cancelled') {
+            throw new Error(
+                'Cannot retry action: The job was cancelled on the server.',
+            );
+        }
+
+        if (serverStatus === 'completed') {
+            throw new Error(
+                'Cannot retry action: The job is already completed on the server.',
+            );
+        }
+
+        if (
+            conflicted.error.serverSnapshot.my_assignment?.response_status ===
+            'rejected'
+        ) {
+            throw new Error(
+                'Cannot retry action: Assignment is no longer active on the server.',
+            );
+        }
+
+        // Lock state immediately to prevent duplicate replacement creation from rapid double-taps
+        const previousState = conflicted.state;
+        conflicted.state = 'syncing';
+
+        try {
+            const replacement = await this.enqueue(
+                conflicted.type,
+                conflicted.jobId,
+                conflicted.assignmentId,
+                conflicted.payload,
+                newVersion,
+                {
+                    priority: conflicted.priority,
+                    expiresAt: conflicted.expiresAt,
+                },
+            );
+            await this.repository.remove(actorId, commandId);
+
+            if (this.activeActorId === actorId) {
+                this.commands.delete(commandId);
+                this.notify();
+                await this.retryCommand(replacement.id, apiClient);
+            }
+
+            return replacement;
+        } catch (err) {
+            conflicted.state = previousState;
+
+            throw err;
+        }
+    }
+
+    public async correctCommandAttachment(
+        commandId: string,
+        oldAttachmentUri: string,
+        newAttachmentUri: string,
+    ): Promise<OutboxCommand> {
+        const actorId = this.requireActor();
+        const command = this.commands.get(commandId);
+
+        if (!command) {
+            throw new Error(`Command "${commandId}" not found.`);
+        }
+
+        if (command.state === 'syncing') {
+            throw new Error(
+                'Cannot modify an action that is currently syncing.',
+            );
+        }
+
+        if (command.state === 'completed') {
+            throw new Error(
+                'This command was already accepted by the server. No authorized attachment correction workflow is available from the mobile outbox.',
+            );
+        }
+
+        if (oldAttachmentUri === newAttachmentUri) {
+            return command;
+        }
+
+        // A changed attachment is a changed request. If the original request
+        // may have reached the server, keep the original payload and identity
+        // intact until a server-side reconciliation result is available.
+        if (command.attempts > 0 && !isVerifiedServerRejection(command)) {
+            const oldAttachmentIsMissing =
+                (oldAttachmentUri.startsWith('file://') ||
+                    durableAttachmentStorage.isDurableUri(oldAttachmentUri)) &&
+                !(await durableAttachmentStorage.attachmentExists(
+                    oldAttachmentUri,
+                ));
+            const previousError = command.error;
+
+            command.state = 'unresolved';
+            command.nextAttemptAt = null;
+            command.error = {
+                code: 'OUTCOME_UNRESOLVED',
+                message:
+                    'The original request may have reached central dispatch. Reconcile the original command before replacing or discarding attachment evidence.',
+                retryable: false,
+                status: previousError?.status,
+                missingAttachmentUri:
+                    previousError?.missingAttachmentUri ??
+                    (oldAttachmentIsMissing ? oldAttachmentUri : undefined),
+            };
+            await this.persist(command);
+
+            return command;
+        }
+
+        const updatedPayload = JSON.parse(
+            JSON.stringify(command.payload),
+        ) as Record<string, unknown>;
+
+        let replaced = false;
+
+        if (Array.isArray(updatedPayload.photos)) {
+            updatedPayload.photos = updatedPayload.photos.map(
+                (item: unknown) => {
+                    if (typeof item === 'string' && item === oldAttachmentUri) {
+                        replaced = true;
+
+                        return newAttachmentUri;
+                    }
+
+                    if (typeof item === 'object' && item !== null) {
+                        const obj = { ...(item as Record<string, unknown>) };
+
+                        if (obj.uri === oldAttachmentUri) {
+                            obj.uri = newAttachmentUri;
+                            replaced = true;
+                        }
+
+                        if (obj.file_path === oldAttachmentUri) {
+                            obj.file_path = newAttachmentUri;
+                            replaced = true;
+                        }
+
+                        return obj;
+                    }
+
+                    return item;
+                },
+            );
+        }
+
+        if (Array.isArray(updatedPayload.attachments)) {
+            updatedPayload.attachments = updatedPayload.attachments.map(
+                (item: unknown) => {
+                    if (typeof item === 'string' && item === oldAttachmentUri) {
+                        replaced = true;
+
+                        return newAttachmentUri;
+                    }
+
+                    if (typeof item === 'object' && item !== null) {
+                        const obj = { ...(item as Record<string, unknown>) };
+
+                        if (obj.uri === oldAttachmentUri) {
+                            obj.uri = newAttachmentUri;
+                            replaced = true;
+                        }
+
+                        if (obj.file_path === oldAttachmentUri) {
+                            obj.file_path = newAttachmentUri;
+                            replaced = true;
+                        }
+
+                        return obj;
+                    }
+
+                    return item;
+                },
+            );
+        }
+
+        if (updatedPayload.signature_image_path === oldAttachmentUri) {
+            updatedPayload.signature_image_path = newAttachmentUri;
+            replaced = true;
+        }
+
+        if (updatedPayload.signature === oldAttachmentUri) {
+            updatedPayload.signature = newAttachmentUri;
+            replaced = true;
+        }
+
+        if (!replaced) {
+            throw new Error(
+                `Attachment "${oldAttachmentUri}" was not found in command payload.`,
+            );
+        }
+
         const replacement = await this.enqueue(
-            conflicted.type,
-            conflicted.jobId,
-            conflicted.assignmentId,
-            conflicted.payload,
-            newVersion,
+            command.type,
+            command.jobId,
+            command.assignmentId,
+            updatedPayload,
+            command.expectedVersion,
+            {
+                priority: command.priority,
+                expiresAt: command.expiresAt,
+            },
         );
+
+        const otherCommands = this.getCommands().filter(
+            (c) => c.id !== commandId && c.id !== replacement.id,
+        );
+
+        if (
+            durableAttachmentStorage.isDurableUri(oldAttachmentUri) ||
+            oldAttachmentUri.startsWith('file://')
+        ) {
+            await durableAttachmentStorage.deleteAttachment(
+                oldAttachmentUri,
+                otherCommands,
+                commandId,
+            );
+        }
+
         await this.repository.remove(actorId, commandId);
 
         if (this.activeActorId === actorId) {
             this.commands.delete(commandId);
             this.notify();
-            await this.retryCommand(replacement.id, apiClient);
         }
 
         return replacement;
@@ -622,6 +1200,18 @@ export class CommandOutboxManager {
 
     public async discardCommand(commandId: string): Promise<void> {
         const actorId = this.requireActor();
+        const command = this.commands.get(commandId);
+
+        if (command) {
+            this.assertCommandDiscardable(command);
+
+            // Clean up unreferenced attachments safely across all retained commands
+            const otherCommands = this.getCommands().filter(
+                (c) => c.id !== commandId,
+            );
+            await this.cleanupCommandAttachments(command, otherCommands);
+        }
+
         await this.repository.remove(actorId, commandId);
 
         if (this.activeActorId === actorId) {
@@ -636,9 +1226,68 @@ export class CommandOutboxManager {
         result: OutboxProcessResult,
     ): Promise<DispatchJob | unknown | null> {
         command.state = 'syncing';
+        command.nextAttemptAt = null;
+
+        const rawPhotos =
+            (command.payload?.photos as unknown[]) ||
+            (command.payload?.attachments as unknown[]);
+        const photoList = Array.isArray(rawPhotos) ? rawPhotos : [];
+
+        // Check if any referenced local attachment file is missing
+        const attachmentUris = durableAttachmentStorage.extractAttachmentUris(
+            command.payload,
+        );
+        const photoCount = photoList.length || attachmentUris.length;
+
+        let missingAttachmentUri: string | null = null;
+
+        for (const uri of attachmentUris) {
+            if (
+                uri.startsWith('file://') ||
+                durableAttachmentStorage.isDurableUri(uri)
+            ) {
+                const exists =
+                    await durableAttachmentStorage.attachmentExists(uri);
+
+                if (!exists) {
+                    missingAttachmentUri = uri;
+                    break;
+                }
+            }
+        }
+
+        if (missingAttachmentUri) {
+            command.state = 'failed';
+            command.stage = null;
+            command.stageMessage = null;
+            command.nextAttemptAt = null;
+            command.error = {
+                code: 'MISSING_ATTACHMENTS',
+                message: `Required attachment file is missing from device storage (${missingAttachmentUri}). Please recapture or discard.`,
+                retryable: false,
+                missingAttachmentUri,
+            };
+            await this.persist(command);
+            result.failed += 1;
+
+            return null;
+        }
+
+        if (photoCount > 0) {
+            command.stage = 'uploading_photos';
+            command.stageMessage = `Uploading ${photoCount} photo${photoCount === 1 ? '' : 's'}`;
+        } else {
+            command.stage = 'submitting_report';
+            command.stageMessage = 'Submitting to dispatch';
+        }
+
+        await this.persist(command);
+
+        // Count an attempt only once the local preflight has passed and the
+        // request is about to cross the network. A missing local file is not a
+        // server attempt and must remain safe to replace with a new command.
         command.attempts += 1;
         command.lastAttemptAt = this.now().toISOString();
-        command.nextAttemptAt = null;
         await this.persist(command);
 
         try {
@@ -740,9 +1389,12 @@ export class CommandOutboxManager {
             }
 
             command.state = 'completed';
+            command.stage = null;
+            command.stageMessage = null;
             command.error = null;
             command.nextAttemptAt = null;
             command.completedAt = this.now().toISOString();
+            this.lastSuccessfulSyncAt = command.completedAt;
             await this.persist(command);
             result.completed += 1;
 
@@ -759,6 +1411,9 @@ export class CommandOutboxManager {
         error: unknown,
         result: OutboxProcessResult,
     ): Promise<void> {
+        command.stage = null;
+        command.stageMessage = null;
+
         if (error instanceof ApiClientError) {
             if (error.status === 409 || error.errorCode === 'stale_version') {
                 command.state = 'conflict';
@@ -872,15 +1527,39 @@ export class CommandOutboxManager {
         }
 
         if (command.attempts >= this.maxAutomaticAttempts) {
-            command.state = 'failed';
-            command.nextAttemptAt = null;
-            command.error = {
-                code: 'RETRY_EXHAUSTED',
-                message:
-                    'Automatic retry limit reached. Review or retry manually.',
-                retryable: true,
-            };
-            result.failed += 1;
+            if (isUncertainTransportError(error)) {
+                const errorObject =
+                    typeof error === 'object' && error !== null
+                        ? (error as Record<string, unknown>)
+                        : undefined;
+                const status =
+                    error instanceof ApiClientError
+                        ? error.status
+                        : typeof errorObject?.status === 'number'
+                          ? errorObject.status
+                          : undefined;
+
+                command.state = 'unresolved';
+                command.nextAttemptAt = null;
+                command.error = {
+                    code: 'OUTCOME_UNRESOLVED',
+                    status,
+                    message:
+                        'The retry limit was reached after a timeout or connection loss. The original request may have reached central dispatch; reconcile it before changing or discarding its evidence.',
+                    retryable: false,
+                };
+                result.failed += 1;
+            } else {
+                command.state = 'failed';
+                command.nextAttemptAt = null;
+                command.error = {
+                    code: 'RETRY_EXHAUSTED',
+                    message:
+                        'Automatic retry limit reached. Review or retry manually.',
+                    retryable: true,
+                };
+                result.failed += 1;
+            }
         } else {
             const calculatedDelay = Math.min(
                 this.baseRetryDelayMs * 2 ** (command.attempts - 1),
@@ -914,6 +1593,25 @@ export class CommandOutboxManager {
                 ? Math.max(calculatedDelay, (retryAfterSeconds ?? 0) * 1000)
                 : calculatedDelay;
 
+            const errStatus =
+                error instanceof ApiClientError
+                    ? error.status
+                    : typeof errObj?.status === 'number'
+                      ? errObj.status
+                      : undefined;
+            const rawCode =
+                error instanceof ApiClientError
+                    ? error.errorCode
+                    : typeof errObj?.code === 'string'
+                      ? errObj.code
+                      : undefined;
+            const isTimeout =
+                rawCode === 'TIMEOUT' ||
+                rawCode === 'NETWORK_TIMEOUT' ||
+                rawCode === 'GATEWAY_TIMEOUT' ||
+                errStatus === 408 ||
+                errStatus === 504;
+
             command.state = 'queued';
             command.nextAttemptAt = new Date(
                 this.now().getTime() + delay,
@@ -922,13 +1620,28 @@ export class CommandOutboxManager {
             if (isRateLimited) {
                 command.error = {
                     code: 'RATE_LIMITED',
+                    status: errStatus,
                     message: `Rate limit reached. Retry scheduled in ${Math.round(delay / 1000)} seconds.`,
+                    retryable: true,
+                };
+            } else if (isTimeout) {
+                command.error = {
+                    code: 'NETWORK_TIMEOUT',
+                    status: errStatus,
+                    message:
+                        typeof errObj?.message === 'string'
+                            ? errObj.message
+                            : 'Network request timed out. This command will retry.',
                     retryable: true,
                 };
             } else {
                 command.error = {
                     code: 'NETWORK_RETRY_SCHEDULED',
-                    message: 'Connection unavailable. This command will retry.',
+                    status: errStatus,
+                    message:
+                        typeof errObj?.message === 'string'
+                            ? errObj.message
+                            : 'Connection unavailable. This command will retry.',
                     retryable: true,
                 };
             }

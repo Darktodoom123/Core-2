@@ -52,6 +52,7 @@ const commandStates: OutboxCommandState[] = [
     'conflict',
     'completed',
     'expired',
+    'unresolved',
 ];
 
 interface OutboxRow {

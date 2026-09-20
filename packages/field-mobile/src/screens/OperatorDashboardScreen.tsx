@@ -183,13 +183,15 @@ export const OperatorDashboardScreen: React.FC<
         (c) => c.state === 'queued',
     ).length;
     const failedCount = outboxCommands.filter(
-        (c) => c.state === 'failed',
+        (c) => c.state === 'failed' || c.state === 'unresolved',
     ).length;
     const conflictCount = outboxCommands.filter(
         (c) => c.state === 'conflict',
     ).length;
     const syncAttentionCount = failedCount + conflictCount;
-    const failedCommands = outboxCommands.filter((c) => c.state === 'failed');
+    const failedCommands = outboxCommands.filter(
+        (c) => c.state === 'failed' || c.state === 'unresolved',
+    );
     const pendingResponseCount = jobs.filter(
         (j) => j.my_assignment?.response_status === 'pending',
     ).length;

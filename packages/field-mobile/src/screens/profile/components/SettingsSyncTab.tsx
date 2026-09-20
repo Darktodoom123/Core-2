@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
     Modal,
     Pressable,
@@ -9,27 +9,69 @@ import {
 } from 'react-native';
 import { Icon } from '../../../components/common/Icon';
 import { colors } from '../../../components/nativeStyles';
+import { projectOutbox } from '../../../services/outboxProjection';
 import { useTheme } from '../../../theme';
+import type { OutboxCommand } from '../../../types/index';
 
 export interface SettingsSyncTabProps {
     isOnline?: boolean | null;
+    isAuthenticated?: boolean;
+    lastSuccessfulSyncAt?: string | null;
     queuedCount?: number;
+    outboxCommands?: OutboxCommand[];
     pushNotificationsEnabled?: boolean;
     onSyncNow?: () => void;
+    onOpenOutboxDetails?: () => void;
     onRequestPushPermissions?: () => void;
     onLogout?: () => void;
 }
 
 export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
     isOnline = true,
+    isAuthenticated = true,
+    lastSuccessfulSyncAt,
     queuedCount = 0,
+    outboxCommands,
     pushNotificationsEnabled = true,
     onSyncNow,
+    onOpenOutboxDetails,
     onRequestPushPermissions,
     onLogout,
 }) => {
     const { isDarkHud, setMode } = useTheme();
     const [signOutModalVisible, setSignOutModalVisible] = useState(false);
+
+    const projection = useMemo(
+        () =>
+            outboxCommands
+                ? projectOutbox(
+                      outboxCommands,
+                      isOnline,
+                      isAuthenticated,
+                      undefined,
+                      lastSuccessfulSyncAt,
+                  )
+                : null,
+        [outboxCommands, isOnline, isAuthenticated, lastSuccessfulSyncAt],
+    );
+
+    const attentionCount = projection?.counts.attention ?? 0;
+    const hasAttention = attentionCount > 0;
+    const waitingCount = projection ? projection.counts.waiting : queuedCount;
+    const submittingCount = projection?.counts.submitting ?? 0;
+    const pendingCount = waitingCount + submittingCount;
+
+    let outboxStatusText = '✓ All actions synced';
+
+    if (!isAuthenticated) {
+        outboxStatusText = '⚠️ Sign in required to sync';
+    } else if (hasAttention) {
+        outboxStatusText = `⚠️ ${attentionCount} action${attentionCount > 1 ? 's' : ''} need attention`;
+    } else if (submittingCount > 0) {
+        outboxStatusText = '⏳ Submitting to dispatch…';
+    } else if (waitingCount > 0) {
+        outboxStatusText = `⏳ ${waitingCount} unsynced action${waitingCount > 1 ? 's' : ''}`;
+    }
 
     const triggerHaptic = () => {
         try {
@@ -323,24 +365,30 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                             <View
                                 style={[
                                     styles.healthSquircle,
-                                    queuedCount > 0
+                                    !isAuthenticated || hasAttention
                                         ? isDarkHud
-                                            ? styles.darkHealthSquircleWarning
-                                            : styles.healthSquircleWarning
-                                        : isDarkHud
-                                          ? styles.darkHealthSquircleSuccess
-                                          : styles.healthSquircleSuccess,
+                                            ? styles.darkHealthSquircleAttention
+                                            : styles.healthSquircleAttention
+                                        : pendingCount > 0
+                                          ? isDarkHud
+                                              ? styles.darkHealthSquircleWarning
+                                              : styles.healthSquircleWarning
+                                          : isDarkHud
+                                            ? styles.darkHealthSquircleSuccess
+                                            : styles.healthSquircleSuccess,
                                 ]}
                             >
                                 <Icon
                                     color={
-                                        queuedCount > 0
-                                            ? isDarkHud
-                                                ? '#FBBF24'
-                                                : '#D97706'
-                                            : isDarkHud
-                                              ? '#34D399'
-                                              : '#059669'
+                                        !isAuthenticated || hasAttention
+                                            ? '#EF4444'
+                                            : pendingCount > 0
+                                              ? isDarkHud
+                                                  ? '#FBBF24'
+                                                  : '#D97706'
+                                              : isDarkHud
+                                                ? '#34D399'
+                                                : '#059669'
                                     }
                                     name="sync"
                                     size={18}
@@ -359,19 +407,57 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                             style={[
                                 styles.healthValue,
                                 isDarkHud && styles.darkHealthValue,
-                                queuedCount > 0 &&
+                                (!isAuthenticated || hasAttention) &&
+                                    (isDarkHud
+                                        ? styles.darkHealthValueAttention
+                                        : styles.healthValueAttention),
+                                isAuthenticated &&
+                                    !hasAttention &&
+                                    pendingCount > 0 &&
                                     (isDarkHud
                                         ? styles.darkHealthValueWarning
                                         : styles.healthValueWarning),
                             ]}
                         >
-                            {queuedCount > 0
-                                ? `⏳ ${queuedCount} unsynced action${queuedCount > 1 ? 's' : ''}`
-                                : '✓ All actions synced'}
+                            {outboxStatusText}
                         </Text>
                     </View>
 
-                    {queuedCount > 0 && isOnline !== false && onSyncNow ? (
+                    {onOpenOutboxDetails ? (
+                        <View style={styles.syncBtnContainer}>
+                            <Pressable
+                                accessibilityHint="Opens full outbox synchronization sheet"
+                                accessibilityLabel="View full outbox synchronization queue"
+                                accessibilityRole="button"
+                                onPress={onOpenOutboxDetails}
+                                style={({ pressed }) => [
+                                    styles.viewOutboxBtn,
+                                    isDarkHud && styles.darkViewOutboxBtn,
+                                    pressed && styles.pressed,
+                                ]}
+                                testID="open-outbox-sheet-btn"
+                            >
+                                <Icon
+                                    color={isDarkHud ? '#60A5FA' : '#2563EB'}
+                                    name="sync"
+                                    size={16}
+                                />
+                                <Text
+                                    style={[
+                                        styles.viewOutboxBtnText,
+                                        isDarkHud &&
+                                            styles.darkViewOutboxBtnText,
+                                    ]}
+                                >
+                                    View Outbox Queue →
+                                </Text>
+                            </Pressable>
+                        </View>
+                    ) : null}
+
+                    {(pendingCount > 0 || hasAttention) &&
+                    isOnline !== false &&
+                    onSyncNow ? (
                         <View style={styles.syncBtnContainer}>
                             <Pressable
                                 accessibilityLabel="Sync queued outbox items"
@@ -904,6 +990,12 @@ const styles = StyleSheet.create({
     darkHealthSquircleNeutral: {
         backgroundColor: '#334155',
     },
+    healthSquircleAttention: {
+        backgroundColor: '#FEE2E2',
+    },
+    darkHealthSquircleAttention: {
+        backgroundColor: '#7F1D1D60',
+    },
     hairlineDivider: {
         height: StyleSheet.hairlineWidth,
         marginLeft: 54,
@@ -951,6 +1043,12 @@ const styles = StyleSheet.create({
     darkHealthValueWarning: {
         color: '#FBBF24',
     },
+    healthValueAttention: {
+        color: '#DC2626',
+    },
+    darkHealthValueAttention: {
+        color: '#F87171',
+    },
     healthValueMuted: {
         fontSize: 12,
         color: '#94A3B8',
@@ -973,6 +1071,30 @@ const styles = StyleSheet.create({
     },
     statusDotOffline: {
         backgroundColor: '#EF4444',
+    },
+    viewOutboxBtn: {
+        minHeight: 44,
+        borderRadius: 10,
+        backgroundColor: '#EFF6FF',
+        borderWidth: 1,
+        borderColor: '#BFDBFE',
+        flexDirection: 'row',
+        gap: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    darkViewOutboxBtn: {
+        backgroundColor: 'rgba(37, 99, 235, 0.15)',
+        borderColor: 'rgba(37, 99, 235, 0.35)',
+    },
+    viewOutboxBtnText: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: '#2563EB',
+    },
+    darkViewOutboxBtnText: {
+        color: '#60A5FA',
     },
     syncNowBtn: {
         minHeight: 48,

@@ -26,6 +26,7 @@ import { isAuthorizedFieldRole } from '../auth/fieldRoles';
 import { LoginScreen } from '../auth/LoginScreen';
 import type { PhotoAttachment } from '../components/attachments/PhotoAttachmentPicker';
 import { colors, sharedStyles } from '../components/nativeStyles';
+import { OutboxStatusSheet } from '../components/sheets/OutboxStatusSheet';
 import type { DigitalSignatureData } from '../components/signature/DigitalSignatureModal';
 import { EmergencySosSheet } from '../components/sos';
 import {
@@ -239,6 +240,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     const [isLoadingJobs, setIsLoadingJobs] = useState(false);
     const [isOnline, setIsOnline] = useState<boolean | null>(null);
     const [isOutboxReady, setIsOutboxReady] = useState(false);
+    const [profileOutboxSheetOpen, setProfileOutboxSheetOpen] = useState(false);
     const [locationSharingActive, setLocationSharingActive] = useState(true);
     const [sosSheetOpen, setSosSheetOpen] = useState(false);
     const [activeSosIncident, setActiveSosIncident] =
@@ -2399,27 +2401,55 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 onTransitionStatus={handleTransitionStatus}
                             />
                         ) : activeAppView === 'profile' ? (
-                            <ProfileScreen
-                                apiClient={apiClient}
-                                assignedAssetLabel={
-                                    jobs.flatMap(
-                                        (j) => j.asset_assignments || [],
-                                    )[0]?.asset_name || null
-                                }
-                                isOnline={isOnline}
-                                onBack={() => setActiveAppView('main')}
-                                onLogout={() => void handleLogout()}
-                                onRequestPushPermissions={
-                                    handleRequestPushPermissions
-                                }
-                                onSyncNow={() => void syncQueue()}
-                                pushNotificationsEnabled={
-                                    pushNotificationsEnabled
-                                }
-                                queuedCount={outboxCommands?.length ?? 0}
-                                userName={user?.name}
-                                userRole={user?.role}
-                            />
+                            <>
+                                <ProfileScreen
+                                    apiClient={apiClient}
+                                    assignedAssetLabel={
+                                        jobs.flatMap(
+                                            (j) => j.asset_assignments || [],
+                                        )[0]?.asset_name || null
+                                    }
+                                    isOnline={isOnline}
+                                    onBack={() => setActiveAppView('main')}
+                                    onLogout={() => void handleLogout()}
+                                    onOpenOutboxDetails={() =>
+                                        setProfileOutboxSheetOpen(true)
+                                    }
+                                    onRequestPushPermissions={
+                                        handleRequestPushPermissions
+                                    }
+                                    onSyncNow={() => void syncQueue()}
+                                    outboxCommands={outboxCommands}
+                                    pushNotificationsEnabled={
+                                        pushNotificationsEnabled
+                                    }
+                                    queuedCount={outboxCommands?.length ?? 0}
+                                    userName={user?.name}
+                                    userRole={user?.role}
+                                    isAuthenticated={status === 'authenticated'}
+                                    lastSuccessfulSyncAt={commandOutbox.getLastSuccessfulSyncAt()}
+                                />
+                                <OutboxStatusSheet
+                                    commands={outboxCommands}
+                                    isAuthenticated={status === 'authenticated'}
+                                    isOnline={isOnline}
+                                    lastSuccessfulSyncAt={commandOutbox.getLastSuccessfulSyncAt()}
+                                    onAcceptServerState={
+                                        handleAcceptServerState
+                                    }
+                                    onClose={() =>
+                                        setProfileOutboxSheetOpen(false)
+                                    }
+                                    onDiscardCommand={handleDiscardCommand}
+                                    onRetryCommand={handleRetryCommand}
+                                    onRetryNewVersion={handleRetryNewVersion}
+                                    onSignIn={() => void handleLogout()}
+                                    onSyncNow={() => void syncQueue()}
+                                    userName={user?.name}
+                                    userRole={user?.role}
+                                    visible={profileOutboxSheetOpen}
+                                />
+                            </>
                         ) : (
                             <View style={{ flex: 1 }}>
                                 {sosResponderNotice && (
@@ -2591,6 +2621,8 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                     }}
                                     onToggleShift={handleToggleShift}
                                     outboxCommands={outboxCommands}
+                                    isAuthenticated={status === 'authenticated'}
+                                    lastSuccessfulSyncAt={commandOutbox.getLastSuccessfulSyncAt()}
                                     shiftInfo={shiftInfo}
                                     userName={user?.name}
                                     userRole={user?.role.replaceAll('_', ' ')}

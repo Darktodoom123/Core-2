@@ -374,16 +374,24 @@ export interface JobReportCommandPayload {
 }
 
 export type OutboxCommandState =
-    'queued' | 'syncing' | 'failed' | 'conflict' | 'completed' | 'expired';
+    | 'queued'
+    | 'syncing'
+    | 'failed'
+    | 'conflict'
+    | 'completed'
+    | 'expired'
+    | 'unresolved';
 
 export type OutboxCommandPriority = 'ordinary' | 'emergency';
 
 export interface CommandErrorDetails {
     message: string;
     code?: string;
+    status?: number;
     currentVersion?: number;
     serverSnapshot?: DispatchJob | null;
     retryable?: boolean;
+    missingAttachmentUri?: string;
 }
 
 export interface OutboxCommand {
@@ -398,6 +406,8 @@ export interface OutboxCommand {
     expiresAt?: string | null;
     expectedVersion?: number | null;
     state: OutboxCommandState;
+    stage?: string | null;
+    stageMessage?: string | null;
     error?: CommandErrorDetails | null;
     createdAt: string;
     updatedAt: string;

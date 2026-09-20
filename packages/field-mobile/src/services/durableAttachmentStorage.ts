@@ -213,9 +213,120 @@ export class DurableAttachmentStorage {
     }
 
     /**
-     * Delete a single durable attachment
+     * Extract all attachment URIs referenced within a command payload.
+     * Traverses arrays, objects, photos, attachments, signatures, and check structures.
      */
-    public async deleteAttachment(uri: string): Promise<void> {
+    public extractAttachmentUris(
+        payload?: Record<string, unknown> | null,
+    ): string[] {
+        if (!payload || typeof payload !== 'object') {
+            return [];
+        }
+
+        const uris = new Set<string>();
+
+        const inspect = (val: unknown): void => {
+            if (!val) {
+                return;
+            }
+
+            if (typeof val === 'string') {
+                if (
+                    val.startsWith('file://') ||
+                    val.startsWith('content://') ||
+                    this.isDurableUri(val)
+                ) {
+                    uris.add(val);
+                }
+
+                return;
+            }
+
+            if (Array.isArray(val)) {
+                for (const item of val) {
+                    inspect(item);
+                }
+
+                return;
+            }
+
+            if (typeof val === 'object') {
+                const obj = val as Record<string, unknown>;
+
+                if (typeof obj.uri === 'string') {
+                    inspect(obj.uri);
+                }
+
+                if (typeof obj.file_path === 'string') {
+                    inspect(obj.file_path);
+                }
+
+                if (typeof obj.path === 'string') {
+                    inspect(obj.path);
+                }
+
+                if (typeof obj.url === 'string') {
+                    inspect(obj.url);
+                }
+
+                for (const key of Object.keys(obj)) {
+                    inspect(obj[key]);
+                }
+            }
+        };
+
+        inspect(payload);
+
+        return Array.from(uris);
+    }
+
+    /**
+     * Check if a durable attachment URI is referenced by any command in the given list.
+     * Evaluates all retained commands including failed, conflicted, authentication-blocked, and dependent commands.
+     */
+    public isAttachmentReferenced(
+        uri: string,
+        commands: Array<{ id?: string; payload?: Record<string, unknown> }>,
+        excludeCommandId?: string,
+    ): boolean {
+        if (!uri) {
+            return false;
+        }
+
+        for (const cmd of commands) {
+            if (excludeCommandId && cmd.id === excludeCommandId) {
+                continue;
+            }
+
+            const uris = this.extractAttachmentUris(cmd.payload);
+
+            if (uris.includes(uri)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Delete a single durable attachment, ensuring it is not referenced by any other command.
+     * Returns true if deleted, false if deletion was blocked due to active references.
+     */
+    public async deleteAttachment(
+        uri: string,
+        commandsToCheck?: Array<{
+            id?: string;
+            payload?: Record<string, unknown>;
+        }>,
+        excludeCommandId?: string,
+    ): Promise<boolean> {
+        if (
+            commandsToCheck &&
+            this.isAttachmentReferenced(uri, commandsToCheck, excludeCommandId)
+        ) {
+            return false;
+        }
+
         const fs = await resolveFileSystem();
 
         if (fs?.deleteAsync) {
@@ -227,6 +338,31 @@ export class DurableAttachmentStorage {
         }
 
         this.inMemoryStorage.delete(uri);
+
+        return true;
+    }
+
+    /**
+     * Check if a durable attachment exists on disk or in simulated memory storage
+     */
+    public async attachmentExists(uri: string): Promise<boolean> {
+        if (!uri) {
+            return false;
+        }
+
+        const fs = await resolveFileSystem();
+
+        if (fs?.getInfoAsync) {
+            try {
+                const info = await fs.getInfoAsync(uri);
+
+                return Boolean(info && info.exists);
+            } catch {
+                return this.inMemoryStorage.has(uri);
+            }
+        }
+
+        return this.inMemoryStorage.has(uri);
     }
 
     /**

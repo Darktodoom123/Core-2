@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme';
+import type { OutboxCommand } from '../../types/index';
 import { Icon } from '../common/Icon';
 import { colors } from '../nativeStyles';
 
@@ -19,7 +20,9 @@ export interface ProfileSheetProps {
     userRole?: string | null;
     assignedAssetLabel?: string | null;
     isOnline?: boolean | null;
+    isAuthenticated?: boolean;
     queuedCount?: number;
+    outboxCommands?: OutboxCommand[];
     onSyncNow?: () => void;
     signOutConfirmationOpen: boolean;
     onClose: () => void;
@@ -29,6 +32,7 @@ export interface ProfileSheetProps {
     pushNotificationsEnabled?: boolean;
     onRequestPushPermissions?: () => void;
     onOpenAccountSettings?: () => void;
+    onOpenOutboxDetails?: () => void;
 }
 
 const initialsFor = (userName?: string | null): string => {
@@ -49,7 +53,9 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
     userRole,
     assignedAssetLabel,
     isOnline,
+    isAuthenticated = true,
     queuedCount = 0,
+    outboxCommands,
     onSyncNow,
     signOutConfirmationOpen,
     onClose,
@@ -59,6 +65,7 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
     pushNotificationsEnabled = true,
     onRequestPushPermissions,
     onOpenAccountSettings,
+    onOpenOutboxDetails,
 }) => {
     const insets = useContext(SafeAreaInsetsContext);
     const bottomInset = insets?.bottom ?? 0;
@@ -68,6 +75,16 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
     const formattedRole = userRole
         ? userRole.replaceAll('_', ' ')
         : 'Field worker';
+
+    const attentionCount =
+        outboxCommands?.filter(
+            (c) =>
+                c.state === 'failed' ||
+                c.state === 'conflict' ||
+                c.state === 'expired' ||
+                c.state === 'unresolved',
+        ).length ?? 0;
+    const hasAttention = attentionCount > 0;
 
     const panY = useMemo(() => new Animated.Value(0), []);
 
@@ -603,19 +620,69 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
                                         style={[
                                             styles.healthValue,
                                             isDarkHud && styles.darkHealthValue,
-                                            queuedCount > 0 &&
+                                            (!isAuthenticated ||
+                                                hasAttention) &&
+                                                (isDarkHud
+                                                    ? styles.darkHealthValueAttention
+                                                    : styles.healthValueAttention),
+                                            isAuthenticated &&
+                                                !hasAttention &&
+                                                queuedCount > 0 &&
                                                 (isDarkHud
                                                     ? styles.darkHealthValueWarning
                                                     : styles.healthValueWarning),
                                         ]}
                                     >
-                                        {queuedCount > 0
-                                            ? `⏳ ${queuedCount} unsynced action${
-                                                  queuedCount > 1 ? 's' : ''
-                                              }`
-                                            : '✓ All actions synced'}
+                                        {!isAuthenticated
+                                            ? '⚠️ Sign in required to sync'
+                                            : hasAttention
+                                              ? `⚠️ ${attentionCount} need${attentionCount === 1 ? 's' : ''} attention`
+                                              : queuedCount > 0
+                                                ? `⏳ ${queuedCount} unsynced action${
+                                                      queuedCount > 1 ? 's' : ''
+                                                  }`
+                                                : '✓ All actions synced'}
                                     </Text>
                                 </View>
+                                {onOpenOutboxDetails ? (
+                                    <View style={styles.syncBtnContainer}>
+                                        <Pressable
+                                            accessibilityHint="Opens full outbox synchronization sheet"
+                                            accessibilityLabel="View full outbox synchronization queue"
+                                            accessibilityRole="button"
+                                            onPress={() => {
+                                                onClose();
+                                                onOpenOutboxDetails();
+                                            }}
+                                            style={({ pressed }) => [
+                                                styles.viewOutboxBtn,
+                                                isDarkHud &&
+                                                    styles.darkViewOutboxBtn,
+                                                pressed && styles.pressed,
+                                            ]}
+                                            testID="open-outbox-sheet-btn"
+                                        >
+                                            <Icon
+                                                color={
+                                                    isDarkHud
+                                                        ? '#60A5FA'
+                                                        : '#2563EB'
+                                                }
+                                                name="sync"
+                                                size={16}
+                                            />
+                                            <Text
+                                                style={[
+                                                    styles.viewOutboxBtnText,
+                                                    isDarkHud &&
+                                                        styles.darkViewOutboxBtnText,
+                                                ]}
+                                            >
+                                                View Outbox Details →
+                                            </Text>
+                                        </Pressable>
+                                    </View>
+                                ) : null}
                                 <View style={styles.healthRow}>
                                     <Text
                                         style={[
@@ -1189,6 +1256,10 @@ const styles = StyleSheet.create({
         color: colors.warningDark,
         fontWeight: '800',
     },
+    healthValueAttention: {
+        color: colors.red,
+        fontWeight: '800',
+    },
     healthValueMuted: {
         color: colors.muted,
         fontSize: 12,
@@ -1385,6 +1456,9 @@ const styles = StyleSheet.create({
     darkHealthValue: {
         color: '#F8FAFC',
     },
+    darkHealthValueAttention: {
+        color: '#F87171',
+    },
     darkSignOutRow: {
         borderColor: '#334155',
     },
@@ -1570,5 +1644,35 @@ const styles = StyleSheet.create({
     },
     darkAccountSettingsChevron: {
         color: '#64748B',
+    },
+    syncBtnContainer: {
+        marginTop: 4,
+        marginBottom: 8,
+    },
+    viewOutboxBtn: {
+        alignItems: 'center',
+        backgroundColor: '#EFF6FF',
+        borderColor: '#BFDBFE',
+        borderRadius: 10,
+        borderWidth: 1,
+        flexDirection: 'row',
+        gap: 8,
+        justifyContent: 'center',
+        marginHorizontal: 12,
+        marginVertical: 6,
+        minHeight: 44,
+        paddingHorizontal: 12,
+    },
+    darkViewOutboxBtn: {
+        backgroundColor: 'rgba(37, 99, 235, 0.15)',
+        borderColor: 'rgba(37, 99, 235, 0.35)',
+    },
+    viewOutboxBtnText: {
+        color: '#2563EB',
+        fontSize: 13,
+        fontWeight: '700',
+    },
+    darkViewOutboxBtnText: {
+        color: '#60A5FA',
     },
 });

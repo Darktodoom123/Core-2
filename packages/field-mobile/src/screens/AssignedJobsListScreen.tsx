@@ -28,12 +28,14 @@ import { DutyStatusSelectorModal } from '../components/sheets/DutyStatusSelector
 import { EndShiftSafeguardModal } from '../components/sheets/EndShiftSafeguardModal';
 import { NotificationsSheet } from '../components/sheets/notifications-sheet';
 import { OnSiteConfirmationModal } from '../components/sheets/OnSiteConfirmationModal';
+import { OutboxStatusSheet } from '../components/sheets/OutboxStatusSheet';
 import { PreTripDefectFallbackModal } from '../components/sheets/PreTripDefectFallbackModal';
 import { ProfileSheet } from '../components/sheets/profile-sheet';
 import { ReliefHandoverModal } from '../components/sheets/ReliefHandoverModal';
 import { ReportDelayModal } from '../components/sheets/ReportDelayModal';
 import { isFetchError } from '../connectivity/networkMonitor';
 import type { FieldApiClient } from '../services/apiClient';
+import { projectOutbox } from '../services/outboxProjection';
 import { useTheme } from '../theme';
 import type {
     DispatchJob,
@@ -118,6 +120,9 @@ export interface AssignedJobsListScreenProps {
     onRequestPushPermissions?: () => void;
     onOpenProfile?: () => void;
     onOpenAccountSettings?: () => void;
+    lastSuccessfulSyncAt?: string | null;
+    isAuthenticated?: boolean;
+    onRecaptureAttachment?: (commandId: string, oldUri: string) => void;
 }
 
 interface TileItem {
@@ -202,6 +207,9 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     onRequestPushPermissions,
     onOpenProfile,
     onOpenAccountSettings,
+    lastSuccessfulSyncAt,
+    isAuthenticated = true,
+    onRecaptureAttachment,
 }) => {
     const { isDarkHud } = useTheme();
     const [delayModalJob, setDelayModalJob] = useState<DispatchJob | null>(
@@ -210,6 +218,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     const [dutyModalOpen, setDutyModalOpen] = useState(false);
     const [profileSheetOpen, setProfileSheetOpen] = useState(false);
     const [notificationsSheetOpen, setNotificationsSheetOpen] = useState(false);
+    const [outboxSheetOpen, setOutboxSheetOpen] = useState(false);
     const [signOutConfirmationOpen, setSignOutConfirmationOpen] =
         useState(false);
     const [endShiftSafeguardOpen, setEndShiftSafeguardOpen] = useState(false);
@@ -262,6 +271,18 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
         }
     }
 
+    const projection = useMemo(
+        () =>
+            projectOutbox(
+                outboxCommands,
+                isOnline,
+                isAuthenticated,
+                undefined,
+                lastSuccessfulSyncAt,
+            ),
+        [outboxCommands, isOnline, isAuthenticated, lastSuccessfulSyncAt],
+    );
+
     const queuedCount = outboxCommands.filter(
         (command) => command.state === 'queued',
     ).length;
@@ -269,13 +290,15 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
         (command) => command.state === 'syncing',
     ).length;
     const failedCount = outboxCommands.filter(
-        (command) => command.state === 'failed',
+        (command) =>
+            command.state === 'failed' || command.state === 'unresolved',
     ).length;
     const conflictCount = outboxCommands.filter(
         (command) => command.state === 'conflict',
     ).length;
     const failedCommands = outboxCommands.filter(
-        (command) => command.state === 'failed',
+        (command) =>
+            command.state === 'failed' || command.state === 'unresolved',
     );
 
     const pendingResponseCount = jobs.filter(
@@ -286,47 +309,10 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     const hasOutboxActivity =
         syncAttentionCount > 0 || queuedCount > 0 || syncingCount > 0;
 
-    const syncGuidance =
-        conflictCount > 0
-            ? `${conflictCount} saved action${conflictCount === 1 ? '' : 's'} need conflict review.`
-            : failedCount > 0
-              ? `${failedCount} saved action${failedCount === 1 ? '' : 's'} failed. Retry before leaving the app.`
-              : isOnline === false
-                ? 'Commands stay on this device until the connection returns.'
-                : queuedCount > 0
-                  ? `${queuedCount} action${queuedCount === 1 ? '' : 's'} saved on this device and waiting to sync.`
-                  : syncingCount > 0
-                    ? 'Saved actions are syncing now.'
-                    : 'Actions sync automatically when the connection is available.';
-
-    const syncStatusLabel =
-        isOnline === null
-            ? 'Checking connection'
-            : isOnline === false
-              ? 'Offline'
-              : syncAttentionCount > 0
-                ? 'Needs review'
-                : queuedCount > 0 || syncingCount > 0
-                  ? 'Syncing'
-                  : 'Synced';
-
-    const syncStatusMessage =
-        isOnline === null
-            ? 'Checking…'
-            : isOnline === true && !hasOutboxActivity
-              ? 'Just now'
-              : isOnline === false
-                ? 'Reconnect to sync'
-                : 'Action needed';
-
-    const syncTone: SyncTone =
-        isOnline === null
-            ? 'checking'
-            : isOnline === false
-              ? 'offline'
-              : syncAttentionCount > 0
-                ? 'attention'
-                : 'online';
+    const syncGuidance = projection.syncGuidance;
+    const syncStatusLabel = projection.headerPill.label;
+    const syncStatusMessage = projection.headerPill.message;
+    const syncTone: SyncTone = projection.headerPill.tone;
 
     const workSummary =
         isLoading && jobs.length === 0
@@ -723,6 +709,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                     notificationCount={totalNotificationCount}
                     onOpenNotifications={handleOpenNotifications}
                     onOpenProfile={handleOpenProfile}
+                    onOpenSyncSheet={() => setOutboxSheetOpen(true)}
                     profileOpen={profileSheetOpen}
                     syncStatusLabel={syncStatusLabel}
                     syncStatusMessage={syncStatusMessage}
@@ -1314,6 +1301,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                 conflictCount={conflictCount}
                                 failedCount={failedCount}
                                 isOnline={isOnline}
+                                onOpenDetails={() => setOutboxSheetOpen(true)}
                                 onSyncNow={onSyncNow}
                                 queuedCount={queuedCount}
                                 showDetails={hasOutboxActivity}
@@ -1551,20 +1539,41 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                     jobs.flatMap((j) => j.asset_assignments || [])[0]
                         ?.asset_name || null
                 }
+                isAuthenticated={isAuthenticated}
                 isOnline={isOnline}
                 onCancelSignOut={handleCancelSignOut}
                 onClose={() => handleCloseProfile()}
                 onLogout={handleLogout}
+                onOpenAccountSettings={onOpenAccountSettings || onOpenProfile}
+                onOpenOutboxDetails={() => setOutboxSheetOpen(true)}
+                onRequestPushPermissions={onRequestPushPermissions}
                 onStartSignOut={handleStartSignOut}
                 onSyncNow={onSyncNow}
+                outboxCommands={outboxCommands}
+                pushNotificationsEnabled={pushNotificationsEnabled}
                 queuedCount={queuedCount}
                 signOutConfirmationOpen={signOutConfirmationOpen}
                 userName={userName}
                 userRole={userRole}
                 visible={profileSheetOpen}
-                pushNotificationsEnabled={pushNotificationsEnabled}
-                onRequestPushPermissions={onRequestPushPermissions}
-                onOpenAccountSettings={onOpenAccountSettings || onOpenProfile}
+            />
+
+            <OutboxStatusSheet
+                commands={outboxCommands}
+                isAuthenticated={isAuthenticated}
+                isOnline={isOnline}
+                lastSuccessfulSyncAt={lastSuccessfulSyncAt}
+                onAcceptServerState={onAcceptServerState}
+                onClose={() => setOutboxSheetOpen(false)}
+                onDiscardCommand={onDiscardCommand}
+                onRecaptureAttachment={onRecaptureAttachment}
+                onRetryCommand={onRetryCommand}
+                onRetryNewVersion={onRetryNewVersion}
+                onSignIn={onLogout}
+                onSyncNow={onSyncNow}
+                userName={userName}
+                userRole={userRole}
+                visible={outboxSheetOpen}
             />
 
             {/* On-Site Confirmation Modal */}
