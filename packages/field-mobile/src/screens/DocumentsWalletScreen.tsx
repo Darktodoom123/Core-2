@@ -1864,7 +1864,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         flexDirection: 'row',
         gap: 8,
-        minHeight: 44,
+        minHeight: 48,
         paddingHorizontal: 12,
     },
     searchInputWrapDark: {
@@ -1883,8 +1883,8 @@ const styles = StyleSheet.create({
     clearBtn: {
         alignItems: 'center',
         justifyContent: 'center',
-        minHeight: 32,
-        minWidth: 32,
+        minHeight: 48,
+        minWidth: 48,
     },
     categoryRailSection: {
         paddingVertical: 10,
@@ -1900,7 +1900,7 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         flexDirection: 'row',
         gap: 6,
-        minHeight: 36,
+        minHeight: 48,
         paddingHorizontal: 14,
     },
     categoryChipDark: {
@@ -2625,9 +2625,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: colors.surfaceMuted,
         borderRadius: 18,
-        height: 36,
+        height: 48,
         justifyContent: 'center',
-        width: 36,
+        width: 48,
     },
     sheetCloseBtnDark: {
         backgroundColor: colors.hudSurface,

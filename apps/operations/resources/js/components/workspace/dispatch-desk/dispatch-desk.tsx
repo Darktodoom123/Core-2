@@ -1,4 +1,4 @@
-import { Link, router, usePage } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
     CalendarDays,
@@ -1447,29 +1447,14 @@ function DeskJobList({
                                                 status={job.status}
                                             />
                                             {job.latest_delay && (
-                                                <span
-                                                    role="link"
-                                                    tabIndex={0}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        router.visit(
-                                                            `/operations/dispatch/${job.id}#reported-delays`,
-                                                        );
-                                                    }}
-                                                    onKeyDown={(e) => {
-                                                        if (
-                                                            e.key === 'Enter' ||
-                                                            e.key === ' '
-                                                        ) {
-                                                            e.stopPropagation();
-                                                            e.preventDefault();
-                                                            router.visit(
-                                                                `/operations/dispatch/${job.id}#reported-delays`,
-                                                            );
-                                                        }
-                                                    }}
+                                                <Link
+                                                    href={`/operations/dispatch-jobs/${job.id}#reported-delays`}
+                                                    onClick={(event) =>
+                                                        event.stopPropagation()
+                                                    }
+                                                    aria-label={`View reported delay for ${job.reference}: ${job.latest_delay.reason_label}${job.latest_delay.estimated_minutes ? `, estimated impact ${job.latest_delay.estimated_minutes} minutes` : ''}`}
                                                     title={`Reported delay: ${job.latest_delay.reason_label}${job.latest_delay.estimated_minutes ? ` (+${job.latest_delay.estimated_minutes}m)` : ''}. Click to view details.`}
-                                                    className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900 transition-colors hover:bg-amber-200 dark:border-amber-700 dark:bg-amber-900/50 dark:text-amber-200 dark:hover:bg-amber-900/75"
+                                                    className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900 transition-colors hover:bg-amber-200 focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:ring-offset-2 focus-visible:outline-none dark:border-amber-700 dark:bg-amber-900/50 dark:text-amber-200 dark:hover:bg-amber-900/75"
                                                 >
                                                     <AlertTriangle
                                                         className="size-3 text-amber-700 dark:text-amber-400"
@@ -1482,7 +1467,7 @@ function DeskJobList({
                                                                 .reason_label
                                                         }
                                                     </span>
-                                                </span>
+                                                </Link>
                                             )}
                                             {job.priority.value !==
                                                 'routine' && (
@@ -1619,9 +1604,10 @@ function DispatchReviewPanel({
                                     <CanonicalStatusBadge status={job.status} />
                                     {job.latest_delay && (
                                         <Link
-                                            href={`/operations/dispatch/${job.id}#reported-delays`}
+                                            href={`/operations/dispatch-jobs/${job.id}#reported-delays`}
+                                            aria-label={`View reported delay for ${job.reference}: ${job.latest_delay.reason_label}${job.latest_delay.estimated_minutes ? `, estimated impact ${job.latest_delay.estimated_minutes} minutes` : ''}`}
                                             title={`Reported delay: ${job.latest_delay.reason_label}${job.latest_delay.estimated_minutes ? ` (+${job.latest_delay.estimated_minutes}m)` : ''}. Click to view details.`}
-                                            className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900 transition-colors hover:bg-amber-200 dark:border-amber-700 dark:bg-amber-900/50 dark:text-amber-200 dark:hover:bg-amber-900/75"
+                                            className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900 transition-colors hover:bg-amber-200 focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:ring-offset-2 focus-visible:outline-none dark:border-amber-700 dark:bg-amber-900/50 dark:text-amber-200 dark:hover:bg-amber-900/75"
                                         >
                                             <AlertTriangle
                                                 className="size-3 text-amber-700 dark:text-amber-400"

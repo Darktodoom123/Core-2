@@ -139,9 +139,9 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         borderWidth: 1,
         flexShrink: 0,
-        height: 38,
+        height: 48,
         justifyContent: 'center',
-        width: 38,
+        width: 48,
         ...shadows.sm,
     },
     darkBackButton: {

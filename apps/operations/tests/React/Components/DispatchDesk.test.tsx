@@ -408,6 +408,49 @@ describe('dispatch desk derived behavior', () => {
 });
 
 describe('DispatchDesk', () => {
+    it('links a server-received field delay to the authorized job detail record', () => {
+        window.history.replaceState({}, '', '/?dispatch_view=schedule');
+        const delayedJob: DispatchJobViewModel = {
+            ...job(17),
+            latest_delay: {
+                id: 81,
+                context: { value: 'transit', label: 'Driving / Transit' },
+                reason: 'traffic',
+                reason_label: 'Traffic Congestion',
+                estimated_minutes: 45,
+                notes: 'Escort convoy moving slowly.',
+                reported_at: '2026-09-20T08:15:00+08:00',
+                created_at: '2026-09-20T08:16:00+08:00',
+                reporter: { id: 4, name: 'A. Operator' },
+                asset: { id: 9, code: 'TRK-09', name: 'Prime mover' },
+            },
+        };
+
+        render(
+            <DispatchDesk
+                jobs={[delayedJob]}
+                clients={[]}
+                serviceRequests={[]}
+                rentalHandoffs={[]}
+                salesHandoffs={[]}
+                capabilities={capabilities()}
+                canCreate={false}
+                refreshing={false}
+            />,
+        );
+
+        const delayLinks = screen.getAllByRole('link', {
+            name: 'View reported delay for DSP-17: Traffic Congestion, estimated impact 45 minutes',
+        });
+        expect(delayLinks.length).toBeGreaterThan(0);
+        delayLinks.forEach((link) =>
+            expect(link).toHaveAttribute(
+                'href',
+                '/operations/dispatch-jobs/17#reported-delays',
+            ),
+        );
+    });
+
     it('renders the task first views and one authoritative review action', () => {
         window.history.replaceState({}, '', '/?view=dispatch');
         render(

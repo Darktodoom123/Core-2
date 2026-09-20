@@ -617,7 +617,7 @@ export const EquipmentInspectionScreen: React.FC<
                                     accessibilityLabel="Open Fuel Management"
                                     onPress={onOpenFuel}
                                     style={{
-                                        minHeight: 44,
+                                        minHeight: 48,
                                         paddingHorizontal: 14,
                                         paddingVertical: 10,
                                         borderRadius: 8,
@@ -711,7 +711,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 6,
         justifyContent: 'center',
-        minHeight: 38,
+        minHeight: 48,
         paddingHorizontal: 14,
         paddingVertical: 6,
     },
@@ -827,7 +827,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         flexDirection: 'row',
         gap: 6,
-        minHeight: 36,
+        minHeight: 48,
         paddingHorizontal: 12,
         paddingVertical: 6,
     },

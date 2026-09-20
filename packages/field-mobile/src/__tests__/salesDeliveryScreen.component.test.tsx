@@ -43,6 +43,10 @@ describe('SalesDeliveryScreen', () => {
             fireEvent.press(view.getByTestId('confirm-sales-delivery-button'));
         });
         expect(onCompleteDelivery).toHaveBeenCalledTimes(1);
+        expect(view.getByText('Saved for Synchronization')).toBeTruthy();
+        expect(
+            view.getByText(/Check synchronization status for server receipt/),
+        ).toBeTruthy();
     });
 
     it('supports Cockpit Dark HUD mode, flags VIN mismatch, and interacts with signature modal', async () => {
@@ -114,6 +118,48 @@ describe('SalesDeliveryScreen', () => {
                 verifiedVin: 'KOMPC210LC-99120',
                 notes: 'Unloaded at Valenzuela depot site crane bay.',
             }),
+        );
+    });
+
+    it('requires an explicit assigned asset when the job contains multiple machines', async () => {
+        const onCompleteDelivery = jest.fn();
+        const view = await render(
+            <SalesDeliveryScreen
+                assignedAssets={[
+                    {
+                        asset_code: 'CAT-320-01',
+                        asset_name: 'Caterpillar 320 GC Hydraulic Excavator',
+                        operational_asset_id: 101,
+                    },
+                    {
+                        asset_code: 'KOM-210-02',
+                        asset_name: 'Komatsu PC210LC-11 Excavator',
+                        operational_asset_id: 202,
+                    },
+                ]}
+                onCompleteDelivery={onCompleteDelivery}
+            />,
+        );
+
+        expect(view.getByTestId('sales-asset-selector')).toBeTruthy();
+        await act(async () => {
+            fireEvent.press(view.getByTestId('confirm-sales-delivery-button'));
+        });
+        expect(onCompleteDelivery).not.toHaveBeenCalled();
+        expect(
+            view.getByText(
+                'Select the assigned machine covered by this evidence before submitting.',
+            ),
+        ).toBeTruthy();
+
+        await act(async () => {
+            fireEvent.press(view.getByTestId('sales-asset-202'));
+        });
+        await act(async () => {
+            fireEvent.press(view.getByTestId('confirm-sales-delivery-button'));
+        });
+        expect(onCompleteDelivery).toHaveBeenCalledWith(
+            expect.objectContaining({ assetId: 202 }),
         );
     });
 
@@ -211,13 +257,18 @@ describe('SalesDeliveryScreen', () => {
         });
         expect(onRetrySync).toHaveBeenCalledTimes(1);
 
-        // 4. Success state
+        // 4. Controlled success state is explicitly server-confirmed
         const successView = await render(
             <SalesDeliveryScreen
                 orderReference="SO-2026-0091"
                 syncStatus="success"
             />,
         );
-        expect(successView.getByText('Submitted Successfully')).toBeTruthy();
+        expect(successView.getByText('Server Confirmed')).toBeTruthy();
+        expect(
+            successView.getByText(
+                'Operations confirmed receipt of this delivery evidence.',
+            ),
+        ).toBeTruthy();
     });
 });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
     Pressable,
     ScrollView,
@@ -15,6 +15,12 @@ import { colors, shadows } from '../components/nativeStyles';
 import { DigitalSignatureModal } from '../components/signature/DigitalSignatureModal';
 import { durableAttachmentStorage } from '../services/durableAttachmentStorage';
 import { useTheme } from '../theme';
+import type { AssetAssignment } from '../types';
+
+type HandoverAssetOption = Pick<
+    AssetAssignment,
+    'operational_asset_id' | 'asset_code' | 'asset_name'
+>;
 
 export interface RentalHandoverScreenProps {
     jobId?: number;
@@ -24,6 +30,7 @@ export interface RentalHandoverScreenProps {
     assetId?: number;
     assetName?: string;
     assetCode?: string;
+    assignedAssets?: HandoverAssetOption[];
     actorId?: number | string;
     mode?: 'checkout' | 'return';
     syncStatus?:
@@ -75,6 +82,7 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
     assetId,
     assetName = '50T Tadano All-Terrain Crane',
     assetCode = 'ALB-CRN-050',
+    assignedAssets = [],
     actorId = '1',
     mode: initialMode = 'checkout',
     syncStatus: propSyncStatus,
@@ -104,8 +112,31 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
     const [localErrorMessage, setLocalErrorMessage] = useState<string | null>(
         null,
     );
+    const [selectedAssetId, setSelectedAssetId] = useState<number | null>(
+        assetId ??
+            (assignedAssets.length === 1
+                ? assignedAssets[0].operational_asset_id
+                : null),
+    );
+    const [assetSelectionError, setAssetSelectionError] = useState<
+        string | null
+    >(null);
+    const submitInFlightRef = useRef(false);
+
+    const selectedAsset = assignedAssets.find(
+        (asset) => asset.operational_asset_id === selectedAssetId,
+    );
+    const displayedAssetCode =
+        selectedAsset?.asset_code ??
+        (assignedAssets.length > 1 ? 'SELECT ASSET' : assetCode);
+    const displayedAssetName =
+        selectedAsset?.asset_name ??
+        (assignedAssets.length > 1
+            ? 'Choose the assigned machine covered by this evidence'
+            : assetName);
 
     const activeSyncStatus = propSyncStatus ?? localSyncStatus;
+    const isServerConfirmedSuccess = propSyncStatus === 'success';
     const activeErrorMessage = propSyncErrorMessage ?? localErrorMessage;
     const isSubmitting =
         activeSyncStatus === 'submitting' || activeSyncStatus === 'saving';
@@ -113,6 +144,20 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
     const isCheckout = mode === 'checkout';
 
     const handleConfirm = async () => {
+        if (submitInFlightRef.current) {
+            return;
+        }
+
+        if (assignedAssets.length > 1 && !selectedAsset) {
+            setAssetSelectionError(
+                'Select the assigned machine covered by this evidence before submitting.',
+            );
+
+            return;
+        }
+
+        setAssetSelectionError(null);
+        submitInFlightRef.current = true;
         const signaturePayload =
             signatureData ||
             (signatureCaptured
@@ -157,7 +202,7 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
                 await onCompleteCheckout?.({
                     jobId,
                     reservationId: numericReservationId,
-                    assetId,
+                    assetId: selectedAssetId ?? assetId,
                     hourMeter: parseFloat(hourMeter) || 0,
                     fuelLevelPercent: parseInt(fuelLevel, 10) || 100,
                     conditionAssessment: 'good',
@@ -173,7 +218,7 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
                 await onCompleteReturn?.({
                     jobId,
                     reservationId: numericReservationId,
-                    assetId,
+                    assetId: selectedAssetId ?? assetId,
                     hourMeter: parseFloat(hourMeter) || 0,
                     fuelLevelPercent: parseInt(fuelLevel, 10) || 100,
                     conditionAssessment: damageNoted ? 'fair' : 'good',
@@ -199,6 +244,8 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
                     ? err.message
                     : 'Handover submission failed.',
             );
+        } finally {
+            submitInFlightRef.current = false;
         }
     };
 
@@ -353,7 +400,7 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
                                     isDarkHud && styles.assetCodeDark,
                                 ]}
                             >
-                                {assetCode}
+                                {displayedAssetCode}
                             </Text>
                         </View>
                         <View
@@ -384,7 +431,7 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
                             isDarkHud && styles.assetNameDark,
                         ]}
                     >
-                        {assetName}
+                        {displayedAssetName}
                     </Text>
 
                     <View
@@ -409,6 +456,115 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
                         </Text>
                     </View>
                 </View>
+
+                {assignedAssets.length > 1 && (
+                    <View
+                        style={[
+                            styles.assetSelectorCard,
+                            isDarkHud && styles.assetSelectorCardDark,
+                        ]}
+                        testID="rental-asset-selector"
+                    >
+                        <Text
+                            style={[
+                                styles.sectionTitle,
+                                isDarkHud && styles.sectionTitleDark,
+                            ]}
+                        >
+                            EVIDENCE ASSET (REQUIRED)
+                        </Text>
+                        <Text
+                            style={[
+                                styles.assetSelectorHint,
+                                isDarkHud && styles.assetSelectorHintDark,
+                            ]}
+                        >
+                            Choose which assigned machine this handover covers.
+                        </Text>
+                        <View
+                            accessibilityRole="radiogroup"
+                            style={styles.assetSelectorList}
+                        >
+                            {assignedAssets.map((asset) => {
+                                const isSelected =
+                                    selectedAssetId ===
+                                    asset.operational_asset_id;
+
+                                return (
+                                    <Pressable
+                                        accessibilityLabel={`Select ${asset.asset_code}, ${asset.asset_name}`}
+                                        accessibilityRole="radio"
+                                        accessibilityState={{
+                                            selected: isSelected,
+                                        }}
+                                        key={asset.operational_asset_id}
+                                        onPress={() => {
+                                            setSelectedAssetId(
+                                                asset.operational_asset_id,
+                                            );
+                                            setAssetSelectionError(null);
+                                        }}
+                                        style={[
+                                            styles.assetSelectorOption,
+                                            isDarkHud &&
+                                                styles.assetSelectorOptionDark,
+                                            isSelected &&
+                                                (isDarkHud
+                                                    ? styles.assetSelectorOptionSelectedDark
+                                                    : styles.assetSelectorOptionSelected),
+                                        ]}
+                                        testID={`rental-asset-${asset.operational_asset_id}`}
+                                    >
+                                        <View style={styles.assetSelectorCopy}>
+                                            <Text
+                                                style={[
+                                                    styles.assetSelectorCode,
+                                                    isDarkHud &&
+                                                        styles.assetSelectorCodeDark,
+                                                ]}
+                                            >
+                                                {asset.asset_code}
+                                            </Text>
+                                            <Text
+                                                numberOfLines={2}
+                                                style={[
+                                                    styles.assetSelectorName,
+                                                    isDarkHud &&
+                                                        styles.assetSelectorNameDark,
+                                                ]}
+                                            >
+                                                {asset.asset_name}
+                                            </Text>
+                                        </View>
+                                        <View
+                                            style={[
+                                                styles.assetSelectorRadio,
+                                                isSelected &&
+                                                    styles.assetSelectorRadioSelected,
+                                            ]}
+                                        >
+                                            {isSelected && (
+                                                <View
+                                                    style={
+                                                        styles.assetSelectorRadioInner
+                                                    }
+                                                />
+                                            )}
+                                        </View>
+                                    </Pressable>
+                                );
+                            })}
+                        </View>
+                        {assetSelectionError && (
+                            <Text
+                                accessibilityRole="alert"
+                                style={styles.assetSelectionError}
+                            >
+                                {assetSelectionError}
+                            </Text>
+                        )}
+                    </View>
+                )}
 
                 {/* Operating Hours & Fluid Levels */}
                 <View
@@ -729,7 +885,10 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
                 {/* Offline Outbox & Sync State Banner */}
                 {activeSyncStatus !== 'idle' && (
                     <View
-                        accessibilityRole="alert"
+                        accessibilityLiveRegion="polite"
+                        accessibilityRole={
+                            activeSyncStatus === 'failed' ? 'alert' : 'summary'
+                        }
                         style={[
                             styles.syncBanner,
                             activeSyncStatus === 'submitting' ||
@@ -795,7 +954,9 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
                                     : activeSyncStatus === 'queued'
                                       ? 'Saved on Device (Waiting to Sync)'
                                       : activeSyncStatus === 'success'
-                                        ? 'Submitted Successfully'
+                                        ? isServerConfirmedSuccess
+                                            ? 'Server Confirmed'
+                                            : 'Saved for Synchronization'
                                         : 'Submission Failed'}
                             </Text>
                             <Text
@@ -810,7 +971,9 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
                                     : activeSyncStatus === 'queued'
                                       ? 'Evidence securely stored in offline outbox. It will synchronize automatically when connection is restored.'
                                       : activeSyncStatus === 'success'
-                                        ? 'Handover evidence recorded and synchronized with operations.'
+                                        ? isServerConfirmedSuccess
+                                            ? 'Operations confirmed receipt of this handover evidence.'
+                                            : 'Handover evidence was saved to the outbox. Check synchronization status for server receipt.'
                                         : activeErrorMessage ||
                                           'Unable to complete submission. Tap retry to re-attempt.'}
                             </Text>
@@ -845,7 +1008,10 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
                             : 'Confirm Return Check-in & Close'
                     }
                     accessibilityRole="button"
-                    accessibilityState={{ disabled: isSubmitting }}
+                    accessibilityState={{
+                        busy: isSubmitting,
+                        disabled: isSubmitting,
+                    }}
                     disabled={isSubmitting}
                     onPress={handleConfirm}
                     style={({ pressed }) => [
@@ -939,7 +1105,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 6,
         justifyContent: 'center',
-        minHeight: 44,
+        minHeight: 48,
         paddingVertical: 8,
     },
     modeTabDark: {
@@ -990,6 +1156,98 @@ const styles = StyleSheet.create({
         borderColor: colors.hudBorder,
         elevation: 0,
         shadowOpacity: 0,
+    },
+    assetSelectorCard: {
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
+        borderRadius: 14,
+        borderWidth: 1,
+        marginBottom: 14,
+        padding: 16,
+    },
+    assetSelectorCardDark: {
+        backgroundColor: colors.hudSurface,
+        borderColor: colors.hudBorder,
+    },
+    assetSelectorHint: {
+        color: colors.secondary,
+        fontSize: 13,
+        marginBottom: 10,
+        marginTop: 4,
+    },
+    assetSelectorHintDark: {
+        color: colors.hudTextDim,
+    },
+    assetSelectorList: {
+        gap: 8,
+    },
+    assetSelectorOption: {
+        alignItems: 'center',
+        backgroundColor: colors.surfaceMuted,
+        borderColor: colors.border,
+        borderRadius: 10,
+        borderWidth: 1,
+        flexDirection: 'row',
+        minHeight: 48,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+    },
+    assetSelectorOptionDark: {
+        backgroundColor: colors.hudSurface,
+        borderColor: colors.hudBorder,
+    },
+    assetSelectorOptionSelected: {
+        backgroundColor: colors.amberLight,
+        borderColor: colors.amber,
+    },
+    assetSelectorOptionSelectedDark: {
+        backgroundColor: 'rgba(245, 158, 11, 0.16)',
+        borderColor: colors.amber,
+    },
+    assetSelectorCopy: {
+        flex: 1,
+        minWidth: 0,
+    },
+    assetSelectorCode: {
+        color: colors.amberDark,
+        fontSize: 12,
+        fontWeight: '800',
+    },
+    assetSelectorCodeDark: {
+        color: '#FDE68A',
+    },
+    assetSelectorName: {
+        color: colors.text,
+        fontSize: 13,
+        marginTop: 2,
+    },
+    assetSelectorNameDark: {
+        color: colors.hudText,
+    },
+    assetSelectorRadio: {
+        alignItems: 'center',
+        borderColor: colors.muted,
+        borderRadius: 10,
+        borderWidth: 1.5,
+        height: 20,
+        justifyContent: 'center',
+        marginLeft: 10,
+        width: 20,
+    },
+    assetSelectorRadioSelected: {
+        borderColor: colors.amber,
+    },
+    assetSelectorRadioInner: {
+        backgroundColor: colors.amber,
+        borderRadius: 5,
+        height: 10,
+        width: 10,
+    },
+    assetSelectionError: {
+        color: colors.red,
+        fontSize: 12,
+        fontWeight: '600',
+        marginTop: 8,
     },
     assetHeader: {
         alignItems: 'center',
@@ -1115,7 +1373,7 @@ const styles = StyleSheet.create({
         color: colors.text,
         fontSize: 14,
         fontWeight: '600',
-        minHeight: 46,
+        minHeight: 48,
         paddingHorizontal: 12,
     },
     textInputDark: {

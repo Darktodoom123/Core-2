@@ -318,6 +318,34 @@ describe('Mobile Lifecycle Modals & Operational Safeguards', () => {
             ).toBeNull();
         });
 
+        it('keeps delay evidence visible when the parent cannot enqueue it', async () => {
+            const onReportDelay = jest
+                .fn()
+                .mockRejectedValue(new Error('Outbox unavailable.'));
+
+            const view = await render(
+                <AssignedJobsListScreen
+                    isLoading={false}
+                    jobs={[mockAcceptedJob]}
+                    onRefresh={jest.fn()}
+                    onReportDelay={onReportDelay}
+                    onSelectJob={jest.fn()}
+                    onSosHoldComplete={jest.fn()}
+                    outboxCommands={[]}
+                />,
+            );
+
+            await fireEvent.press(view.getByTestId('report-delay-btn-101'));
+            await fireEvent.press(
+                view.getByTestId('delay-reason-site_not_ready'),
+            );
+            await fireEvent.press(view.getByTestId('submit-delay-btn'));
+
+            expect(onReportDelay).toHaveBeenCalledTimes(1);
+            expect(view.getByTestId('report-delay-modal')).toBeTruthy();
+            expect(view.getByText('Outbox unavailable.')).toBeTruthy();
+        });
+
         it('renders I am On Site button on accepted jobs and triggers OnSiteConfirmationModal', async () => {
             const view = await render(
                 <AssignedJobsListScreen

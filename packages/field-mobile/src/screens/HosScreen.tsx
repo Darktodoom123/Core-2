@@ -437,8 +437,7 @@ export const TIMELINE_HISTORY_DAYS: TimelineDayHistory[] = [
                 startTime: '11:30 AM',
                 endTime: '12:30 PM',
                 durationFormatted: '1h 00m',
-                details:
-                    'Driver lunch and mandatory DOT 30-min compliance break',
+                details: 'Driver lunch and recorded 30-minute break',
                 location: 'NLEX Mega Station',
             },
             {

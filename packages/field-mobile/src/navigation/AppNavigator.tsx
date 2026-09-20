@@ -1356,6 +1356,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     const handleReportDelay = useCallback(
         async (jobId: number, payload: ReportDelayPayload) => {
             setIsLoadingJobs(true);
+            let queued = false;
 
             try {
                 const targetJob =
@@ -1373,12 +1374,18 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                     },
                     expectedVersion,
                 );
+                queued = true;
+
                 await syncQueue();
             } catch (error: unknown) {
                 await handleRequestFailure(
                     error,
-                    'Failed to submit delay report.',
+                    'Delay report saved locally and will retry.',
                 );
+
+                if (!queued) {
+                    throw error;
+                }
             } finally {
                 setIsLoadingJobs(false);
             }
@@ -1480,13 +1487,37 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                     'Please select an active rental reservation job.',
                 );
 
-                return;
+                throw error;
             }
 
+            const assignments = linkedJob?.asset_assignments ?? [];
+            const requestedAssetId = data.assetId ?? selectedAssetId;
             const assetId =
-                data.assetId ??
-                linkedJob?.asset_assignments?.[0]?.operational_asset_id ??
-                null;
+                assignments.length === 0
+                    ? (requestedAssetId ?? null)
+                    : requestedAssetId !== null &&
+                        requestedAssetId !== undefined &&
+                        assignments.some(
+                            (assignment) =>
+                                assignment.operational_asset_id ===
+                                requestedAssetId,
+                        )
+                      ? requestedAssetId
+                      : assignments.length === 1
+                        ? assignments[0].operational_asset_id
+                        : null;
+
+            if (assignments.length > 1 && assetId === null) {
+                const error = new Error(
+                    'Multiple assets are assigned to this job. Select the asset covered by the rental handover before submitting.',
+                );
+                await handleRequestFailure(
+                    error,
+                    'Please select the assigned asset covered by this handover.',
+                );
+
+                throw error;
+            }
 
             const photosPayload = (data.photos || []).map((p) => ({
                 base64:
@@ -1496,11 +1527,14 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                 label: p.fileName || 'inspection',
             }));
 
+            let queued = false;
+
             try {
                 await commandOutbox.enqueueSubmitRentalHandover({
                     reservation_id: Number(reservationId),
                     dispatch_job_id: linkedJob?.id ?? null,
-                    operational_asset_id: assetId ? Number(assetId) : null,
+                    operational_asset_id:
+                        assetId !== null ? Number(assetId) : null,
                     handover_type: 'checkout',
                     hour_meter: data.hourMeter,
                     fuel_percent: data.fuelLevelPercent,
@@ -1513,6 +1547,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                     signee_name: data.signeeName,
                     signee_role: data.signeeRole || 'Site Representative',
                 });
+                queued = true;
 
                 await syncQueue();
             } catch (error: unknown) {
@@ -1520,11 +1555,24 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                     error,
                     'Rental checkout evidence queued locally.',
                 );
-            } finally {
+
+                if (!queued) {
+                    throw error;
+                }
+            }
+
+            if (queued) {
                 setActiveAppView('main');
             }
         },
-        [activeJob, commandOutbox, handleRequestFailure, jobs, syncQueue],
+        [
+            activeJob,
+            commandOutbox,
+            handleRequestFailure,
+            jobs,
+            selectedAssetId,
+            syncQueue,
+        ],
     );
 
     const handleRentalReturn = useCallback(
@@ -1550,13 +1598,37 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                     'Please select an active rental reservation job.',
                 );
 
-                return;
+                throw error;
             }
 
+            const assignments = linkedJob?.asset_assignments ?? [];
+            const requestedAssetId = data.assetId ?? selectedAssetId;
             const assetId =
-                data.assetId ??
-                linkedJob?.asset_assignments?.[0]?.operational_asset_id ??
-                null;
+                assignments.length === 0
+                    ? (requestedAssetId ?? null)
+                    : requestedAssetId !== null &&
+                        requestedAssetId !== undefined &&
+                        assignments.some(
+                            (assignment) =>
+                                assignment.operational_asset_id ===
+                                requestedAssetId,
+                        )
+                      ? requestedAssetId
+                      : assignments.length === 1
+                        ? assignments[0].operational_asset_id
+                        : null;
+
+            if (assignments.length > 1 && assetId === null) {
+                const error = new Error(
+                    'Multiple assets are assigned to this job. Select the asset covered by the rental return before submitting.',
+                );
+                await handleRequestFailure(
+                    error,
+                    'Please select the assigned asset covered by this return.',
+                );
+
+                throw error;
+            }
 
             const photosPayload = (data.photos || []).map((p) => ({
                 base64:
@@ -1566,11 +1638,14 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                 label: p.fileName || 'inspection',
             }));
 
+            let queued = false;
+
             try {
                 await commandOutbox.enqueueSubmitRentalHandover({
                     reservation_id: Number(reservationId),
                     dispatch_job_id: linkedJob?.id ?? null,
-                    operational_asset_id: assetId ? Number(assetId) : null,
+                    operational_asset_id:
+                        assetId !== null ? Number(assetId) : null,
                     handover_type: 'return',
                     hour_meter: data.hourMeter,
                     fuel_percent: data.fuelLevelPercent,
@@ -1585,6 +1660,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                     signee_name: data.signeeName,
                     signee_role: data.signeeRole || 'Site Representative',
                 });
+                queued = true;
 
                 await syncQueue();
             } catch (error: unknown) {
@@ -1592,11 +1668,24 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                     error,
                     'Rental return evidence queued locally.',
                 );
-            } finally {
+
+                if (!queued) {
+                    throw error;
+                }
+            }
+
+            if (queued) {
                 setActiveAppView('main');
             }
         },
-        [activeJob, commandOutbox, handleRequestFailure, jobs, syncQueue],
+        [
+            activeJob,
+            commandOutbox,
+            handleRequestFailure,
+            jobs,
+            selectedAssetId,
+            syncQueue,
+        ],
     );
 
     const handleSalesDelivery = useCallback(
@@ -1620,13 +1709,37 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                     'Please select an active sales delivery job.',
                 );
 
-                return;
+                throw error;
             }
 
+            const assignments = linkedJob?.asset_assignments ?? [];
+            const requestedAssetId = data.assetId ?? selectedAssetId;
             const assetId =
-                data.assetId ??
-                linkedJob?.asset_assignments?.[0]?.operational_asset_id ??
-                null;
+                assignments.length === 0
+                    ? (requestedAssetId ?? null)
+                    : requestedAssetId !== null &&
+                        requestedAssetId !== undefined &&
+                        assignments.some(
+                            (assignment) =>
+                                assignment.operational_asset_id ===
+                                requestedAssetId,
+                        )
+                      ? requestedAssetId
+                      : assignments.length === 1
+                        ? assignments[0].operational_asset_id
+                        : null;
+
+            if (assignments.length > 1 && assetId === null) {
+                const error = new Error(
+                    'Multiple assets are assigned to this job. Select the asset covered by the sales delivery before submitting.',
+                );
+                await handleRequestFailure(
+                    error,
+                    'Please select the assigned asset covered by this delivery.',
+                );
+
+                throw error;
+            }
 
             const photosPayload = (data.photos || []).map((p) => ({
                 base64:
@@ -1636,11 +1749,14 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                 label: p.fileName || 'delivery_proof',
             }));
 
+            let queued = false;
+
             try {
                 await commandOutbox.enqueueSubmitSalesDelivery({
                     order_id: Number(orderId),
                     dispatch_job_id: linkedJob?.id ?? null,
-                    operational_asset_id: assetId ? Number(assetId) : null,
+                    operational_asset_id:
+                        assetId !== null ? Number(assetId) : null,
                     verified_vin: data.verifiedVin,
                     accessories_checked: data.accessoriesChecked,
                     delivery_notes: data.notes,
@@ -1649,6 +1765,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                     signee_name: data.signeeName,
                     signee_role: data.signeeRole,
                 });
+                queued = true;
 
                 await syncQueue();
             } catch (error: unknown) {
@@ -1656,11 +1773,24 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                     error,
                     'Sales delivery evidence queued locally.',
                 );
-            } finally {
+
+                if (!queued) {
+                    throw error;
+                }
+            }
+
+            if (queued) {
                 setActiveAppView('main');
             }
         },
-        [activeJob, commandOutbox, handleRequestFailure, jobs, syncQueue],
+        [
+            activeJob,
+            commandOutbox,
+            handleRequestFailure,
+            jobs,
+            selectedAssetId,
+            syncQueue,
+        ],
     );
 
     const handleSaveInspection = useCallback(
@@ -2309,8 +2439,12 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                         context: 'transit',
                                         reason: reasonCode,
                                         operational_asset_id:
-                                            jobToDelay.asset_assignments?.[0]
-                                                ?.operational_asset_id ?? null,
+                                            jobToDelay.asset_assignments
+                                                ?.length === 1
+                                                ? jobToDelay
+                                                      .asset_assignments[0]
+                                                      .operational_asset_id
+                                                : null,
                                         estimated_minutes: 30,
                                         notes: delayReason,
                                         job_version: jobToDelay.version,
@@ -2325,18 +2459,16 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                             />
                         ) : activeAppView === 'rental' ? (
                             <RentalHandoverScreen
+                                assignedAssets={activeJob?.asset_assignments}
                                 actorId={user?.id}
                                 assetCode={
-                                    activeJob?.asset_assignments?.[0]
-                                        ?.asset_code || resolvedAssetCode
+                                    currentAsset?.asset_code ||
+                                    resolvedAssetCode
                                 }
-                                assetId={
-                                    activeJob?.asset_assignments?.[0]
-                                        ?.operational_asset_id
-                                }
+                                assetId={currentAsset?.operational_asset_id}
                                 assetName={
-                                    activeJob?.asset_assignments?.[0]
-                                        ?.asset_name || resolvedAssetName
+                                    currentAsset?.asset_name ||
+                                    resolvedAssetName
                                 }
                                 clientName={
                                     activeJob?.client || resolvedClientName
@@ -2359,17 +2491,15 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                             />
                         ) : activeAppView === 'sales' ? (
                             <SalesDeliveryScreen
+                                assignedAssets={activeJob?.asset_assignments}
                                 actorId={user?.id}
-                                assetId={
-                                    activeJob?.asset_assignments?.[0]
-                                        ?.operational_asset_id
-                                }
+                                assetId={currentAsset?.operational_asset_id}
                                 clientName={
                                     activeJob?.client || resolvedClientName
                                 }
                                 equipmentName={
-                                    activeJob?.asset_assignments?.[0]
-                                        ?.asset_name || resolvedAssetName
+                                    currentAsset?.asset_name ||
+                                    resolvedAssetName
                                 }
                                 jobId={activeJob?.id}
                                 onBack={() => setActiveAppView('main')}

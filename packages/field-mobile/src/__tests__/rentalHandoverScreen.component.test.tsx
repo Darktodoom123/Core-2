@@ -36,6 +36,10 @@ describe('RentalHandoverScreen', () => {
             fireEvent.press(view.getByTestId('confirm-handover-button'));
         });
         expect(onCompleteCheckout).toHaveBeenCalledTimes(1);
+        expect(view.getByText('Saved for Synchronization')).toBeTruthy();
+        expect(
+            view.getByText(/Check synchronization status for server receipt/),
+        ).toBeTruthy();
     });
 
     it('renders return check-in mode with condition diff damage inspection in Philippine context', async () => {
@@ -69,6 +73,48 @@ describe('RentalHandoverScreen', () => {
             fireEvent.press(view.getByTestId('confirm-handover-button'));
         });
         expect(onCompleteReturn).toHaveBeenCalledTimes(1);
+    });
+
+    it('requires an explicit assigned asset when the job contains multiple machines', async () => {
+        const onCompleteCheckout = jest.fn();
+        const view = await render(
+            <RentalHandoverScreen
+                assignedAssets={[
+                    {
+                        asset_code: 'ALB-CRN-050',
+                        asset_name: '50T Tadano All-Terrain Crane',
+                        operational_asset_id: 50,
+                    },
+                    {
+                        asset_code: 'ALB-CRN-080',
+                        asset_name: '80T Tadano All-Terrain Crane',
+                        operational_asset_id: 80,
+                    },
+                ]}
+                onCompleteCheckout={onCompleteCheckout}
+            />,
+        );
+
+        expect(view.getByTestId('rental-asset-selector')).toBeTruthy();
+        await act(async () => {
+            fireEvent.press(view.getByTestId('confirm-handover-button'));
+        });
+        expect(onCompleteCheckout).not.toHaveBeenCalled();
+        expect(
+            view.getByText(
+                'Select the assigned machine covered by this evidence before submitting.',
+            ),
+        ).toBeTruthy();
+
+        await act(async () => {
+            fireEvent.press(view.getByTestId('rental-asset-80'));
+        });
+        await act(async () => {
+            fireEvent.press(view.getByTestId('confirm-handover-button'));
+        });
+        expect(onCompleteCheckout).toHaveBeenCalledWith(
+            expect.objectContaining({ assetId: 80 }),
+        );
     });
 
     it('supports Cockpit Dark HUD mode and switching tabs between checkout and return', async () => {
@@ -218,13 +264,18 @@ describe('RentalHandoverScreen', () => {
         });
         expect(onRetrySync).toHaveBeenCalledTimes(1);
 
-        // 4. Success state
+        // 4. Controlled success state is explicitly server-confirmed
         const successView = await render(
             <RentalHandoverScreen
                 reservationReference="REN-2026-0412"
                 syncStatus="success"
             />,
         );
-        expect(successView.getByText('Submitted Successfully')).toBeTruthy();
+        expect(successView.getByText('Server Confirmed')).toBeTruthy();
+        expect(
+            successView.getByText(
+                'Operations confirmed receipt of this handover evidence.',
+            ),
+        ).toBeTruthy();
     });
 });

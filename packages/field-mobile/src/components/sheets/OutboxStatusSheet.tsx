@@ -1444,9 +1444,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: colors.background,
         borderRadius: 20,
-        height: 36,
+        height: 48,
         justifyContent: 'center',
-        width: 36,
+        width: 48,
     },
     darkCloseButton: {
         backgroundColor: '#1E293B',
@@ -1582,7 +1582,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 8,
         justifyContent: 'center',
-        minHeight: 44,
+        minHeight: 48,
         paddingHorizontal: 16,
     },
     darkSyncNowBtn: {
@@ -1829,7 +1829,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 6,
         justifyContent: 'center',
-        minHeight: 40,
+        minHeight: 48,
         paddingHorizontal: 14,
     },
     retryActionBtn: {
@@ -2071,7 +2071,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.background,
         borderRadius: 8,
         justifyContent: 'center',
-        minHeight: 44,
+        minHeight: 48,
         paddingHorizontal: 16,
     },
     darkDialogCancelBtn: {
@@ -2090,7 +2090,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#EF4444',
         borderRadius: 8,
         justifyContent: 'center',
-        minHeight: 44,
+        minHeight: 48,
         paddingHorizontal: 16,
     },
     dialogConfirmText: {

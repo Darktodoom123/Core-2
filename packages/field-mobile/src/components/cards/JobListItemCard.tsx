@@ -53,7 +53,15 @@ export const JobListItemCard: React.FC<JobListItemCardProps> = ({
 
     const isPendingAssignment =
         job.my_assignment?.response_status === 'pending';
-    const primaryAsset = job.asset_assignments?.[0] || null;
+    const assetSummary =
+        job.asset_assignments && job.asset_assignments.length > 0
+            ? job.asset_assignments
+                  .map(
+                      (assignment) =>
+                          `${assignment.asset_code} · ${assignment.asset_name}`,
+                  )
+                  .join('\n')
+            : null;
     const currentStatus = job.status?.value || 'scheduled';
     const statusLabel = job.status?.label || currentStatus.toUpperCase();
     const priorityLabel = job.priority?.label || 'ROUTINE';
@@ -142,6 +150,7 @@ export const JobListItemCard: React.FC<JobListItemCardProps> = ({
     return (
         <Pressable
             accessibilityLabel={`Dispatch assignment ${job.reference}, ${job.title}`}
+            accessibilityRole="button"
             onPress={() => onSelectJob?.(job.id)}
             style={[styles.cardRoot, isDarkHud && styles.darkCardRoot]}
             testID={`job-card-${job.id}`}
@@ -313,15 +322,12 @@ export const JobListItemCard: React.FC<JobListItemCardProps> = ({
                             Assigned Equipment
                         </Text>
                         <Text
-                            numberOfLines={1}
                             style={[
                                 styles.detailValue,
                                 isDarkHud && styles.darkDetailValue,
                             ]}
                         >
-                            {primaryAsset
-                                ? `${primaryAsset.asset_code} · ${primaryAsset.asset_name}`
-                                : 'CRN-101 · Liebherr LTM 1050-3.1'}
+                            {assetSummary ?? 'No equipment assigned'}
                         </Text>
                     </View>
                 </View>

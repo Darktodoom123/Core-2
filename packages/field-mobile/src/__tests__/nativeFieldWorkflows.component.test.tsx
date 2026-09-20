@@ -148,6 +148,45 @@ describe('Native Field Workflows Component Tests', () => {
             expect(view.getByText('Tandem lift')).toBeTruthy();
         });
 
+        it('shows every assigned asset and never fabricates an equipment identity', async () => {
+            const multipleAssetsView = await render(
+                <JobListItemCard
+                    job={{
+                        ...mockJob,
+                        asset_assignments: [
+                            ...(mockJob.asset_assignments ?? []),
+                            {
+                                id: 2,
+                                operational_asset_id: 56,
+                                asset_code: 'TRK-LONG-IDENTIFIER-2026-0042',
+                                asset_name:
+                                    'Prime Mover with Extendable Low-Bed Trailer',
+                                asset_kind: 'truck',
+                            },
+                        ],
+                    }}
+                />,
+            );
+
+            expect(
+                multipleAssetsView.getByText(
+                    'CRN-101 · Liebherr LTM 1050-3.1\nTRK-LONG-IDENTIFIER-2026-0042 · Prime Mover with Extendable Low-Bed Trailer',
+                ),
+            ).toBeTruthy();
+
+            await cleanup();
+
+            const unassignedView = await render(
+                <JobListItemCard job={{ ...mockJob, asset_assignments: [] }} />,
+            );
+            expect(
+                unassignedView.getByText('No equipment assigned'),
+            ).toBeTruthy();
+            expect(
+                unassignedView.queryByText('CRN-101 · Liebherr LTM 1050-3.1'),
+            ).toBeNull();
+        });
+
         it('handles direct one-tap assignment acceptance and rejection when pending', async () => {
             const pendingJob: DispatchJob = {
                 ...mockJob,

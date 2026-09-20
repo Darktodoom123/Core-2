@@ -209,6 +209,56 @@ describe('Job Delay Reporting Mobile Components', () => {
             expect(
                 view.getByText('Please select a delay reason.'),
             ).toBeTruthy();
+            expect(view.getByText('DELAY REASON (REQUIRED)')).toBeTruthy();
+            expect(
+                view.getByTestId('delay-error').props.accessibilityRole,
+            ).toBe('alert');
+        });
+
+        it('exposes selected context and submit state to assistive technology', async () => {
+            const view = await render(
+                <ReportDelayModal
+                    job={mockWorkingJob}
+                    onClose={jest.fn()}
+                    onSubmit={jest.fn()}
+                    visible={true}
+                />,
+            );
+
+            expect(
+                view.getByTestId('context-on_site-btn').props.accessibilityState
+                    .selected,
+            ).toBe(true);
+            expect(
+                view.getByTestId('submit-delay-btn').props.accessibilityState,
+            ).toEqual({ busy: false, disabled: false });
+        });
+
+        it('ignores a rapid duplicate submit while the first report is in flight', async () => {
+            const submitButtonRef: {
+                current?: Parameters<typeof fireEvent.press>[0];
+            } = {};
+            const onSubmit = jest.fn(async () => {
+                if (submitButtonRef.current) {
+                    await fireEvent.press(submitButtonRef.current);
+                }
+            });
+
+            const view = await render(
+                <ReportDelayModal
+                    job={mockWorkingJob}
+                    onClose={jest.fn()}
+                    onSubmit={onSubmit}
+                    visible={true}
+                />,
+            );
+
+            await fireEvent.press(
+                view.getByTestId('delay-reason-site_not_ready'),
+            );
+            submitButtonRef.current = view.getByTestId('submit-delay-btn');
+            await fireEvent.press(submitButtonRef.current);
+            expect(onSubmit).toHaveBeenCalledTimes(1);
         });
     });
 

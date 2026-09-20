@@ -1,7 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
+    KeyboardAvoidingView,
     Modal,
+    Platform,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -159,11 +161,16 @@ export const ReportDelayModal: React.FC<ReportDelayModalProps> = ({
     const [estimatedMinutes, setEstimatedMinutes] = useState<number | null>(30);
     const [notes, setNotes] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const submitInFlightRef = useRef(false);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
     const reasons = context === 'transit' ? TRANSIT_REASONS : ON_SITE_REASONS;
 
     const handleSubmit = async () => {
+        if (submitInFlightRef.current) {
+            return;
+        }
+
         if (!selectedReason) {
             setErrorMsg('Please select a delay reason.');
 
@@ -171,6 +178,7 @@ export const ReportDelayModal: React.FC<ReportDelayModalProps> = ({
         }
 
         setErrorMsg(null);
+        submitInFlightRef.current = true;
         setIsSubmitting(true);
 
         try {
@@ -192,19 +200,26 @@ export const ReportDelayModal: React.FC<ReportDelayModalProps> = ({
                 err instanceof Error ? err.message : 'Failed to report delay.';
             setErrorMsg(message);
         } finally {
+            submitInFlightRef.current = false;
             setIsSubmitting(false);
         }
     };
 
     return (
         <Modal
+            accessibilityViewIsModal
             animationType="slide"
             onRequestClose={onClose}
             transparent
             visible={visible}
         >
-            <View style={styles.overlay} testID="report-delay-modal">
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={styles.overlay}
+                testID="report-delay-modal"
+            >
                 <View
+                    accessibilityViewIsModal
                     style={[
                         styles.sheetContainer,
                         isDarkHud && styles.darkSheetContainer,
@@ -222,8 +237,9 @@ export const ReportDelayModal: React.FC<ReportDelayModalProps> = ({
                             >
                                 <Icon color="#F59E0B" name="alert" size={20} />
                             </View>
-                            <View>
+                            <View style={styles.headerTitleCopy}>
                                 <Text
+                                    numberOfLines={1}
                                     style={[
                                         styles.sheetTitle,
                                         isDarkHud && styles.darkSheetTitle,
@@ -232,6 +248,8 @@ export const ReportDelayModal: React.FC<ReportDelayModalProps> = ({
                                     Report Operational Delay
                                 </Text>
                                 <Text
+                                    ellipsizeMode="tail"
+                                    numberOfLines={2}
                                     style={[
                                         styles.sheetSubtitle,
                                         isDarkHud && styles.darkSheetSubtitle,
@@ -244,6 +262,7 @@ export const ReportDelayModal: React.FC<ReportDelayModalProps> = ({
                         <Pressable
                             accessibilityLabel="Close delay modal"
                             accessibilityRole="button"
+                            accessibilityState={{ disabled: isSubmitting }}
                             disabled={isSubmitting}
                             onPress={onClose}
                             style={styles.closeBtn}
@@ -270,10 +289,16 @@ export const ReportDelayModal: React.FC<ReportDelayModalProps> = ({
                         >
                             OPERATIONAL STAGE
                         </Text>
-                        <View style={styles.toggleRow}>
+                        <View
+                            accessibilityRole="radiogroup"
+                            style={styles.toggleRow}
+                        >
                             <Pressable
                                 accessibilityLabel="Transit Stage Delay"
-                                accessibilityRole="button"
+                                accessibilityRole="radio"
+                                accessibilityState={{
+                                    selected: context === 'transit',
+                                }}
                                 onPress={() => {
                                     setContext('transit');
                                     setSelectedReason(null);
@@ -317,7 +342,10 @@ export const ReportDelayModal: React.FC<ReportDelayModalProps> = ({
 
                             <Pressable
                                 accessibilityLabel="On-Site Stage Delay"
-                                accessibilityRole="button"
+                                accessibilityRole="radio"
+                                accessibilityState={{
+                                    selected: context === 'on_site',
+                                }}
                                 onPress={() => {
                                     setContext('on_site');
                                     setSelectedReason(null);
@@ -373,11 +401,17 @@ export const ReportDelayModal: React.FC<ReportDelayModalProps> = ({
                                     ASSIGNED ASSET AFFECTED
                                 </Text>
                                 <ScrollView
+                                    accessibilityRole="radiogroup"
                                     horizontal
                                     showsHorizontalScrollIndicator={false}
                                     style={styles.assetScroll}
                                 >
                                     <Pressable
+                                        accessibilityLabel="Apply delay to entire dispatch job"
+                                        accessibilityRole="radio"
+                                        accessibilityState={{
+                                            selected: selectedAssetId === null,
+                                        }}
                                         onPress={() => setSelectedAssetId(null)}
                                         style={[
                                             styles.assetChip,
@@ -412,6 +446,11 @@ export const ReportDelayModal: React.FC<ReportDelayModalProps> = ({
 
                                         return (
                                             <Pressable
+                                                accessibilityLabel={`Apply delay to ${assignment.asset_code}, ${assignment.asset_name}`}
+                                                accessibilityRole="radio"
+                                                accessibilityState={{
+                                                    selected: isSelected,
+                                                }}
                                                 key={assignment.id}
                                                 onPress={() =>
                                                     setSelectedAssetId(
@@ -460,16 +499,22 @@ export const ReportDelayModal: React.FC<ReportDelayModalProps> = ({
                                 isDarkHud && styles.darkSectionHeading,
                             ]}
                         >
-                            DELAY REASON
+                            DELAY REASON (REQUIRED)
                         </Text>
-                        <View style={styles.reasonsList}>
+                        <View
+                            accessibilityRole="radiogroup"
+                            style={styles.reasonsList}
+                        >
                             {reasons.map((opt) => {
                                 const isSelected = selectedReason === opt.code;
 
                                 return (
                                     <Pressable
                                         accessibilityLabel={`Select delay reason: ${opt.label}`}
-                                        accessibilityRole="button"
+                                        accessibilityRole="radio"
+                                        accessibilityState={{
+                                            selected: isSelected,
+                                        }}
                                         key={opt.code}
                                         onPress={() =>
                                             setSelectedReason(opt.code)
@@ -605,12 +650,20 @@ export const ReportDelayModal: React.FC<ReportDelayModalProps> = ({
                         >
                             ESTIMATED IMPACT (MINUTES)
                         </Text>
-                        <View style={styles.minutesRow}>
+                        <View
+                            accessibilityRole="radiogroup"
+                            style={styles.minutesRow}
+                        >
                             {ESTIMATE_OPTIONS.map((mins) => {
                                 const isSelected = estimatedMinutes === mins;
 
                                 return (
                                     <Pressable
+                                        accessibilityLabel={`${mins} minute estimated impact`}
+                                        accessibilityRole="radio"
+                                        accessibilityState={{
+                                            selected: isSelected,
+                                        }}
                                         key={mins}
                                         onPress={() =>
                                             setEstimatedMinutes(mins)
@@ -673,7 +726,12 @@ export const ReportDelayModal: React.FC<ReportDelayModalProps> = ({
                         />
 
                         {errorMsg && (
-                            <View style={styles.errorBox}>
+                            <View
+                                accessibilityLiveRegion="assertive"
+                                accessibilityRole="alert"
+                                style={styles.errorBox}
+                                testID="delay-error"
+                            >
                                 <Icon color="#EF4444" name="alert" size={14} />
                                 <Text style={styles.errorText}>{errorMsg}</Text>
                             </View>
@@ -685,6 +743,7 @@ export const ReportDelayModal: React.FC<ReportDelayModalProps> = ({
                         <Pressable
                             accessibilityLabel="Cancel delay report"
                             accessibilityRole="button"
+                            accessibilityState={{ disabled: isSubmitting }}
                             disabled={isSubmitting}
                             onPress={onClose}
                             style={[
@@ -706,6 +765,10 @@ export const ReportDelayModal: React.FC<ReportDelayModalProps> = ({
                         <Pressable
                             accessibilityLabel="Submit delay report to dispatch"
                             accessibilityRole="button"
+                            accessibilityState={{
+                                busy: isSubmitting,
+                                disabled: isSubmitting,
+                            }}
                             disabled={isSubmitting}
                             onPress={handleSubmit}
                             style={[
@@ -734,7 +797,7 @@ export const ReportDelayModal: React.FC<ReportDelayModalProps> = ({
                         </Pressable>
                     </View>
                 </View>
-            </View>
+            </KeyboardAvoidingView>
         </Modal>
     );
 };
@@ -771,6 +834,10 @@ const styles = StyleSheet.create({
         gap: 10,
         flex: 1,
     },
+    headerTitleCopy: {
+        flex: 1,
+        minWidth: 0,
+    },
     headerIconWrap: {
         alignItems: 'center',
         backgroundColor: '#FEF3C7',
@@ -800,7 +867,10 @@ const styles = StyleSheet.create({
         color: '#94A3B8',
     },
     closeBtn: {
-        padding: 6,
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 48,
+        minWidth: 48,
     },
     scrollContent: {
         paddingBottom: 16,
@@ -832,6 +902,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 8,
         justifyContent: 'center',
+        minHeight: 48,
         paddingVertical: 10,
     },
     toggleBtnActive: {
@@ -869,6 +940,8 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         borderWidth: 1,
         marginRight: 8,
+        minHeight: 48,
+        justifyContent: 'center',
         paddingHorizontal: 12,
         paddingVertical: 6,
     },
@@ -906,6 +979,7 @@ const styles = StyleSheet.create({
         borderColor: '#E2E8F0',
         borderRadius: 12,
         borderWidth: 1.5,
+        minHeight: 56,
         padding: 12,
     },
     reasonCardSelected: {
@@ -1009,6 +1083,7 @@ const styles = StyleSheet.create({
         gap: 6,
         justifyContent: 'center',
         marginTop: 8,
+        minHeight: 48,
         paddingVertical: 8,
     },
     dvirLinkBtnText: {
@@ -1027,6 +1102,7 @@ const styles = StyleSheet.create({
         borderColor: '#CBD5E1',
         borderRadius: 8,
         borderWidth: 1,
+        minHeight: 48,
         minWidth: 50,
         paddingHorizontal: 12,
         paddingVertical: 8,
@@ -1100,6 +1176,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         flex: 1,
         justifyContent: 'center',
+        minHeight: 48,
         paddingVertical: 12,
     },
     darkCancelBtn: {
@@ -1121,6 +1198,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 8,
         justifyContent: 'center',
+        minHeight: 52,
         paddingVertical: 12,
     },
     submitBtnDisabled: {

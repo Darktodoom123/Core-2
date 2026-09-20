@@ -1023,9 +1023,9 @@ const styles = StyleSheet.create({
         borderColor: colors.border,
         borderRadius: 18,
         borderWidth: 1,
-        height: 36,
+        height: 48,
         justifyContent: 'center',
-        width: 36,
+        width: 48,
     },
     darkCloseButton: {
         backgroundColor: '#1E293B',
@@ -1048,7 +1048,7 @@ const styles = StyleSheet.create({
         borderRadius: 9,
         flex: 1,
         justifyContent: 'center',
-        minHeight: 34,
+        minHeight: 48,
         paddingHorizontal: 4,
         paddingVertical: 6,
     },
@@ -1165,7 +1165,7 @@ const styles = StyleSheet.create({
     syncNowBtn: {
         backgroundColor: colors.amber,
         borderRadius: 8,
-        minHeight: 34,
+        minHeight: 48,
         justifyContent: 'center',
         paddingHorizontal: 12,
         paddingVertical: 6,
@@ -1313,7 +1313,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         flex: 1,
         justifyContent: 'center',
-        minHeight: 40,
+        minHeight: 48,
         paddingHorizontal: 12,
     },
     acceptJobBtnText: {
@@ -1329,7 +1329,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         flex: 1,
         justifyContent: 'center',
-        minHeight: 40,
+        minHeight: 48,
         paddingHorizontal: 12,
     },
     darkDeclineJobBtn: {
@@ -1350,7 +1350,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         flex: 1,
         justifyContent: 'center',
-        minHeight: 40,
+        minHeight: 48,
         paddingHorizontal: 12,
     },
     retryBtnText: {
@@ -1366,7 +1366,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         flex: 1,
         justifyContent: 'center',
-        minHeight: 40,
+        minHeight: 48,
         paddingHorizontal: 12,
     },
     darkDiscardBtn: {

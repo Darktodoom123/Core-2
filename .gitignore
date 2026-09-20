@@ -102,6 +102,9 @@ Desktop.ini
 !/Docs/architecture/deployment.md
 !/Docs/architecture/field-tracking.md
 .ai-reports/
+!.ai-reports/
+.ai-reports/*
+!.ai-reports/milestone-7-field-mobile-web-polish.md
 /test-results/
 .devswarm-temp/
 /zap-report*.json

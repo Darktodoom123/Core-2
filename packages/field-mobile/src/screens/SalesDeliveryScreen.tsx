@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
     Pressable,
     ScrollView,
@@ -15,6 +15,12 @@ import { colors, shadows } from '../components/nativeStyles';
 import { DigitalSignatureModal } from '../components/signature/DigitalSignatureModal';
 import { durableAttachmentStorage } from '../services/durableAttachmentStorage';
 import { useTheme } from '../theme';
+import type { AssetAssignment } from '../types';
+
+type DeliveryAssetOption = Pick<
+    AssetAssignment,
+    'operational_asset_id' | 'asset_code' | 'asset_name'
+>;
 
 export interface SalesDeliveryScreenProps {
     jobId?: number;
@@ -23,6 +29,7 @@ export interface SalesDeliveryScreenProps {
     clientName?: string;
     assetId?: number;
     equipmentName?: string;
+    assignedAssets?: DeliveryAssetOption[];
     actorId?: number | string;
     vinNumber?: string;
     deliveryAddress?: string;
@@ -54,6 +61,7 @@ export const SalesDeliveryScreen: React.FC<SalesDeliveryScreenProps> = ({
     clientName = 'San Miguel Infrastructure Corp.',
     assetId,
     equipmentName = 'Caterpillar 320 GC Hydraulic Excavator',
+    assignedAssets = [],
     actorId = '1',
     vinNumber = 'CAT0320GC88912',
     deliveryAddress = 'North-South Commuter Railway (NSCR) Project - Depot Area, Bulacan, PH',
@@ -89,8 +97,28 @@ export const SalesDeliveryScreen: React.FC<SalesDeliveryScreenProps> = ({
     const [localErrorMessage, setLocalErrorMessage] = useState<string | null>(
         null,
     );
+    const [selectedAssetId, setSelectedAssetId] = useState<number | null>(
+        assetId ??
+            (assignedAssets.length === 1
+                ? assignedAssets[0].operational_asset_id
+                : null),
+    );
+    const [assetSelectionError, setAssetSelectionError] = useState<
+        string | null
+    >(null);
+    const submitInFlightRef = useRef(false);
+
+    const selectedAsset = assignedAssets.find(
+        (asset) => asset.operational_asset_id === selectedAssetId,
+    );
+    const displayedEquipmentName =
+        selectedAsset?.asset_name ??
+        (assignedAssets.length > 1
+            ? 'Choose the assigned machine covered by this evidence'
+            : equipmentName);
 
     const activeSyncStatus = propSyncStatus ?? localSyncStatus;
+    const isServerConfirmedSuccess = propSyncStatus === 'success';
     const activeErrorMessage = propSyncErrorMessage ?? localErrorMessage;
     const isSubmitting =
         activeSyncStatus === 'submitting' || activeSyncStatus === 'saving';
@@ -103,6 +131,20 @@ export const SalesDeliveryScreen: React.FC<SalesDeliveryScreenProps> = ({
     };
 
     const handleConfirm = async () => {
+        if (submitInFlightRef.current) {
+            return;
+        }
+
+        if (assignedAssets.length > 1 && !selectedAsset) {
+            setAssetSelectionError(
+                'Select the assigned machine covered by this evidence before submitting.',
+            );
+
+            return;
+        }
+
+        setAssetSelectionError(null);
+        submitInFlightRef.current = true;
         const checkedList = Object.keys(accessories).filter(
             (k) => accessories[k],
         );
@@ -149,7 +191,7 @@ export const SalesDeliveryScreen: React.FC<SalesDeliveryScreenProps> = ({
             await onCompleteDelivery?.({
                 jobId,
                 orderId: numericOrderId,
-                assetId,
+                assetId: selectedAssetId ?? assetId,
                 verifiedVin: enteredVin,
                 accessoriesChecked: checkedList,
                 signeeName,
@@ -168,6 +210,8 @@ export const SalesDeliveryScreen: React.FC<SalesDeliveryScreenProps> = ({
                     ? err.message
                     : 'Delivery submission failed.',
             );
+        } finally {
+            submitInFlightRef.current = false;
         }
     };
 
@@ -246,7 +290,7 @@ export const SalesDeliveryScreen: React.FC<SalesDeliveryScreenProps> = ({
                             isDarkHud && styles.equipmentTitleDark,
                         ]}
                     >
-                        {equipmentName}
+                        {displayedEquipmentName}
                     </Text>
 
                     <View style={styles.clientRow}>
@@ -281,6 +325,115 @@ export const SalesDeliveryScreen: React.FC<SalesDeliveryScreenProps> = ({
                         </Text>
                     </View>
                 </View>
+
+                {assignedAssets.length > 1 && (
+                    <View
+                        style={[
+                            styles.assetSelectorCard,
+                            isDarkHud && styles.assetSelectorCardDark,
+                        ]}
+                        testID="sales-asset-selector"
+                    >
+                        <Text
+                            style={[
+                                styles.sectionTitle,
+                                isDarkHud && styles.sectionTitleDark,
+                            ]}
+                        >
+                            EVIDENCE ASSET (REQUIRED)
+                        </Text>
+                        <Text
+                            style={[
+                                styles.assetSelectorHint,
+                                isDarkHud && styles.assetSelectorHintDark,
+                            ]}
+                        >
+                            Choose which assigned machine this delivery covers.
+                        </Text>
+                        <View
+                            accessibilityRole="radiogroup"
+                            style={styles.assetSelectorList}
+                        >
+                            {assignedAssets.map((asset) => {
+                                const isSelected =
+                                    selectedAssetId ===
+                                    asset.operational_asset_id;
+
+                                return (
+                                    <Pressable
+                                        accessibilityLabel={`Select ${asset.asset_code}, ${asset.asset_name}`}
+                                        accessibilityRole="radio"
+                                        accessibilityState={{
+                                            selected: isSelected,
+                                        }}
+                                        key={asset.operational_asset_id}
+                                        onPress={() => {
+                                            setSelectedAssetId(
+                                                asset.operational_asset_id,
+                                            );
+                                            setAssetSelectionError(null);
+                                        }}
+                                        style={[
+                                            styles.assetSelectorOption,
+                                            isDarkHud &&
+                                                styles.assetSelectorOptionDark,
+                                            isSelected &&
+                                                (isDarkHud
+                                                    ? styles.assetSelectorOptionSelectedDark
+                                                    : styles.assetSelectorOptionSelected),
+                                        ]}
+                                        testID={`sales-asset-${asset.operational_asset_id}`}
+                                    >
+                                        <View style={styles.assetSelectorCopy}>
+                                            <Text
+                                                style={[
+                                                    styles.assetSelectorCode,
+                                                    isDarkHud &&
+                                                        styles.assetSelectorCodeDark,
+                                                ]}
+                                            >
+                                                {asset.asset_code}
+                                            </Text>
+                                            <Text
+                                                numberOfLines={2}
+                                                style={[
+                                                    styles.assetSelectorName,
+                                                    isDarkHud &&
+                                                        styles.assetSelectorNameDark,
+                                                ]}
+                                            >
+                                                {asset.asset_name}
+                                            </Text>
+                                        </View>
+                                        <View
+                                            style={[
+                                                styles.assetSelectorRadio,
+                                                isSelected &&
+                                                    styles.assetSelectorRadioSelected,
+                                            ]}
+                                        >
+                                            {isSelected && (
+                                                <View
+                                                    style={
+                                                        styles.assetSelectorRadioInner
+                                                    }
+                                                />
+                                            )}
+                                        </View>
+                                    </Pressable>
+                                );
+                            })}
+                        </View>
+                        {assetSelectionError && (
+                            <Text
+                                accessibilityRole="alert"
+                                style={styles.assetSelectionError}
+                            >
+                                {assetSelectionError}
+                            </Text>
+                        )}
+                    </View>
+                )}
 
                 {/* Serial / VIN Verification */}
                 <View style={[styles.card, isDarkHud && styles.cardDark]}>
@@ -675,7 +828,10 @@ export const SalesDeliveryScreen: React.FC<SalesDeliveryScreenProps> = ({
                 {/* Offline Outbox & Sync State Banner */}
                 {activeSyncStatus !== 'idle' && (
                     <View
-                        accessibilityRole="alert"
+                        accessibilityLiveRegion="polite"
+                        accessibilityRole={
+                            activeSyncStatus === 'failed' ? 'alert' : 'summary'
+                        }
                         style={[
                             styles.syncBanner,
                             activeSyncStatus === 'submitting' ||
@@ -741,7 +897,9 @@ export const SalesDeliveryScreen: React.FC<SalesDeliveryScreenProps> = ({
                                     : activeSyncStatus === 'queued'
                                       ? 'Saved on Device (Waiting to Sync)'
                                       : activeSyncStatus === 'success'
-                                        ? 'Submitted Successfully'
+                                        ? isServerConfirmedSuccess
+                                            ? 'Server Confirmed'
+                                            : 'Saved for Synchronization'
                                         : 'Submission Failed'}
                             </Text>
                             <Text
@@ -756,7 +914,9 @@ export const SalesDeliveryScreen: React.FC<SalesDeliveryScreenProps> = ({
                                     : activeSyncStatus === 'queued'
                                       ? 'Evidence securely stored in offline outbox. It will synchronize automatically when connection is restored.'
                                       : activeSyncStatus === 'success'
-                                        ? 'Delivery evidence recorded and synchronized with operations.'
+                                        ? isServerConfirmedSuccess
+                                            ? 'Operations confirmed receipt of this delivery evidence.'
+                                            : 'Delivery evidence was saved to the outbox. Check synchronization status for server receipt.'
                                         : activeErrorMessage ||
                                           'Unable to complete submission. Tap retry to re-attempt.'}
                             </Text>
@@ -787,7 +947,10 @@ export const SalesDeliveryScreen: React.FC<SalesDeliveryScreenProps> = ({
                 <Pressable
                     accessibilityLabel="Confirm Delivery & Complete Acceptance"
                     accessibilityRole="button"
-                    accessibilityState={{ disabled: isSubmitting }}
+                    accessibilityState={{
+                        busy: isSubmitting,
+                        disabled: isSubmitting,
+                    }}
                     disabled={isSubmitting}
                     onPress={handleConfirm}
                     style={({ pressed }) => [
@@ -881,6 +1044,98 @@ const styles = StyleSheet.create({
         borderColor: colors.hudBorder,
         elevation: 0,
         shadowOpacity: 0,
+    },
+    assetSelectorCard: {
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
+        borderRadius: 14,
+        borderWidth: 1,
+        marginBottom: 14,
+        padding: 16,
+    },
+    assetSelectorCardDark: {
+        backgroundColor: colors.hudSurface,
+        borderColor: colors.hudBorder,
+    },
+    assetSelectorHint: {
+        color: colors.secondary,
+        fontSize: 13,
+        marginBottom: 10,
+        marginTop: 4,
+    },
+    assetSelectorHintDark: {
+        color: colors.hudTextDim,
+    },
+    assetSelectorList: {
+        gap: 8,
+    },
+    assetSelectorOption: {
+        alignItems: 'center',
+        backgroundColor: colors.surfaceMuted,
+        borderColor: colors.border,
+        borderRadius: 10,
+        borderWidth: 1,
+        flexDirection: 'row',
+        minHeight: 48,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+    },
+    assetSelectorOptionDark: {
+        backgroundColor: colors.hudSurface,
+        borderColor: colors.hudBorder,
+    },
+    assetSelectorOptionSelected: {
+        backgroundColor: colors.amberLight,
+        borderColor: colors.amber,
+    },
+    assetSelectorOptionSelectedDark: {
+        backgroundColor: 'rgba(245, 158, 11, 0.16)',
+        borderColor: colors.amber,
+    },
+    assetSelectorCopy: {
+        flex: 1,
+        minWidth: 0,
+    },
+    assetSelectorCode: {
+        color: colors.amberDark,
+        fontSize: 12,
+        fontWeight: '800',
+    },
+    assetSelectorCodeDark: {
+        color: '#FDE68A',
+    },
+    assetSelectorName: {
+        color: colors.text,
+        fontSize: 13,
+        marginTop: 2,
+    },
+    assetSelectorNameDark: {
+        color: colors.hudText,
+    },
+    assetSelectorRadio: {
+        alignItems: 'center',
+        borderColor: colors.muted,
+        borderRadius: 10,
+        borderWidth: 1.5,
+        height: 20,
+        justifyContent: 'center',
+        marginLeft: 10,
+        width: 20,
+    },
+    assetSelectorRadioSelected: {
+        borderColor: colors.amber,
+    },
+    assetSelectorRadioInner: {
+        backgroundColor: colors.amber,
+        borderRadius: 5,
+        height: 10,
+        width: 10,
+    },
+    assetSelectionError: {
+        color: colors.red,
+        fontSize: 12,
+        fontWeight: '600',
+        marginTop: 8,
     },
     cardHeader: {
         alignItems: 'center',
@@ -981,7 +1236,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '700',
         letterSpacing: 1,
-        minHeight: 46,
+        minHeight: 48,
         paddingHorizontal: 12,
     },
     vinInputDark: {
@@ -995,7 +1250,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         flexDirection: 'row',
         gap: 4,
-        minHeight: 46,
+        minHeight: 48,
         paddingHorizontal: 10,
     },
     vinValid: {
@@ -1112,7 +1367,7 @@ const styles = StyleSheet.create({
         color: colors.text,
         fontSize: 13,
         fontWeight: '600',
-        minHeight: 46,
+        minHeight: 48,
         paddingHorizontal: 12,
     },
     textInputDark: {
