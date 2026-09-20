@@ -639,6 +639,7 @@ describe('native application component tree', () => {
         expect(await screen.findByText(driverJob.reference)).toBeVisible();
 
         await fireEvent.press(screen.getByLabelText('Open profile'));
+        await fireEvent.press(screen.getByTestId('tab-settings'));
         await fireEvent.press(screen.getByLabelText('Start sign out'));
         await fireEvent.press(screen.getByLabelText('Confirm sign out'));
         expect(await screen.findByTestId('login-screen')).toBeVisible();
@@ -673,6 +674,7 @@ describe('native application component tree', () => {
         expect(await screen.findByText(driverJob.reference)).toBeVisible();
 
         await fireEvent.press(screen.getByLabelText('Open profile'));
+        await fireEvent.press(screen.getByTestId('tab-settings'));
         await fireEvent.press(screen.getByLabelText('Start sign out'));
         await fireEvent.press(screen.getByLabelText('Confirm sign out'));
 
@@ -1376,13 +1378,12 @@ describe('native application component tree', () => {
         expect(screen.queryByTestId('bottom-nav-sync')).toBeNull();
 
         await fireEvent.press(screen.getByTestId('bottom-nav-profile'));
-        const profileSheet = screen.getByTestId('profile-sheet');
-        expect(profileSheet).toBeVisible();
-        expect(within(profileSheet).getByText('Profile')).toBeVisible();
-        expect(within(profileSheet).getByText('Sign out')).toBeVisible();
+        const profileScreen = screen.getByTestId('profile-screen');
+        expect(profileScreen).toBeVisible();
+        expect(screen.getByText('Account & Security')).toBeVisible();
 
-        await fireEvent.press(screen.getByTestId('profile-sheet-close'));
-        expect(screen.queryByTestId('profile-sheet')).toBeNull();
+        await fireEvent.press(screen.getByTestId('profile-screen-back'));
+        expect(screen.queryByTestId('profile-screen')).toBeNull();
         expect(
             screen.getByTestId('bottom-nav-today').props.accessibilityState
                 .selected,

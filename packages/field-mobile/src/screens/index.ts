@@ -8,3 +8,4 @@ export * from './RentalHandoverScreen';
 export * from './SalesDeliveryScreen';
 export * from './HeavyCraneDriveModeScreen';
 export * from './DispatchOrdersScreen';
+export * from './profile/ProfileScreen';

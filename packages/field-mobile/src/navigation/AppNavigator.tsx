@@ -46,6 +46,7 @@ import { EquipmentInspectionScreen } from '../screens/EquipmentInspectionScreen'
 import { FuelScreen } from '../screens/FuelScreen';
 import { HeavyCraneDriveModeScreen } from '../screens/HeavyCraneDriveModeScreen';
 import { HosScreen } from '../screens/HosScreen';
+import { ProfileScreen } from '../screens/profile/ProfileScreen';
 import type {
     RentalCheckoutData,
     RentalReturnData,
@@ -258,6 +259,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         | 'rental'
         | 'sales'
         | 'dispatch'
+        | 'profile'
     >('main');
     const [shiftInfo, setShiftInfo] = useState<ShiftInfo>({
         status: 'on_shift',
@@ -296,9 +298,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                 setSelectedJobId(null);
                 setJobs([]);
                 setJobsError(null);
-                setActiveAppView((prev) =>
-                    prev === 'dispatch' ? 'main' : prev,
-                );
+                setActiveAppView('main');
             });
             clearNotificationTokenCache();
         } else if (
@@ -312,9 +312,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                 setSelectedJobId(null);
                 setJobs([]);
                 setJobsError(null);
-                setActiveAppView((prev) =>
-                    prev === 'dispatch' ? 'main' : prev,
-                );
+                setActiveAppView('main');
             });
             clearNotificationTokenCache();
         }
@@ -2400,6 +2398,28 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 onSelectJob={handleSelectJob}
                                 onTransitionStatus={handleTransitionStatus}
                             />
+                        ) : activeAppView === 'profile' ? (
+                            <ProfileScreen
+                                apiClient={apiClient}
+                                assignedAssetLabel={
+                                    jobs.flatMap(
+                                        (j) => j.asset_assignments || [],
+                                    )[0]?.asset_name || null
+                                }
+                                isOnline={isOnline}
+                                onBack={() => setActiveAppView('main')}
+                                onLogout={() => void handleLogout()}
+                                onRequestPushPermissions={
+                                    handleRequestPushPermissions
+                                }
+                                onSyncNow={() => void syncQueue()}
+                                pushNotificationsEnabled={
+                                    pushNotificationsEnabled
+                                }
+                                queuedCount={outboxCommands?.length ?? 0}
+                                userName={user?.name}
+                                userRole={user?.role}
+                            />
                         ) : (
                             <View style={{ flex: 1 }}>
                                 {sosResponderNotice && (
@@ -2529,6 +2549,12 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                         setActiveAppView('inspection')
                                     }
                                     onOpenFuel={() => setActiveAppView('fuel')}
+                                    onOpenProfile={() =>
+                                        setActiveAppView('profile')
+                                    }
+                                    onOpenAccountSettings={() =>
+                                        setActiveAppView('profile')
+                                    }
                                     onRefresh={() => {
                                         void fetchJobs();
                                         void refreshWeather();

@@ -83,6 +83,8 @@ export interface OperatorDashboardScreenProps {
     onDiscardCommand?: (commandId: string) => void;
     pushNotificationsEnabled?: boolean;
     onRequestPushPermissions?: () => void;
+    onOpenProfile?: () => void;
+    onOpenAccountSettings?: () => void;
 }
 
 interface DashboardTileConfig {
@@ -147,6 +149,8 @@ export const OperatorDashboardScreen: React.FC<
     onRetryCommand,
     pushNotificationsEnabled = true,
     onRequestPushPermissions,
+    onOpenProfile,
+    onOpenAccountSettings,
 }) => {
     const { isDarkHud } = useTheme();
     const { width } = useWindowDimensions();
@@ -418,6 +422,30 @@ export const OperatorDashboardScreen: React.FC<
         }
     };
 
+    const handleOpenProfile = () => {
+        if (onOpenProfile) {
+            onOpenProfile();
+
+            return;
+        }
+
+        if (onOpenAccountSettings) {
+            onOpenAccountSettings();
+
+            return;
+        }
+
+        setProfileSheetOpen(true);
+        setSignOutConfirmationOpen(false);
+        setActiveNavItem('profile');
+    };
+
+    const handleCloseProfile = (nextItem: FieldNavItem = 'today') => {
+        setProfileSheetOpen(false);
+        setSignOutConfirmationOpen(false);
+        setActiveNavItem(nextItem);
+    };
+
     return (
         <View
             style={[styles.screenRoot, isDarkHud && styles.darkScreenRoot]}
@@ -512,7 +540,7 @@ export const OperatorDashboardScreen: React.FC<
                         <Pressable
                             accessibilityLabel="Operator settings & sync profile"
                             accessibilityRole="button"
-                            onPress={() => setProfileSheetOpen(true)}
+                            onPress={handleOpenProfile}
                             style={({ pressed }) => [
                                 styles.headerIconButton,
                                 isDarkHud && styles.darkHeaderIconButton,
@@ -731,7 +759,7 @@ export const OperatorDashboardScreen: React.FC<
                     if (item === 'route') {
                         onOpenRoutes();
                     } else if (item === 'profile') {
-                        setProfileSheetOpen(true);
+                        handleOpenProfile();
                     } else {
                         setActiveNavItem('today');
                     }
@@ -846,9 +874,9 @@ export const OperatorDashboardScreen: React.FC<
                 }
                 isOnline={isOnline}
                 onCancelSignOut={() => setSignOutConfirmationOpen(false)}
-                onClose={() => setProfileSheetOpen(false)}
+                onClose={() => handleCloseProfile()}
                 onLogout={() => {
-                    setProfileSheetOpen(false);
+                    handleCloseProfile();
                     onLogout?.();
                 }}
                 onStartSignOut={() => setSignOutConfirmationOpen(true)}
@@ -860,6 +888,7 @@ export const OperatorDashboardScreen: React.FC<
                 visible={profileSheetOpen}
                 pushNotificationsEnabled={pushNotificationsEnabled}
                 onRequestPushPermissions={onRequestPushPermissions}
+                onOpenAccountSettings={onOpenAccountSettings || onOpenProfile}
             />
         </View>
     );

@@ -116,6 +116,8 @@ export interface AssignedJobsListScreenProps {
     apiClient?: FieldApiClient;
     pushNotificationsEnabled?: boolean;
     onRequestPushPermissions?: () => void;
+    onOpenProfile?: () => void;
+    onOpenAccountSettings?: () => void;
 }
 
 interface TileItem {
@@ -198,6 +200,8 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     apiClient,
     pushNotificationsEnabled,
     onRequestPushPermissions,
+    onOpenProfile,
+    onOpenAccountSettings,
 }) => {
     const { isDarkHud } = useTheme();
     const [delayModalJob, setDelayModalJob] = useState<DispatchJob | null>(
@@ -639,6 +643,18 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     };
 
     const handleOpenProfile = () => {
+        if (onOpenProfile) {
+            onOpenProfile();
+
+            return;
+        }
+
+        if (onOpenAccountSettings) {
+            onOpenAccountSettings();
+
+            return;
+        }
+
         setProfileSheetOpen(true);
         setSignOutConfirmationOpen(false);
         setActiveNavItem('profile');
@@ -1548,6 +1564,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 visible={profileSheetOpen}
                 pushNotificationsEnabled={pushNotificationsEnabled}
                 onRequestPushPermissions={onRequestPushPermissions}
+                onOpenAccountSettings={onOpenAccountSettings || onOpenProfile}
             />
 
             {/* On-Site Confirmation Modal */}

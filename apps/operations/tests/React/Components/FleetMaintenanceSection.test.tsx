@@ -141,6 +141,7 @@ describe('FleetMaintenanceSection UI', () => {
                     completed_at: '2026-09-17T11:00:00Z',
                 },
             ];
+
             if (source === 'workshop') {
                 asset.inspections.push({
                     id: 2,
@@ -165,6 +166,7 @@ describe('FleetMaintenanceSection UI', () => {
                     },
                 ];
             }
+
             const { rerender } = render(
                 <FleetMaintenanceSection asset={asset} canMaintain={true} />,
             );

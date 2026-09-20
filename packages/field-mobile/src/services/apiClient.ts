@@ -23,6 +23,9 @@ import type {
     SosLocationSnapshot,
     User,
     WeatherTelemetry,
+    AccountDetailsResponse,
+    OtpChallengeResponse,
+    SecurityActivityResponse,
 } from '../types/index';
 
 export class ApiClientError extends Error {
@@ -1546,5 +1549,288 @@ export class FieldApiClient {
         });
 
         return this.handleResponse<ComplianceDocument[]>(response);
+    }
+
+    public async getAccountDetails(): Promise<AccountDetailsResponse> {
+        const url = `${this.baseUrl}/api/v1/account`;
+        const response = await this.fetchFn(url, {
+            method: 'GET',
+            headers: this.getHeaders(),
+        });
+
+        return this.handleResponse<AccountDetailsResponse>(response);
+    }
+
+    public async updateAccountProfile(payload: {
+        phone?: string | null;
+    }): Promise<{ message: string; phone?: string | null }> {
+        const url = `${this.baseUrl}/api/v1/account/profile`;
+        const response = await this.fetchFn(url, {
+            method: 'PATCH',
+            headers: this.getHeaders(),
+            body: JSON.stringify(payload),
+        });
+
+        return this.handleResponse<{ message: string; phone?: string | null }>(
+            response,
+        );
+    }
+
+    public async requestEmailChange(payload: {
+        currentPassword: string;
+        newEmail: string;
+    }): Promise<OtpChallengeResponse> {
+        const url = `${this.baseUrl}/api/v1/account/email/request`;
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(),
+            body: JSON.stringify({
+                current_password: payload.currentPassword,
+                email: payload.newEmail,
+            }),
+        });
+
+        return this.handleResponse<OtpChallengeResponse>(response);
+    }
+
+    public async verifyEmailChange(payload: {
+        challengeId: string;
+        code: string;
+    }): Promise<{ message: string }> {
+        const url = `${this.baseUrl}/api/v1/account/email/verify`;
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(),
+            body: JSON.stringify({
+                challenge_id: payload.challengeId,
+                code: payload.code,
+            }),
+        });
+
+        return this.handleResponse<{ message: string }>(response);
+    }
+
+    public async updatePassword(payload: {
+        currentPassword: string;
+        newPassword: string;
+        confirmation: string;
+    }): Promise<{ message: string }> {
+        const url = `${this.baseUrl}/api/v1/account/password`;
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(),
+            body: JSON.stringify({
+                current_password: payload.currentPassword,
+                password: payload.newPassword,
+                password_confirmation: payload.confirmation,
+            }),
+        });
+
+        return this.handleResponse<{ message: string }>(response);
+    }
+
+    public async requestEnableOtp(payload: {
+        currentPassword: string;
+    }): Promise<OtpChallengeResponse> {
+        const url = `${this.baseUrl}/api/v1/account/security/otp/request-enable`;
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(),
+            body: JSON.stringify({
+                current_password: payload.currentPassword,
+            }),
+        });
+
+        return this.handleResponse<OtpChallengeResponse>(response);
+    }
+
+    public async confirmEnableOtp(payload: {
+        challengeId: string;
+        code: string;
+    }): Promise<{ message: string; email_otp_enabled: boolean }> {
+        const url = `${this.baseUrl}/api/v1/account/security/otp/confirm-enable`;
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(),
+            body: JSON.stringify({
+                challenge_id: payload.challengeId,
+                code: payload.code,
+            }),
+        });
+
+        return this.handleResponse<{
+            message: string;
+            email_otp_enabled: boolean;
+        }>(response);
+    }
+
+    public async requestDisableOtp(payload: {
+        currentPassword: string;
+    }): Promise<OtpChallengeResponse> {
+        const url = `${this.baseUrl}/api/v1/account/security/otp/request-disable`;
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(),
+            body: JSON.stringify({
+                current_password: payload.currentPassword,
+            }),
+        });
+
+        return this.handleResponse<OtpChallengeResponse>(response);
+    }
+
+    public async confirmDisableOtp(payload: {
+        challengeId: string;
+        code: string;
+    }): Promise<{ message: string; email_otp_enabled: boolean }> {
+        const url = `${this.baseUrl}/api/v1/account/security/otp/confirm-disable`;
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(),
+            body: JSON.stringify({
+                challenge_id: payload.challengeId,
+                code: payload.code,
+            }),
+        });
+
+        return this.handleResponse<{
+            message: string;
+            email_otp_enabled: boolean;
+        }>(response);
+    }
+
+    public async resendSecurityOtp(payload: {
+        challengeId: string;
+        purpose: string;
+    }): Promise<OtpChallengeResponse> {
+        const url = `${this.baseUrl}/api/v1/account/security/otp/resend`;
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(),
+            body: JSON.stringify({
+                challenge_id: payload.challengeId,
+                purpose: payload.purpose,
+            }),
+        });
+
+        return this.handleResponse<OtpChallengeResponse>(response);
+    }
+
+    public async revokeSession(
+        sessionId: string,
+    ): Promise<{ message: string }> {
+        const url = `${this.baseUrl}/api/v1/account/sessions/${encodeURIComponent(sessionId)}`;
+        const response = await this.fetchFn(url, {
+            method: 'DELETE',
+            headers: this.getHeaders(),
+        });
+
+        return this.handleResponse<{ message: string }>(response);
+    }
+
+    public async revokeOtherSessions(payload: {
+        currentPassword: string;
+    }): Promise<{ message: string; revoked_count?: number }> {
+        const url = `${this.baseUrl}/api/v1/account/sessions/revoke-others`;
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(),
+            body: JSON.stringify({
+                current_password: payload.currentPassword,
+            }),
+        });
+
+        return this.handleResponse<{
+            message: string;
+            revoked_count?: number;
+        }>(response);
+    }
+
+    public async revokeTrustedDevice(
+        deviceId: string,
+    ): Promise<{ message: string }> {
+        const url = `${this.baseUrl}/api/v1/account/trusted-devices/${encodeURIComponent(deviceId)}`;
+        const response = await this.fetchFn(url, {
+            method: 'DELETE',
+            headers: this.getHeaders(),
+        });
+
+        return this.handleResponse<{ message: string }>(response);
+    }
+
+    public async markDeviceLost(
+        deviceId: string,
+    ): Promise<{ message: string }> {
+        const url = `${this.baseUrl}/api/v1/account/trusted-devices/${encodeURIComponent(deviceId)}/lost`;
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(),
+        });
+
+        return this.handleResponse<{ message: string }>(response);
+    }
+
+    public async revokeAllTrustedDevices(): Promise<{
+        message: string;
+        revoked_count?: number;
+    }> {
+        const url = `${this.baseUrl}/api/v1/account/trusted-devices/revoke-all`;
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(),
+        });
+
+        return this.handleResponse<{
+            message: string;
+            revoked_count?: number;
+        }>(response);
+    }
+
+    public async getAccountActivity(params?: {
+        page?: number;
+        perPage?: number;
+    }): Promise<SecurityActivityResponse> {
+        const searchParams = new URLSearchParams();
+
+        if (params?.page) {
+            searchParams.set('page', String(params.page));
+        }
+
+        if (params?.perPage) {
+            searchParams.set('per_page', String(params.perPage));
+        }
+
+        const qs = searchParams.toString();
+        const url = `${this.baseUrl}/api/v1/account/activity${qs ? `?${qs}` : ''}`;
+        const response = await this.fetchFn(url, {
+            method: 'GET',
+            headers: this.getHeaders(),
+        });
+
+        if (!response.ok) {
+            return this.handleResponse<SecurityActivityResponse>(response);
+        }
+
+        const body = (await response.json()) as any;
+
+        if (Array.isArray(body)) {
+            return {
+                data: body,
+                current_page: params?.page ?? 1,
+                last_page: 1,
+                prev_page_url: null,
+                next_page_url: null,
+                total: body.length,
+            };
+        }
+
+        return {
+            data: Array.isArray(body?.data) ? body.data : [],
+            current_page: Number(body?.current_page) || 1,
+            last_page: Number(body?.last_page) || 1,
+            prev_page_url: body?.prev_page_url ?? null,
+            next_page_url: body?.next_page_url ?? null,
+            total: Number(body?.total) || 0,
+        };
     }
 }

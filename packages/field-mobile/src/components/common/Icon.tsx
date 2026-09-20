@@ -50,7 +50,18 @@ export type IconName =
     | 'cloud'
     | 'download'
     | 'trash'
-    | 'chevron-up';
+    | 'chevron-up'
+    | 'lock'
+    | 'shield'
+    | 'eye'
+    | 'eye-off'
+    | 'mail'
+    | 'laptop'
+    | 'tablet'
+    | 'smartphone'
+    | 'logo-android'
+    | 'logo-apple'
+    | 'logo-windows';
 
 export interface IconProps {
     name: IconName;
@@ -250,6 +261,48 @@ export const Icon: React.FC<IconProps> = ({
             return <Ionicons name="trash-outline" size={size} color={color} />;
         case 'chevron-up':
             return <Ionicons name="chevron-up" size={size} color={color} />;
+        case 'lock':
+            return (
+                <Ionicons
+                    name="lock-closed-outline"
+                    size={size}
+                    color={color}
+                />
+            );
+        case 'shield':
+            return <Ionicons name="shield-outline" size={size} color={color} />;
+        case 'eye':
+            return <Ionicons name="eye-outline" size={size} color={color} />;
+        case 'eye-off':
+            return (
+                <Ionicons name="eye-off-outline" size={size} color={color} />
+            );
+        case 'mail':
+            return <Ionicons name="mail-outline" size={size} color={color} />;
+        case 'laptop':
+            return <Ionicons name="laptop-outline" size={size} color={color} />;
+        case 'tablet':
+            return (
+                <Ionicons
+                    name="tablet-portrait-outline"
+                    size={size}
+                    color={color}
+                />
+            );
+        case 'smartphone':
+            return (
+                <Ionicons
+                    name="phone-portrait-outline"
+                    size={size}
+                    color={color}
+                />
+            );
+        case 'logo-android':
+            return <Ionicons name="logo-android" size={size} color={color} />;
+        case 'logo-apple':
+            return <Ionicons name="logo-apple" size={size} color={color} />;
+        case 'logo-windows':
+            return <Ionicons name="logo-windows" size={size} color={color} />;
         default:
             return (
                 <Ionicons

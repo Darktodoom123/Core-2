@@ -267,4 +267,36 @@ describe('ProfileSheet component tests', () => {
 
         expect(onRequestPushPermissions).toHaveBeenCalledTimes(1);
     });
+
+    it('renders account & security gateway button and invokes onOpenAccountSettings and onClose on press', async () => {
+        const onClose = jest.fn();
+        const onOpenAccountSettings = jest.fn();
+
+        const view = await render(
+            <ThemeProvider initialMode="dark_hud">
+                <ProfileSheet
+                    isOnline={true}
+                    onCancelSignOut={jest.fn()}
+                    onClose={onClose}
+                    onOpenAccountSettings={onOpenAccountSettings}
+                    onStartSignOut={jest.fn()}
+                    signOutConfirmationOpen={false}
+                    userName="Dev Crane Operator"
+                    userRole="crane_operator"
+                    visible={true}
+                />
+            </ThemeProvider>,
+        );
+
+        const gatewayBtn = view.getByTestId('open-account-settings-btn');
+        expect(gatewayBtn).toBeTruthy();
+        expect(view.getByText('Account & Security Settings')).toBeTruthy();
+
+        await act(async () => {
+            fireEvent.press(gatewayBtn);
+        });
+
+        expect(onClose).toHaveBeenCalledTimes(1);
+        expect(onOpenAccountSettings).toHaveBeenCalledTimes(1);
+    });
 });

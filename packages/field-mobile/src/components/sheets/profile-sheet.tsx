@@ -28,6 +28,7 @@ export interface ProfileSheetProps {
     onLogout?: () => void;
     pushNotificationsEnabled?: boolean;
     onRequestPushPermissions?: () => void;
+    onOpenAccountSettings?: () => void;
 }
 
 const initialsFor = (userName?: string | null): string => {
@@ -57,6 +58,7 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
     onLogout,
     pushNotificationsEnabled = true,
     onRequestPushPermissions,
+    onOpenAccountSettings,
 }) => {
     const insets = useContext(SafeAreaInsetsContext);
     const bottomInset = insets?.bottom ?? 0;
@@ -333,6 +335,74 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
                                 </View>
                             </View>
                         </View>
+
+                        {onOpenAccountSettings && (
+                            <Pressable
+                                accessibilityLabel="Open account and security settings"
+                                accessibilityRole="button"
+                                onPress={() => {
+                                    onClose();
+                                    onOpenAccountSettings();
+                                }}
+                                style={({ pressed }) => [
+                                    styles.accountSettingsButton,
+                                    isDarkHud &&
+                                        styles.darkAccountSettingsButton,
+                                    pressed && styles.pressed,
+                                ]}
+                                testID="open-account-settings-btn"
+                            >
+                                <View style={styles.accountSettingsLeft}>
+                                    <View
+                                        style={[
+                                            styles.accountSettingsIconWrap,
+                                            isDarkHud &&
+                                                styles.darkAccountSettingsIconWrap,
+                                        ]}
+                                    >
+                                        <Icon
+                                            color={
+                                                isDarkHud
+                                                    ? '#60A5FA'
+                                                    : '#2563EB'
+                                            }
+                                            name="shield"
+                                            size={16}
+                                        />
+                                    </View>
+                                    <View style={styles.accountSettingsCopy}>
+                                        <Text
+                                            style={[
+                                                styles.accountSettingsTitle,
+                                                isDarkHud &&
+                                                    styles.darkAccountSettingsTitle,
+                                            ]}
+                                        >
+                                            Account & Security Settings
+                                        </Text>
+                                        <Text
+                                            style={[
+                                                styles.accountSettingsSubtitle,
+                                                isDarkHud &&
+                                                    styles.darkAccountSettingsSubtitle,
+                                            ]}
+                                        >
+                                            Password, 2FA, sessions and audit
+                                            log
+                                        </Text>
+                                    </View>
+                                </View>
+                                <Text
+                                    style={[
+                                        styles.accountSettingsChevron,
+                                        isDarkHud &&
+                                            styles.darkAccountSettingsChevron,
+                                    ]}
+                                >
+                                    ›
+                                </Text>
+                            </Pressable>
+                        )}
 
                         <View
                             style={[
@@ -1438,5 +1508,67 @@ const styles = StyleSheet.create({
         color: '#F59E0B',
         fontSize: 14,
         fontWeight: '900',
+    },
+    accountSettingsButton: {
+        alignItems: 'center',
+        backgroundColor: '#FFFFFF',
+        borderColor: '#E2E8F0',
+        borderRadius: 14,
+        borderWidth: 1,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 12,
+        minHeight: 52,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+    },
+    darkAccountSettingsButton: {
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
+    },
+    accountSettingsLeft: {
+        alignItems: 'center',
+        flex: 1,
+        flexDirection: 'row',
+        gap: 12,
+    },
+    accountSettingsIconWrap: {
+        alignItems: 'center',
+        backgroundColor: '#EFF6FF',
+        borderRadius: 10,
+        height: 36,
+        justifyContent: 'center',
+        width: 36,
+    },
+    darkAccountSettingsIconWrap: {
+        backgroundColor: '#1E3A5F',
+    },
+    accountSettingsCopy: {
+        flex: 1,
+    },
+    accountSettingsTitle: {
+        color: '#0F172A',
+        fontSize: 14,
+        fontWeight: '700',
+    },
+    darkAccountSettingsTitle: {
+        color: '#F8FAFC',
+    },
+    accountSettingsSubtitle: {
+        color: '#64748B',
+        fontSize: 12,
+        marginTop: 2,
+    },
+    darkAccountSettingsSubtitle: {
+        color: '#94A3B8',
+    },
+    accountSettingsChevron: {
+        color: '#94A3B8',
+        fontSize: 20,
+        fontWeight: '600',
+        marginLeft: 8,
+    },
+    darkAccountSettingsChevron: {
+        color: '#64748B',
     },
 });
