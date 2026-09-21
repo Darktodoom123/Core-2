@@ -113,7 +113,7 @@ final class InspectionController extends Controller
 
             $resultLabel = ucfirst($validated['result']);
 
-            return to_route('home')->with('flash', [
+            return back()->with('flash', [
                 'tone' => $validated['result'] === 'passed' ? 'success' : 'warning',
                 'message' => "Inspection recorded for {$operationalAsset->code} ({$resultLabel}).",
             ]);

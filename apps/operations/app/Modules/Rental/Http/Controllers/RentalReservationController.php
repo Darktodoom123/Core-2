@@ -50,7 +50,7 @@ final class RentalReservationController extends Controller
             return response()->json(['data' => $job], 201);
         }
 
-        return to_route('home')->with('flash', [
+        return back()->with('flash', [
             'tone' => 'success',
             'message' => "Rental {$rentalReservation->reference} was linked to dispatch {$job->reference}.",
         ]);

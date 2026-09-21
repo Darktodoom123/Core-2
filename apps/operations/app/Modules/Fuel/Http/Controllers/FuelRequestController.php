@@ -33,7 +33,7 @@ final class FuelRequestController extends Controller
         $fuel = FuelRequest::query()->create([...$request->validated(), 'reference' => 'FUEL-'.now()->format('YmdHis').'-'.Str::lower(Str::random(8)), 'requester_id' => $request->user()->id, 'status' => FuelRequestStatus::Submitted]);
         $audit->handle($request->user(), $fuel, 'fuel.requested', null, $fuel->toArray());
 
-        return to_route('home')->with('flash', [
+        return back()->with('flash', [
             'tone' => 'success',
             'message' => "Fuel request {$fuel->reference} was submitted.",
         ]);
@@ -65,7 +65,7 @@ final class FuelRequestController extends Controller
         $status = FuelRequestStatus::from($validated['status']);
         $action->handle($request->user(), $fuelRequest, $status, $validated['reason'] ?? null, $validated);
 
-        return to_route('home')->with('flash', [
+        return back()->with('flash', [
             'tone' => 'success',
             'message' => "Fuel request {$fuelRequest->reference} is now {$status->label()}.",
         ]);

@@ -36,7 +36,7 @@ final class ServiceRequestController extends Controller
             return response()->json(['data' => $serviceRequest->load('client')], 201);
         }
 
-        return to_route('home')->with('flash', [
+        return back()->with('flash', [
             'tone' => 'success',
             'message' => "Service request {$serviceRequest->reference} was recorded.",
         ]);

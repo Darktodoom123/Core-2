@@ -639,6 +639,10 @@ export default function Workspace(props: WorkspacePageProps) {
             .length;
     const sectionReady =
         availableSection !== null && hasSectionProps(props, availableSection);
+    const inlineFlash = flash?.tone === 'success' ? null : flash;
+    const hasInlineNotices = Boolean(
+        inlineFlash || locationError || showStaleNotice,
+    );
 
     return (
         <>
@@ -666,9 +670,10 @@ export default function Workspace(props: WorkspacePageProps) {
                         onOpenQueue={() => changeSection('sos')}
                     />
                 )}
-                {(flash || locationError || showStaleNotice) && (
+                {flash?.tone === 'success' && <FlashNotice flash={flash} />}
+                {hasInlineNotices && (
                     <div className="space-y-2 border-b border-line bg-surface px-4 py-3 md:px-6">
-                        {flash && <FlashNotice flash={flash} />}
+                        {inlineFlash && <FlashNotice flash={inlineFlash} />}
                         {locationError && (
                             <StateNotice
                                 tone="error"
@@ -824,7 +829,52 @@ function WorkspaceSectionLoading({ section }: { section: WorkspaceSection }) {
 }
 
 function FlashNotice({ flash }: { flash: WorkspaceFlash }) {
+    if (flash.tone === 'success') {
+        return (
+            <SuccessToast
+                key={`${flash.tone}:${flash.message}`}
+                flash={flash}
+            />
+        );
+    }
+
     return <StateNotice tone={flash.tone} message={flash.message} />;
+}
+
+function SuccessToast({ flash }: { flash: WorkspaceFlash }) {
+    const [dismissed, setDismissed] = useState(false);
+
+    useEffect(() => {
+        const timeout = window.setTimeout(() => setDismissed(true), 4000);
+
+        return () => window.clearTimeout(timeout);
+    }, []);
+
+    if (dismissed) {
+        return null;
+    }
+
+    return (
+        <div className="pointer-events-none fixed top-20 right-4 left-4 z-[60] flex justify-center sm:right-6 sm:left-auto sm:w-[min(32rem,calc(100vw-3rem))] sm:justify-end">
+            <div
+                className="pointer-events-auto flex w-full items-start gap-3 rounded-lg bg-success-soft px-4 py-3 text-sm text-success-strong shadow-lg"
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+            >
+                <Check className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                <p className="min-w-0 flex-1 leading-5">{flash.message}</p>
+                <button
+                    type="button"
+                    onClick={() => setDismissed(true)}
+                    className="-m-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg hover:bg-black/5 focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                    aria-label="Dismiss success message"
+                >
+                    <X className="h-4 w-4" aria-hidden="true" />
+                </button>
+            </div>
+        </div>
+    );
 }
 
 function StateNotice({

@@ -29,7 +29,7 @@ final class ClientController extends Controller
             return response()->json(['data' => $client], 201);
         }
 
-        return to_route('home')->with('flash', [
+        return back()->with('flash', [
             'tone' => 'success',
             'message' => "Client {$client->company_name} was created.",
         ]);

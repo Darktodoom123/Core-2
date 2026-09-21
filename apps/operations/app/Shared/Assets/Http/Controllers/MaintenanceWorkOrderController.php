@@ -66,7 +66,7 @@ final class MaintenanceWorkOrderController extends Controller
                 return response()->json(['data' => $work], 201);
             }
 
-            return to_route('home')->with('flash', [
+            return back()->with('flash', [
                 'tone' => 'warning',
                 'message' => "Maintenance work order opened for {$operationalAsset->code}.",
             ]);
@@ -356,7 +356,7 @@ final class MaintenanceWorkOrderController extends Controller
                 return response()->json(['data' => $releasedOrder->refresh()]);
             }
 
-            return to_route('home')->with('flash', [
+            return back()->with('flash', [
                 'tone' => 'success',
                 'message' => "Maintenance work order for {$asset->code} released and verified.",
             ]);

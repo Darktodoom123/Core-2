@@ -44,7 +44,7 @@ final class SalesOrderController extends Controller
             return response()->json(['data' => $job], 201);
         }
 
-        return to_route('home')->with('flash', [
+        return back()->with('flash', [
             'tone' => 'success',
             'message' => "Sale {$salesOrder->reference} was linked to dispatch {$job->reference}.",
         ]);

@@ -131,10 +131,10 @@ it('requires reasons and safety checks when updating asset status', function () 
         'completed_at' => now(),
     ]);
 
-    $this->actingAs($manager)->post("/operations/assets/{$asset->id}/status", [
+    $this->withHeader('Referer', '/?view=assets')->actingAs($manager)->post("/operations/assets/{$asset->id}/status", [
         'status' => AssetStatus::ReadyForService->value,
         'reason' => 'Passed safety verification',
-    ])->assertRedirect('/')->assertSessionHas('flash');
+    ])->assertRedirect('/?view=assets')->assertSessionHas('flash');
 
     expect($asset->refresh()->status)->toBe(AssetStatus::ReadyForService);
     $this->assertDatabaseHas('audit_events', [
@@ -154,12 +154,12 @@ it('records inspection submissions and updates status on non-passing outcomes', 
         'status' => AssetStatus::Available,
     ]);
 
-    $this->actingAs($technician)->post("/operations/assets/{$asset->id}/inspections", [
+    $this->withHeader('Referer', '/?view=assets')->actingAs($technician)->post("/operations/assets/{$asset->id}/inspections", [
         'type' => 'pre_operation',
         'result' => 'failed',
         'checklist' => ['brakes' => false, 'tires' => true],
         'findings' => 'Brake pad wear beyond limit.',
-    ])->assertRedirect('/')->assertSessionHas('flash');
+    ])->assertRedirect('/?view=assets')->assertSessionHas('flash');
 
     expect($asset->refresh()->status)->toBe(AssetStatus::UnderInspection);
     $this->assertDatabaseHas('inspections', [
@@ -185,11 +185,11 @@ it('handles maintenance order creation and verified release after post-repair pa
     ]);
 
     // Open blocking maintenance
-    $this->actingAs($technician)->post("/operations/assets/{$asset->id}/maintenance", [
+    $this->withHeader('Referer', '/?view=assets')->actingAs($technician)->post("/operations/assets/{$asset->id}/maintenance", [
         'defect' => 'Winch motor noise',
         'dispatch_blocking' => true,
         'remarks' => 'Requires replacement bearing',
-    ])->assertRedirect('/')->assertSessionHas('flash');
+    ])->assertRedirect('/?view=assets')->assertSessionHas('flash');
 
     expect($asset->refresh()->status)->toBe(AssetStatus::UnderMaintenance);
     $workOrder = MaintenanceWorkOrder::query()->where('operational_asset_id', $asset->id)->first();
@@ -229,11 +229,11 @@ it('handles maintenance order creation and verified release after post-repair pa
         'completed_at' => now(),
     ]);
 
-    $this->actingAs($technician)->post("/operations/maintenance/{$workOrder->id}/release", [
+    $this->withHeader('Referer', '/?view=assets')->actingAs($technician)->post("/operations/maintenance/{$workOrder->id}/release", [
         'work_performed' => ['Replaced winch motor bearing'],
         'parts' => ['BRG-900'],
         'remarks' => 'Tested under load, fully operational.',
-    ])->assertRedirect('/')->assertSessionHas('flash');
+    ])->assertRedirect('/?view=assets')->assertSessionHas('flash');
 
     expect($workOrder->refresh()->released_at)->not->toBeNull();
     expect($workOrder->release_verified_by)->toBe($technician->id);

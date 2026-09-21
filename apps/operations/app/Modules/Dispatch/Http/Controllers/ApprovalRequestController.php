@@ -60,7 +60,7 @@ final class ApprovalRequestController extends Controller
             ]);
         }
 
-        return to_route('home')->with('flash', [
+        return back()->with('flash', [
             'tone' => 'success',
             'message' => $message,
         ]);

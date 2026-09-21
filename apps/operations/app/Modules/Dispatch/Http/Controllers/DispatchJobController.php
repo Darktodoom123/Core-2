@@ -81,7 +81,7 @@ final class DispatchJobController extends Controller
             $job = $manual->handle($request->user(), $validated);
         }
 
-        return to_route('home')->with('flash', [
+        return back()->with('flash', [
             'tone' => 'success',
             'message' => "Dispatch {$job->reference} was created.",
         ]);

@@ -61,7 +61,7 @@ final class OperationalAssetController extends Controller
             return response()->json(['data' => $operationalAsset->refresh()]);
         }
 
-        return to_route('home')->with('flash', [
+        return back()->with('flash', [
             'tone' => 'success',
             'message' => "Asset {$operationalAsset->code} status updated to {$next->label()}.",
         ]);

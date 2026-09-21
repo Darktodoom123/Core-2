@@ -105,7 +105,7 @@ final class LocationUpdateController extends Controller
             );
             $broadcast->afterCommit();
 
-            return to_route('home')->with('flash', [
+            return back()->with('flash', [
                 'tone' => 'success',
                 'message' => 'Your current location was shared.',
             ]);
