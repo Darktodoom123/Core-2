@@ -1,5 +1,8 @@
 import {
     Check,
+    ChevronLeft,
+    ChevronRight,
+    ChevronUp,
     Construction,
     Layers,
     LocateFixed,
@@ -27,7 +30,13 @@ import {
     useRef,
     useState,
 } from 'react';
-import { Button, StatusBadge } from '@/components/ui';
+import type { MutableRefObject } from 'react';
+import { Button } from '@/components/ui';
+import {
+    getFleetLocationFreshnessDescription,
+    getFleetLocationFreshnessLabel,
+    hasLocationCoordinates,
+} from '@/components/workspace/fleet/fleet-location-labels';
 import { getAssetKind, getAssetKindLabel } from '@/lib/asset-kind';
 import { cn } from '@/lib/utils';
 import {
@@ -84,12 +93,12 @@ function PreciseLocationDisplay({
 
     return (
         <span
-            className="flex items-center gap-1.5 truncate"
+            className="flex min-w-0 items-center gap-1.5"
             title={
                 isMapped &&
                 location.latitude !== null &&
                 location.longitude !== null
-                    ? `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`
+                    ? `${getFleetLocationFreshnessDescription(location)} · ${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`
                     : undefined
             }
         >
@@ -97,7 +106,7 @@ function PreciseLocationDisplay({
                 className="h-3.5 w-3.5 shrink-0 text-brand-strong"
                 aria-hidden="true"
             />
-            <span className="truncate font-medium text-ink">
+            <span className="min-w-0 truncate font-medium text-ink">
                 {isMapped
                     ? locationName
                     : location.recorded_location
@@ -117,6 +126,8 @@ export function LiveTrackingMap({
     showLocationList = true,
     selectedLocationId,
     onSelectedLocationChange,
+    onCollapse,
+    onSectionChange,
     className,
 }: {
     locations: LocationUpdateViewModel[];
@@ -125,6 +136,8 @@ export function LiveTrackingMap({
     showLocationList?: boolean;
     selectedLocationId?: number | null;
     onSelectedLocationChange?: (id: number) => void;
+    onCollapse?: () => void;
+    onSectionChange?: (section: 'tracking') => void;
     className?: string;
 }) {
     const [internalSelectedId, setInternalSelectedId] = useState<number | null>(
@@ -133,8 +146,13 @@ export function LiveTrackingMap({
     const [styleVariant, setStyleVariant] = useState<MapStyleVariant>('light');
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [copiedId, setCopiedId] = useState<number | null>(null);
+    const [mobileView, setMobileView] = useState<'map' | 'list'>('map');
+    const [isLocationListCollapsed, setIsLocationListCollapsed] =
+        useState(false);
+    const [mapActionsReady, setMapActionsReady] = useState(false);
+    const mapActionsRef = useRef<MapActions | null>(null);
     const fullscreenSurfaceRef = useRef<HTMLDivElement>(null);
+    const locationListId = useId();
 
     useEffect(() => {
         if (!isFullscreen) {
@@ -218,7 +236,7 @@ export function LiveTrackingMap({
     }, [isFullscreen]);
 
     const mappedLocations = useMemo(
-        () => locations.filter(hasMapCoordinates),
+        () => locations.filter(hasLocationCoordinates),
         [locations],
     );
 
@@ -243,6 +261,10 @@ export function LiveTrackingMap({
                 (location.asset?.name ?? '').toLowerCase().includes(query),
         );
     }, [locations, searchQuery]);
+    const filteredMappedLocations = useMemo(
+        () => filteredLocations.filter(hasLocationCoordinates),
+        [filteredLocations],
+    );
     const mapCenter = useMemo(
         () =>
             mappedLocations.length > 0
@@ -252,13 +274,13 @@ export function LiveTrackingMap({
     );
     const selectedId =
         selectedLocationId === undefined
-            ? internalSelectedId
+            ? (internalSelectedId ?? mappedLocations[0]?.id ?? null)
             : selectedLocationId;
     const selected =
         (selectedId === null
             ? undefined
             : locations.find((location) => location.id === selectedId)) ??
-        (selectedLocationId === undefined ? mappedLocations[0] : undefined);
+        undefined;
 
     const selectLocation = useCallback(
         (id: number) => {
@@ -268,50 +290,11 @@ export function LiveTrackingMap({
         [onSelectedLocationChange],
     );
 
-    const copyCoordinates = useCallback(
-        async (
-            location: LocationUpdateViewModel,
-            button?: HTMLButtonElement,
-        ) => {
-            if (
-                location.latitude === null ||
-                location.longitude === null ||
-                !navigator.clipboard
-            ) {
-                return;
-            }
-
-            try {
-                await navigator.clipboard.writeText(
-                    `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`,
-                );
-                setCopiedId(location.id);
-
-                if (button) {
-                    button.textContent = 'Copied';
-                }
-
-                window.setTimeout(() => {
-                    setCopiedId((current) =>
-                        current === location.id ? null : current,
-                    );
-
-                    if (button) {
-                        button.textContent = 'Copy';
-                    }
-                }, 2000);
-            } catch {
-                // Clipboard access is optional; the coordinates remain visible in the popup.
-            }
-        },
-        [],
-    );
-
     const provider = getMapProviderConfiguration(styleVariant);
     const mapHeight = isFullscreen
         ? 'fixed inset-4 z-[9999] h-[calc(100vh-2rem)] rounded-2xl shadow-2xl ring-1 ring-line/50'
         : compact
-          ? 'h-[360px] md:h-[420px]'
+          ? 'h-[560px] md:h-[680px]'
           : 'h-[560px] lg:h-[620px]';
 
     return (
@@ -327,283 +310,389 @@ export function LiveTrackingMap({
                 isFullscreen ? 'Fullscreen live tracking map' : undefined
             }
             className={cn(
-                'grid grid-cols-1 overflow-hidden rounded-2xl border border-line bg-surface shadow-sm',
-                showLocationList && 'xl:grid-cols-[minmax(0,1fr)_22rem]',
+                '@container relative flex flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-sm',
                 mapHeight,
                 !isFullscreen && className,
             )}
         >
-            <div className="relative h-full min-h-0 w-full overflow-hidden bg-surface-subtle">
-                <MapLibreMap
-                    key={styleVariant}
-                    center={mapCenter}
-                    zoom={DEFAULT_ZOOM}
-                    ariaLabel="Interactive live field location map; use the synchronized location list for an accessible alternative"
+            {compact && (
+                <CompactMapToolbar
+                    searchQuery={searchQuery}
+                    onSearchQueryChange={setSearchQuery}
+                    onFitAll={() => mapActionsRef.current?.fitAll()}
+                    fitAllDisabled={
+                        !mapActionsReady || filteredMappedLocations.length === 0
+                    }
+                    isFullscreen={isFullscreen}
+                    onToggleFullscreen={() =>
+                        setIsFullscreen((value) => !value)
+                    }
                     styleVariant={styleVariant}
-                >
-                    <TrackingMapContent
-                        locations={mappedLocations}
-                        activeSosIncidents={activeSosIncidents}
-                        selected={
-                            selected && hasMapCoordinates(selected)
-                                ? selected
-                                : undefined
-                        }
-                        selectedId={selectedId}
-                        onSelect={selectLocation}
-                        onCopyCoordinates={copyCoordinates}
-                    />
-                    <LiveMapControls
-                        compact={compact}
-                        activeSosIncidents={activeSosIncidents}
-                        mappedLocations={mappedLocations}
-                        mapCenter={mapCenter}
-                        styleVariant={styleVariant}
-                        onStyleVariantChange={setStyleVariant}
-                        isFullscreen={isFullscreen}
-                        onToggleFullscreen={() =>
-                            setIsFullscreen((value) => !value)
-                        }
-                    />
-                </MapLibreMap>
+                    onStyleVariantChange={setStyleVariant}
+                    mobileView={mobileView}
+                    onMobileViewChange={setMobileView}
+                    showLocationList={showLocationList}
+                    onCollapse={onCollapse}
+                    onSectionChange={onSectionChange}
+                />
+            )}
 
-                {!compact && <MapLegend />}
-
-                {mappedLocations.length === 0 &&
-                    activeSosIncidents.every(
-                        (incident) => getSosMarkerPosition(incident) === null,
-                    ) && (
-                        <div className="pointer-events-none absolute inset-0 z-[2] flex items-center justify-center bg-surface/40 p-6 backdrop-blur-xs">
-                            <div className="rounded-xl border border-line bg-surface/95 px-5 py-4 text-center text-sm text-ink-soft shadow-lg">
-                                {locations.length === 0
-                                    ? 'No location updates match the selected filter.'
-                                    : 'Coordinates are unavailable for the selected updates.'}
-                            </div>
-                        </div>
+            <div
+                className={cn(
+                    'grid min-h-0 flex-1 grid-cols-1',
+                    showLocationList &&
+                        !isLocationListCollapsed &&
+                        '@lg:grid-cols-[minmax(0,1fr)_22rem]',
+                )}
+            >
+                <div
+                    className={cn(
+                        'relative min-h-0 w-full overflow-hidden bg-surface-subtle',
+                        compact &&
+                            showLocationList &&
+                            mobileView === 'list' &&
+                            'hidden @lg:block',
                     )}
-            </div>
-
-            {showLocationList && (
-                <aside
-                    className="flex h-full min-h-0 flex-col overflow-hidden border-t border-line bg-surface xl:border-t-0 xl:border-l"
-                    aria-label="Synchronized mapped location list"
                 >
-                    <div className="space-y-3 border-b border-line bg-surface p-3.5">
-                        <div>
-                            <h3 className="text-sm font-semibold text-ink">
-                                Mapped locations
-                            </h3>
-                            <p className="text-xs text-ink-soft">
-                                {mappedLocations.length} of {locations.length}{' '}
-                                assets mapped
-                            </p>
-                        </div>
-                        <div className="relative">
-                            <Search
-                                className="absolute top-3 left-3 h-4 w-4 text-ink-soft"
+                    {showLocationList && isLocationListCollapsed && (
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            className="absolute top-3 right-3 z-[4] hidden min-h-10 gap-1.5 px-2.5 text-xs @lg:inline-flex"
+                            onClick={() => setIsLocationListCollapsed(false)}
+                            aria-label="Show asset list"
+                            aria-controls={locationListId}
+                            aria-expanded={false}
+                        >
+                            <ChevronRight
+                                className="h-3.5 w-3.5"
                                 aria-hidden="true"
                             />
-                            <input
-                                type="search"
-                                value={searchQuery}
-                                onChange={(event) =>
-                                    setSearchQuery(event.target.value)
-                                }
-                                placeholder="Search asset code, name, or operator…"
-                                aria-label="Search mapped locations"
-                                className="min-h-[44px] w-full rounded-lg border border-line bg-surface-subtle py-2 pr-3 pl-10 text-sm text-ink placeholder:text-ink-soft focus:border-brand-strong focus:outline-none"
-                            />
-                        </div>
-                    </div>
+                            Show list
+                        </Button>
+                    )}
+                    <MapLibreMap
+                        center={mapCenter}
+                        zoom={DEFAULT_ZOOM}
+                        ariaLabel="Interactive live field location map; use the synchronized location list for an accessible alternative"
+                        styleVariant={styleVariant}
+                    >
+                        <TrackingMapContent
+                            locations={filteredMappedLocations}
+                            activeSosIncidents={activeSosIncidents}
+                            selected={
+                                selected && hasLocationCoordinates(selected)
+                                    ? selected
+                                    : undefined
+                            }
+                            onSelect={selectLocation}
+                        />
+                        <MapActionBridge
+                            mappedLocations={filteredMappedLocations}
+                            activeSosIncidents={activeSosIncidents}
+                            actionsRef={mapActionsRef}
+                            onReady={setMapActionsReady}
+                        />
+                        <LiveMapControls
+                            compact={compact}
+                            activeSosIncidents={activeSosIncidents}
+                            mappedLocations={filteredMappedLocations}
+                            mapCenter={mapCenter}
+                            styleVariant={styleVariant}
+                            onStyleVariantChange={setStyleVariant}
+                            isFullscreen={isFullscreen}
+                            onToggleFullscreen={() =>
+                                setIsFullscreen((value) => !value)
+                            }
+                        />
+                    </MapLibreMap>
 
-                    <div className="flex-1 divide-y divide-line overflow-y-auto">
-                        {filteredLocations.length === 0 ? (
-                            <div className="p-6 text-center text-xs text-ink-soft">
-                                {searchQuery
-                                    ? `No locations match “${searchQuery}”.`
-                                    : 'No location updates match the selected filter.'}
+                    {!compact && <MapLegend />}
+
+                    {filteredMappedLocations.length === 0 &&
+                        activeSosIncidents.every(
+                            (incident) =>
+                                getSosMarkerPosition(incident) === null,
+                        ) && (
+                            <div className="pointer-events-none absolute inset-0 z-[2] flex items-center justify-center bg-surface/40 p-6 backdrop-blur-xs">
+                                <div className="rounded-xl border border-line bg-surface/95 px-5 py-4 text-center text-sm text-ink-soft shadow-lg">
+                                    {searchQuery.trim()
+                                        ? `No assets match “${searchQuery}”.`
+                                        : locations.length === 0
+                                          ? 'No location updates are available.'
+                                          : 'Coordinates are unavailable for these assets.'}
+                                </div>
                             </div>
-                        ) : (
-                            filteredLocations.map((location) => {
-                                const isMapped = hasMapCoordinates(location);
-                                const isSelected = location.id === selected?.id;
-                                const kind = getAssetKind(location);
+                        )}
+                </div>
 
-                                return (
-                                    <div
-                                        key={location.id}
-                                        className={cn(
-                                            'group relative flex items-start justify-between p-3.5 transition-colors',
-                                            isSelected
-                                                ? 'bg-brand-soft/80 font-medium text-ink ring-1 ring-brand-strong/20'
-                                                : 'text-ink-soft hover:bg-surface-subtle',
-                                            !isMapped && 'opacity-60',
-                                        )}
+                {showLocationList && (
+                    <aside
+                        id={locationListId}
+                        className={cn(
+                            'flex min-h-0 flex-col overflow-hidden border-t border-line bg-surface @lg:border-t-0 @lg:border-l',
+                            compact &&
+                                mobileView === 'map' &&
+                                (isLocationListCollapsed
+                                    ? 'hidden @lg:hidden'
+                                    : 'hidden @lg:flex'),
+                            isLocationListCollapsed && '@lg:hidden',
+                        )}
+                        aria-label="Synchronized mapped location list"
+                    >
+                        <div className="space-y-2 border-b border-line bg-surface p-3.5">
+                            <div className="flex items-start justify-between gap-3">
+                                <div>
+                                    <h3 className="text-sm font-semibold text-ink">
+                                        Asset locations
+                                    </h3>
+                                    <p className="text-xs text-ink-soft">
+                                        {mappedLocations.length} mapped ·{' '}
+                                        {Math.max(
+                                            0,
+                                            locations.length -
+                                                mappedLocations.length,
+                                        )}{' '}
+                                        without coordinates
+                                    </p>
+                                </div>
+                                {!isLocationListCollapsed && (
+                                    <Button
+                                        type="button"
+                                        variant="quiet"
+                                        size="icon"
+                                        className="hidden h-9 w-9 shrink-0 @lg:inline-flex"
+                                        onClick={() =>
+                                            setIsLocationListCollapsed(true)
+                                        }
+                                        aria-label="Hide asset list"
+                                        aria-controls={locationListId}
+                                        aria-expanded={true}
+                                        title="Hide asset list"
                                     >
+                                        <ChevronLeft
+                                            className="h-4 w-4"
+                                            aria-hidden="true"
+                                        />
+                                    </Button>
+                                )}
+                            </div>
+                            {!compact && (
+                                <div className="relative">
+                                    <Search
+                                        className="absolute top-3 left-3 h-4 w-4 text-ink-soft"
+                                        aria-hidden="true"
+                                    />
+                                    <input
+                                        type="search"
+                                        value={searchQuery}
+                                        onChange={(event) =>
+                                            setSearchQuery(event.target.value)
+                                        }
+                                        placeholder="Search asset code, name, or operator…"
+                                        aria-label="Search mapped locations"
+                                        className="min-h-[44px] w-full rounded-lg border border-line bg-surface-subtle py-2 pr-3 pl-10 text-sm text-ink placeholder:text-ink-soft focus:border-brand-strong focus:outline-none"
+                                    />
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex-1 divide-y divide-line overflow-y-auto">
+                            {filteredLocations.length === 0 ? (
+                                <div className="p-6 text-center text-xs text-ink-soft">
+                                    {searchQuery
+                                        ? `No locations match “${searchQuery}”.`
+                                        : 'No location updates match the selected filter.'}
+                                </div>
+                            ) : (
+                                filteredLocations.map((location) => {
+                                    const isMapped =
+                                        hasLocationCoordinates(location);
+                                    const isSelected =
+                                        location.id === selectedId;
+                                    const kind = getAssetKind(location);
+                                    const operationalStatus =
+                                        location.asset?.status_label ??
+                                        location.asset?.status ??
+                                        'Operational status unavailable';
+                                    const freshnessLabel =
+                                        getFleetLocationFreshnessLabel(
+                                            location,
+                                        );
+                                    const freshnessTone =
+                                        location.freshness_status === 'fresh'
+                                            ? 'text-success-strong'
+                                            : isMapped
+                                              ? 'text-warning-strong'
+                                              : 'text-ink-soft';
+
+                                    return (
                                         <button
+                                            key={location.id}
                                             type="button"
                                             onClick={() =>
-                                                isMapped &&
                                                 selectLocation(location.id)
                                             }
-                                            disabled={!isMapped}
                                             aria-pressed={isSelected}
-                                            className="min-h-[44px] flex-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:ring-offset-2"
+                                            className={cn(
+                                                'group relative w-full border-l px-3.5 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:ring-inset',
+                                                isSelected
+                                                    ? 'border-brand-strong bg-brand-soft/55 text-ink'
+                                                    : 'border-transparent text-ink-soft hover:bg-surface-subtle',
+                                                !isMapped &&
+                                                    !isSelected &&
+                                                    'bg-surface-subtle/50',
+                                            )}
                                         >
-                                            <div className="flex items-start justify-between gap-2">
-                                                <div className="flex items-center gap-2.5">
-                                                    <span
-                                                        className={cn(
-                                                            'flex h-7 w-7 shrink-0 items-center justify-center text-xs font-semibold text-white shadow-xs',
-                                                            kind === 'truck'
-                                                                ? 'rounded-lg bg-success-strong'
-                                                                : kind ===
-                                                                        'crane' ||
-                                                                    kind ===
-                                                                        'mobile_crane'
-                                                                  ? 'rotate-45 rounded-md bg-success-strong'
-                                                                  : kind ===
-                                                                      'equipment'
-                                                                    ? 'rounded-sm bg-success-strong'
-                                                                    : 'rounded-full bg-success-strong',
+                                            <div className="flex min-w-0 items-start gap-3">
+                                                <span
+                                                    className={cn(
+                                                        'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border bg-surface-subtle text-ink-soft',
+                                                        isSelected
+                                                            ? 'border-brand-strong/35 bg-brand-soft text-brand-strong'
+                                                            : 'border-line',
+                                                    )}
+                                                >
+                                                    <span className="flex items-center justify-center">
+                                                        {kind === 'truck' ? (
+                                                            <Truck
+                                                                className="h-4 w-4"
+                                                                aria-hidden="true"
+                                                            />
+                                                        ) : kind === 'crane' ||
+                                                          kind ===
+                                                              'mobile_crane' ? (
+                                                            <Construction
+                                                                className="h-4 w-4"
+                                                                aria-hidden="true"
+                                                            />
+                                                        ) : kind ===
+                                                          'equipment' ? (
+                                                            <Wrench
+                                                                className="h-4 w-4"
+                                                                aria-hidden="true"
+                                                            />
+                                                        ) : (
+                                                            <UserRoundCog
+                                                                className="h-4 w-4"
+                                                                aria-hidden="true"
+                                                            />
                                                         )}
-                                                    >
+                                                    </span>
+                                                </span>
+
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="min-w-0">
+                                                        <div className="min-w-0">
+                                                            <span className="block truncate text-sm font-semibold text-ink">
+                                                                {location.asset
+                                                                    ?.code ??
+                                                                    location
+                                                                        .asset
+                                                                        ?.name ??
+                                                                    'Asset'}
+                                                            </span>
+                                                            <span className="mt-0.5 line-clamp-2 block text-xs leading-4 text-ink-soft">
+                                                                {location.asset
+                                                                    ?.name ??
+                                                                    getAssetKindLabel(
+                                                                        kind,
+                                                                    )}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                                                        <span className="inline-flex min-w-0 items-center gap-1.5 text-ink">
+                                                            <span
+                                                                className="bg-ink-muted h-1.5 w-1.5 shrink-0 rounded-full"
+                                                                aria-hidden="true"
+                                                            />
+                                                            <span className="truncate">
+                                                                <span className="text-ink-soft">
+                                                                    Operational
+                                                                </span>{' '}
+                                                                {
+                                                                    operationalStatus
+                                                                }
+                                                            </span>
+                                                        </span>
                                                         <span
                                                             className={cn(
-                                                                'flex items-center justify-center',
-                                                                (kind ===
-                                                                    'crane' ||
-                                                                    kind ===
-                                                                        'mobile_crane') &&
-                                                                    '-rotate-45',
+                                                                'inline-flex min-w-0 items-center gap-1.5',
+                                                                freshnessTone,
                                                             )}
                                                         >
-                                                            {kind ===
-                                                            'truck' ? (
-                                                                <Truck
-                                                                    className="h-3.5 w-3.5"
-                                                                    aria-hidden="true"
-                                                                />
-                                                            ) : kind ===
-                                                                  'crane' ||
-                                                              kind ===
-                                                                  'mobile_crane' ? (
-                                                                <Construction
-                                                                    className="h-3.5 w-3.5"
-                                                                    aria-hidden="true"
-                                                                />
-                                                            ) : kind ===
-                                                              'equipment' ? (
-                                                                <Wrench
-                                                                    className="h-3.5 w-3.5"
-                                                                    aria-hidden="true"
-                                                                />
-                                                            ) : (
-                                                                <UserRoundCog
-                                                                    className="h-3.5 w-3.5"
-                                                                    aria-hidden="true"
-                                                                />
+                                                            <span
+                                                                className={cn(
+                                                                    'h-1.5 w-1.5 shrink-0 rounded-full',
+                                                                    location.freshness_status ===
+                                                                        'fresh'
+                                                                        ? 'bg-success-strong'
+                                                                        : isMapped
+                                                                          ? 'bg-warning-strong'
+                                                                          : 'bg-ink-muted',
+                                                                )}
+                                                                aria-hidden="true"
+                                                            />
+                                                            <span className="truncate">
+                                                                <span className="text-ink-soft">
+                                                                    GPS
+                                                                </span>{' '}
+                                                                {freshnessLabel}
+                                                            </span>
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-ink-soft">
+                                                        <span>
+                                                            Reported{' '}
+                                                            {formatReportAge(
+                                                                location.received_at ??
+                                                                    location.captured_at,
                                                             )}
-                                                        </span>
-                                                    </span>
-                                                    <span>
-                                                        <span className="block text-sm font-semibold text-ink">
-                                                            {location.asset
-                                                                ?.code ??
-                                                                location.asset
-                                                                    ?.name ??
-                                                                'Asset'}
-                                                        </span>
-                                                        <span className="mt-0.5 block text-xs text-ink-soft">
-                                                            {location.asset
-                                                                ?.name ??
-                                                                getAssetKindLabel(
-                                                                    kind,
-                                                                )}{' '}
-                                                            ·{' '}
-                                                            {location.asset
-                                                                ?.status_label ??
-                                                                'Available'}{' '}
-                                                            ·{' '}
-                                                            {location.is_assigned
-                                                                ? location.job
-                                                                      ?.reference
-                                                                    ? `Assigned (${location.job.reference})`
-                                                                    : 'Assigned'
-                                                                : 'Unassigned'}
                                                         </span>
                                                         {location.user
                                                             ?.name && (
-                                                            <span className="mt-0.5 block text-[11px] text-ink-soft">
-                                                                Operator:{' '}
-                                                                {
-                                                                    location
-                                                                        .user
-                                                                        .name
-                                                                }
-                                                                {location.reported_via_phone && (
-                                                                    <span className="text-ink-muted ml-1">
-                                                                        (via
-                                                                        operator’s
-                                                                        phone)
-                                                                    </span>
-                                                                )}
-                                                            </span>
+                                                            <>
+                                                                <span aria-hidden="true">
+                                                                    ·
+                                                                </span>
+                                                                <span className="min-w-0 truncate">
+                                                                    Operator:{' '}
+                                                                    {
+                                                                        location
+                                                                            .user
+                                                                            .name
+                                                                    }
+                                                                    {location.reported_via_phone && (
+                                                                        <span className="text-ink-muted ml-1">
+                                                                            (via
+                                                                            phone)
+                                                                        </span>
+                                                                    )}
+                                                                </span>
+                                                            </>
                                                         )}
-                                                    </span>
+                                                    </div>
                                                 </div>
-                                                <StatusBadge
-                                                    status={
-                                                        location.freshness_label ??
-                                                        (location.freshness_status ===
-                                                        'fresh'
-                                                            ? 'Fresh'
-                                                            : location.has_gps_report ===
-                                                                false
-                                                              ? 'No GPS report'
-                                                              : 'Location not current')
-                                                    }
-                                                />
                                             </div>
-                                            <div className="mt-2.5 flex items-center justify-between gap-3 text-xs text-ink-soft">
+
+                                            <div className="mt-2.5 min-w-0 border-t border-line/70 pt-2 text-xs text-ink-soft">
                                                 <PreciseLocationDisplay
                                                     location={location}
                                                     isMapped={isMapped}
                                                 />
                                             </div>
                                         </button>
-
-                                        {isMapped && (
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    void copyCoordinates(
-                                                        location,
-                                                    )
-                                                }
-                                                className="ml-2 min-h-[44px] min-w-[44px] rounded p-2 text-ink-soft transition-colors hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-strong"
-                                                title="Copy coordinates"
-                                                aria-label={`Copy coordinates for ${location.asset?.code ?? location.user?.name ?? 'asset'}`}
-                                            >
-                                                {copiedId === location.id ? (
-                                                    <Check
-                                                        className="mx-auto h-4 w-4 text-success-strong"
-                                                        aria-hidden="true"
-                                                    />
-                                                ) : (
-                                                    <span className="text-xs font-semibold">
-                                                        Copy
-                                                    </span>
-                                                )}
-                                            </button>
-                                        )}
-                                    </div>
-                                );
-                            })
-                        )}
-                    </div>
-                </aside>
-            )}
+                                    );
+                                })
+                            )}
+                        </div>
+                    </aside>
+                )}
+            </div>
         </div>
     );
 }
@@ -612,26 +701,20 @@ function TrackingMapContent({
     locations,
     activeSosIncidents,
     selected,
-    selectedId,
     onSelect,
-    onCopyCoordinates,
 }: {
     locations: LocationUpdateViewModel[];
     activeSosIncidents: SosIncidentViewModel[];
     selected?: LocationUpdateViewModel;
-    selectedId: number | null;
     onSelect: (id: number) => void;
-    onCopyCoordinates: (
-        location: LocationUpdateViewModel,
-        button?: HTMLButtonElement,
-    ) => void | Promise<void>;
 }) {
-    const { map, maplibregl, prefersReducedMotion } = useMapLibre();
+    const { map, maplibregl, prefersReducedMotion, cameraWasRestored } =
+        useMapLibre();
     const markersRef = useRef<MapLibreMarker[]>([]);
     const accuracySourceRef = useRef<GeoJSONSource | null>(null);
     const overviewSourceRef = useRef<GeoJSONSource | null>(null);
-    const hasCenteredRef = useRef(false);
-    const previousSelectedIdRef = useRef<number | null>(null);
+    const previousSelectedAssetKeyRef = useRef<string | number | null>(null);
+    const hasInitializedSelectionRef = useRef(false);
     const markerSelectionRef = useRef<number | null>(null);
 
     const accuracyData = useMemo(
@@ -871,12 +954,7 @@ function TrackingMapContent({
                     description: `${location.freshness_status} · Received ${formatReportAge(location.received_at)}`,
                     sos,
                     content: () =>
-                        createTrackingLocationPopup(
-                            location,
-                            incident,
-                            (button) =>
-                                void onCopyCoordinates(location, button),
-                        ),
+                        createTrackingLocationPopup(location, incident),
                     element: () =>
                         createAssetMarker({
                             kind: getAssetKind(location),
@@ -917,14 +995,7 @@ function TrackingMapContent({
                 label: incident.worker.name,
                 description: `${incident.status.label} · ${incident.category.label}`,
                 sos,
-                content: () =>
-                    createTrackingSosPopup(
-                        incident,
-                        location
-                            ? (button) =>
-                                  void onCopyCoordinates(location, button)
-                            : undefined,
-                    ),
+                content: () => createTrackingSosPopup(incident),
                 element: () => createSosMarker(sos),
             });
         }
@@ -1156,11 +1227,6 @@ function TrackingMapContent({
                                     createTrackingLocationPopup(
                                         location,
                                         incident,
-                                        (button) =>
-                                            void onCopyCoordinates(
-                                                location,
-                                                button,
-                                            ),
                                     ),
                                 );
                                 onSelect(location.id);
@@ -1200,8 +1266,6 @@ function TrackingMapContent({
                                     location,
                                     activeSosIncidents,
                                 ),
-                                (button) =>
-                                    void onCopyCoordinates(location, button),
                             ),
                         );
 
@@ -1258,7 +1322,6 @@ function TrackingMapContent({
         locations,
         map,
         maplibregl,
-        onCopyCoordinates,
         onSelect,
         prefersReducedMotion,
     ]);
@@ -1311,8 +1374,6 @@ function TrackingMapContent({
                                     location,
                                     activeSosIncidents,
                                 ),
-                                (button) =>
-                                    void onCopyCoordinates(location, button),
                             ),
                         )
                         .addTo(map);
@@ -1378,40 +1439,104 @@ function TrackingMapContent({
             activePopup?.remove();
             map.off('click', 'tracking-marker-overview', onOverviewClick);
         };
-    }, [
-        activeSosIncidents,
-        locations,
-        map,
-        maplibregl,
-        onCopyCoordinates,
-        onSelect,
-    ]);
+    }, [activeSosIncidents, locations, map, maplibregl, onSelect]);
     useEffect(() => {
         if (!selected) {
-            previousSelectedIdRef.current = null;
+            previousSelectedAssetKeyRef.current = null;
 
             return;
         }
 
-        const selectedIdChanged = previousSelectedIdRef.current !== selected.id;
+        const selectedAssetKey =
+            selected.asset?.id ?? `location:${selected.id}`;
+        const selectedAssetChanged =
+            previousSelectedAssetKeyRef.current !== selectedAssetKey;
         const shouldCenter =
-            !hasCenteredRef.current ||
-            (selectedId !== null &&
-                selected.id === selectedId &&
-                selectedIdChanged);
-        previousSelectedIdRef.current = selected.id;
+            (!hasInitializedSelectionRef.current && !cameraWasRestored) ||
+            (hasInitializedSelectionRef.current && selectedAssetChanged);
+        previousSelectedAssetKeyRef.current = selectedAssetKey;
+        hasInitializedSelectionRef.current = true;
 
         if (!shouldCenter) {
             return;
         }
 
-        hasCenteredRef.current = true;
         map.easeTo({
             center: toLngLat(selected),
             zoom: 13,
             duration: prefersReducedMotion ? 0 : 350,
         });
-    }, [map, prefersReducedMotion, selected, selectedId]);
+    }, [cameraWasRestored, map, prefersReducedMotion, selected]);
+
+    return null;
+}
+
+type MapActions = {
+    fitAll: () => void;
+};
+
+function MapActionBridge({
+    mappedLocations,
+    activeSosIncidents,
+    actionsRef,
+    onReady,
+}: {
+    mappedLocations: LocationUpdateViewModel[];
+    activeSosIncidents: SosIncidentViewModel[];
+    actionsRef: MutableRefObject<MapActions | null>;
+    onReady: (ready: boolean) => void;
+}) {
+    const { map, maplibregl, prefersReducedMotion } = useMapLibre();
+
+    const fitAll = useCallback(() => {
+        const positions = [
+            ...mappedLocations.map(toLngLat),
+            ...activeSosIncidents.flatMap((incident) => {
+                const position = getSosMarkerPosition(
+                    incident,
+                    mappedLocations.find(
+                        (location) => location.user.id === incident.worker.id,
+                    ),
+                    incident.asset?.id
+                        ? mappedLocations.find(
+                              (location) =>
+                                  location.asset?.id === incident.asset?.id,
+                          )
+                        : undefined,
+                );
+
+                return position ? [position] : [];
+            }),
+        ];
+
+        if (positions.length === 0) {
+            return;
+        }
+
+        const bounds = new maplibregl.LngLatBounds();
+        positions.forEach((position) => bounds.extend(position));
+        map.fitBounds(bounds, {
+            padding: 40,
+            maxZoom: 15,
+            duration: prefersReducedMotion ? 0 : 350,
+        });
+    }, [
+        activeSosIncidents,
+        map,
+        maplibregl,
+        mappedLocations,
+        prefersReducedMotion,
+    ]);
+
+    useEffect(() => {
+        actionsRef.current = { fitAll };
+        onReady(true);
+
+        return () => {
+            actionsRef.current = null;
+            onReady(false);
+        };
+    }, [actionsRef, fitAll, onReady]);
 
     return null;
 }
@@ -1494,18 +1619,13 @@ function LiveMapControls({
 
     if (compact) {
         return (
-            <CompactMapControls
+            <MapZoomControls
                 onZoomIn={() =>
                     map.zoomIn({ duration: prefersReducedMotion ? 0 : 200 })
                 }
                 onZoomOut={() =>
                     map.zoomOut({ duration: prefersReducedMotion ? 0 : 200 })
                 }
-                onFitAll={fitAll}
-                styleVariant={styleVariant}
-                onStyleVariantChange={onStyleVariantChange}
-                isFullscreen={isFullscreen}
-                onToggleFullscreen={onToggleFullscreen}
             />
         );
     }
@@ -1633,120 +1753,244 @@ function LiveMapControls({
     );
 }
 
-function CompactMapControls({
+function MapZoomControls({
     onZoomIn,
     onZoomOut,
-    onFitAll,
-    styleVariant,
-    onStyleVariantChange,
-    isFullscreen,
-    onToggleFullscreen,
 }: {
     onZoomIn: () => void;
     onZoomOut: () => void;
+}) {
+    return (
+        <div className="absolute top-3 left-3 z-[3] flex flex-col overflow-hidden rounded-lg border border-line bg-surface/95 shadow-sm backdrop-blur-md">
+            <Button
+                size="icon"
+                variant="quiet"
+                className="h-11 w-11 rounded-none"
+                onClick={onZoomIn}
+                aria-label="Zoom in"
+                title="Zoom in"
+            >
+                <ZoomIn className="h-4 w-4" aria-hidden="true" />
+            </Button>
+            <Button
+                size="icon"
+                variant="quiet"
+                className="h-11 w-11 rounded-none border-t border-line"
+                onClick={onZoomOut}
+                aria-label="Zoom out"
+                title="Zoom out"
+            >
+                <ZoomOut className="h-4 w-4" aria-hidden="true" />
+            </Button>
+        </div>
+    );
+}
+
+function CompactMapToolbar({
+    searchQuery,
+    onSearchQueryChange,
+    onFitAll,
+    fitAllDisabled,
+    isFullscreen,
+    onToggleFullscreen,
+    styleVariant,
+    onStyleVariantChange,
+    mobileView,
+    onMobileViewChange,
+    showLocationList,
+    onCollapse,
+    onSectionChange,
+}: {
+    searchQuery: string;
+    onSearchQueryChange: (query: string) => void;
     onFitAll: () => void;
-    styleVariant: MapStyleVariant;
-    onStyleVariantChange: (variant: MapStyleVariant) => void;
+    fitAllDisabled: boolean;
     isFullscreen: boolean;
     onToggleFullscreen: () => void;
+    styleVariant: MapStyleVariant;
+    onStyleVariantChange: (variant: MapStyleVariant) => void;
+    mobileView: 'map' | 'list';
+    onMobileViewChange: (view: 'map' | 'list') => void;
+    showLocationList: boolean;
+    onCollapse?: () => void;
+    onSectionChange?: (section: 'tracking') => void;
 }) {
-    const menuId = useId();
+    const menuId = `fleet-map-options-${useId().replace(/:/g, '')}`;
     const menuRef = useRef<HTMLDivElement>(null);
     const triggerRef = useRef<HTMLButtonElement>(null);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
 
+    useEffect(() => {
+        if (!isMenuOpen) {
+            return;
+        }
+
+        const handlePointerDown = (event: PointerEvent) => {
+            if (
+                event.target instanceof Node &&
+                !menuRef.current?.contains(event.target) &&
+                !triggerRef.current?.contains(event.target)
+            ) {
+                setIsMenuOpen(false);
+            }
+        };
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                setIsMenuOpen(false);
+                triggerRef.current?.focus();
+            }
+        };
+
+        document.addEventListener('pointerdown', handlePointerDown);
+        document.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            document.removeEventListener('pointerdown', handlePointerDown);
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isMenuOpen]);
+
     return (
-        <div className="absolute top-3 right-3 left-3 z-[3] flex items-start justify-between gap-2">
-            <div className="flex flex-col gap-2">
-                <div className="flex flex-col overflow-hidden rounded-lg border border-line bg-surface">
+        <div className="shrink-0 space-y-2 border-b border-line bg-surface p-2.5">
+            <div className="flex flex-wrap items-center gap-2">
+                <label className="relative min-w-[min(100%,14rem)] flex-1">
+                    <span className="sr-only">Search fleet map</span>
+                    <Search
+                        className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ink-soft"
+                        aria-hidden="true"
+                    />
+                    <input
+                        type="search"
+                        value={searchQuery}
+                        onChange={(event) =>
+                            onSearchQueryChange(event.target.value)
+                        }
+                        placeholder="Search asset code, name, or operator…"
+                        className="h-10 w-full rounded-lg border border-line bg-surface-subtle py-2 pr-3 pl-9 text-sm text-ink placeholder:text-ink-soft focus:border-brand-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
+                    />
+                </label>
+                <div className="flex flex-wrap items-center gap-1.5">
                     <Button
-                        size="icon"
-                        variant="quiet"
-                        className="h-11 w-11 rounded-none"
-                        onClick={onZoomIn}
-                        aria-label="Zoom in"
-                        title="Zoom in"
+                        variant="secondary"
+                        size="sm"
+                        className="min-h-10 px-2.5 text-xs"
+                        onClick={onFitAll}
+                        disabled={fitAllDisabled}
+                        aria-label="Fit all assets"
                     >
-                        <ZoomIn className="h-4 w-4" aria-hidden="true" />
+                        <Maximize2 className="h-3.5 w-3.5" aria-hidden="true" />
+                        Fit all
                     </Button>
                     <Button
+                        variant="secondary"
                         size="icon"
-                        variant="quiet"
-                        className="h-11 w-11 rounded-none border-t border-line"
-                        onClick={onZoomOut}
-                        aria-label="Zoom out"
-                        title="Zoom out"
+                        className="h-10 w-10"
+                        aria-label={
+                            isFullscreen
+                                ? 'Exit fullscreen'
+                                : 'Expand map fullscreen'
+                        }
+                        title={
+                            isFullscreen
+                                ? 'Exit fullscreen'
+                                : 'Expand fullscreen'
+                        }
+                        onClick={onToggleFullscreen}
                     >
-                        <ZoomOut className="h-4 w-4" aria-hidden="true" />
+                        {isFullscreen ? (
+                            <Minimize className="h-4 w-4" aria-hidden="true" />
+                        ) : (
+                            <Maximize className="h-4 w-4" aria-hidden="true" />
+                        )}
                     </Button>
+                    <Button
+                        ref={triggerRef}
+                        variant="secondary"
+                        size="sm"
+                        className="min-h-10 px-2.5 text-xs"
+                        aria-haspopup="menu"
+                        aria-controls={menuId}
+                        aria-expanded={isMenuOpen}
+                        onClick={() => {
+                            const rect =
+                                triggerRef.current?.getBoundingClientRect();
+
+                            if (rect) {
+                                setMenuPosition({
+                                    left: Math.max(
+                                        8,
+                                        Math.min(
+                                            rect.right - 192,
+                                            window.innerWidth - 200,
+                                        ),
+                                    ),
+                                    top: Math.min(
+                                        rect.bottom + 8,
+                                        window.innerHeight - 260,
+                                    ),
+                                });
+                            }
+
+                            setIsMenuOpen((value) => !value);
+                        }}
+                    >
+                        <Layers className="h-3.5 w-3.5" aria-hidden="true" />
+                        Map options
+                    </Button>
+                    {onCollapse && (
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            className="min-h-10 px-2.5 text-xs"
+                            onClick={onCollapse}
+                            aria-label="Collapse fleet map"
+                        >
+                            <ChevronUp
+                                className="h-3.5 w-3.5"
+                                aria-hidden="true"
+                            />
+                            Collapse
+                        </Button>
+                    )}
                 </div>
             </div>
-            <div className="flex flex-wrap justify-end gap-2">
-                <Button
-                    variant="secondary"
-                    className="min-h-11 bg-surface px-3 text-xs"
-                    onClick={onFitAll}
-                    aria-label="Fit all locations on map"
-                >
-                    <Maximize2 className="h-4 w-4" aria-hidden="true" />
-                    Fit all units
-                </Button>
-                <Button
-                    variant="secondary"
-                    size="icon"
-                    className="h-11 w-11 bg-surface"
-                    aria-label={
-                        isFullscreen
-                            ? 'Exit fullscreen'
-                            : 'Expand map fullscreen'
-                    }
-                    title={
-                        isFullscreen ? 'Exit fullscreen' : 'Expand fullscreen'
-                    }
-                    onClick={onToggleFullscreen}
-                >
-                    {isFullscreen ? (
-                        <Minimize className="h-4 w-4" aria-hidden="true" />
-                    ) : (
-                        <Maximize className="h-4 w-4" aria-hidden="true" />
-                    )}
-                </Button>
-                <Button
-                    ref={triggerRef}
-                    variant="secondary"
-                    className="min-h-11 bg-surface px-3 text-xs"
-                    popoverTarget={menuId}
-                    onClick={() => {
-                        const rect =
-                            triggerRef.current?.getBoundingClientRect();
 
-                        if (rect) {
-                            setMenuPosition({
-                                left: Math.max(
-                                    8,
-                                    Math.min(
-                                        rect.right - 192,
-                                        window.innerWidth - 200,
-                                    ),
-                                ),
-                                top: Math.min(
-                                    rect.bottom + 8,
-                                    window.innerHeight - 228,
-                                ),
-                            });
-                        }
-                    }}
+            {showLocationList && (
+                <div
+                    className="flex w-full gap-1 rounded-lg bg-surface-subtle p-1 @lg:hidden"
+                    role="group"
+                    aria-label="Fleet map view"
                 >
-                    <Layers className="h-4 w-4" aria-hidden="true" />
-                    Map options
-                </Button>
+                    {(['map', 'list'] as const).map((view) => (
+                        <button
+                            key={view}
+                            type="button"
+                            aria-pressed={mobileView === view}
+                            onClick={() => onMobileViewChange(view)}
+                            className={cn(
+                                'min-h-9 flex-1 rounded-md px-3 text-xs font-semibold capitalize transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none',
+                                mobileView === view
+                                    ? 'bg-surface text-ink shadow-sm'
+                                    : 'text-ink-soft hover:text-ink',
+                            )}
+                        >
+                            {view}
+                        </button>
+                    ))}
+                </div>
+            )}
+
+            {isMenuOpen && (
                 <div
                     ref={menuRef}
                     id={menuId}
-                    popover="auto"
+                    role="menu"
                     aria-label="Map options"
-                    className="fixed m-0 w-48 rounded-lg border border-line bg-surface p-1 text-ink shadow-lg"
-                    style={{ inset: 'auto', ...menuPosition }}
+                    className="fixed z-50 m-0 w-48 rounded-lg border border-line bg-surface p-1 text-ink shadow-lg"
+                    style={menuPosition}
                 >
                     <p className="px-3 py-2 text-xs font-medium text-ink-soft">
                         Basemap
@@ -1755,10 +1999,12 @@ function CompactMapControls({
                         <button
                             key={variant}
                             type="button"
-                            aria-pressed={variant === styleVariant}
+                            role="menuitemradio"
+                            aria-checked={variant === styleVariant}
                             className="flex min-h-11 w-full items-center justify-between rounded-md px-3 text-left text-sm capitalize hover:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-brand-strong"
                             onClick={() => {
-                                menuRef.current?.hidePopover();
+                                setIsMenuOpen(false);
+                                triggerRef.current?.focus();
                                 onStyleVariantChange(variant);
                             }}
                         >
@@ -1768,23 +2014,22 @@ function CompactMapControls({
                             )}
                         </button>
                     ))}
-                    <button
-                        type="button"
-                        className="flex min-h-11 w-full items-center gap-2 rounded-md border-t border-line px-3 text-left text-sm hover:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-brand-strong"
-                        onClick={() => {
-                            menuRef.current?.hidePopover();
-                            onToggleFullscreen();
-                        }}
-                    >
-                        {isFullscreen ? (
-                            <Minimize className="h-4 w-4" aria-hidden="true" />
-                        ) : (
-                            <Maximize className="h-4 w-4" aria-hidden="true" />
-                        )}
-                        {isFullscreen ? 'Exit fullscreen' : 'Expand fullscreen'}
-                    </button>
+                    {onSectionChange && (
+                        <button
+                            type="button"
+                            role="menuitem"
+                            className="flex min-h-11 w-full items-center gap-2 rounded-md border-t border-line px-3 text-left text-sm hover:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-brand-strong"
+                            onClick={() => {
+                                setIsMenuOpen(false);
+                                triggerRef.current?.focus();
+                                onSectionChange('tracking');
+                            }}
+                        >
+                            Open operations tracking
+                        </button>
+                    )}
                 </div>
-            </div>
+            )}
         </div>
     );
 }
@@ -1822,10 +2067,6 @@ function MapLegend() {
             </span>
         </div>
     );
-}
-
-function hasMapCoordinates(location: LocationUpdateViewModel): boolean {
-    return location.latitude !== null && location.longitude !== null;
 }
 
 function toLngLat(location: LocationUpdateViewModel): LngLat {

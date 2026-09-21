@@ -327,7 +327,9 @@ describe('Phase 2 Lead Integration: LiveWorkspaceSection Screen Coordination', (
                 name: 'Heavy Crane CRN-501',
             }),
         ).toBeInTheDocument();
-        expect(screen.getByText(/GPS Live/i)).toBeInTheDocument();
+        expect(
+            screen.getAllByText(/Fresh location/i).length,
+        ).toBeGreaterThanOrEqual(1);
     });
 
     it('renders FleetSurface in map mode when section="tracking"', async () => {
@@ -357,9 +359,7 @@ describe('Phase 2 Lead Integration: LiveWorkspaceSection Screen Coordination', (
         expect(
             await screen.findByTestId('live-tracking-map'),
         ).toBeInTheDocument();
-        expect(
-            screen.getByText('Live Fleet Telematics & GIS Map'),
-        ).toBeInTheDocument();
+        expect(screen.getByText('Fleet map')).toBeInTheDocument();
         expect(
             screen.getByRole('heading', { level: 2, name: /CRN-701/ }),
         ).toBeInTheDocument();

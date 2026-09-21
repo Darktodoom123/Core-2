@@ -68,4 +68,95 @@ describe('LiveTrackingMap controlled selection', () => {
             'border-0',
         );
     });
+
+    it('separates stale state from report age in the synchronized list row', () => {
+        render(
+            <LiveTrackingMap
+                locations={[
+                    {
+                        ...location,
+                        freshness_status: 'stale',
+                        received_at: new Date().toISOString(),
+                    },
+                ]}
+            />,
+        );
+
+        const selectedRow = screen.getByRole('button', { pressed: true });
+
+        expect(selectedRow).toHaveTextContent('Last known location');
+        expect(selectedRow).toHaveTextContent(
+            'Reported Less than a minute ago',
+        );
+    });
+
+    it('keeps mobile Map/List controls and the shared asset search synchronized', () => {
+        const secondLocation: LocationUpdateViewModel = {
+            ...location,
+            id: 2,
+            asset: {
+                ...location.asset!,
+                id: 2,
+                code: 'TRK-202',
+                name: 'Transport truck',
+                kind: 'truck',
+            },
+            latitude: null,
+            longitude: null,
+            recorded_location: 'North Yard',
+            has_gps_report: false,
+        };
+
+        render(
+            <LiveTrackingMap
+                locations={[location, secondLocation]}
+                compact
+                showLocationList
+            />,
+        );
+
+        expect(
+            screen.getByRole('group', { name: 'Fleet map view' }),
+        ).toBeInTheDocument();
+
+        fireEvent.click(
+            screen.getByRole('button', { name: 'Hide asset list' }),
+        );
+        expect(
+            screen.getByRole('button', { name: 'Show asset list' }),
+        ).toHaveAttribute('aria-expanded', 'false');
+        fireEvent.click(
+            screen.getByRole('button', { name: 'Show asset list' }),
+        );
+
+        fireEvent.click(screen.getByRole('button', { name: /^list$/i }));
+
+        const search = screen.getByRole('searchbox', {
+            name: 'Search fleet map',
+        });
+        fireEvent.change(search, { target: { value: 'TRK-202' } });
+
+        expect(screen.getByText('TRK-202')).toBeInTheDocument();
+        expect(screen.queryByText('CRN-101')).not.toBeInTheDocument();
+        expect(screen.getAllByText('No GPS report').length).toBeGreaterThan(0);
+    });
+
+    it('exposes a keyboard-safe compact map settings menu', () => {
+        render(<LiveTrackingMap locations={[location]} compact />);
+
+        const trigger = screen.getByRole('button', { name: 'Map options' });
+        expect(trigger).toHaveAttribute('aria-expanded', 'false');
+
+        fireEvent.click(trigger);
+
+        const menu = screen.getByRole('menu', { name: 'Map options' });
+        expect(menu).toBeVisible();
+        expect(
+            screen.getByRole('menuitemradio', { name: 'light' }),
+        ).toHaveAttribute('aria-checked', 'true');
+
+        fireEvent.keyDown(document, { key: 'Escape' });
+        expect(menu).not.toBeInTheDocument();
+        expect(trigger).toHaveFocus();
+    });
 });

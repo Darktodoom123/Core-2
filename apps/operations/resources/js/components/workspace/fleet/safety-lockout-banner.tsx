@@ -76,6 +76,7 @@ export function SafetyLockoutBanner({
 
         form.post(`/operations/maintenance/${workOrderId}/release`, {
             preserveScroll: true,
+            preserveState: true,
             onSuccess: () => {
                 setShowClearModal(false);
                 form.reset();

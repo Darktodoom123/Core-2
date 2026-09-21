@@ -1,4 +1,4 @@
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, ChevronUp, RefreshCw } from 'lucide-react';
 import type { ErrorInfo, ReactNode } from 'react';
 import React, { Component } from 'react';
 import { Button } from '@/components/ui';
@@ -10,6 +10,8 @@ export interface MapErrorBoundaryProps {
     fallbackMessage?: string;
     compact?: boolean;
     onReset?: () => void;
+    onCollapse?: () => void;
+    fallbackRender?: (actions: { retry: () => void }) => ReactNode;
 }
 
 interface MapErrorBoundaryState {
@@ -47,7 +49,13 @@ export class MapErrorBoundary extends Component<
                 fallbackTitle = 'Live Map Unavailable',
                 fallbackMessage = 'Live map preview currently unavailable. GPS telemetry coordinates and meter data remain fully accessible.',
                 compact = false,
+                onCollapse,
+                fallbackRender,
             } = this.props;
+
+            if (fallbackRender) {
+                return fallbackRender({ retry: this.handleReset });
+            }
 
             return (
                 <div
@@ -56,7 +64,7 @@ export class MapErrorBoundary extends Component<
                     className={cn(
                         'flex flex-col items-center justify-center rounded-2xl border border-warning/40 bg-warning-soft/20 p-6 text-center',
                         compact
-                            ? 'h-[360px] md:h-[420px]'
+                            ? 'h-[520px] md:h-[640px]'
                             : 'h-[560px] lg:h-[620px]',
                     )}
                 >
@@ -79,6 +87,18 @@ export class MapErrorBoundary extends Component<
                             <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
                             Retry loading map
                         </Button>
+                        {onCollapse && (
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                onClick={onCollapse}
+                                aria-label="Collapse fleet map"
+                            >
+                                <ChevronUp className="mr-1.5 h-3.5 w-3.5" />
+                                Collapse map
+                            </Button>
+                        )}
                     </div>
                 </div>
             );

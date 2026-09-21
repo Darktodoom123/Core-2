@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
     FleetDetailPane,
+    FleetMapFailureFallback,
     FleetQueue,
     FleetSurface,
     FleetTelemetrySection,
@@ -99,16 +100,25 @@ vi.mock('@/components/live-tracking-map', () => ({
     LiveTrackingMap: ({
         locations,
         selectedLocationId,
+        onCollapse,
     }: {
         locations: LocationUpdateViewModel[];
         selectedLocationId?: number | null;
+        onCollapse?: () => void;
     }) => (
-        <div
-            data-testid="live-tracking-map"
-            data-selected-location-id={selectedLocationId ?? ''}
-        >
-            LiveTrackingMap Mock ({locations?.length ?? 0} markers)
-        </div>
+        <>
+            <div
+                data-testid="live-tracking-map"
+                data-selected-location-id={selectedLocationId ?? ''}
+            >
+                LiveTrackingMap Mock ({locations?.length ?? 0} markers)
+            </div>
+            {onCollapse && (
+                <button type="button" onClick={onCollapse}>
+                    Collapse fleet map
+                </button>
+            )}
+        </>
     ),
 }));
 
@@ -250,7 +260,6 @@ describe('FleetSurface & Modular Fleet Components', () => {
                     capabilities={createCapabilities()}
                 />,
             );
-
             // Calm Operate-mode title
             expect(
                 screen.getByRole('heading', {
@@ -271,21 +280,39 @@ describe('FleetSurface & Modular Fleet Components', () => {
                 screen.queryByText('Maintenance Holds'),
             ).not.toBeInTheDocument();
 
-            // Compact counted filter buttons are present instead
+            // Category filters are grouped behind a compact, labelled menu.
+            const categoryFilterTrigger = screen.getByRole('button', {
+                name: /filter assets: all assets/i,
+            });
+            expect(categoryFilterTrigger).toBeInTheDocument();
+            fireEvent.click(categoryFilterTrigger);
+            const categoryMenu = screen.getByRole('menu', {
+                name: 'Fleet asset category filters',
+            });
             expect(
-                screen.getByRole('button', { name: /all \(2\)/i }),
+                within(categoryMenu).getByRole('menuitemradio', {
+                    name: /all assets \(2\)/i,
+                }),
             ).toBeInTheDocument();
             expect(
-                screen.getByRole('button', { name: /cranes \(1\)/i }),
+                within(categoryMenu).getByRole('menuitemradio', {
+                    name: /cranes \(1\)/i,
+                }),
             ).toBeInTheDocument();
             expect(
-                screen.getByRole('button', { name: /transport \(1\)/i }),
+                within(categoryMenu).getByRole('menuitemradio', {
+                    name: /transport \(1\)/i,
+                }),
             ).toBeInTheDocument();
             expect(
-                screen.getByRole('button', { name: /ready \(2\)/i }),
+                within(categoryMenu).getByRole('menuitemradio', {
+                    name: /ready \(2\)/i,
+                }),
             ).toBeInTheDocument();
             expect(
-                screen.getByRole('button', { name: /holds \(0\)/i }),
+                within(categoryMenu).getByRole('menuitemradio', {
+                    name: /holds \(0\)/i,
+                }),
             ).toBeInTheDocument();
         });
 
@@ -307,11 +334,9 @@ describe('FleetSurface & Modular Fleet Components', () => {
                 />,
             );
 
-            // Live map is prominently rendered on top by default
-            expect(
-                screen.getByText('Live Fleet Telematics & GIS Map'),
-            ).toBeInTheDocument();
-            expect(screen.getByText('2 active GPS')).toBeInTheDocument();
+            // Fleet map is prominently rendered on top by default
+            expect(screen.getByText('Fleet map')).toBeInTheDocument();
+            expect(screen.getAllByText(/2 mapped/).length).toBeGreaterThan(0);
 
             // Both map and registry are simultaneously present
             expect(
@@ -341,11 +366,11 @@ describe('FleetSurface & Modular Fleet Components', () => {
                 }),
             ).toBeInTheDocument();
 
-            // Top map has collapsible toggle
-            const hideMapBtn = screen.getByRole('button', {
-                name: /hide map/i,
+            // Map toolbar has a collapsible toggle
+            const collapseMapBtn = screen.getByRole('button', {
+                name: /collapse fleet map/i,
             });
-            fireEvent.click(hideMapBtn);
+            fireEvent.click(collapseMapBtn);
             expect(
                 screen.queryByTestId('live-tracking-map'),
             ).not.toBeInTheDocument();
@@ -356,10 +381,33 @@ describe('FleetSurface & Modular Fleet Components', () => {
             fireEvent.click(showMapBtn);
             expect(screen.getByTestId('live-tracking-map')).toBeInTheDocument();
         });
+
+        it('explains when an available asset still needs an inspection before dispatch', () => {
+            const asset = createAsset(1, 'TRK-201', 'truck', 'available', {
+                is_dispatchable: false,
+                inspections: [],
+                latest_dvir: null,
+            });
+
+            render(
+                <FleetSurface
+                    assets={[asset]}
+                    locations={[]}
+                    capabilities={createCapabilities()}
+                />,
+            );
+
+            expect(
+                screen.getAllByText('Inspection required before dispatch'),
+            ).toHaveLength(2);
+            expect(
+                screen.queryByText('Non-dispatchable'),
+            ).not.toBeInTheDocument();
+        });
     });
 
-    describe('Strict Selection Invariant & Zero Zombie Panes', () => {
-        it('immediately re-binds selectedAsset when category filter excludes the current item', () => {
+    describe('Stable Selection Across Registry Filters', () => {
+        it('keeps the selected detail asset stable when a registry filter excludes it', () => {
             const assets = [
                 createAsset(1, 'CRN-001', 'crane', 'available'),
                 createAsset(2, 'TRK-002', 'truck', 'available'),
@@ -382,25 +430,31 @@ describe('FleetSurface & Modular Fleet Components', () => {
             ).toBeInTheDocument();
 
             // Filter to "Transport" (excludes CRN-001)
-            const transportFilterBtn = screen.getByRole('button', {
-                name: /transport/i,
-            });
-            fireEvent.click(transportFilterBtn);
-
-            // CRN-001 detail MUST NOT be retained (no zombie pane)
-            expect(
-                screen.queryByRole('heading', {
-                    level: 2,
-                    name: 'Asset CRN-001',
+            fireEvent.click(
+                screen.getByRole('button', {
+                    name: /filter assets: all assets/i,
                 }),
-            ).not.toBeInTheDocument();
+            );
+            fireEvent.click(
+                screen.getByRole('menuitemradio', {
+                    name: /transport \(1\)/i,
+                }),
+            );
 
-            // It MUST immediately display TRK-002
+            // The detail pane remains anchored to the selected asset while the
+            // registry list narrows.
             expect(
                 screen.getByRole('heading', {
                     level: 2,
-                    name: 'Asset TRK-002',
+                    name: 'Asset CRN-001',
                 }),
+            ).toBeInTheDocument();
+
+            // The filtered registry still displays TRK-002.
+            expect(
+                within(
+                    screen.getByRole('list', { name: 'Fleet assets' }),
+                ).getByText('TRK-002'),
             ).toBeInTheDocument();
         });
 
@@ -428,8 +482,14 @@ describe('FleetSurface & Modular Fleet Components', () => {
             // Queue shows empty state with Clear filters action
             expect(screen.getByText('No matching assets')).toBeInTheDocument();
 
-            // Detail pane renders empty state (zero zombie selection)
-            expect(screen.getByText('Select an asset')).toBeInTheDocument();
+            // Detail pane keeps the selected asset rather than silently
+            // switching to another record.
+            expect(
+                screen.getByRole('heading', {
+                    level: 2,
+                    name: 'Asset CRN-001',
+                }),
+            ).toBeInTheDocument();
 
             // Clicking Clear filters restores view
             const clearBtn = screen.getByRole('button', {
@@ -447,7 +507,7 @@ describe('FleetSurface & Modular Fleet Components', () => {
     });
 
     describe('Truthful GPS Freshness & Telemetry Truth', () => {
-        it('renders distinct badges for fresh, delayed, stale, and offline locations', () => {
+        it('separates operational status from truthful location freshness', () => {
             const assets = [
                 createAsset(1, 'CRN-001', 'crane'),
                 createAsset(2, 'TRK-002', 'truck'),
@@ -473,13 +533,17 @@ describe('FleetSurface & Modular Fleet Components', () => {
                 />,
             );
 
-            // Check queue rows for distinct freshness strings
+            // Fresh positions are distinct from retained/non-current positions;
+            // stale data is never presented as live GPS.
             expect(
-                screen.getByText(/GPS Live \(30 km\/h\)/i),
+                screen.getByText(/Fresh location \(30 km\/h\)/i),
             ).toBeInTheDocument();
-            expect(screen.getByText('GPS Delayed')).toBeInTheDocument();
-            expect(screen.getByText('Last Known (Stale)')).toBeInTheDocument();
-            expect(screen.getByText('Telemetry Offline')).toBeInTheDocument();
+            expect(
+                screen.getAllByText('Last known location').length,
+            ).toBeGreaterThanOrEqual(3);
+            expect(
+                screen.queryByText(/GPS Live|GPS Delayed|Telemetry Offline/i),
+            ).not.toBeInTheDocument();
 
             // Asset 5 with null coordinates: "Location not recorded" (never "Base Yard")
             expect(
@@ -575,9 +639,9 @@ describe('FleetSurface & Modular Fleet Components', () => {
             );
 
             // In queue: blocker visible
-            expect(
-                screen.getByText('1 blocking work order'),
-            ).toBeInTheDocument();
+            expect(screen.getAllByText('1 blocking work order')).toHaveLength(
+                2,
+            );
 
             // Lockout reason visible in both queue row badge and detail pane banner
             const lockoutReasons = screen.getAllByText(
@@ -590,8 +654,8 @@ describe('FleetSurface & Modular Fleet Components', () => {
                 screen.getByText('DISPATCH SAFETY LOCKOUT ACTIVE'),
             ).toBeInTheDocument();
             expect(
-                screen.getByText('Safety hold / Non-dispatchable'),
-            ).toBeInTheDocument();
+                screen.queryByText(/Safety hold.*Non-dispatchable/),
+            ).not.toBeInTheDocument();
         });
 
         it('opens safety lockdown modal and enforces mandatory reason', () => {
@@ -640,6 +704,42 @@ describe('FleetSurface & Modular Fleet Components', () => {
     });
 
     describe('Map Resiliency & Error Boundary', () => {
+        it('keeps the synchronized location list actionable when the map fails', () => {
+            const onSelectedLocationChange = vi.fn();
+
+            render(
+                <FleetMapFailureFallback
+                    locations={[createLocation(1, 'stale')]}
+                    selectedLocationId={null}
+                    onSelectedLocationChange={onSelectedLocationChange}
+                    onRetry={vi.fn()}
+                    compact
+                />,
+            );
+
+            expect(screen.getByRole('alert')).toHaveTextContent(
+                'Map unavailable',
+            );
+            const locationList = screen.getByRole('complementary', {
+                name: 'Synchronized mapped location list',
+            });
+            expect(
+                within(locationList).getByRole('heading', {
+                    name: 'Asset locations',
+                }),
+            ).toBeInTheDocument();
+            expect(
+                within(locationList).getByText(/Last known location/),
+            ).toBeInTheDocument();
+
+            fireEvent.click(
+                within(locationList).getByRole('button', {
+                    name: /asset-1/i,
+                }),
+            );
+            expect(onSelectedLocationChange).toHaveBeenCalledWith(501);
+        });
+
         it('catches map rendering failure without crashing the surrounding interface', () => {
             // A faulty map component that throws an error
             const FaultyMap = () => {
@@ -681,6 +781,7 @@ describe('FleetSurface & Modular Fleet Components', () => {
 
         it('supports retry via onReset callback', () => {
             const onResetMock = vi.fn();
+            const onCollapseMock = vi.fn();
             let shouldThrow = true;
             const FlakyMap = () => {
                 if (shouldThrow) {
@@ -695,7 +796,10 @@ describe('FleetSurface & Modular Fleet Components', () => {
                 .mockImplementation(() => {});
 
             render(
-                <MapErrorBoundary onReset={onResetMock}>
+                <MapErrorBoundary
+                    onReset={onResetMock}
+                    onCollapse={onCollapseMock}
+                >
                     <FlakyMap />
                 </MapErrorBoundary>,
             );
@@ -703,6 +807,11 @@ describe('FleetSurface & Modular Fleet Components', () => {
             expect(
                 screen.getByText('Live Map Unavailable'),
             ).toBeInTheDocument();
+
+            fireEvent.click(
+                screen.getByRole('button', { name: /collapse fleet map/i }),
+            );
+            expect(onCollapseMock).toHaveBeenCalledTimes(1);
 
             shouldThrow = false;
             const retryBtn = screen.getByRole('button', {
@@ -718,6 +827,36 @@ describe('FleetSurface & Modular Fleet Components', () => {
     });
 
     describe('Inspections, Maintenance & Status Transitions in Detail Pane', () => {
+        it('supports arrow-key selection across detail tabs', () => {
+            const asset = createAsset(1, 'CRN-001', 'crane');
+
+            render(
+                <FleetDetailPane
+                    asset={asset}
+                    capabilities={createCapabilities()}
+                />,
+            );
+
+            const overviewTab = screen.getByRole('tab', {
+                name: /overview & specs/i,
+            });
+            const statusTab = screen.getByRole('tab', {
+                name: /readiness & status/i,
+            });
+
+            overviewTab.focus();
+            fireEvent.keyDown(overviewTab, { key: 'ArrowRight' });
+
+            expect(statusTab).toHaveAttribute('aria-selected', 'true');
+            expect(document.activeElement).toBe(statusTab);
+
+            fireEvent.keyDown(statusTab, { key: 'End' });
+
+            expect(
+                screen.getByRole('tab', { name: /permits & docs/i }),
+            ).toHaveAttribute('aria-selected', 'true');
+        });
+
         it('allows recording a new safety inspection', () => {
             const asset = createAsset(1, 'CRN-001', 'crane');
 
@@ -738,9 +877,9 @@ describe('FleetSurface & Modular Fleet Components', () => {
                 screen.getByText('No inspections recorded for this asset yet.'),
             ).toBeInTheDocument();
 
-            // Click Record new inspection
+            // Click Record workshop inspection
             const openFormBtn = screen.getByRole('button', {
-                name: /record new inspection/i,
+                name: /record workshop inspection/i,
             });
             fireEvent.click(openFormBtn);
 
@@ -1145,61 +1284,91 @@ describe('FleetSurface & Modular Fleet Components', () => {
                     capabilities={createCapabilities()}
                 />,
             );
+            const fleetList = () =>
+                screen.getByRole('list', { name: 'Fleet assets' });
 
-            // Triage bar renders with accurate counts
+            // Compact registry filter renders with the accurate unique-asset count
             expect(
-                screen.getByRole('button', { name: /lockouts \(1\)/i }),
+                screen.getByRole('button', {
+                    name: /needs attention \(4\)/i,
+                }),
             ).toBeInTheDocument();
-            expect(
-                screen.getByRole('button', { name: /blocking orders \(1\)/i }),
-            ).toBeInTheDocument();
-            expect(
-                screen.getByRole('button', { name: /dvir defects \(1\)/i }),
-            ).toBeInTheDocument();
-            expect(
-                screen.getByRole('button', { name: /stale gps \(1\)/i }),
-            ).toBeInTheDocument();
+
+            const openTriageMenu = () => {
+                const trigger = screen.getByRole('button', {
+                    name: /needs attention \(4\)/i,
+                });
+
+                if (trigger.getAttribute('aria-expanded') !== 'true') {
+                    fireEvent.click(trigger);
+                }
+            };
 
             // 1. Filter by Lockouts
+            openTriageMenu();
             fireEvent.click(
-                screen.getByRole('button', { name: /lockouts \(1\)/i }),
+                screen.getByRole('menuitemcheckbox', {
+                    name: /lockouts \(1\)/i,
+                }),
             );
             expect(
                 screen.getAllByText('CRN-002').length,
             ).toBeGreaterThanOrEqual(1);
-            expect(screen.queryByText('CRN-001')).not.toBeInTheDocument();
-            expect(screen.queryByText('TRK-003')).not.toBeInTheDocument();
+            expect(
+                within(fleetList()).queryByText('CRN-001'),
+            ).not.toBeInTheDocument();
+            expect(
+                within(fleetList()).queryByText('TRK-003'),
+            ).not.toBeInTheDocument();
 
             // 2. Filter by Blocking Orders
+            openTriageMenu();
             fireEvent.click(
-                screen.getByRole('button', { name: /blocking orders \(1\)/i }),
+                screen.getByRole('menuitemcheckbox', {
+                    name: /blocking orders \(1\)/i,
+                }),
             );
             expect(
                 screen.getAllByText('TRK-003').length,
             ).toBeGreaterThanOrEqual(1);
-            expect(screen.queryByText('CRN-001')).not.toBeInTheDocument();
+            expect(
+                within(fleetList()).queryByText('CRN-001'),
+            ).not.toBeInTheDocument();
 
             // 3. Filter by DVIR Defects
+            openTriageMenu();
             fireEvent.click(
-                screen.getByRole('button', { name: /dvir defects \(1\)/i }),
+                screen.getByRole('menuitemcheckbox', {
+                    name: /dvir defects \(1\)/i,
+                }),
             );
             expect(
                 screen.getAllByText('TRK-004').length,
             ).toBeGreaterThanOrEqual(1);
-            expect(screen.queryByText('CRN-001')).not.toBeInTheDocument();
+            expect(
+                within(fleetList()).queryByText('CRN-001'),
+            ).not.toBeInTheDocument();
 
             // 4. Filter by Stale GPS
+            openTriageMenu();
             fireEvent.click(
-                screen.getByRole('button', { name: /stale gps \(1\)/i }),
+                screen.getByRole('menuitemcheckbox', {
+                    name: /stale gps \(1\)/i,
+                }),
             );
             expect(
                 screen.getAllByText('TRK-005').length,
             ).toBeGreaterThanOrEqual(1);
-            expect(screen.queryByText('CRN-001')).not.toBeInTheDocument();
+            expect(
+                within(fleetList()).queryByText('CRN-001'),
+            ).not.toBeInTheDocument();
 
-            // Reset triage via Reset triage button
+            // Clear the active triage filter from the compact menu
+            openTriageMenu();
             fireEvent.click(
-                screen.getByRole('button', { name: /reset triage/i }),
+                screen.getByRole('menuitem', {
+                    name: /clear exception filter/i,
+                }),
             );
             expect(
                 screen.getAllByText('CRN-001').length,
@@ -1263,6 +1432,16 @@ describe('FleetSurface & Modular Fleet Components', () => {
                 name: /asset quick actions/i,
             });
             expect(toolbar).toBeInTheDocument();
+
+            // Asset actions belong to the selected-asset header, not tab content.
+            const detailContent = screen.getByRole('region', {
+                name: 'Asset detail content',
+            });
+            expect(
+                within(detailContent).queryByRole('toolbar', {
+                    name: /asset quick actions/i,
+                }),
+            ).not.toBeInTheDocument();
 
             // Quick action: Track on Map
             const trackBtn = screen.getByRole('button', {
@@ -1428,12 +1607,23 @@ describe('FleetSurface & Modular Fleet Components', () => {
                     capabilities={createCapabilities()}
                 />,
             );
+            const fleetList = () =>
+                screen.getByRole('list', { name: 'Fleet assets' });
 
             // 1. Activate blocking_orders triage filter -> excludes CRN-001
             fireEvent.click(
-                screen.getByRole('button', { name: /blocking orders \(2\)/i }),
+                screen.getByRole('button', {
+                    name: /needs attention \(2\)/i,
+                }),
             );
-            expect(screen.queryByText('CRN-001')).not.toBeInTheDocument();
+            fireEvent.click(
+                screen.getByRole('menuitemcheckbox', {
+                    name: /blocking orders \(2\)/i,
+                }),
+            );
+            expect(
+                within(fleetList()).queryByText('CRN-001'),
+            ).not.toBeInTheDocument();
             expect(
                 screen.getAllByText('CRN-002').length,
             ).toBeGreaterThanOrEqual(1);
@@ -1442,8 +1632,19 @@ describe('FleetSurface & Modular Fleet Components', () => {
             ).toBeGreaterThanOrEqual(1);
 
             // 2. Further filter to "Transport" category -> excludes CRN-002
-            fireEvent.click(screen.getByRole('button', { name: /transport/i }));
-            expect(screen.queryByText('CRN-002')).not.toBeInTheDocument();
+            fireEvent.click(
+                screen.getByRole('button', {
+                    name: /filter assets: all assets/i,
+                }),
+            );
+            fireEvent.click(
+                screen.getByRole('menuitemradio', {
+                    name: /transport \(1\)/i,
+                }),
+            );
+            expect(
+                within(fleetList()).queryByText('CRN-002'),
+            ).not.toBeInTheDocument();
             expect(
                 screen.getAllByText('TRK-003').length,
             ).toBeGreaterThanOrEqual(1);
@@ -1456,7 +1657,12 @@ describe('FleetSurface & Modular Fleet Components', () => {
                 target: { value: 'nonexistent-unit' },
             });
             expect(screen.getByText('No matching assets')).toBeInTheDocument();
-            expect(screen.getByText('Select an asset')).toBeInTheDocument();
+            expect(
+                screen.getByRole('heading', {
+                    level: 2,
+                    name: 'Asset CRN-001',
+                }),
+            ).toBeInTheDocument();
 
             // 4. Clear filters button restores everything
             fireEvent.click(
@@ -1597,8 +1803,16 @@ describe('FleetSurface & Modular Fleet Components', () => {
                 />,
             );
 
+            const needsAttention = screen.getByRole('button', {
+                name: /needs attention \(1\)/i,
+            });
+            expect(needsAttention).toBeInTheDocument();
+
+            fireEvent.click(needsAttention);
             expect(
-                screen.getByRole('button', { name: /stale gps \(1\)/i }),
+                screen.getByRole('menuitemcheckbox', {
+                    name: /stale gps \(1\)/i,
+                }),
             ).toBeInTheDocument();
         });
     });

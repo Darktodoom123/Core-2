@@ -54,31 +54,12 @@ export function FleetQuickActionToolbar({
     return (
         <div
             className={cn(
-                'flex flex-wrap items-center gap-2 rounded-xl border border-line bg-surface-subtle/50 p-2.5',
+                'flex flex-wrap items-center justify-start gap-2',
                 className,
             )}
             role="toolbar"
             aria-label="Asset quick actions"
         >
-            <span className="text-xs font-semibold text-ink-soft select-none">
-                Quick Actions:
-            </span>
-
-            {/* Emergency Safety Recall Lockdown */}
-            {canLockdown && (
-                <Button
-                    ref={lockdownTriggerRef}
-                    size="sm"
-                    variant="danger"
-                    onClick={onOpenLockdown}
-                    title="Place asset under emergency safety recall lockdown"
-                    className="shrink-0"
-                >
-                    <ShieldAlert className="h-3.5 w-3.5" />
-                    Safety Lockdown
-                </Button>
-            )}
-
             {/* Live GIS Map View */}
             {canTrack && (
                 <Button
@@ -114,6 +95,21 @@ export function FleetQuickActionToolbar({
                     ) : (
                         'Walkaround Photos'
                     )}
+                </Button>
+            )}
+
+            {/* Emergency Safety Recall Lockdown */}
+            {canLockdown && (
+                <Button
+                    ref={lockdownTriggerRef}
+                    size="sm"
+                    variant="danger"
+                    onClick={onOpenLockdown}
+                    title="Place asset under emergency safety recall lockdown"
+                    className="shrink-0 lg:ml-1"
+                >
+                    <ShieldAlert className="h-3.5 w-3.5" />
+                    Safety Lockdown
                 </Button>
             )}
         </div>

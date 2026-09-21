@@ -108,6 +108,7 @@ export function FleetDocumentsSection({
         e.preventDefault();
         form.post(`/operations/assets/${asset.id}/documents`, {
             preserveScroll: true,
+            preserveState: true,
             forceFormData: true,
             onSuccess: () => {
                 setShowUploadForm(false);
@@ -141,6 +142,7 @@ export function FleetDocumentsSection({
             `/operations/assets/${asset.id}/documents/${editingDoc.id}`,
             {
                 preserveScroll: true,
+                preserveState: true,
                 onSuccess: () => {
                     setEditingDoc(null);
                     editForm.reset();
@@ -169,6 +171,7 @@ export function FleetDocumentsSection({
             `/operations/assets/${asset.id}/documents/${replacingDoc.id}/replace`,
             {
                 preserveScroll: true,
+                preserveState: true,
                 forceFormData: true,
                 onSuccess: () => {
                     setReplacingDoc(null);
@@ -189,6 +192,7 @@ export function FleetDocumentsSection({
 
         router.delete(`/operations/assets/${asset.id}/documents/${docId}`, {
             preserveScroll: true,
+            preserveState: true,
         });
     };
 
@@ -196,34 +200,34 @@ export function FleetDocumentsSection({
         switch (doc.validity_status) {
             case 'valid':
                 return (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2.5 py-0.5 text-xs font-semibold text-success-strong">
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-success-strong">
                         <ShieldCheck className="h-3.5 w-3.5" />
                         Valid
                     </span>
                 );
             case 'expiring_soon':
                 return (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-warning/30 bg-warning-soft px-2.5 py-0.5 text-xs font-semibold text-warning-strong">
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-warning-strong">
                         <AlertTriangle className="h-3.5 w-3.5" />
                         Expiring soon
                     </span>
                 );
             case 'expired':
                 return (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-danger-soft px-2.5 py-0.5 text-xs font-semibold text-danger">
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-danger">
                         <ShieldAlert className="h-3.5 w-3.5" />
                         Expired
                     </span>
                 );
             case 'revoked':
                 return (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-danger-soft px-2.5 py-0.5 text-xs font-semibold text-danger">
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-danger">
                         Revoked
                     </span>
                 );
             case 'superseded':
                 return (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-line bg-surface-subtle px-2.5 py-0.5 text-xs font-medium text-ink-soft">
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-ink-soft">
                         Superseded
                     </span>
                 );
@@ -231,7 +235,7 @@ export function FleetDocumentsSection({
             case 'permanent':
             default:
                 return (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-line bg-surface-subtle px-2.5 py-0.5 text-xs font-medium text-ink-soft">
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-ink-soft">
                         No expiration date
                     </span>
                 );
@@ -239,13 +243,13 @@ export function FleetDocumentsSection({
     };
 
     return (
-        <div className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="space-y-5">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line pb-4">
                 <div>
                     <h3 className="text-sm font-semibold text-ink">
-                        Asset Permits &amp; Regulatory Compliance Documents
+                        Permits &amp; documents
                     </h3>
-                    <p className="text-xs text-ink-soft">
+                    <p className="mt-1 max-w-2xl text-sm text-ink-soft">
                         Authorized certificates, road transit clearances, and
                         proof of insurance for {asset.code}.
                     </p>
@@ -274,9 +278,9 @@ export function FleetDocumentsSection({
             {showUploadForm && (
                 <form
                     onSubmit={submitUpload}
-                    className="space-y-3 rounded-xl border border-brand/20 bg-brand-soft/20 p-4"
+                    className="space-y-4 border-y border-line py-4"
                 >
-                    <h4 className="text-xs font-bold tracking-wider text-brand-strong uppercase">
+                    <h4 className="text-sm font-semibold text-ink">
                         Upload Authorized Permit / Certificate
                     </h4>
 
@@ -458,7 +462,7 @@ export function FleetDocumentsSection({
 
             {/* Documents List */}
             {documents.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-line p-8 text-center">
+                <div className="border-y border-dashed border-line py-10 text-center">
                     <FileText className="mx-auto h-8 w-8 text-ink-soft/40" />
                     <h4 className="mt-2 text-sm font-semibold text-ink">
                         No documents on record
@@ -469,11 +473,11 @@ export function FleetDocumentsSection({
                     </p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div className="divide-y divide-line border-y border-line">
                     {documents.map((doc) => (
                         <div
                             key={doc.id}
-                            className="flex flex-col justify-between rounded-xl border border-line bg-surface p-4 shadow-xs transition-colors hover:border-brand/30"
+                            className="flex flex-col justify-between py-4 transition-colors hover:bg-surface-subtle/40"
                         >
                             <div>
                                 <div className="flex items-start justify-between gap-2">
@@ -494,7 +498,7 @@ export function FleetDocumentsSection({
                                             <button
                                                 type="button"
                                                 onClick={() => openReplace(doc)}
-                                                className="rounded-md p-1 text-ink-soft transition-colors hover:bg-surface-subtle hover:text-brand"
+                                                className="min-h-9 min-w-9 rounded-md p-2 text-ink-soft transition-colors hover:bg-surface-subtle hover:text-brand"
                                                 title="Replace Document File"
                                                 aria-label={`Replace file for ${doc.title}`}
                                             >
@@ -503,7 +507,7 @@ export function FleetDocumentsSection({
                                             <button
                                                 type="button"
                                                 onClick={() => openEdit(doc)}
-                                                className="rounded-md p-1 text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink"
+                                                className="min-h-9 min-w-9 rounded-md p-2 text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink"
                                                 title="Edit Document Metadata"
                                                 aria-label={`Edit metadata for ${doc.title}`}
                                             >
@@ -514,7 +518,7 @@ export function FleetDocumentsSection({
                                                 onClick={() =>
                                                     handleDelete(doc.id)
                                                 }
-                                                className="rounded-md p-1 text-ink-soft transition-colors hover:bg-surface-subtle hover:text-danger"
+                                                className="min-h-9 min-w-9 rounded-md p-2 text-ink-soft transition-colors hover:bg-surface-subtle hover:text-danger"
                                                 title="Delete Document"
                                                 aria-label={`Delete ${doc.title}`}
                                             >
@@ -573,7 +577,7 @@ export function FleetDocumentsSection({
                                 </dl>
 
                                 {doc.notes && (
-                                    <p className="mt-2 rounded-lg border border-line/60 bg-surface-subtle p-2 text-xs text-ink-soft">
+                                    <p className="mt-2 border-l-2 border-line pl-3 text-sm text-ink-soft">
                                         {doc.notes}
                                     </p>
                                 )}

@@ -1,3 +1,4 @@
+import { getFleetLocationFreshnessLabel } from '@/components/workspace/fleet/fleet-location-labels';
 import {
     getAssetKind,
     getAssetKindLabel,
@@ -72,13 +73,7 @@ export function createTrackingLocationPopup(
     incident?: SosIncidentViewModel,
     onCopyCoordinates?: (button: HTMLButtonElement) => void,
 ): HTMLDivElement {
-    const freshnessText =
-        location.freshness_label ??
-        (location.freshness_status === 'fresh'
-            ? 'Fresh'
-            : location.has_gps_report === false
-              ? 'No GPS report'
-              : 'Location not current');
+    const freshnessText = getFleetLocationFreshnessLabel(location);
     const kind = getAssetKind(location);
 
     const card = createPopupCard({
@@ -113,7 +108,10 @@ export function createTrackingLocationPopup(
             { label: 'Equipment type', value: getAssetKindLabel(kind) },
             {
                 label: 'Operational status',
-                value: location.asset?.status_label ?? 'Available',
+                value:
+                    location.asset?.status_label ??
+                    location.asset?.status ??
+                    'Operational status unavailable',
             },
             {
                 label: 'Assignment',

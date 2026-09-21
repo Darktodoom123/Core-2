@@ -2,6 +2,10 @@ import { Compass, MapPin, Navigation } from 'lucide-react';
 import React, { lazy, Suspense } from 'react';
 import { Button } from '@/components/ui';
 import { WeatherSafetyTelemetry } from '@/components/weather/weather-safety-telemetry';
+import {
+    getFleetLocationFreshnessLabel,
+    hasLocationCoordinates,
+} from '@/components/workspace/fleet/fleet-location-labels';
 import { MapErrorBoundary } from '@/components/workspace/fleet/map-error-boundary';
 import { formatDateTime, humanize } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
@@ -26,14 +30,14 @@ export function AssetMapLoadingFallback({
         <div
             className={cn(
                 'flex items-center justify-center rounded-2xl border border-line bg-surface-subtle p-6 text-center',
-                compact ? 'h-[360px] md:h-[420px]' : 'h-[560px] lg:h-[620px]',
+                compact ? 'h-[520px] md:h-[640px]' : 'h-[560px] lg:h-[620px]',
             )}
             role="status"
             aria-live="polite"
             aria-busy="true"
-            aria-label="Loading live location map"
+            aria-label="Loading asset location map"
         >
-            <p className="text-sm text-ink-soft">Loading live location map…</p>
+            <p className="text-sm text-ink-soft">Loading asset location map…</p>
         </div>
     );
 }
@@ -51,8 +55,7 @@ export function FleetTelemetrySection({
     activeSosIncidents = [],
     onViewFullTracking,
 }: FleetTelemetrySectionProps) {
-    const hasGps =
-        location && location.latitude !== null && location.longitude !== null;
+    const hasGps = location && hasLocationCoordinates(location);
 
     if (!hasGps) {
         return (
@@ -62,11 +65,11 @@ export function FleetTelemetrySection({
                         <MapPin className="h-6 w-6" aria-hidden="true" />
                     </div>
                     <h3 className="mt-3 text-base font-semibold text-ink">
-                        No Active Live GPS Stream
+                        No current location report
                     </h3>
                     <p className="mx-auto mt-1 max-w-md text-sm text-ink-soft">
-                        This vehicle is not currently broadcasting live GPS
-                        coordinates. Its registered yard or depot location is:
+                        This asset has no current GPS coordinates. Its recorded
+                        yard or depot location is:
                     </p>
                     <div className="mt-3 inline-flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-1.5 text-sm font-medium text-ink">
                         <Navigation className="h-4 w-4 text-brand-strong" />
@@ -76,9 +79,8 @@ export function FleetTelemetrySection({
                         </span>
                     </div>
                     <p className="mx-auto mt-4 max-w-lg text-xs text-ink-soft">
-                        Real-time GPS telemetry streams automatically when an
-                        operator or driver starts an active dispatch assignment
-                        with this unit using the field mobile app.
+                        A recorded location is not a live position. Review the
+                        last known report in the fleet map when available.
                     </p>
                     {onViewFullTracking && (
                         <div className="mt-5 flex justify-center">
@@ -150,7 +152,7 @@ export function FleetTelemetrySection({
                             )}
                         />
                         <span className="capitalize">
-                            {humanize(location.freshness_status)}
+                            {getFleetLocationFreshnessLabel(location)}
                         </span>
                     </dd>
                 </div>
@@ -199,7 +201,7 @@ export function FleetTelemetrySection({
             <div className="space-y-2">
                 <div className="flex items-center justify-between">
                     <h4 className="text-xs font-semibold text-ink">
-                        Live map position
+                        Map position
                     </h4>
                     {location.accuracy_metres !== null && (
                         <span className="text-xs text-ink-soft">
@@ -234,7 +236,7 @@ export function FleetTelemetrySection({
                 variant="site"
                 latitude={location.latitude}
                 longitude={location.longitude}
-                locationLabel={`${asset.code} Current Telemetry Location`}
+                locationLabel={`${asset.code} Reported Location`}
                 className="mt-3"
             />
 

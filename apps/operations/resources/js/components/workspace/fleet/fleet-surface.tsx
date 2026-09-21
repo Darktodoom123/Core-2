@@ -5,7 +5,6 @@ import { FleetDetailPane } from '@/components/workspace/fleet/fleet-detail-pane'
 import { FleetMapView } from '@/components/workspace/fleet/fleet-map-view';
 import type { FleetCategoryFilter } from '@/components/workspace/fleet/fleet-queue';
 import { FleetQueue } from '@/components/workspace/fleet/fleet-queue';
-import { FleetTriageBar } from '@/components/workspace/fleet/fleet-triage-bar';
 import type { FleetTriageException } from '@/components/workspace/fleet/fleet-triage-bar';
 import { cn } from '@/lib/utils';
 import type {
@@ -101,6 +100,7 @@ export function FleetSurface({
     }, [assets]);
 
     const triageCounts = useMemo(() => {
+        let needs_attention = 0;
         let lockouts = 0;
         let blocking_orders = 0;
         let dvir_defects = 0;
@@ -133,9 +133,23 @@ export function FleetSurface({
             if (isStale) {
                 stale_gps += 1;
             }
+
+            if (
+                asset.lockout?.is_locked_out ||
+                asset.blocking_work_orders_count > 0 ||
+                (asset.latest_dvir &&
+                    (asset.latest_dvir.has_defects ||
+                        asset.latest_dvir.critical_defects_count > 0 ||
+                        asset.latest_dvir.status === 'critical_defect' ||
+                        asset.latest_dvir.status === 'defect_flagged')) ||
+                isStale
+            ) {
+                needs_attention += 1;
+            }
         }
 
         return {
+            needs_attention,
             lockouts,
             blocking_orders,
             dvir_defects,
@@ -226,17 +240,15 @@ export function FleetSurface({
         });
     }, [assets, categoryFilter, searchQuery, triageFilter, locations]);
 
-    // Strict selection invariant: selected asset is strictly derived from filteredAssets
+    // Keep the selected asset stable while registry filters change. Map selection
+    // is authoritative; filtering must not silently move the detail pane.
     const selectedAsset = useMemo(() => {
-        if (filteredAssets.length === 0) {
-            return null;
+        if (selectedAssetId !== null) {
+            return assets.find((asset) => asset.id === selectedAssetId) ?? null;
         }
 
-        return (
-            filteredAssets.find((a) => a.id === selectedAssetId) ??
-            filteredAssets[0]
-        );
-    }, [filteredAssets, selectedAssetId]);
+        return filteredAssets[0] ?? assets[0] ?? null;
+    }, [assets, filteredAssets, selectedAssetId]);
 
     const selectedAssetLocation = useMemo(
         () =>
@@ -279,7 +291,7 @@ export function FleetSurface({
         <div>
             <PageHeading
                 title="Fleet Management"
-                description="Core 3 assets, live GPS telematics, readiness status, specifications, safety inspections, and maintenance work orders."
+                description="Core 3 assets, GPS location updates and freshness, readiness status, specifications, safety inspections, and maintenance work orders."
             />
             <div className="space-y-6 p-4 md:p-6">
                 {/* Live Fleet GIS Map prominently positioned on top */}
@@ -292,13 +304,6 @@ export function FleetSurface({
                     compact={true}
                     showLocationList={true}
                     collapsible={true}
-                />
-
-                {/* 1-Click Exception Triage Bar */}
-                <FleetTriageBar
-                    activeFilter={triageFilter}
-                    onFilterChange={setTriageFilter}
-                    counts={triageCounts}
                 />
 
                 {assetsTotal !== undefined && assetsTotal > assets.length && (
@@ -325,11 +330,11 @@ export function FleetSurface({
                         />
                     </Panel>
                 ) : (
-                    <div className="grid gap-6 lg:grid-cols-12">
+                    <div className="grid scroll-mt-24 gap-6 lg:h-[calc(100dvh-7rem)] lg:min-h-96 lg:grid-cols-12">
                         {/* Queue Column */}
                         <div
                             className={cn(
-                                'lg:col-span-5 xl:col-span-4',
+                                'min-h-0 min-w-0 lg:col-span-5 xl:col-span-4',
                                 isMobileDetailOpen && 'hidden lg:block',
                             )}
                         >
@@ -344,13 +349,16 @@ export function FleetSurface({
                                 onCategoryFilterChange={setCategoryFilter}
                                 counts={counts}
                                 onClearFilters={handleClearFilters}
+                                triageFilter={triageFilter}
+                                onTriageFilterChange={setTriageFilter}
+                                triageCounts={triageCounts}
                             />
                         </div>
 
                         {/* Detail Column */}
                         <div
                             className={cn(
-                                'lg:col-span-7 xl:col-span-8',
+                                'min-h-0 min-w-0 lg:col-span-7 xl:col-span-8',
                                 !isMobileDetailOpen && 'hidden lg:block',
                             )}
                         >

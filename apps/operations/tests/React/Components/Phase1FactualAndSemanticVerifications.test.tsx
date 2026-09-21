@@ -39,7 +39,10 @@ vi.mock('@inertiajs/react', () => {
                     if (typeof keyOrFn === 'function') {
                         setDataState(keyOrFn);
                     } else if (typeof keyOrFn === 'string') {
-                        setDataState((prev: any) => ({ ...prev, [keyOrFn]: val }));
+                        setDataState((prev: any) => ({
+                            ...prev,
+                            [keyOrFn]: val,
+                        }));
                     } else {
                         setDataState(keyOrFn);
                     }
@@ -182,7 +185,12 @@ function createLocation(
         id: 500 + assetId,
         user: { id: 10 + assetId, name: `Driver ${assetId}` },
         job: null,
-        asset: { id: assetId, code: `CRN-${assetId}`, name: `Asset ${assetId}`, kind: 'crane' },
+        asset: {
+            id: assetId,
+            code: `CRN-${assetId}`,
+            name: `Asset ${assetId}`,
+            kind: 'crane',
+        },
         latitude: 14.5995,
         longitude: 120.9842,
         speed: 45.5,
@@ -203,35 +211,34 @@ describe('Phase 1 Empirical Challenger: Factual and Semantic Verifications', () 
         window.history.replaceState({}, '', '/operations');
     });
 
-    describe('Verification 1: Telemetry with coordinates but delayed, stale, or offline status does NOT display as "GPS Live"', () => {
-        it('renders "GPS Live" only when status is fresh, and renders non-live status accurately for delayed/stale/offline in FleetAssetCard', () => {
+    describe('Verification 1: Telemetry freshness is distinct from operational status', () => {
+        it('renders fresh and last-known location labels accurately in FleetAssetCard', () => {
             const asset = createAsset(1, 'CRN-01', 'crane');
 
-            // 1. Fresh -> Shows GPS Live
+            // 1. Fresh -> Shows a current-location label.
             const freshLoc = createLocation(1, 'fresh');
-            const { rerender } = render(<FleetAssetCard asset={asset} location={freshLoc} />);
-            expect(screen.getByText(/GPS Live/i)).toBeInTheDocument();
-            expect(screen.queryByText(/GPS Delayed/i)).not.toBeInTheDocument();
-            expect(screen.queryByText(/Last Known \(Stale\)/i)).not.toBeInTheDocument();
-            expect(screen.queryByText(/Telemetry Offline/i)).not.toBeInTheDocument();
+            const { rerender } = render(
+                <FleetAssetCard asset={asset} location={freshLoc} />,
+            );
+            expect(screen.getByText(/Fresh location/i)).toBeInTheDocument();
+            expect(
+                screen.queryByText(/Last known location/i),
+            ).not.toBeInTheDocument();
 
-            // 2. Delayed with coordinates -> MUST NOT display GPS Live! Displays GPS Delayed
+            // 2. Delayed with coordinates -> the position is still last known.
             const delayedLoc = createLocation(1, 'delayed');
             rerender(<FleetAssetCard asset={asset} location={delayedLoc} />);
-            expect(screen.queryByText(/GPS Live/i)).not.toBeInTheDocument();
-            expect(screen.getByText('GPS Delayed')).toBeInTheDocument();
+            expect(screen.getByText('Last known location')).toBeInTheDocument();
 
-            // 3. Stale with coordinates -> MUST NOT display GPS Live! Displays Last Known (Stale)
+            // 3. Stale with coordinates -> still explicitly last known.
             const staleLoc = createLocation(1, 'stale');
             rerender(<FleetAssetCard asset={asset} location={staleLoc} />);
-            expect(screen.queryByText(/GPS Live/i)).not.toBeInTheDocument();
-            expect(screen.getByText('Last Known (Stale)')).toBeInTheDocument();
+            expect(screen.getByText('Last known location')).toBeInTheDocument();
 
-            // 4. Offline with coordinates -> MUST NOT display GPS Live! Displays Telemetry Offline
+            // 4. Offline with coordinates -> coordinates remain last known, not live.
             const offlineLoc = createLocation(1, 'offline');
             rerender(<FleetAssetCard asset={asset} location={offlineLoc} />);
-            expect(screen.queryByText(/GPS Live/i)).not.toBeInTheDocument();
-            expect(screen.getByText('Telemetry Offline')).toBeInTheDocument();
+            expect(screen.getByText('Last known location')).toBeInTheDocument();
         });
 
         it('renders observation timestamps and non-live status badges in AssetsSurface detail pane', () => {
@@ -253,12 +260,20 @@ describe('Phase 1 Empirical Challenger: Factual and Semantic Verifications', () 
                 />,
             );
 
-            // AssetDetailPane header: MUST NOT say "Live GPS active"
-            expect(screen.queryByText('Live GPS active')).not.toBeInTheDocument();
-            expect(screen.getAllByText('Last Known (Stale)').length).toBeGreaterThanOrEqual(1);
+            // AssetDetailPane header: current freshness is explicit and not described as live.
+            expect(
+                screen.queryByText('Live GPS active'),
+            ).not.toBeInTheDocument();
+            expect(
+                screen.getAllByText('Last known location').length,
+            ).toBeGreaterThanOrEqual(1);
 
             // Observation timestamp must be rendered in the location summary
-            expect(screen.getByText(/GPS 14\.5995, 120\.9842/i)).toBeInTheDocument();
+            expect(
+                screen.getByText(
+                    /Last known location \(14\.5995, 120\.9842\)/i,
+                ),
+            ).toBeInTheDocument();
         });
     });
 
@@ -268,9 +283,16 @@ describe('Phase 1 Empirical Challenger: Factual and Semantic Verifications', () 
                 location: null,
             });
 
-            render(<FleetAssetCard asset={assetWithNullLocation} location={null} />);
+            render(
+                <FleetAssetCard
+                    asset={assetWithNullLocation}
+                    location={null}
+                />,
+            );
 
-            expect(screen.getByText('Location not recorded')).toBeInTheDocument();
+            expect(
+                screen.getByText('Location not recorded'),
+            ).toBeInTheDocument();
             expect(screen.queryByText(/Base Yard/i)).not.toBeInTheDocument();
         });
 
@@ -292,7 +314,9 @@ describe('Phase 1 Empirical Challenger: Factual and Semantic Verifications', () 
             );
 
             // Both list row and detail pane should render "Location not recorded"
-            const nullLocationElements = screen.getAllByText('Location not recorded');
+            const nullLocationElements = screen.getAllByText(
+                'Location not recorded',
+            );
             expect(nullLocationElements.length).toBeGreaterThanOrEqual(1);
             expect(screen.queryByText(/Base Yard/i)).not.toBeInTheDocument();
         });
@@ -308,9 +332,13 @@ describe('Phase 1 Empirical Challenger: Factual and Semantic Verifications', () 
                 />,
             );
 
-            expect(screen.getByText('Location not recorded')).toBeInTheDocument();
+            expect(
+                screen.getByText('Location not recorded'),
+            ).toBeInTheDocument();
             expect(screen.queryByText(/Base Yard/i)).not.toBeInTheDocument();
-            expect(screen.queryByText(/GPS coordinates verified/i)).not.toBeInTheDocument();
+            expect(
+                screen.queryByText(/GPS coordinates verified/i),
+            ).not.toBeInTheDocument();
         });
 
         it('renders "Client Sign-Off: Not recorded" when sign-off metadata is missing', () => {
@@ -322,7 +350,9 @@ describe('Phase 1 Empirical Challenger: Factual and Semantic Verifications', () 
                 />,
             );
 
-            expect(screen.getByText('Client Sign-Off: Not recorded')).toBeInTheDocument();
+            expect(
+                screen.getByText('Client Sign-Off: Not recorded'),
+            ).toBeInTheDocument();
         });
     });
 
@@ -465,18 +495,28 @@ describe('Phase 1 Empirical Challenger: Factual and Semantic Verifications', () 
             // 1. Pending: 1
             expect(screen.getByText('Pending Review')).toBeInTheDocument();
             // 2. Approved: 1
-            expect(screen.getAllByText('Approved').length).toBeGreaterThanOrEqual(1);
+            expect(
+                screen.getAllByText('Approved').length,
+            ).toBeGreaterThanOrEqual(1);
             // 3. Verified: 1
-            expect(screen.getAllByText('Verified').length).toBeGreaterThanOrEqual(1);
+            expect(
+                screen.getAllByText('Verified').length,
+            ).toBeGreaterThanOrEqual(1);
             // 4. Logged: 1
-            expect(screen.getAllByText('Logged').length).toBeGreaterThanOrEqual(1);
+            expect(screen.getAllByText('Logged').length).toBeGreaterThanOrEqual(
+                1,
+            );
             // 5. Requested Litres: 1,050 (100+250+300+400)
             expect(screen.getByText('Requested Litres')).toBeInTheDocument();
             expect(screen.getByText('1,050')).toBeInTheDocument();
 
             // Distinct filter buttons
-            const verifiedFilterBtn = screen.getByRole('button', { name: /verified \(1\)/i });
-            const loggedFilterBtn = screen.getByRole('button', { name: /logged \(1\)/i });
+            const verifiedFilterBtn = screen.getByRole('button', {
+                name: /verified \(1\)/i,
+            });
+            const loggedFilterBtn = screen.getByRole('button', {
+                name: /logged \(1\)/i,
+            });
             expect(verifiedFilterBtn).toBeInTheDocument();
             expect(loggedFilterBtn).toBeInTheDocument();
 
@@ -491,7 +531,9 @@ describe('Phase 1 Empirical Challenger: Factual and Semantic Verifications', () 
             expect(screen.queryByText('FUEL-REQ-003')).not.toBeInTheDocument();
 
             // In request card: Requested quantity is explicitly labeled "Requested: 400 Litres"
-            expect(screen.getByText(/Requested: 400 Litres/i)).toBeInTheDocument();
+            expect(
+                screen.getByText(/Requested: 400 Litres/i),
+            ).toBeInTheDocument();
         });
     });
 
@@ -617,7 +659,9 @@ describe('Phase 1 Empirical Challenger: Factual and Semantic Verifications', () 
             );
 
             expect(
-                screen.getByText('All evaluated logs within baseline burn rate'),
+                screen.getByText(
+                    'All evaluated logs within baseline burn rate',
+                ),
             ).toBeInTheDocument();
             expect(
                 screen.queryByText('Not enough data to assess consumption'),
@@ -637,20 +681,34 @@ describe('Phase 1 Empirical Challenger: Factual and Semantic Verifications', () 
             );
 
             // Empty state heading must state "No job reports in loaded scope"
-            expect(screen.getByText('No job reports in loaded scope')).toBeInTheDocument();
+            expect(
+                screen.getByText('No job reports in loaded scope'),
+            ).toBeInTheDocument();
             expect(
                 screen.queryByText(/All field reports verified & signed off/i),
             ).not.toBeInTheDocument();
 
             // Stat descriptions must be honest about scope
-            expect(screen.getByText('No pending submissions in loaded scope')).toBeInTheDocument();
-            expect(screen.queryByText(/All submissions up to date/i)).not.toBeInTheDocument();
+            expect(
+                screen.getByText('No pending submissions in loaded scope'),
+            ).toBeInTheDocument();
+            expect(
+                screen.queryByText(/All submissions up to date/i),
+            ).not.toBeInTheDocument();
 
-            expect(screen.getByText('Loaded in current scope')).toBeInTheDocument();
-            expect(screen.queryByText(/Logged across active fleet/i)).not.toBeInTheDocument();
+            expect(
+                screen.getByText('Loaded in current scope'),
+            ).toBeInTheDocument();
+            expect(
+                screen.queryByText(/Logged across active fleet/i),
+            ).not.toBeInTheDocument();
 
-            expect(screen.getByText('Approved by operations review')).toBeInTheDocument();
-            expect(screen.queryByText(/ready for billing/i)).not.toBeInTheDocument();
+            expect(
+                screen.getByText('Approved by operations review'),
+            ).toBeInTheDocument();
+            expect(
+                screen.queryByText(/ready for billing/i),
+            ).not.toBeInTheDocument();
         });
 
         it('labels attachments truthfully without claiming they are "verified attachments"', () => {
@@ -691,7 +749,9 @@ describe('Phase 1 Empirical Challenger: Factual and Semantic Verifications', () 
 
             // Must say "1 attachments", NOT "1 verified attachments"
             expect(screen.getByText('1 attachments')).toBeInTheDocument();
-            expect(screen.queryByText(/verified attachments/i)).not.toBeInTheDocument();
+            expect(
+                screen.queryByText(/verified attachments/i),
+            ).not.toBeInTheDocument();
         });
     });
 });

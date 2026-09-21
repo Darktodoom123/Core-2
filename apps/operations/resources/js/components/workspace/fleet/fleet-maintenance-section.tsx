@@ -46,6 +46,7 @@ export function FleetMaintenanceSection({
         e.preventDefault();
         openForm.post(`/operations/assets/${asset.id}/maintenance`, {
             preserveScroll: true,
+            preserveState: true,
             onSuccess: () => {
                 setShowOpenForm(false);
                 openForm.reset();
@@ -69,6 +70,7 @@ export function FleetMaintenanceSection({
         }));
         completeForm.post(`/operations/maintenance/${orderId}/complete`, {
             preserveScroll: true,
+            preserveState: true,
             onSuccess: () => {
                 setCompletingOrderId(null);
                 completeForm.reset();
@@ -91,6 +93,7 @@ export function FleetMaintenanceSection({
         }));
         releaseForm.post(`/operations/maintenance/${orderId}/release`, {
             preserveScroll: true,
+            preserveState: true,
             onSuccess: () => {
                 setReleasingOrderId(null);
                 releaseForm.reset();
@@ -99,9 +102,18 @@ export function FleetMaintenanceSection({
     };
 
     return (
-        <div className="space-y-4">
-            {canMaintain && (
-                <div className="flex justify-end">
+        <div className="space-y-5">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line pb-4">
+                <div>
+                    <h3 className="text-sm font-semibold text-ink">
+                        Maintenance work orders
+                    </h3>
+                    <p className="mt-1 max-w-2xl text-sm text-ink-soft">
+                        Track repair progress and release dispatch blocks only
+                        after post-repair verification.
+                    </p>
+                </div>
+                {canMaintain && (
                     <Button
                         variant={showOpenForm ? 'secondary' : 'primary'}
                         onClick={() => setShowOpenForm(!showOpenForm)}
@@ -110,16 +122,16 @@ export function FleetMaintenanceSection({
                             ? 'Cancel work order'
                             : 'Open maintenance work order'}
                     </Button>
-                </div>
-            )}
+                )}
+            </div>
 
             {showOpenForm && canMaintain && (
                 <form
                     onSubmit={submitOpen}
-                    className="space-y-4 rounded-lg border border-line bg-surface-subtle p-4"
+                    className="space-y-4 border-y border-line py-4"
                     noValidate
                 >
-                    <h4 className="font-semibold text-ink">
+                    <h4 className="text-sm font-semibold text-ink">
                         Open Maintenance Work Order
                     </h4>
                     <FleetInput
@@ -152,7 +164,7 @@ export function FleetMaintenanceSection({
                         error={openForm.errors.remarks}
                         onChange={(v) => openForm.setData('remarks', v)}
                     />
-                    <div className="flex justify-end">
+                    <div className="flex justify-end border-t border-line pt-4">
                         <Button
                             type="submit"
                             variant="primary"
@@ -170,9 +182,15 @@ export function FleetMaintenanceSection({
             )}
 
             {asset.maintenance_work_orders.length === 0 ? (
-                <p className="py-4 text-center text-sm text-ink-soft">
-                    No maintenance work orders recorded for this asset.
-                </p>
+                <div className="border-y border-dashed border-line py-8 text-center">
+                    <p className="text-sm font-medium text-ink">
+                        No maintenance work orders recorded for this asset.
+                    </p>
+                    <p className="mt-1 text-sm text-ink-soft">
+                        Open a work order when this asset needs repair or
+                        inspection follow-up.
+                    </p>
+                </div>
             ) : (
                 <ul className="divide-y divide-line">
                     {asset.maintenance_work_orders.map((order) => {
@@ -243,13 +261,13 @@ export function FleetMaintenanceSection({
                                             {order.defect}
                                         </span>
                                         {order.dispatch_blocking && (
-                                            <span className="inline-flex items-center rounded-md bg-danger-soft px-1.5 py-0.5 text-xs font-medium text-danger-strong">
+                                            <span className="inline-flex items-center text-xs font-semibold text-danger-strong">
                                                 Blocking
                                             </span>
                                         )}
                                         {order.completed_at ? (
                                             <>
-                                                <span className="bg-positive-soft text-positive-strong inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium">
+                                                <span className="text-positive-strong inline-flex items-center text-xs font-semibold">
                                                     Repair Completed:{' '}
                                                     {formatDateTime(
                                                         order.completed_at,
@@ -257,18 +275,18 @@ export function FleetMaintenanceSection({
                                                 </span>
                                                 {qualifyingInspection &&
                                                 !hasSubsequentDefect ? (
-                                                    <span className="bg-positive-soft text-positive-strong inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium">
+                                                    <span className="text-positive-strong inline-flex items-center text-xs font-semibold">
                                                         Post-Repair: Verified
                                                     </span>
                                                 ) : (
-                                                    <span className="inline-flex items-center rounded-md bg-warning-soft px-1.5 py-0.5 text-xs font-medium text-warning-strong">
+                                                    <span className="inline-flex items-center text-xs font-semibold text-warning-strong">
                                                         Post-Repair: Awaiting
                                                         Verification
                                                     </span>
                                                 )}
                                             </>
                                         ) : (
-                                            <span className="inline-flex items-center rounded-md bg-warning-soft px-1.5 py-0.5 text-xs font-medium text-warning-strong">
+                                            <span className="inline-flex items-center text-xs font-semibold text-warning-strong">
                                                 Pending Repair Completion
                                             </span>
                                         )}
@@ -348,10 +366,10 @@ export function FleetMaintenanceSection({
                                                 onSubmit={(e) =>
                                                     submitComplete(e, order.id)
                                                 }
-                                                className="mt-2 space-y-3 rounded-lg border border-line bg-surface-subtle p-3"
+                                                className="mt-3 space-y-3 border-t border-line pt-3"
                                                 noValidate
                                             >
-                                                <div className="rounded-lg border border-brand/30 bg-brand-soft/60 p-2.5 text-xs font-medium text-brand-strong">
+                                                <div className="border-l-2 border-brand-strong/50 pl-3 text-sm text-brand-strong">
                                                     Notice: Authoritatively
                                                     record physical repair
                                                     completion details before
@@ -482,10 +500,10 @@ export function FleetMaintenanceSection({
                                                 onSubmit={(e) =>
                                                     submitRelease(e, order.id)
                                                 }
-                                                className="mt-2 space-y-3 rounded-lg border border-line bg-surface-subtle p-3"
+                                                className="mt-3 space-y-3 border-t border-line pt-3"
                                                 noValidate
                                             >
-                                                <div className="rounded-lg border border-warning/30 bg-warning-soft/60 p-2.5 text-xs font-medium text-warning-strong">
+                                                <div className="border-l-2 border-warning-strong/50 pl-3 text-sm text-warning-strong">
                                                     Notice: Releasing requires a
                                                     passing safety inspection
                                                     completed after repair was

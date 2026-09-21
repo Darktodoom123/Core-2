@@ -13,6 +13,7 @@ type MapLibreContextValue = {
     map: MapLibreInstance;
     maplibregl: MapLibreRuntime;
     prefersReducedMotion: boolean;
+    cameraWasRestored: boolean;
 };
 
 type ReadyMapContext = Omit<MapLibreContextValue, 'prefersReducedMotion'>;
@@ -102,6 +103,12 @@ export function MapLibreMap({
     );
     const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
     const initialCenterRef = useRef(center);
+    const cameraRef = useRef<{
+        center: [number, number];
+        zoom: number;
+        bearing: number;
+        pitch: number;
+    } | null>(null);
     const mapLoadedRef = useRef(false);
 
     useEffect(() => {
@@ -147,11 +154,13 @@ export function MapLibreMap({
                 map = new maplibregl.Map({
                     container: containerRef.current,
                     style: styleUrl,
-                    center: [
+                    center: cameraRef.current?.center ?? [
                         initialCenterRef.current[0],
                         initialCenterRef.current[1],
                     ],
-                    zoom,
+                    zoom: cameraRef.current?.zoom ?? zoom,
+                    bearing: cameraRef.current?.bearing ?? 0,
+                    pitch: cameraRef.current?.pitch ?? 0,
                     attributionControl: false,
                     cooperativeGestures: true,
                     maxPitch: 0,
@@ -178,7 +187,11 @@ export function MapLibreMap({
                     mapLoadedRef.current = true;
                     setStatus('ready');
                     setErrorMessage(null);
-                    setMapContext({ map, maplibregl });
+                    setMapContext({
+                        map,
+                        maplibregl,
+                        cameraWasRestored: Boolean(cameraRef.current),
+                    });
                 });
 
                 map.on('error', (event) => {
@@ -234,6 +247,17 @@ export function MapLibreMap({
             mapLoadedRef.current = false;
             setMapContext(null);
             resizeObserver?.disconnect();
+
+            if (map) {
+                const center = map.getCenter();
+                cameraRef.current = {
+                    center: [center.lng, center.lat],
+                    zoom: map.getZoom(),
+                    bearing: map.getBearing(),
+                    pitch: map.getPitch(),
+                };
+            }
+
             map?.remove();
         };
     }, [styleVariant, zoom]);

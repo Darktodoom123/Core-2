@@ -23,13 +23,14 @@ export function FleetStatusForm({ asset, canUpdate }: FleetStatusFormProps) {
         e.preventDefault();
         form.post(`/operations/assets/${asset.id}/status`, {
             preserveScroll: true,
+            preserveState: true,
             onSuccess: () => form.reset(),
         });
     };
 
     if (!canUpdate) {
         return (
-            <div className="rounded-lg bg-surface-subtle p-4 text-sm text-ink-soft">
+            <div className="border-y border-line py-5 text-sm text-ink-soft">
                 Your role does not have authorization to update status for this
                 asset kind.
             </div>
@@ -37,9 +38,10 @@ export function FleetStatusForm({ asset, canUpdate }: FleetStatusFormProps) {
     }
 
     return (
-        <form onSubmit={submit} className="space-y-4" noValidate>
-            <div className="rounded-lg border border-line bg-surface-subtle p-3 text-xs text-ink-soft">
-                <strong>Safety Rule:</strong> Transitioning to{' '}
+        <form onSubmit={submit} className="space-y-5" noValidate>
+            <div className="border-y border-line py-4 text-sm text-ink-soft">
+                <strong className="text-ink">Dispatch readiness rule:</strong>{' '}
+                Transitioning to{' '}
                 <span className="font-semibold text-ink">
                     Ready for Service
                 </span>{' '}
@@ -48,7 +50,7 @@ export function FleetStatusForm({ asset, canUpdate }: FleetStatusFormProps) {
                 dispatch-blocking work orders.
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-5 sm:grid-cols-2">
                 <label className="text-sm font-medium text-ink">
                     Target status *
                     <select
@@ -60,7 +62,7 @@ export function FleetStatusForm({ asset, canUpdate }: FleetStatusFormProps) {
                             )
                         }
                         aria-invalid={Boolean(form.errors.status)}
-                        className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-xs text-ink transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                        className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                     >
                         <option value="available">Available</option>
                         <option value="ready_for_service">
@@ -92,7 +94,7 @@ export function FleetStatusForm({ asset, canUpdate }: FleetStatusFormProps) {
                 </p>
             )}
 
-            <div className="flex justify-end">
+            <div className="flex justify-end border-t border-line pt-4">
                 <Button
                     type="submit"
                     variant="primary"

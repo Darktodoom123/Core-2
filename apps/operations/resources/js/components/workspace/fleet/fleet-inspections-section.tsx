@@ -55,6 +55,7 @@ export function FleetInspectionsSection({
         e.preventDefault();
         form.post(`/operations/assets/${asset.id}/inspections`, {
             preserveScroll: true,
+            preserveState: true,
             onSuccess: () => {
                 setShowForm(false);
                 form.reset();
@@ -87,19 +88,19 @@ export function FleetInspectionsSection({
         dvirInspections.length > 0 || asset.inspections.length > 0;
 
     return (
-        <div className="space-y-6">
-            {canInspect && (
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h3 className="text-sm font-bold text-ink">
-                            Fleet Inspection Audit Trail
-                        </h3>
-                        <p className="text-xs text-ink-soft">
-                            Routine pre-trip and post-trip checks use DVIR.
-                            Record workshop checks and post-repair verification
-                            here.
-                        </p>
-                    </div>
+        <div className="space-y-5">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line pb-4">
+                <div>
+                    <h3 className="text-sm font-semibold text-ink">
+                        Inspection history
+                    </h3>
+                    <p className="mt-1 max-w-2xl text-sm text-ink-soft">
+                        Review field DVIRs and workshop checks for this asset.
+                        Record post-repair verification when a work order is
+                        ready to release.
+                    </p>
+                </div>
+                {canInspect && (
                     <Button
                         variant={showForm ? 'secondary' : 'primary'}
                         size="sm"
@@ -107,18 +108,18 @@ export function FleetInspectionsSection({
                     >
                         {showForm
                             ? 'Cancel inspection'
-                            : 'Record new inspection'}
+                            : 'Record workshop inspection'}
                     </Button>
-                </div>
-            )}
+                )}
+            </div>
 
             {showForm && canInspect && (
                 <form
                     onSubmit={submit}
-                    className="space-y-4 rounded-xl border border-line bg-surface-subtle p-4"
+                    className="space-y-4 border-y border-line py-4"
                     noValidate
                 >
-                    <h4 className="font-semibold text-ink">
+                    <h4 className="text-sm font-semibold text-ink">
                         Workshop / Post-Repair Verification
                     </h4>
                     <div className="grid gap-4 sm:grid-cols-2">
@@ -132,7 +133,7 @@ export function FleetInspectionsSection({
                                         e.target.value as InspectionTypeValue,
                                     )
                                 }
-                                className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-xs text-ink transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                             >
                                 <option value="post_repair">
                                     Post-repair verification
@@ -151,7 +152,7 @@ export function FleetInspectionsSection({
                                         e.target.value as InspectionResultValue,
                                     )
                                 }
-                                className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-xs text-ink transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                             >
                                 <option value="passed">Passed</option>
                                 <option value="failed">
@@ -200,7 +201,7 @@ export function FleetInspectionsSection({
                         onChange={(v) => form.setData('findings', v)}
                     />
 
-                    <div className="flex justify-end">
+                    <div className="flex justify-end border-t border-line pt-4">
                         <Button
                             type="submit"
                             variant="primary"
@@ -215,7 +216,7 @@ export function FleetInspectionsSection({
             )}
 
             {!hasAnyInspections ? (
-                <div className="rounded-xl border border-dashed border-line p-8 text-center">
+                <div className="border-y border-dashed border-line py-10 text-center">
                     <ClipboardCheck className="mx-auto h-8 w-8 stroke-1 text-ink-soft opacity-60" />
                     <p className="mt-2 text-sm font-medium text-ink">
                         No inspections recorded for this asset yet.
@@ -237,7 +238,7 @@ export function FleetInspectionsSection({
                                     Post-Trip)
                                 </h4>
                             </div>
-                            <span className="rounded-full bg-surface-subtle px-2 py-0.5 font-mono text-[10px] font-semibold text-ink-soft tabular-nums">
+                            <span className="text-xs font-semibold text-ink-soft tabular-nums">
                                 {dvirInspections.length} recorded
                             </span>
                         </div>
@@ -263,13 +264,13 @@ export function FleetInspectionsSection({
                                     return (
                                         <div
                                             key={dvir.id}
-                                            className="space-y-2.5 rounded-xl border border-line bg-surface p-4"
+                                            className="space-y-2.5 border-b border-line py-4 last:border-b-0"
                                         >
                                             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line/60 pb-2">
                                                 <div className="flex items-center gap-2">
                                                     <span
                                                         className={cn(
-                                                            'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium',
+                                                            'text-[11px] font-semibold tracking-wide uppercase',
                                                             isPreTrip
                                                                 ? 'bg-sky-500/10 text-sky-700 dark:text-sky-400'
                                                                 : 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-400',
@@ -294,7 +295,7 @@ export function FleetInspectionsSection({
                                                 <div className="flex items-center gap-2">
                                                     <span
                                                         className={cn(
-                                                            'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold',
+                                                            'inline-flex items-center gap-1 text-xs font-semibold',
                                                             isCritical
                                                                 ? 'bg-danger-soft text-danger-strong'
                                                                 : isDefect
@@ -375,7 +376,7 @@ export function FleetInspectionsSection({
                                             {/* Defects Breakdown */}
                                             {dvir.defects &&
                                                 dvir.defects.length > 0 && (
-                                                    <div className="space-y-1.5 rounded-lg border border-line/60 bg-surface-subtle p-2.5">
+                                                    <div className="space-y-1.5 border-l-2 border-warning-strong/50 pl-3">
                                                         <span className="text-xs font-semibold text-ink">
                                                             Flagged checklist
                                                             defects
@@ -427,7 +428,7 @@ export function FleetInspectionsSection({
 
                                             {/* Driver Remarks */}
                                             {dvir.remarks && (
-                                                <p className="rounded-md bg-surface-subtle px-2.5 py-1 text-xs text-ink-soft italic">
+                                                <p className="border-l-2 border-line pl-3 text-xs text-ink-soft italic">
                                                     &ldquo;{dvir.remarks}&rdquo;
                                                 </p>
                                             )}
@@ -489,18 +490,18 @@ export function FleetInspectionsSection({
                                     Workshop &amp; Safety Audits
                                 </h4>
                             </div>
-                            <span className="rounded-full bg-surface-subtle px-2 py-0.5 font-mono text-[10px] font-semibold text-ink-soft tabular-nums">
+                            <span className="text-xs font-semibold text-ink-soft tabular-nums">
                                 {asset.inspections.length} recorded
                             </span>
                         </div>
 
                         {asset.inspections.length === 0 ? (
-                            <p className="rounded-lg border border-line bg-surface-subtle/50 p-4 text-xs text-ink-soft">
+                            <p className="border-y border-dashed border-line py-5 text-sm text-ink-soft">
                                 No shop or periodic safety audits recorded for
                                 this asset yet.
                             </p>
                         ) : (
-                            <ul className="divide-y divide-line rounded-xl border border-line bg-surface px-4">
+                            <ul className="divide-y divide-line border-y border-line">
                                 {asset.inspections.map((ins) => (
                                     <li key={ins.id} className="py-3">
                                         <div className="flex items-center justify-between">
@@ -509,7 +510,7 @@ export function FleetInspectionsSection({
                                             </span>
                                             <span
                                                 className={cn(
-                                                    'rounded-full px-2 py-0.5 text-xs font-semibold capitalize',
+                                                    'text-xs font-semibold capitalize',
                                                     ins.result === 'passed'
                                                         ? 'bg-success-soft text-success-strong'
                                                         : 'bg-danger-soft text-danger',

@@ -64,7 +64,7 @@ async function openTracking(page: Page) {
         page.getByRole('region', { name: 'assets section loading' }),
     ).toBeHidden({ timeout: 20_000 });
 
-    const showMapButton = page.getByRole('button', { name: 'Show Map' });
+    const showMapButton = page.getByRole('button', { name: /show map/i });
 
     if (await showMapButton.isVisible()) {
         await showMapButton.click();
@@ -82,7 +82,9 @@ async function expectMapReady(page: Page) {
     ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Zoom in' })).toBeVisible();
     await expect(
-        page.getByRole('button', { name: /Fit all (locations on map|units)/i }),
+        page.getByRole('button', {
+            name: /Fit all (locations on map|units|assets)/i,
+        }),
     ).toBeVisible();
 }
 
@@ -93,7 +95,7 @@ async function expectSynchronizedList(page: Page) {
 
     await expect(list).toBeVisible();
     await expect(
-        list.getByRole('heading', { name: 'Mapped locations' }),
+        list.getByRole('heading', { name: 'Asset locations' }),
     ).toBeVisible();
 }
 
@@ -170,6 +172,42 @@ test('loads the configured MapLibre surface with attribution and accessible cont
 
     expect(tileRequests).toHaveLength(0);
     await expectSynchronizedList(page);
+
+    const quickActions = page.getByRole('toolbar', {
+        name: 'Asset quick actions',
+    });
+    await expect(quickActions).toBeVisible();
+    await expect(
+        page
+            .getByRole('region', { name: 'Asset detail content' })
+            .getByRole('toolbar', { name: 'Asset quick actions' }),
+    ).toHaveCount(0);
+
+    const list = page.getByRole('complementary', {
+        name: 'Synchronized mapped location list',
+    });
+
+    const needsAttention = page.getByRole('button', {
+        name: /^Needs attention \(/i,
+    });
+    await expect(needsAttention).toBeVisible();
+    await needsAttention.click();
+    await expect(
+        page.getByRole('menu', { name: 'Fleet exception filters' }),
+    ).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(needsAttention).toBeFocused();
+    await expect(
+        page.getByRole('region', { name: 'Exception triage toolbar' }),
+    ).toHaveCount(0);
+
+    await list.getByRole('button', { name: 'Hide asset list' }).click();
+    await expect(list).toBeHidden();
+    await expect(
+        page.getByRole('button', { name: 'Show asset list' }),
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Show asset list' }).click();
+    await expect(list).toBeVisible();
 });
 
 test('uses the configured attribution fallback when a style has no metadata', async ({
@@ -236,6 +274,15 @@ test('keeps controls usable at a 390px viewport with reduced motion', async ({
     await expectMapReady(page);
     await page.getByRole('button', { name: 'Zoom in' }).focus();
     await expect(page.getByRole('button', { name: 'Zoom in' })).toBeFocused();
+    await expect(
+        page.getByRole('group', { name: 'Fleet map view' }),
+    ).toBeVisible();
+    await page.getByRole('button', { name: /^list$/i }).click();
+    await expect(
+        page.getByRole('complementary', {
+            name: 'Synchronized mapped location list',
+        }),
+    ).toBeVisible();
     expect(
         await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBeLessThanOrEqual(390);

@@ -80,6 +80,26 @@ describe('CanonicalStatusBadge', () => {
         expect(container.firstChild).toHaveClass('border-transparent');
     });
 
+    it('supports an inline presentation without a capsule shape', () => {
+        const status: StatusViewModel<CanonicalStatusValue> = {
+            value: 'available',
+            label: 'Available',
+        };
+
+        const { container } = render(
+            <CanonicalStatusBadge
+                status={status}
+                variant="minimal"
+                presentation="inline"
+                size="sm"
+            />,
+        );
+
+        expect(container.firstChild).not.toHaveClass('rounded-full');
+        expect(container.firstChild).toHaveClass('bg-transparent');
+        expect(container.firstChild).toHaveClass('text-[11px]');
+    });
+
     it('renders different size scales (sm, md, lg)', () => {
         const status: StatusViewModel<CanonicalStatusValue> = {
             value: 'scheduled',

@@ -24,7 +24,11 @@ export {
     FleetDetailPane,
     type FleetDetailPaneProps,
 } from './fleet-detail-pane';
-export { FleetMapView, type FleetMapViewProps } from './fleet-map-view';
+export {
+    FleetMapFailureFallback,
+    FleetMapView,
+    type FleetMapViewProps,
+} from './fleet-map-view';
 export {
     MapErrorBoundary,
     type MapErrorBoundaryProps,

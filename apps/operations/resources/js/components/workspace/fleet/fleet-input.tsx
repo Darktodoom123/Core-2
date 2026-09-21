@@ -33,7 +33,7 @@ export function FleetInput({
                 onChange={(event) => onChange(event.target.value)}
                 aria-invalid={error ? 'true' : undefined}
                 className={cn(
-                    'mt-1 h-11 w-full rounded-lg border bg-surface px-3 text-xs text-ink transition-colors placeholder:text-ink-soft/60 focus-visible:outline-hidden',
+                    'mt-1 h-11 w-full rounded-lg border bg-surface px-3 text-sm text-ink transition-colors placeholder:text-ink-soft/60 focus-visible:outline-hidden',
                     error
                         ? 'border-danger focus-visible:border-danger focus-visible:ring-2 focus-visible:ring-danger'
                         : 'border-line-strong focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand',

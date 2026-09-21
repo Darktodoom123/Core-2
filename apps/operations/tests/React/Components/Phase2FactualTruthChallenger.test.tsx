@@ -166,7 +166,12 @@ describe('Phase 2 Factual Truth & 5-Stage Machine Challenger', () => {
                 id: 99,
                 user: { id: 10, name: 'Driver 10' },
                 job: null,
-                asset: { id: 1, code: 'CRN-CHALLENGE', name: 'Challenger Crane 100T', kind: 'crane' },
+                asset: {
+                    id: 1,
+                    code: 'CRN-CHALLENGE',
+                    name: 'Challenger Crane 100T',
+                    kind: 'crane',
+                },
                 latitude: 14.5995,
                 longitude: 120.9842,
                 speed: 30,
@@ -188,8 +193,10 @@ describe('Phase 2 Factual Truth & 5-Stage Machine Challenger', () => {
                 />,
             );
 
-            expect(screen.queryByText(/Live GPS active/i)).not.toBeInTheDocument();
-            expect(screen.getByText('Last Known (Stale)')).toBeInTheDocument();
+            expect(
+                screen.queryByText(/Live GPS active/i),
+            ).not.toBeInTheDocument();
+            expect(screen.getByText('Last known location')).toBeInTheDocument();
 
             // 2. FleetQueue
             rerender(
@@ -202,13 +209,19 @@ describe('Phase 2 Factual Truth & 5-Stage Machine Challenger', () => {
                     onSearchChange={vi.fn()}
                     categoryFilter="all"
                     onCategoryFilterChange={vi.fn()}
-                    counts={{ total: 1, cranes: 1, trucks: 0, ready: 1, maintenance: 0 }}
+                    counts={{
+                        total: 1,
+                        cranes: 1,
+                        trucks: 0,
+                        ready: 1,
+                        maintenance: 0,
+                    }}
                     onClearFilters={vi.fn()}
                 />,
             );
 
             expect(screen.queryByText(/GPS Live/i)).not.toBeInTheDocument();
-            expect(screen.getByText('Last Known (Stale)')).toBeInTheDocument();
+            expect(screen.getByText('Last known location')).toBeInTheDocument();
         });
 
         it('renders "Location not recorded" (never "Base Yard") when asset location and telemetry are null', () => {
@@ -220,7 +233,9 @@ describe('Phase 2 Factual Truth & 5-Stage Machine Challenger', () => {
                 />,
             );
 
-            expect(screen.getByText(/Location: Location not recorded/i)).toBeInTheDocument();
+            expect(
+                screen.getByText(/Location: Location not recorded/i),
+            ).toBeInTheDocument();
             expect(screen.queryByText(/Base Yard/i)).not.toBeInTheDocument();
         });
     });
@@ -253,17 +268,24 @@ describe('Phase 2 Factual Truth & 5-Stage Machine Challenger', () => {
             render(
                 <FuelRequestCard
                     request={approvedRequest}
-                    capabilities={createCapabilities({ verify_fuel: true, record_fuel: true })}
+                    capabilities={createCapabilities({
+                        verify_fuel: true,
+                        record_fuel: true,
+                    })}
                     onRecordLog={onRecordLog}
                     onTransition={onTransition}
                 />,
             );
 
             // "Record Fuel Log" MUST NOT BE PRESENT
-            expect(screen.queryByRole('button', { name: /record fuel log/i })).not.toBeInTheDocument();
+            expect(
+                screen.queryByRole('button', { name: /record fuel log/i }),
+            ).not.toBeInTheDocument();
 
             // "Verify Allocation" MUST BE PRESENT
-            const verifyBtn = screen.getByRole('button', { name: /verify allocation/i });
+            const verifyBtn = screen.getByRole('button', {
+                name: /verify allocation/i,
+            });
             expect(verifyBtn).toBeInTheDocument();
 
             fireEvent.click(verifyBtn);
@@ -282,7 +304,9 @@ describe('Phase 2 Factual Truth & 5-Stage Machine Challenger', () => {
                 />,
             );
 
-            const recordBtn = screen.getByRole('button', { name: /record fuel log/i });
+            const recordBtn = screen.getByRole('button', {
+                name: /record fuel log/i,
+            });
             expect(recordBtn).toBeInTheDocument();
 
             fireEvent.click(recordBtn);
@@ -318,17 +342,27 @@ describe('Phase 2 Factual Truth & 5-Stage Machine Challenger', () => {
             );
 
             // Open decision box
-            fireEvent.click(screen.getByRole('button', { name: /review decision/i }));
+            fireEvent.click(
+                screen.getByRole('button', { name: /review decision/i }),
+            );
 
             // Self review forbidden banner
-            expect(screen.getByText('Self-Review Forbidden')).toBeInTheDocument();
             expect(
-                screen.getByText(/requester cannot approve or reject their own request/i),
+                screen.getByText('Self-Review Forbidden'),
+            ).toBeInTheDocument();
+            expect(
+                screen.getByText(
+                    /requester cannot approve or reject their own request/i,
+                ),
             ).toBeInTheDocument();
 
             // Both action buttons disabled
-            expect(screen.getByRole('button', { name: /approve request/i })).toBeDisabled();
-            expect(screen.getByRole('button', { name: /reject request/i })).toBeDisabled();
+            expect(
+                screen.getByRole('button', { name: /approve request/i }),
+            ).toBeDisabled();
+            expect(
+                screen.getByRole('button', { name: /reject request/i }),
+            ).toBeDisabled();
         });
     });
 
@@ -394,8 +428,12 @@ describe('Phase 2 Factual Truth & 5-Stage Machine Challenger', () => {
             expect(screen.getByText('290')).toBeInTheDocument();
 
             // Missing consumption baseline -> "Not enough data to assess consumption"
-            expect(screen.getByText('Not enough data to assess consumption')).toBeInTheDocument();
-            expect(screen.queryByText(/All within baseline burn rate/i)).not.toBeInTheDocument();
+            expect(
+                screen.getByText('Not enough data to assess consumption'),
+            ).toBeInTheDocument();
+            expect(
+                screen.queryByText(/All within baseline burn rate/i),
+            ).not.toBeInTheDocument();
         });
     });
 
@@ -403,7 +441,11 @@ describe('Phase 2 Factual Truth & 5-Stage Machine Challenger', () => {
         const report: JobReportViewModel = {
             id: 501,
             dispatch_job_id: 1501,
-            job: { id: 1501, reference: 'JOB-501', title: 'Adversarial Report Test' },
+            job: {
+                id: 1501,
+                reference: 'JOB-501',
+                title: 'Adversarial Report Test',
+            },
             author: { id: 88, name: 'Operator Jack' },
             status: { value: 'submitted', label: 'SUBMITTED' },
             work_summary: 'Erected crane section',
@@ -445,14 +487,22 @@ describe('Phase 2 Factual Truth & 5-Stage Machine Challenger', () => {
 
             // Attachment count
             expect(screen.getByText('1 attachments')).toBeInTheDocument();
-            expect(screen.queryByText(/verified attachments/i)).not.toBeInTheDocument();
+            expect(
+                screen.queryByText(/verified attachments/i),
+            ).not.toBeInTheDocument();
 
             // Checksum status
-            expect(screen.getByText('SHA-256 Checksums Recorded')).toBeInTheDocument();
-            expect(screen.queryByText(/SHA-256 Checksums Validated/i)).not.toBeInTheDocument();
+            expect(
+                screen.getByText('SHA-256 Checksums Recorded'),
+            ).toBeInTheDocument();
+            expect(
+                screen.queryByText(/SHA-256 Checksums Validated/i),
+            ).not.toBeInTheDocument();
 
             // Client sign-off missing -> "Client Sign-Off: Not recorded"
-            expect(screen.getByText('Client Sign-Off: Not recorded')).toBeInTheDocument();
+            expect(
+                screen.getByText('Client Sign-Off: Not recorded'),
+            ).toBeInTheDocument();
         });
 
         it('strictly labels duration as "Elapsed Time", not billable or productive hours', () => {
@@ -467,8 +517,12 @@ describe('Phase 2 Factual Truth & 5-Stage Machine Challenger', () => {
 
             expect(screen.getByText('Elapsed Time:')).toBeInTheDocument();
             expect(screen.getByText('6h 15m')).toBeInTheDocument();
-            expect(screen.queryByText(/billable hours/i)).not.toBeInTheDocument();
-            expect(screen.queryByText(/productive hours/i)).not.toBeInTheDocument();
+            expect(
+                screen.queryByText(/billable hours/i),
+            ).not.toBeInTheDocument();
+            expect(
+                screen.queryByText(/productive hours/i),
+            ).not.toBeInTheDocument();
         });
     });
 });

@@ -17,6 +17,7 @@ export type StatusTone =
 
 export type BadgeVariant = 'soft' | 'outline' | 'minimal';
 export type BadgeSize = 'sm' | 'md' | 'lg';
+export type StatusPresentation = 'pill' | 'inline';
 
 export const statusTones: Record<CanonicalStatusValue, StatusTone> = {
     // Neutral (Drafts, queues, logs)
@@ -167,6 +168,7 @@ export interface CanonicalStatusBadgeProps {
     status: StatusViewModel<CanonicalStatusValue>;
     variant?: BadgeVariant;
     size?: BadgeSize;
+    presentation?: StatusPresentation;
     className?: string;
     showDot?: boolean;
     showIcon?: boolean;
@@ -177,6 +179,7 @@ export function CanonicalStatusBadge({
     status,
     variant = 'soft',
     size = 'md',
+    presentation = 'pill',
     className,
     showDot = true,
     showIcon = false,
@@ -186,15 +189,23 @@ export function CanonicalStatusBadge({
     const isLive = pulse ?? liveStatuses.has(status.value);
     const Icon = showIcon ? statusIcons[status.value] : null;
     const sizeConfig = sizeClasses[size];
+    const isInline = presentation === 'inline';
 
     return (
         <span
             role="status"
             aria-label={`Status: ${status.label}`}
             className={cn(
-                'inline-flex items-center rounded-full font-semibold tracking-wide transition-colors select-none',
+                'inline-flex items-center font-semibold tracking-wide transition-colors select-none',
+                isInline
+                    ? {
+                          'gap-1.5 text-[11px]': size === 'sm',
+                          'gap-1.5 text-xs': size === 'md',
+                          'gap-2 text-sm': size === 'lg',
+                      }
+                    : 'rounded-full',
                 variantToneClasses[variant][tone],
-                sizeConfig.badge,
+                isInline ? 'min-h-0 px-0 py-0' : sizeConfig.badge,
                 className,
             )}
         >
