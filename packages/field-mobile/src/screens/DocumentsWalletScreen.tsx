@@ -30,9 +30,24 @@ const CATEGORIES: Array<{ key: DocumentCategory | 'all'; label: string }> = [
     { key: 'all', label: 'All Documents' },
     { key: 'road_permits', label: 'Road Permits' },
     { key: 'load_test_certs', label: 'Load Tests' },
+    { key: 'insurance', label: 'Insurance' },
+    { key: 'registrations', label: 'Registration' },
+    { key: 'emission_certs', label: 'Emissions' },
+    { key: 'other', label: 'Other Compliance' },
     { key: 'operator_licenses', label: 'Licenses' },
     { key: 'delivery_receipts', label: 'Delivery' },
 ];
+
+const DOCUMENT_CATEGORY_LABELS: Record<DocumentCategory, string> = {
+    road_permits: 'Road Transit Permit',
+    load_test_certs: 'Load Test Certificate',
+    insurance: 'Insurance',
+    registrations: 'Registration / LTO',
+    emission_certs: 'Smoke Emission Clearance',
+    other: 'Other Regulatory Permit',
+    operator_licenses: 'Operator License',
+    delivery_receipts: 'Delivery Receipt',
+};
 
 export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
     onBack,
@@ -562,7 +577,9 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                         </View>
                     ) : (
                         filteredDocs.map((doc) => {
-                            const status = getStatusStyle(doc.status);
+                            const status = getStatusStyle(
+                                doc.validityStatus ?? doc.status,
+                            );
 
                             return (
                                 <View
@@ -685,6 +702,21 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                             </View>
                                         </View>
 
+                                        {/* Shared category vocabulary */}
+                                        <Text
+                                            style={[
+                                                styles.docCategoryLabel,
+                                                isDarkHud &&
+                                                    styles.docCategoryLabelDark,
+                                            ]}
+                                        >
+                                            {doc.categoryLabel ||
+                                                DOCUMENT_CATEGORY_LABELS[
+                                                    doc.category
+                                                ] ||
+                                                'Compliance document'}
+                                        </Text>
+
                                         {/* Document Title */}
                                         <Text
                                             numberOfLines={2}
@@ -721,6 +753,21 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                                     'No Expiry Date'}
                                             </Text>
                                         </View>
+
+                                        {doc.lastSynchronized ? (
+                                            <Text
+                                                style={[
+                                                    styles.syncLabelText,
+                                                    isDarkHud &&
+                                                        styles.syncLabelTextDark,
+                                                ]}
+                                            >
+                                                Last synced{' '}
+                                                {new Date(
+                                                    doc.lastSynchronized,
+                                                ).toLocaleDateString()}
+                                            </Text>
+                                        ) : null}
 
                                         {/* Operational Restrictions Callout */}
                                         {doc.notes ? (
@@ -801,7 +848,7 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                 </ScrollView>
             )}
 
-            {/* DOT / DOLE Official PDF Inspection Modal Bottom Sheet */}
+            {/* Compliance document inspection modal bottom sheet */}
             {viewingDoc ? (
                 <Modal
                     animationType="slide"
@@ -837,12 +884,12 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                 />
                             </View>
 
-                            {/* Top PDF Reader Navigation Bar */}
+                            {/* Source file navigation bar */}
                             <View style={styles.pdfToolbar}>
                                 <View style={styles.pdfToolbarLeft}>
                                     <View style={styles.pdfBadge}>
                                         <Text style={styles.pdfBadgeText}>
-                                            PDF
+                                            FILE
                                         </Text>
                                     </View>
                                     <View style={styles.pdfFileInfo}>
@@ -854,7 +901,8 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                                     styles.pdfFileNameDark,
                                             ]}
                                         >
-                                            {viewingDoc.documentNumber}.pdf
+                                            {viewingDoc.fileName ||
+                                                viewingDoc.documentNumber}
                                         </Text>
                                         <Text
                                             style={[
@@ -864,8 +912,7 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                             ]}
                                         >
                                             {viewingDoc.fileSizeLabel ||
-                                                '1.4 MB · PDF'}{' '}
-                                            • Page 1 of 1
+                                                'Source file'}
                                         </Text>
                                     </View>
                                 </View>
@@ -979,7 +1026,7 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                 ) : null}
                             </View>
 
-                            {/* Segmented Mode Switcher: Official PDF vs Field Summary */}
+                            {/* Segmented Mode Switcher: Source file vs Field Summary */}
                             <View
                                 style={[
                                     styles.viewModeSwitcher,
@@ -987,7 +1034,7 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                 ]}
                             >
                                 <Pressable
-                                    accessibilityLabel="Official PDF Document View"
+                                    accessibilityLabel="Source document view"
                                     accessibilityRole="button"
                                     onPress={() => setModalViewMode('pdf')}
                                     style={[
@@ -1022,7 +1069,7 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                                 styles.viewModeTabTextActiveDark,
                                         ]}
                                     >
-                                        Official PDF Document
+                                        Source Document
                                     </Text>
                                 </Pressable>
 
@@ -1075,7 +1122,7 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                 showsVerticalScrollIndicator={false}
                             >
                                 {modalViewMode === 'pdf' ? (
-                                    /* Authentic A4 Government PDF Document Page */
+                                    /* Source document metadata and local copy */
                                     <View
                                         style={[
                                             styles.pdfReaderCanvas,
@@ -1099,11 +1146,11 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                                         styles.offlineNoticeText
                                                     }
                                                 >
-                                                    Viewing cached document
-                                                    details. Tap &quot;Save
-                                                    Offline&quot; below to make
-                                                    available without network
-                                                    connectivity.
+                                                    Showing the compliance
+                                                    record while the source file
+                                                    is online. Make it available
+                                                    offline below to keep the
+                                                    file on this device.
                                                 </Text>
                                             </View>
                                         ) : null}
@@ -1141,7 +1188,7 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                                         styles.pdfInnerBorderDark,
                                                 ]}
                                             >
-                                                {/* Official Republic Header */}
+                                                {/* Source record header */}
                                                 <View
                                                     style={
                                                         styles.pdfHeaderBlock
@@ -1163,8 +1210,7 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                                             styles.pdfRepublicText
                                                         }
                                                     >
-                                                        REPUBLIC OF THE
-                                                        PHILIPPINES
+                                                        CORE-2 OPERATIONS
                                                     </Text>
                                                     <Text
                                                         style={
@@ -1178,9 +1224,8 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                                             styles.pdfBureauText
                                                         }
                                                     >
-                                                        NATIONAL CAPITAL REGION
-                                                        • HEAVY VEHICLE
-                                                        REGULATORY DIVISION
+                                                        COMPLIANCE DOCUMENT
+                                                        RECORD
                                                     </Text>
                                                 </View>
 
@@ -1451,8 +1496,7 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                                                 styles.pdfSigTitle
                                                             }
                                                         >
-                                                            Certification
-                                                            Authority
+                                                            Issuing Authority
                                                         </Text>
                                                     </View>
 
@@ -1472,7 +1516,7 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                                                     styles.pdfStampTextTop
                                                                 }
                                                             >
-                                                                OFFICIAL SEAL
+                                                                SOURCE RECORD
                                                             </Text>
                                                             <Icon
                                                                 color="#991B1B"
@@ -1484,7 +1528,7 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                                                     styles.pdfStampTextBottom
                                                                 }
                                                             >
-                                                                APPROVED
+                                                                AVAILABLE
                                                             </Text>
                                                         </View>
                                                     </View>
@@ -1511,8 +1555,8 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                                                 styles.pdfVerifyTitle
                                                             }
                                                         >
-                                                            ✓ Verified
-                                                            Compliance Record
+                                                            ✓ Operations Record
+                                                            Synchronized
                                                         </Text>
                                                         <Text
                                                             style={
@@ -1521,18 +1565,16 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                                         >
                                                             {viewingDoc.lastSynchronized
                                                                 ? `Synchronized with operations on ${new Date(viewingDoc.lastSynchronized).toLocaleDateString()}`
-                                                                : 'Synchronized with Operations System'}
+                                                                : 'Synchronized with Core-2 operations'}
                                                         </Text>
                                                         <Text
                                                             style={
                                                                 styles.pdfRevocationNotice
                                                             }
                                                         >
-                                                            Note: Offline
-                                                            verification copy.
-                                                            Real-time
-                                                            supersessions or
-                                                            revocations require
+                                                            Note: Offline copy.
+                                                            Real-time status
+                                                            changes require an
                                                             active connection.
                                                         </Text>
                                                     </View>
@@ -1548,8 +1590,8 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                                         }
                                                     >
                                                         {viewingDoc.localFileUri
-                                                            ? `LOCAL DURABLE STORAGE • ${viewingDoc.localFileUri.split('/').pop()} • VERIFIED`
-                                                            : 'PAGE 1 OF 1 • OFFICIAL ELECTRONIC CERTIFICATE • AUTHENTICATED VIA CORE-2'}
+                                                            ? `LOCAL DURABLE STORAGE • ${viewingDoc.localFileUri.split('/').pop()} • OFFLINE READY`
+                                                            : 'SOURCE FILE • SYNCHRONIZED VIA CORE-2'}
                                                     </Text>
                                                 </View>
                                             </View>
@@ -1769,7 +1811,7 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                             </View>
                                         ) : null}
 
-                                        {/* Cryptographic Compliance Verification Card */}
+                                        {/* Synchronization status card */}
                                         <View
                                             style={[
                                                 styles.verificationPillCard,
@@ -1798,7 +1840,8 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                                             styles.verificationHeadlineDark,
                                                     ]}
                                                 >
-                                                    ✓ Verified Compliance Record
+                                                    ✓ Operations Record
+                                                    Synchronized
                                                 </Text>
                                                 <Text
                                                     style={[
@@ -1807,8 +1850,8 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                                             styles.verificationSubDark,
                                                     ]}
                                                 >
-                                                    Synchronized with DPWH &
-                                                    DOLE-OSHC registry
+                                                    Synchronized with Core-2
+                                                    operations
                                                 </Text>
                                             </View>
                                         </View>
@@ -2071,6 +2114,17 @@ const styles = StyleSheet.create({
     statusPillText: {
         fontSize: 10,
         fontWeight: '800',
+    },
+    docCategoryLabel: {
+        color: colors.amberDark,
+        fontSize: 10,
+        fontWeight: '800',
+        letterSpacing: 0.4,
+        marginBottom: 3,
+        textTransform: 'uppercase',
+    },
+    docCategoryLabelDark: {
+        color: colors.hudAmber,
     },
     docCardTitle: {
         color: colors.text,

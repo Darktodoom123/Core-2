@@ -3,6 +3,7 @@
 namespace App\Shared\Assets\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Fleet\Enums\AssetDocumentCategory;
 use App\Modules\Fleet\Models\AssetDocument;
 use App\Platform\Attachments\Actions\UploadAttachmentAction;
 use App\Platform\Audit\Actions\RecordAuditEvent;
@@ -13,6 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 final class AssetDocumentController extends Controller
 {
@@ -22,7 +24,7 @@ final class AssetDocumentController extends Controller
         Gate::authorize(($isFleet ? PermissionName::FleetUpdateStatus : PermissionName::EquipmentUpdateStatus)->value);
 
         $validated = $request->validate([
-            'category' => ['required', 'string', 'max:64'],
+            'category' => ['required', 'string', Rule::in(AssetDocumentCategory::values())],
             'title' => ['nullable', 'string', 'max:255'],
             'document_number' => ['nullable', 'string', 'max:96'],
             'issuing_authority' => ['nullable', 'string', 'max:128'],
@@ -74,7 +76,7 @@ final class AssetDocumentController extends Controller
         abort_unless($document->operational_asset_id === $operationalAsset->id, 404);
 
         $validated = $request->validate([
-            'category' => ['sometimes', 'string', 'max:64'],
+            'category' => ['sometimes', 'string', Rule::in(AssetDocumentCategory::values())],
             'title' => ['sometimes', 'string', 'max:255'],
             'document_number' => ['nullable', 'string', 'max:96'],
             'issuing_authority' => ['nullable', 'string', 'max:128'],

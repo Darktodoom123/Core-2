@@ -71,6 +71,21 @@ const sampleDocs: ComplianceDocument[] = [
         isAvailableOffline: false,
         notes: 'Proof tested to 125% rated capacity.',
     },
+    {
+        id: 'insurance-404',
+        category: 'insurance',
+        title: 'Comprehensive Equipment Insurance',
+        documentNumber: 'INS-CRN-2026-04',
+        issuingAuthority: 'Alibaton Risk Services',
+        issuedDate: '2026-01-01',
+        expiryDate: '2026-12-31',
+        assetCode: 'ALB-CRN-050',
+        status: 'valid',
+        fileUri:
+            'https://core2.test/api/v1/fleet/assets/ALB-CRN-050/permits/404/download',
+        fileSizeLabel: '1.1 MB · PDF',
+        isAvailableOffline: false,
+    },
 ];
 
 const secondaryAssetDocs: ComplianceDocument[] = [
@@ -201,6 +216,24 @@ describe('DocumentsWalletScreen Component & Offline Access Engine', () => {
                 'DPWH Special Heavy-Load Road Transit Permit',
             ),
         ).toBeTruthy();
+    });
+
+    it('filters asset categories supplied by the fleet document contract', async () => {
+        const view = await render(
+            <DocumentsWalletScreen
+                assetCode="ALB-CRN-050"
+                operatorName="Alex Rivera"
+            />,
+        );
+
+        await fireEvent.press(view.getByTestId('filter-insurance'));
+
+        expect(
+            await view.findByText('Comprehensive Equipment Insurance'),
+        ).toBeTruthy();
+        expect(
+            view.queryByText('DPWH Special Heavy-Load Road Transit Permit'),
+        ).toBeNull();
     });
 
     it('supports multi-asset switching between assigned units', async () => {
@@ -412,17 +445,17 @@ describe('DocumentsWalletScreen Component & Offline Access Engine', () => {
         expect(await view.findByTestId('certificate-modal')).toBeTruthy();
 
         // Verify truthful compliance record header and sync info
-        expect(view.getByText('✓ Verified Compliance Record')).toBeTruthy();
+        expect(view.getByText('✓ Operations Record Synchronized')).toBeTruthy();
         expect(
             view.getByText(
-                'Note: Offline verification copy. Real-time supersessions or revocations require active connection.',
+                'Note: Offline copy. Real-time status changes require an active connection.',
             ),
         ).toBeTruthy();
 
         // Verify local durable storage footnote
         expect(
             view.getByText(
-                'LOCAL DURABLE STORAGE • wallet_ALB_CRN_050_doc_permit_sync_99.pdf • VERIFIED',
+                'LOCAL DURABLE STORAGE • wallet_ALB_CRN_050_doc_permit_sync_99.pdf • OFFLINE READY',
             ),
         ).toBeTruthy();
     });

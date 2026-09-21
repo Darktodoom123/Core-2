@@ -118,13 +118,65 @@ it('allows assigned operator to list compliance documents for their assigned ass
     $response->assertJsonCount(1, 'data');
     $response->assertJsonPath('data.0.id', (string) $permit->id);
     $response->assertJsonPath('data.0.category', 'road_permits');
+    $response->assertJsonPath('data.0.categoryLabel', 'Road Transit Permit');
+    $response->assertJsonPath('data.0.documentType', 'road_permits');
     $response->assertJsonPath('data.0.title', 'DPWH Special Road Transit Permit');
     $response->assertJsonPath('data.0.documentNumber', 'DPWH-NCR-2026-SP-8821');
     $response->assertJsonPath('data.0.issuingAuthority', 'Department of Public Works and Highways');
     $response->assertJsonPath('data.0.status', 'valid');
+    $response->assertJsonPath('data.0.validityStatus', 'valid');
+    $response->assertJsonPath('data.0.recordStatus', 'active');
     $response->assertJsonPath('data.0.isExpired', false);
     $response->assertJsonPath('data.0.notes', 'Authorized for off-peak transit along C-5 and EDSA.');
     expect($response->json('data.0.fileUri'))->not->toBeNull();
+    $response->assertJsonPath('data.0.fileType', 'application/pdf');
+    $response->assertJsonPath('data.0.fileName', 'permit_8821.pdf');
+});
+
+it('exposes every supported asset category with a shared label and validity status', function (): void {
+    $manager = User::factory()->create(['is_active' => true]);
+    $manager->syncRoles([RoleName::OperationsManager->value]);
+
+    $asset = OperationalAsset::query()->create([
+        'code' => 'CRN-CATEGORIES',
+        'name' => 'Category Contract Crane',
+        'kind' => 'crane',
+        'status' => AssetStatus::Available,
+    ]);
+
+    foreach ([
+        ['category' => 'insurance', 'label' => 'Comprehensive / Third-Party Insurance'],
+        ['category' => 'registrations', 'label' => 'Registration / LTO'],
+        ['category' => 'emission_certs', 'label' => 'Smoke Emission Clearance'],
+        ['category' => 'other', 'label' => 'Other Regulatory Permit'],
+    ] as $index => $definition) {
+        AssetDocument::query()->create([
+            'operational_asset_id' => $asset->id,
+            'category' => $definition['category'],
+            'document_type' => $definition['category'],
+            'title' => $definition['label'],
+            'document_number' => 'CAT-'.$index,
+            'issuing_authority' => 'Operations Authority',
+            'expires_at' => null,
+            'status' => 'active',
+        ]);
+    }
+
+    $token = $manager->createToken('Mobile Token')->plainTextToken;
+    $response = $this->withToken($token)
+        ->getJson(route('api.v1.fleet.assets.permits.index', $asset->code));
+
+    $response->assertOk();
+    $response->assertJsonCount(4, 'data');
+    expect(collect($response->json('data'))->pluck('categoryLabel')->all())
+        ->toEqualCanonicalizing([
+            'Comprehensive / Third-Party Insurance',
+            'Registration / LTO',
+            'Smoke Emission Clearance',
+            'Other Regulatory Permit',
+        ]);
+    expect(collect($response->json('data'))->pluck('validityStatus')->unique()->all())
+        ->toBe(['no_expiration']);
 });
 
 it('prohibits unassigned operator from listing asset documents with 404', function (): void {

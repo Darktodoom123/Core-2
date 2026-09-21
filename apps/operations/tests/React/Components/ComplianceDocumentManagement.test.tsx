@@ -343,5 +343,31 @@ describe('Compliance Document Management & RBAC Gating', () => {
             );
             expect(screen.getByText('Document uploaded.')).toBeInTheDocument();
         });
+
+        it('makes the shared no-expiration state explicit in the upload form', () => {
+            render(
+                <FleetDocumentsSection
+                    asset={sampleAsset}
+                    canManage={true}
+                />,
+            );
+
+            fireEvent.click(
+                screen.getByRole('button', { name: /add document/i }),
+            );
+
+            const expiryInput = screen.getByLabelText('Expiry Date');
+            const noExpiration = screen.getByRole('checkbox', {
+                name: 'No expiration date',
+            });
+
+            expect(noExpiration).toBeChecked();
+            expect(expiryInput).toBeDisabled();
+
+            fireEvent.click(noExpiration);
+
+            expect(noExpiration).not.toBeChecked();
+            expect(expiryInput).not.toBeDisabled();
+        });
     });
 });

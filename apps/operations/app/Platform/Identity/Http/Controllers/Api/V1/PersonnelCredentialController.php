@@ -25,6 +25,8 @@ class PersonnelCredentialController extends Controller
             return [
                 'id' => (string) $cred->id,
                 'category' => 'operator_licenses',
+                'categoryLabel' => 'Operator License',
+                'documentType' => $cred->kind,
                 'title' => ucwords(str_replace('_', ' ', $cred->credential_type)),
                 'documentNumber' => $cred->credential_number,
                 'issuingAuthority' => $cred->issuing_authority ?? 'Unknown',
@@ -32,9 +34,14 @@ class PersonnelCredentialController extends Controller
                 'expiryDate' => $cred->expires_at ? $cred->expires_at->toDateString() : null,
                 'isExpired' => $cred->isExpired(),
                 'operatorName' => $user->name,
+                'recordStatus' => $cred->status,
+                'validityStatus' => $cred->validityStatus(),
                 'status' => $cred->validityStatus(),
                 'notes' => $cred->notes,
                 'fileUri' => $attachment ? route('api.v1.personnel.credentials.download', $cred->id) : null,
+                'fileName' => $attachment?->original_filename,
+                'fileType' => $attachment?->mime_type,
+                'fileSizeBytes' => $attachment?->size_bytes,
                 'fileSizeLabel' => $attachment ? round($attachment->size_bytes / 1024 / 1024, 1).' MB · '.strtoupper(pathinfo($attachment->path, PATHINFO_EXTENSION)) : null,
                 'version' => $attachment ? $attachment->updated_at->timestamp : null,
             ];

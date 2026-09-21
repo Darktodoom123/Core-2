@@ -30,6 +30,8 @@ class AssetDocumentApiController extends Controller
             return [
                 'id' => (string) $doc->id,
                 'category' => $doc->category,
+                'categoryLabel' => $doc->categoryLabel(),
+                'documentType' => $doc->document_type,
                 'title' => $doc->title ?? $doc->categoryLabel(),
                 'documentNumber' => $doc->document_number,
                 'issuingAuthority' => $doc->issuing_authority ?? 'Unknown',
@@ -37,9 +39,14 @@ class AssetDocumentApiController extends Controller
                 'expiryDate' => $doc->expires_at ? $doc->expires_at->toDateString() : null,
                 'isExpired' => $doc->isExpired(),
                 'assetCode' => $asset->code,
+                'recordStatus' => $doc->status,
+                'validityStatus' => $doc->validityStatus(),
                 'status' => $doc->validityStatus(),
                 'notes' => $doc->notes,
                 'fileUri' => $attachment ? route('api.v1.fleet.assets.permits.download', ['operationalAsset' => $asset->id, 'document' => $doc->id]) : null,
+                'fileName' => $attachment?->original_filename,
+                'fileType' => $attachment?->mime_type,
+                'fileSizeBytes' => $attachment?->size_bytes,
                 'fileSizeLabel' => $attachment ? round($attachment->size_bytes / 1024 / 1024, 1).' MB · '.strtoupper(pathinfo($attachment->path, PATHINFO_EXTENSION)) : null,
                 'version' => $attachment ? $attachment->updated_at->timestamp : null,
             ];

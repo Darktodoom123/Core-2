@@ -548,12 +548,18 @@ export interface ShiftInfo {
 export type DocumentCategory =
     | 'road_permits'
     | 'load_test_certs'
+    | 'insurance'
+    | 'registrations'
+    | 'emission_certs'
+    | 'other'
     | 'operator_licenses'
     | 'delivery_receipts';
 
 export interface ComplianceDocument {
     id: string;
     category: DocumentCategory;
+    categoryLabel?: string | null;
+    documentType?: string | null;
     title: string;
     documentNumber: string;
     issuingAuthority: string;
@@ -563,7 +569,9 @@ export interface ComplianceDocument {
     assetCode?: string | null;
     operatorName?: string | null;
     fileUri?: string | null;
+    fileName?: string | null;
     fileSizeLabel?: string;
+    fileSizeBytes?: number | null;
     fileType?: string | null;
     status:
         | 'valid'
@@ -573,6 +581,8 @@ export interface ComplianceDocument {
         | 'superseded'
         | 'permanent'
         | 'no_expiration';
+    validityStatus?: ComplianceDocument['status'];
+    recordStatus?: 'active' | 'revoked' | 'superseded' | string;
     notes?: string | null;
     isAvailableOffline?: boolean;
     localFileUri?: string | null;

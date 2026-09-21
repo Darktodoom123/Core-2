@@ -2,6 +2,7 @@
 
 namespace App\Modules\Fleet\Models;
 
+use App\Modules\Fleet\Enums\AssetDocumentCategory;
 use App\Platform\Attachments\Models\Attachment;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
@@ -143,13 +144,8 @@ class AssetDocument extends Model
 
     public function categoryLabel(): string
     {
-        return match ($this->category) {
-            'road_permits' => 'Road Transit Permit',
-            'load_test_certs' => 'Load Test Certificate',
-            'insurance' => 'Comprehensive Insurance',
-            'registrations' => 'Registration / LTO',
-            default => ucwords(str_replace('_', ' ', $this->category)),
-        };
+        return AssetDocumentCategory::tryFrom($this->category)?->label()
+            ?? ucwords(str_replace('_', ' ', $this->category));
     }
 
     /**

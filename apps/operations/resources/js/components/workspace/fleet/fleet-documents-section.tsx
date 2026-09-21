@@ -372,150 +372,245 @@ export function FleetDocumentsSection({
                         before uploading.
                     </div>
 
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <section
+                        aria-labelledby={`document-identity-${asset.id}`}
+                        className="space-y-3"
+                    >
                         <div>
-                            <label
-                                htmlFor={`document-category-${asset.id}`}
-                                className="block text-sm font-medium text-ink"
+                            <h4
+                                id={`document-identity-${asset.id}`}
+                                className="text-sm font-semibold text-ink"
                             >
-                                Category *
-                            </label>
-                            <select
-                                id={`document-category-${asset.id}`}
-                                value={form.data.category}
-                                data-autofocus
-                                onChange={(e) =>
-                                    form.setData('category', e.target.value)
-                                }
-                                className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                Document identity
+                            </h4>
+                            <p className="mt-1 text-xs leading-5 text-ink-soft">
+                                Use the same title and number shown on the
+                                source permit or certificate.
+                            </p>
+                        </div>
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div>
+                                <label
+                                    htmlFor={`document-category-${asset.id}`}
+                                    className="block text-sm font-medium text-ink"
+                                >
+                                    Category *
+                                </label>
+                                <select
+                                    id={`document-category-${asset.id}`}
+                                    value={form.data.category}
+                                    data-autofocus
+                                    onChange={(e) =>
+                                        form.setData('category', e.target.value)
+                                    }
+                                    className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                >
+                                    {CATEGORIES.map((c) => (
+                                        <option key={c.value} value={c.value}>
+                                            {c.label}
+                                        </option>
+                                    ))}
+                                </select>
+                                {form.errors.category && (
+                                    <p className="mt-1 text-xs text-danger">
+                                        {form.errors.category}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div>
+                                <FleetInput
+                                    label="Document Title"
+                                    required
+                                    value={form.data.title}
+                                    onChange={(val) =>
+                                        form.setData('title', val)
+                                    }
+                                    placeholder="e.g. DPWH Special Transit Permit"
+                                />
+                                {form.errors.title && (
+                                    <p className="mt-1 text-xs text-danger">
+                                        {form.errors.title}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="sm:col-span-2">
+                                <FleetInput
+                                    label="Document / Permit Number"
+                                    value={form.data.document_number}
+                                    onChange={(val) =>
+                                        form.setData('document_number', val)
+                                    }
+                                    placeholder="e.g. DPWH-NCR-2026-SP-8821"
+                                />
+                                {form.errors.document_number && (
+                                    <p className="mt-1 text-xs text-danger">
+                                        {form.errors.document_number}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    </section>
+
+                    <section
+                        aria-labelledby={`document-validity-${asset.id}`}
+                        className="space-y-3 border-t border-line pt-4"
+                    >
+                        <div>
+                            <h4
+                                id={`document-validity-${asset.id}`}
+                                className="text-sm font-semibold text-ink"
                             >
-                                {CATEGORIES.map((c) => (
-                                    <option key={c.value} value={c.value}>
-                                        {c.label}
-                                    </option>
-                                ))}
-                            </select>
-                            {form.errors.category && (
-                                <p className="mt-1 text-xs text-danger">
-                                    {form.errors.category}
-                                </p>
-                            )}
+                                Authority and validity
+                            </h4>
+                            <p className="mt-1 text-xs leading-5 text-ink-soft">
+                                These fields determine the status dispatchers
+                                and field operators see.
+                            </p>
                         </div>
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div className="sm:col-span-2">
+                                <FleetInput
+                                    label="Issuing Authority"
+                                    value={form.data.issuing_authority}
+                                    onChange={(val) =>
+                                        form.setData('issuing_authority', val)
+                                    }
+                                    placeholder="e.g. Department of Public Works and Highways"
+                                />
+                                {form.errors.issuing_authority && (
+                                    <p className="mt-1 text-xs text-danger">
+                                        {form.errors.issuing_authority}
+                                    </p>
+                                )}
+                            </div>
 
-                        <div>
-                            <FleetInput
-                                label="Document Title"
-                                required
-                                value={form.data.title}
-                                onChange={(val) => form.setData('title', val)}
-                                placeholder="e.g. DPWH Special Transit Permit"
-                            />
-                            {form.errors.title && (
-                                <p className="mt-1 text-xs text-danger">
-                                    {form.errors.title}
-                                </p>
-                            )}
+                            <div>
+                                <label
+                                    htmlFor={`document-issued-at-${asset.id}`}
+                                    className="block text-sm font-medium text-ink"
+                                >
+                                    Issued Date
+                                </label>
+                                <input
+                                    id={`document-issued-at-${asset.id}`}
+                                    type="date"
+                                    value={form.data.issued_at}
+                                    onChange={(e) =>
+                                        form.setData(
+                                            'issued_at',
+                                            e.target.value,
+                                        )
+                                    }
+                                    className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                />
+                                {form.errors.issued_at && (
+                                    <p className="mt-1 text-xs text-danger">
+                                        {form.errors.issued_at}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div>
+                                <label
+                                    htmlFor={`document-expires-at-${asset.id}`}
+                                    className="block text-sm font-medium text-ink"
+                                >
+                                    Expiry Date
+                                </label>
+                                <input
+                                    id={`document-expires-at-${asset.id}`}
+                                    type="date"
+                                    value={form.data.expires_at}
+                                    disabled={!form.data.expires_at}
+                                    onChange={(e) =>
+                                        form.setData(
+                                            'expires_at',
+                                            e.target.value,
+                                        )
+                                    }
+                                    className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden disabled:cursor-not-allowed disabled:bg-surface-subtle disabled:text-ink-soft"
+                                />
+                                {form.errors.expires_at && (
+                                    <p className="mt-1 text-xs text-danger">
+                                        {form.errors.expires_at}
+                                    </p>
+                                )}
+                                <label className="mt-2 flex items-center gap-2 text-xs text-ink-soft">
+                                    <input
+                                        type="checkbox"
+                                        checked={!form.data.expires_at}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                form.setData('expires_at', '');
+                                            } else {
+                                                const today = new Date();
+                                                form.setData(
+                                                    'expires_at',
+                                                    today
+                                                        .toISOString()
+                                                        .slice(0, 10),
+                                                );
+                                            }
+                                        }}
+                                        className="h-4 w-4 rounded border-line-strong text-brand focus:ring-brand"
+                                    />
+                                    No expiration date
+                                </label>
+                            </div>
                         </div>
+                    </section>
 
+                    <section
+                        aria-labelledby={`document-notes-heading-${asset.id}`}
+                        className="space-y-3 border-t border-line pt-4"
+                    >
                         <div>
-                            <FleetInput
-                                label="Document / Permit Number"
-                                value={form.data.document_number}
-                                onChange={(val) =>
-                                    form.setData('document_number', val)
-                                }
-                                placeholder="e.g. DPWH-NCR-2026-SP-8821"
-                            />
-                            {form.errors.document_number && (
-                                <p className="mt-1 text-xs text-danger">
-                                    {form.errors.document_number}
-                                </p>
-                            )}
-                        </div>
-
-                        <div>
-                            <FleetInput
-                                label="Issuing Authority"
-                                value={form.data.issuing_authority}
-                                onChange={(val) =>
-                                    form.setData('issuing_authority', val)
-                                }
-                                placeholder="e.g. Department of Public Works and Highways"
-                            />
-                            {form.errors.issuing_authority && (
-                                <p className="mt-1 text-xs text-danger">
-                                    {form.errors.issuing_authority}
-                                </p>
-                            )}
-                        </div>
-
-                        <div>
-                            <label
-                                htmlFor={`document-issued-at-${asset.id}`}
-                                className="block text-sm font-medium text-ink"
+                            <h4
+                                id={`document-notes-heading-${asset.id}`}
+                                className="text-sm font-semibold text-ink"
                             >
-                                Issued Date
-                            </label>
-                            <input
-                                id={`document-issued-at-${asset.id}`}
-                                type="date"
-                                value={form.data.issued_at}
-                                onChange={(e) =>
-                                    form.setData('issued_at', e.target.value)
-                                }
-                                className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
-                            />
-                            {form.errors.issued_at && (
-                                <p className="mt-1 text-xs text-danger">
-                                    {form.errors.issued_at}
-                                </p>
-                            )}
+                                Operating restrictions
+                            </h4>
+                            <p className="mt-1 text-xs leading-5 text-ink-soft">
+                                Record route, time-window, or dispatch
+                                conditions that operators must see.
+                            </p>
                         </div>
-
-                        <div>
-                            <label
-                                htmlFor={`document-expires-at-${asset.id}`}
-                                className="block text-sm font-medium text-ink"
-                            >
-                                Expiry Date (Leave empty if permanent)
-                            </label>
-                            <input
-                                id={`document-expires-at-${asset.id}`}
-                                type="date"
-                                value={form.data.expires_at}
-                                onChange={(e) =>
-                                    form.setData('expires_at', e.target.value)
-                                }
-                                className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
-                            />
-                            {form.errors.expires_at && (
-                                <p className="mt-1 text-xs text-danger">
-                                    {form.errors.expires_at}
-                                </p>
-                            )}
-                        </div>
-                    </div>
-
-                    <div>
-                        <label
-                            htmlFor={`document-notes-${asset.id}`}
-                            className="block text-sm font-medium text-ink"
-                        >
-                            Notes / Operating Restrictions
-                        </label>
                         <textarea
                             id={`document-notes-${asset.id}`}
-                            rows={2}
+                            rows={3}
                             value={form.data.notes}
                             onChange={(e) =>
                                 form.setData('notes', e.target.value)
                             }
                             placeholder="e.g. Permits off-peak transit along C-5 and EDSA (10 PM to 4 AM)."
-                            className="mt-1 w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                            className="w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                         />
-                    </div>
+                        {form.errors.notes && (
+                            <p className="text-xs text-danger">
+                                {form.errors.notes}
+                            </p>
+                        )}
+                    </section>
 
-                    <div>
+                    <section
+                        aria-labelledby={`document-attachment-heading-${asset.id}`}
+                        className="space-y-3 border-t border-line pt-4"
+                    >
+                        <div>
+                            <h4
+                                id={`document-attachment-heading-${asset.id}`}
+                                className="text-sm font-semibold text-ink"
+                            >
+                                Source attachment
+                            </h4>
+                            <p className="mt-1 text-xs leading-5 text-ink-soft">
+                                Upload the source PDF or image. Maximum file
+                                size is 10 MB.
+                            </p>
+                        </div>
                         <label
                             htmlFor={`document-file-${asset.id}`}
                             className="block text-sm font-medium text-ink"
@@ -532,14 +627,21 @@ export function FleetDocumentsSection({
                                     e.target.files?.[0] ?? null,
                                 )
                             }
-                            className="mt-1 block min-h-11 w-full cursor-pointer rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink file:mr-3 file:rounded-md file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-brand-strong"
+                            className="block min-h-11 w-full cursor-pointer rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink file:mr-3 file:rounded-md file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-brand-strong"
                         />
+                        {form.data.file && (
+                            <p className="text-xs text-ink-soft">
+                                Selected: {form.data.file.name} ·{' '}
+                                {(form.data.file.size / 1024 / 1024).toFixed(2)}{' '}
+                                MB
+                            </p>
+                        )}
                         {form.errors.file && (
-                            <p className="mt-1 text-xs text-danger">
+                            <p className="text-xs text-danger">
                                 {form.errors.file}
                             </p>
                         )}
-                    </div>
+                    </section>
                 </form>
             </Modal>
 
@@ -944,21 +1046,49 @@ export function FleetDocumentsSection({
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-medium text-ink">
-                                        Expiry Date (Leave empty if no
-                                        expiration)
+                                    <label
+                                        htmlFor={`edit-document-expires-at-${editingDoc.id}`}
+                                        className="block text-xs font-medium text-ink"
+                                    >
+                                        Expiry Date
                                     </label>
                                     <input
+                                        id={`edit-document-expires-at-${editingDoc.id}`}
                                         type="date"
                                         value={editForm.data.expires_at}
+                                        disabled={!editForm.data.expires_at}
                                         onChange={(e) =>
                                             editForm.setData(
                                                 'expires_at',
                                                 e.target.value,
                                             )
                                         }
-                                        className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                        className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden disabled:cursor-not-allowed disabled:bg-surface-subtle disabled:text-ink-soft"
                                     />
+                                    <label className="mt-2 flex items-center gap-2 text-xs text-ink-soft">
+                                        <input
+                                            type="checkbox"
+                                            checked={!editForm.data.expires_at}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    editForm.setData(
+                                                        'expires_at',
+                                                        '',
+                                                    );
+                                                } else {
+                                                    const today = new Date();
+                                                    editForm.setData(
+                                                        'expires_at',
+                                                        today
+                                                            .toISOString()
+                                                            .slice(0, 10),
+                                                    );
+                                                }
+                                            }}
+                                            className="h-4 w-4 rounded border-line-strong text-brand focus:ring-brand"
+                                        />
+                                        No expiration date
+                                    </label>
                                     {editForm.errors.expires_at && (
                                         <p className="mt-1 text-xs text-danger">
                                             {editForm.errors.expires_at}
@@ -1117,20 +1247,49 @@ export function FleetDocumentsSection({
                             </div>
 
                             <div>
-                                <label className="block text-xs font-medium text-ink">
+                                <label
+                                    htmlFor={`replace-document-expires-at-${replacingDoc.id}`}
+                                    className="block text-xs font-medium text-ink"
+                                >
                                     Updated Expiration Date
                                 </label>
                                 <input
+                                    id={`replace-document-expires-at-${replacingDoc.id}`}
                                     type="date"
                                     value={replaceForm.data.expires_at}
+                                    disabled={!replaceForm.data.expires_at}
                                     onChange={(e) =>
                                         replaceForm.setData(
                                             'expires_at',
                                             e.target.value,
                                         )
                                     }
-                                    className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                    className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden disabled:cursor-not-allowed disabled:bg-surface-subtle disabled:text-ink-soft"
                                 />
+                                <label className="mt-2 flex items-center gap-2 text-xs text-ink-soft">
+                                    <input
+                                        type="checkbox"
+                                        checked={!replaceForm.data.expires_at}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                replaceForm.setData(
+                                                    'expires_at',
+                                                    '',
+                                                );
+                                            } else {
+                                                const today = new Date();
+                                                replaceForm.setData(
+                                                    'expires_at',
+                                                    today
+                                                        .toISOString()
+                                                        .slice(0, 10),
+                                                );
+                                            }
+                                        }}
+                                        className="h-4 w-4 rounded border-line-strong text-brand focus:ring-brand"
+                                    />
+                                    No expiration date
+                                </label>
                                 {replaceForm.errors.expires_at && (
                                     <p className="mt-1 text-xs text-danger">
                                         {replaceForm.errors.expires_at}

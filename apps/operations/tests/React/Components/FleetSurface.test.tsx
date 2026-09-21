@@ -1049,6 +1049,50 @@ describe('FleetSurface & Modular Fleet Components', () => {
             );
         });
 
+        it('focuses workshop checks when field DVIR history is empty', () => {
+            const asset = createAsset(1, 'CRN-001', 'crane', 'available', {
+                inspections: [
+                    {
+                        id: 12,
+                        type: 'safety',
+                        result: 'passed',
+                        checklist: { brakes: true },
+                        findings: 'Quarterly safety sign-off',
+                        completed_at: '2026-09-05T10:00:00Z',
+                    },
+                ],
+                inspections_count: 1,
+                dvir_inspections_count: 0,
+            });
+
+            render(
+                <FleetDetailPane
+                    asset={asset}
+                    capabilities={createCapabilities()}
+                />,
+            );
+
+            fireEvent.click(screen.getByRole('tab', { name: /inspections/i }));
+
+            expect(
+                screen.getByRole('tab', { name: /workshop checks/i }),
+            ).toHaveAttribute('aria-selected', 'true');
+            expect(
+                screen.getByText('Quarterly safety sign-off'),
+            ).toBeInTheDocument();
+
+            fireEvent.click(screen.getByRole('tab', { name: /field dvirs/i }));
+
+            expect(
+                screen.getByRole('tab', { name: /field dvirs/i }),
+            ).toHaveAttribute('aria-selected', 'true');
+            expect(
+                screen.getByText(
+                    'No field DVIR reports have been accepted for this asset yet.',
+                ),
+            ).toBeInTheDocument();
+        });
+
         it('renders pre-trip and post-trip DVIR compliance log and opens photo viewer from inspection row', () => {
             const asset: AssetViewModel = {
                 ...createAsset(1, 'CRN-001', 'crane'),

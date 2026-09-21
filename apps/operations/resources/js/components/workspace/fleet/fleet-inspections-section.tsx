@@ -31,6 +31,7 @@ export interface FleetInspectionsSectionProps {
 
 type DvirHistoryFilter = 'all' | 'needs_attention' | 'pre_trip' | 'post_trip';
 type DvirHistoryRange = 'all' | '7' | '30' | '90' | '365';
+type InspectionSource = 'field' | 'workshop';
 
 interface DvirHistoryCursor {
     before_id: number;
@@ -102,6 +103,10 @@ function dvirTypeLabel(dvir: DvirInspectionViewModel): string {
         : 'Pre-trip';
 }
 
+function recordCountLabel(count: number): string {
+    return `${count} ${count === 1 ? 'record' : 'records'}`;
+}
+
 export function FleetInspectionsSection({
     asset,
     canInspect,
@@ -156,6 +161,26 @@ export function FleetInspectionsSection({
     const initialRecords = initialDvirRecords(asset);
     const dvirCount = asset.dvir_inspections_count ?? null;
     const workshopInspectionCount = asset.inspections_count ?? null;
+    const latestWorkshopInspection = [...asset.inspections].sort((a, b) => {
+        const aTime = a.completed_at ? Date.parse(a.completed_at) : 0;
+        const bTime = b.completed_at ? Date.parse(b.completed_at) : 0;
+
+        return bTime - aTime || b.id - a.id;
+    })[0];
+    const initialSource: InspectionSource =
+        (dvirCount ?? initialRecords.length) > 0
+            ? 'field'
+            : (workshopInspectionCount ?? asset.inspections.length) > 0
+              ? 'workshop'
+              : 'field';
+    const [activeSource, setActiveSource] = useState<{
+        assetId: number;
+        source: InspectionSource;
+    } | null>(null);
+    const selectedSource =
+        activeSource?.assetId === asset.id
+            ? activeSource.source
+            : initialSource;
     const [dvirFilter, setDvirFilter] = useState<DvirHistoryFilter>('all');
     const [dvirRange, setDvirRange] = useState<DvirHistoryRange>('all');
     const [dvirInspections, setDvirInspections] =
@@ -275,8 +300,7 @@ export function FleetInspectionsSection({
                         Inspection history
                     </h3>
                     <p className="mt-1 max-w-2xl text-sm leading-5 text-ink-soft">
-                        Field DVIRs and workshop checks stay separate so the
-                        dispatch decision is easy to verify.
+                        Review field reports and workshop checks for this asset.
                     </p>
                 </div>
                 {canInspect && (
@@ -296,73 +320,100 @@ export function FleetInspectionsSection({
                 <InlineNotice tone="success" title={successMessage} />
             )}
 
-            <dl className="grid border-y border-line sm:grid-cols-2 md:grid-cols-4 md:divide-x md:divide-line">
-                <div className="py-4 sm:pr-5">
-                    <dt className="text-xs font-semibold text-ink-soft">
-                        Total field DVIRs
-                    </dt>
-                    <dd
-                        className="mt-1 text-lg font-semibold text-ink tabular-nums"
-                        aria-live="polite"
-                    >
-                        {dvirTotal ?? '—'}
-                    </dd>
-                    <p className="mt-1 text-xs text-ink-soft">
-                        {dvirTotal !== null
-                            ? 'Authoritative server total'
-                            : 'Total not available'}
-                    </p>
-                </div>
-                <div className="border-t border-line py-4 sm:pr-5 md:border-t-0 md:pl-5">
-                    <dt className="text-xs font-semibold text-ink-soft">
-                        Latest field result
-                    </dt>
-                    <dd className="mt-2">
-                        {asset.latest_dvir ? (
-                            <DvirStatusBadge dvir={asset.latest_dvir} compact />
-                        ) : (
-                            <span className="text-sm font-medium text-ink-soft">
-                                No field submission
+            <section
+                aria-label="Inspection status overview"
+                className="overflow-hidden rounded-lg border border-line bg-surface"
+            >
+                <div className="grid md:grid-cols-2 md:divide-x md:divide-line">
+                    <div className="p-4 sm:p-5">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                            <h4 className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
+                                Latest field DVIR
+                            </h4>
+                            <span
+                                className="text-xs font-semibold text-ink-soft tabular-nums"
+                                aria-live="polite"
+                            >
+                                {dvirTotal === null
+                                    ? 'Total unavailable'
+                                    : `${dvirTotal} total records`}
                             </span>
-                        )}
-                    </dd>
-                    <p className="mt-1 text-xs text-ink-soft">
-                        {asset.latest_dvir
-                            ? formatDateTime(
-                                  asset.latest_dvir.completed_at,
-                                  'Completion time not recorded',
-                              )
-                            : 'Awaiting a mobile DVIR'}
-                    </p>
+                        </div>
+                        <div className="mt-3">
+                            {asset.latest_dvir ? (
+                                <DvirStatusBadge
+                                    dvir={asset.latest_dvir}
+                                    compact
+                                />
+                            ) : (
+                                <p className="text-sm font-semibold text-ink">
+                                    No field DVIR received
+                                </p>
+                            )}
+                            <p className="mt-1 text-xs text-ink-soft">
+                                {asset.latest_dvir
+                                    ? formatDateTime(
+                                          asset.latest_dvir.completed_at,
+                                          'Completion time not recorded',
+                                      )
+                                    : 'Awaiting a mobile submission'}
+                            </p>
+                            {asset.latest_dvir?.received_at && (
+                                <p className="mt-1 text-xs text-ink-soft">
+                                    Accepted by Core-2{' '}
+                                    {formatDateTime(
+                                        asset.latest_dvir.received_at,
+                                        'Receipt time not recorded',
+                                    )}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                    <div className="border-t border-line p-4 sm:p-5 md:border-t-0">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                            <h4 className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
+                                Latest workshop check
+                            </h4>
+                            <span className="text-xs font-semibold text-ink-soft tabular-nums">
+                                {workshopInspectionCount === null
+                                    ? 'Total unavailable'
+                                    : `${workshopInspectionCount} total records`}
+                            </span>
+                        </div>
+                        <div className="mt-3">
+                            {latestWorkshopInspection ? (
+                                <span
+                                    className={cn(
+                                        'inline-flex items-center gap-1.5 text-sm font-semibold capitalize',
+                                        latestWorkshopInspection.result ===
+                                            'passed'
+                                            ? 'text-success-strong'
+                                            : latestWorkshopInspection.result ===
+                                                'conditional'
+                                              ? 'text-warning-strong'
+                                              : 'text-danger-strong',
+                                    )}
+                                >
+                                    <span
+                                        className="h-2 w-2 rounded-full bg-current"
+                                        aria-hidden="true"
+                                    />
+                                    {latestWorkshopInspection.result}
+                                </span>
+                            ) : (
+                                <p className="text-sm font-semibold text-ink">
+                                    No workshop check recorded
+                                </p>
+                            )}
+                            <p className="mt-1 text-xs text-ink-soft">
+                                {latestWorkshopInspection
+                                    ? `Completed ${formatDateTime(latestWorkshopInspection.completed_at, 'date not recorded')}`
+                                    : 'Record a check after maintenance or safety work'}
+                            </p>
+                        </div>
+                    </div>
                 </div>
-                <div className="border-t border-line py-4 sm:pr-5 md:border-t-0 md:pl-5">
-                    <dt className="text-xs font-semibold text-ink-soft">
-                        Server receipt
-                    </dt>
-                    <dd className="mt-1 text-sm font-semibold text-ink">
-                        {asset.latest_dvir?.received_at
-                            ? formatDateTime(
-                                  asset.latest_dvir.received_at,
-                                  'Not recorded',
-                              )
-                            : 'Not available'}
-                    </dd>
-                    <p className="mt-1 text-xs text-ink-soft">
-                        When Core-2 accepted the mobile record
-                    </p>
-                </div>
-                <div className="border-t border-line py-4 md:border-t-0 md:pl-5">
-                    <dt className="text-xs font-semibold text-ink-soft">
-                        Workshop &amp; safety checks
-                    </dt>
-                    <dd className="mt-1 text-lg font-semibold text-ink tabular-nums">
-                        {workshopInspectionCount ?? '—'}
-                    </dd>
-                    <p className="mt-1 text-xs text-ink-soft">
-                        Authoritative server total
-                    </p>
-                </div>
-            </dl>
+            </section>
 
             <Modal
                 open={showForm && canInspect}
@@ -550,8 +601,56 @@ export function FleetInspectionsSection({
                 </div>
             ) : (
                 <div className="space-y-8">
+                    <div
+                        role="tablist"
+                        aria-label="Inspection record source"
+                        className="flex flex-wrap gap-2 border-b border-line pb-3"
+                    >
+                        {(
+                            [
+                                [
+                                    'field',
+                                    'Field DVIRs',
+                                    dvirTotal ?? initialRecords.length,
+                                ],
+                                [
+                                    'workshop',
+                                    'Workshop checks',
+                                    workshopInspectionCount ??
+                                        asset.inspections.length,
+                                ],
+                            ] as const
+                        ).map(([source, label, count]) => (
+                            <button
+                                key={source}
+                                type="button"
+                                role="tab"
+                                aria-selected={selectedSource === source}
+                                aria-controls={`asset-${source}-inspection-panel-${asset.id}`}
+                                onClick={() =>
+                                    setActiveSource({
+                                        assetId: asset.id,
+                                        source,
+                                    })
+                                }
+                                className={cn(
+                                    'min-h-11 rounded-lg border px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-hidden',
+                                    selectedSource === source
+                                        ? 'border-brand-strong bg-brand-soft text-brand-strong'
+                                        : 'border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
+                                )}
+                            >
+                                {label}{' '}
+                                <span className="tabular-nums">({count})</span>
+                            </button>
+                        ))}
+                    </div>
+
                     <section
+                        id={`asset-field-inspection-panel-${asset.id}`}
+                        role="tabpanel"
                         aria-labelledby={`asset-dvir-heading-${asset.id}`}
+                        hidden={selectedSource !== 'field'}
                         className="space-y-4"
                     >
                         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -574,7 +673,7 @@ export function FleetInspectionsSection({
                             <span className="text-xs font-semibold text-ink-soft tabular-nums">
                                 {dvirTotal === null
                                     ? 'Total unavailable'
-                                    : `${dvirTotal} total records`}
+                                    : recordCountLabel(dvirTotal)}
                             </span>
                         </div>
 
@@ -645,7 +744,9 @@ export function FleetInspectionsSection({
                                     variant="secondary"
                                     size="sm"
                                     onClick={() =>
-                                        void loadDvirHistory({ append: false })
+                                        void loadDvirHistory({
+                                            append: false,
+                                        })
                                     }
                                     disabled={historyLoading}
                                     aria-label="Refresh field DVIR history"
@@ -1006,7 +1107,9 @@ export function FleetInspectionsSection({
                                     variant="secondary"
                                     size="sm"
                                     onClick={() =>
-                                        void loadDvirHistory({ append: true })
+                                        void loadDvirHistory({
+                                            append: true,
+                                        })
                                     }
                                     disabled={historyLoading}
                                 >
@@ -1019,7 +1122,10 @@ export function FleetInspectionsSection({
                     </section>
 
                     <section
+                        id={`asset-workshop-inspection-panel-${asset.id}`}
+                        role="tabpanel"
                         aria-labelledby={`asset-workshop-heading-${asset.id}`}
+                        hidden={selectedSource !== 'workshop'}
                         className="space-y-3 border-t border-line pt-6"
                     >
                         <div className="flex items-center justify-between">
@@ -1035,7 +1141,7 @@ export function FleetInspectionsSection({
                             <span className="text-xs font-semibold text-ink-soft tabular-nums">
                                 {workshopInspectionCount === null
                                     ? 'Total unavailable'
-                                    : `${workshopInspectionCount} total records`}
+                                    : recordCountLabel(workshopInspectionCount)}
                             </span>
                         </div>
                         <p className="text-xs leading-5 text-ink-soft">
