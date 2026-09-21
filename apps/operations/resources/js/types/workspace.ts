@@ -292,6 +292,7 @@ export interface MaintenanceWorkOrderViewModel {
     id: number;
     defect: string;
     status: string;
+    created_at?: string | null;
     dispatch_blocking: boolean;
     scheduled_at: string | null;
     next_due_at: string | null;
@@ -371,6 +372,7 @@ export interface DvirInspectionViewModel {
     has_defects: boolean;
     critical_defects_count: number;
     completed_at: string | null;
+    received_at?: string | null;
     inspector_name?: string | null;
     starting_odometer_km?: number | null;
     ending_odometer_km?: number | null;
@@ -389,6 +391,7 @@ export interface DvirInspectionSummaryViewModel {
     has_defects: boolean;
     critical_defects_count: number;
     completed_at: string | null;
+    received_at?: string | null;
     inspector_name?: string | null;
     photos: DvirPhotoViewModel[];
 }
@@ -401,6 +404,28 @@ export interface AssetLockoutViewModel {
     blocking_work_order_id?: number | null;
     locked_at?: string | null;
     latest_critical_dvir_id?: number | null;
+}
+
+export interface AssetDispatchabilityBlockerViewModel {
+    code: 'status' | 'maintenance' | 'inspection' | string;
+    label: string;
+    detail: string;
+}
+
+export interface AssetDispatchabilityViewModel {
+    is_dispatchable: boolean;
+    blockers: AssetDispatchabilityBlockerViewModel[];
+}
+
+export interface AssetStatusChangeViewModel {
+    from_status: AssetStatusValue | string | null;
+    to_status: AssetStatusValue | string | null;
+    reason: string | null;
+    occurred_at: string | null;
+    actor: {
+        id: number;
+        name: string;
+    } | null;
 }
 
 export interface AssetViewModel {
@@ -423,6 +448,12 @@ export interface AssetViewModel {
     status: StatusViewModel<AssetStatusValue>;
     blocking_work_orders_count: number;
     is_dispatchable: boolean;
+    dispatchability?: AssetDispatchabilityViewModel;
+    inspections_count?: number | null;
+    dvir_inspections_count?: number | null;
+    maintenance_work_orders_count?: number | null;
+    documents_count?: number | null;
+    latest_status_change?: AssetStatusChangeViewModel | null;
     active_operator?: OperatorBindingViewModel | null;
     hos?: EquipmentHosViewModel | null;
     latest_dvir?: DvirInspectionSummaryViewModel | null;

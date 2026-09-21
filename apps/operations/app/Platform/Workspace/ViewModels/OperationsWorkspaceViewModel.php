@@ -326,14 +326,83 @@ final class OperationsWorkspaceViewModel
      */
     public static function assets(Collection $assets): array
     {
-        return $assets->map(static function (OperationalAsset $asset): array {
+        $assetIds = $assets
+            ->map(static fn (OperationalAsset $asset): int => (int) $asset->getKey())
+            ->values();
+        $latestStatusChanges = $assetIds->isEmpty()
+            ? collect()
+            : AuditEvent::query()
+                ->with('actor:id,name')
+                ->where('subject_type', (new OperationalAsset)->getMorphClass())
+                ->where('action', 'asset.status_updated')
+                ->whereIn('subject_id', $assetIds->all())
+                ->latest('occurred_at')
+                ->get()
+                ->groupBy('subject_id')
+                ->map(static fn (Collection $events): ?AuditEvent => $events->first());
+
+        return $assets->map(static function (OperationalAsset $asset) use ($latestStatusChanges): array {
             $blockingCount = (int) $asset->getAttribute('blocking_work_orders_count');
+            $inspectionsCount = $asset->getAttribute('inspections_count');
+            $dvirInspectionsCount = $asset->getAttribute('dvir_inspections_count');
+            $maintenanceWorkOrdersCount = $asset->getAttribute('maintenance_work_orders_count');
+            $documentsCount = $asset->getAttribute('documents_count');
+            $inspectionsCount = is_numeric($inspectionsCount) ? (int) $inspectionsCount : null;
+            $dvirInspectionsCount = is_numeric($dvirInspectionsCount) ? (int) $dvirInspectionsCount : null;
+            $maintenanceWorkOrdersCount = is_numeric($maintenanceWorkOrdersCount) ? (int) $maintenanceWorkOrdersCount : null;
+            $documentsCount = is_numeric($documentsCount) ? (int) $documentsCount : null;
             $inspections = $asset->relationLoaded('inspections') ? $asset->inspections : collect();
             $maintenanceOrders = $asset->relationLoaded('maintenanceWorkOrders') ? $asset->maintenanceWorkOrders : collect();
             $latestDvir = $asset->relationLoaded('latestDvirInspection') ? $asset->latestDvirInspection : null;
-            $hasPassingInspection = $inspections->contains(static fn ($i): bool => $i->result === 'passed' && $i->completed_at !== null)
-                || ($latestDvir !== null && ! $latestDvir->has_defects && $latestDvir->critical_defects_count === 0);
+            $completedInspections = $inspections
+                ->filter(static fn ($inspection): bool => $inspection->completed_at !== null)
+                ->sortByDesc('completed_at')
+                ->values();
+            $latestLegacyInspection = $completedInspections->first();
+            $hasLegacyPassingInspection = $completedInspections->contains(
+                static fn ($inspection): bool => $inspection->result === 'passed',
+            );
+            $hasDvirPassingInspection = $latestDvir !== null
+                && ! $latestDvir->has_defects
+                && $latestDvir->critical_defects_count === 0;
+            $latestInspectionFailed = false;
+            if ($latestLegacyInspection !== null && $latestDvir !== null) {
+                $latestInspectionFailed = $latestLegacyInspection->completed_at->greaterThanOrEqualTo($latestDvir->completed_at)
+                    ? $latestLegacyInspection->result !== 'passed'
+                    : ! $hasDvirPassingInspection;
+            } elseif ($latestLegacyInspection !== null) {
+                $latestInspectionFailed = $latestLegacyInspection->result !== 'passed';
+            } elseif ($latestDvir !== null) {
+                $latestInspectionFailed = ! $hasDvirPassingInspection;
+            }
+            $hasPassingInspection = ($hasLegacyPassingInspection || $hasDvirPassingInspection)
+                && ! $latestInspectionFailed;
             $isDispatchable = $asset->status->dispatchable() && $blockingCount === 0 && $hasPassingInspection;
+            $dispatchabilityBlockers = [];
+            if (! $asset->status->dispatchable()) {
+                $dispatchabilityBlockers[] = [
+                    'code' => 'status',
+                    'label' => 'Operational status prevents dispatch',
+                    'detail' => "Current status is {$asset->status->label()}.",
+                ];
+            }
+            if ($blockingCount > 0) {
+                $dispatchabilityBlockers[] = [
+                    'code' => 'maintenance',
+                    'label' => 'Dispatch-blocking maintenance is open',
+                    'detail' => "{$blockingCount} open maintenance order(s) block dispatch.",
+                ];
+            }
+            if (! $hasPassingInspection) {
+                $dispatchabilityBlockers[] = [
+                    'code' => 'inspection',
+                    'label' => 'Passing inspection required',
+                    'detail' => 'A completed passing inspection is required before dispatch.',
+                ];
+            }
+
+            $statusChange = $latestStatusChanges->get((string) $asset->getKey())
+                ?? $latestStatusChanges->get($asset->getKey());
 
             $activeShift = $asset->relationLoaded('activeOperatorShift') ? $asset->activeOperatorShift : null;
             $activeOperator = null;
@@ -413,6 +482,7 @@ final class OperationsWorkspaceViewModel
                     'has_defects' => (bool) $latestDvir->has_defects,
                     'critical_defects_count' => $criticalCount,
                     'completed_at' => $latestDvir->completed_at->toIso8601String(),
+                    'received_at' => $latestDvir->created_at?->toIso8601String(),
                     'inspector_name' => $latestDvir->inspector_name,
                     'photos' => $photos,
                 ];
@@ -460,6 +530,7 @@ final class OperationsWorkspaceViewModel
                     'has_defects' => (bool) $dvir->has_defects,
                     'critical_defects_count' => $critCount,
                     'completed_at' => $dvir->completed_at->toIso8601String(),
+                    'received_at' => $dvir->created_at?->toIso8601String(),
                     'inspector_name' => $dvir->inspector_name,
                     'starting_odometer_km' => $dvir->starting_odometer_km !== null ? (float) $dvir->starting_odometer_km : null,
                     'ending_odometer_km' => $dvir->ending_odometer_km !== null ? (float) $dvir->ending_odometer_km : null,
@@ -512,6 +583,24 @@ final class OperationsWorkspaceViewModel
                 ],
                 'blocking_work_orders_count' => $blockingCount,
                 'is_dispatchable' => $isDispatchable,
+                'dispatchability' => [
+                    'is_dispatchable' => $isDispatchable,
+                    'blockers' => $dispatchabilityBlockers,
+                ],
+                'inspections_count' => $inspectionsCount,
+                'dvir_inspections_count' => $dvirInspectionsCount,
+                'maintenance_work_orders_count' => $maintenanceWorkOrdersCount,
+                'documents_count' => $documentsCount,
+                'latest_status_change' => $statusChange instanceof AuditEvent ? [
+                    'from_status' => is_array($statusChange->before) ? ($statusChange->before['status'] ?? null) : null,
+                    'to_status' => is_array($statusChange->after) ? ($statusChange->after['status'] ?? null) : null,
+                    'reason' => $statusChange->reason,
+                    'occurred_at' => $statusChange->occurred_at?->toIso8601String(),
+                    'actor' => $statusChange->actor === null ? null : [
+                        'id' => (int) $statusChange->actor->getKey(),
+                        'name' => $statusChange->actor->name,
+                    ],
+                ] : null,
                 'active_operator' => $activeOperator,
                 'hos' => $hosData,
                 'latest_dvir' => $dvirData,
@@ -529,6 +618,7 @@ final class OperationsWorkspaceViewModel
                     'id' => (int) $order->getKey(),
                     'defect' => $order->defect,
                     'status' => $order->status,
+                    'created_at' => $order->created_at?->toIso8601String(),
                     'dispatch_blocking' => (bool) $order->dispatch_blocking,
                     'scheduled_at' => $order->scheduled_at?->toIso8601String(),
                     'next_due_at' => $order->next_due_at?->toIso8601String(),

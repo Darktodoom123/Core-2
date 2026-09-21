@@ -291,5 +291,57 @@ describe('Compliance Document Management & RBAC Gating', () => {
             expect(screen.getByTitle('Replace Document File')).toBeInTheDocument();
             expect(screen.getByTitle('Delete Document')).toBeInTheDocument();
         });
+
+        it('opens Add Document in a modal and submits the selected file', () => {
+            render(
+                <FleetDocumentsSection asset={sampleAsset} canManage={true} />,
+            );
+
+            fireEvent.click(
+                screen.getByRole('button', { name: /add document/i }),
+            );
+
+            expect(
+                screen.getByRole('dialog', {
+                    name: /add compliance document/i,
+                }),
+            ).toBeInTheDocument();
+            expect(
+                screen.getByText('Upload Authorized Permit / Certificate'),
+            ).toBeInTheDocument();
+
+            const uploadButton = screen.getByRole('button', {
+                name: /upload document/i,
+            });
+            expect(uploadButton).toBeDisabled();
+
+            fireEvent.change(
+                screen.getByLabelText(
+                    /document attachment \(pdf or image, max 10mb\)/i,
+                ),
+                {
+                    target: {
+                        files: [
+                            new File(['permit'], 'permit.pdf', {
+                                type: 'application/pdf',
+                            }),
+                        ],
+                    },
+                },
+            );
+
+            expect(uploadButton).not.toBeDisabled();
+            fireEvent.click(uploadButton);
+
+            expect(mockPost).toHaveBeenCalledWith(
+                '/operations/assets/201/documents',
+                expect.objectContaining({
+                    data: expect.objectContaining({
+                        file: expect.any(File),
+                    }),
+                }),
+            );
+            expect(screen.getByText('Document uploaded.')).toBeInTheDocument();
+        });
     });
 });

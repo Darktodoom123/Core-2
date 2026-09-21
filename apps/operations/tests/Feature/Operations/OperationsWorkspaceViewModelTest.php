@@ -16,11 +16,13 @@ use App\Modules\HoursOfService\Enums\ShiftStatus;
 use App\Modules\HoursOfService\Enums\StandbyReason;
 use App\Modules\HoursOfService\Models\OperatorDutyLog;
 use App\Modules\HoursOfService\Models\OperatorShift;
+use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Gpt\Models\GptRecommendation;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
 use App\Platform\Reporting\Enums\JobReportStatus;
 use App\Platform\Reporting\Models\JobReport;
+use App\Platform\Workspace\Queries\WorkspaceAssetsQuery;
 use App\Platform\Workspace\ViewModels\OperationsWorkspaceViewModel;
 use App\Shared\Assets\Enums\AssetStatus;
 use App\Shared\Assets\Models\MaintenanceWorkOrder;
@@ -33,6 +35,76 @@ uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
     $this->seed(RolePermissionSeeder::class);
+});
+
+it('serializes authoritative fleet detail totals and the latest recorded status update', function (): void {
+    $manager = User::factory()->create(['name' => 'Fleet Operations Manager']);
+    $manager->syncRoles([RoleName::OperationsManager->value]);
+
+    $asset = OperationalAsset::query()->create([
+        'code' => 'CRN-COUNTS-01',
+        'name' => 'Counted Fleet Asset',
+        'kind' => 'mobile_crane',
+        'status' => AssetStatus::Available,
+    ]);
+
+    for ($index = 1; $index <= 12; $index++) {
+        $asset->inspections()->create([
+            'technician_id' => $manager->id,
+            'type' => 'safety',
+            'result' => 'passed',
+            'checklist' => ['brakes' => true],
+            'completed_at' => now()->subMinutes($index),
+        ]);
+    }
+
+    for ($index = 1; $index <= 16; $index++) {
+        DvirInspection::query()->create([
+            'user_id' => $manager->id,
+            'operational_asset_id' => $asset->id,
+            'inspection_type' => DvirInspectionType::PRE_TRIP,
+            'completed_at' => now()->subMinutes($index),
+            'has_defects' => false,
+            'critical_defects_count' => 0,
+            'signature_captured' => true,
+        ]);
+    }
+
+    MaintenanceWorkOrder::query()->create([
+        'operational_asset_id' => $asset->id,
+        'status' => 'pending',
+        'priority' => 'routine',
+        'dispatch_blocking' => false,
+        'defect' => 'Routine maintenance follow-up',
+        'reported_at' => now()->subHour(),
+    ]);
+
+    AuditEvent::query()->create([
+        'actor_id' => $manager->id,
+        'subject_type' => $asset->getMorphClass(),
+        'subject_id' => $asset->id,
+        'action' => 'asset.status_updated',
+        'before' => ['status' => AssetStatus::UnderInspection->value],
+        'after' => ['status' => AssetStatus::Available->value],
+        'reason' => 'Passing safety inspection recorded',
+        'occurred_at' => now()->subMinute(),
+    ]);
+
+    $page = app(WorkspaceAssetsQuery::class)->paginate($manager, [
+        'per_page' => 50,
+    ]);
+    $serialized = OperationsWorkspaceViewModel::assets($page->getCollection());
+    $item = collect($serialized)->firstWhere('id', $asset->id);
+
+    expect($item)->not()->toBeNull()
+        ->and($item['inspections_count'])->toBe(12)
+        ->and($item['dvir_inspections_count'])->toBe(16)
+        ->and($item['maintenance_work_orders_count'])->toBe(1)
+        ->and(count($item['inspections']))->toBeLessThanOrEqual(10)
+        ->and(count($item['dvir_inspections']))->toBeLessThanOrEqual(15)
+        ->and($item['latest_status_change']['to_status'])->toBe(AssetStatus::Available->value)
+        ->and($item['latest_status_change']['reason'])->toBe('Passing safety inspection recorded')
+        ->and($item['latest_status_change']['actor']['name'])->toBe('Fleet Operations Manager');
 });
 
 it('maps asset active operator with DOLE 9-hour fatigue warning and fresh telemetry', function (): void {

@@ -69,7 +69,13 @@ final class WorkspaceAssetsQuery
 
         /** @var LengthAwarePaginator<int, OperationalAsset> $paginator */
         $paginator = $query
-            ->withCount(['maintenanceWorkOrders as blocking_work_orders_count' => fn ($q) => $q->where('dispatch_blocking', true)->whereNull('released_at')])
+            ->withCount([
+                'inspections as inspections_count',
+                'dvirInspections as dvir_inspections_count',
+                'maintenanceWorkOrders as maintenance_work_orders_count',
+                'documents as documents_count',
+                'maintenanceWorkOrders as blocking_work_orders_count' => fn ($q) => $q->where('dispatch_blocking', true)->whereNull('released_at'),
+            ])
             ->with([
                 'documents.latestAttachment',
                 'inspections' => fn ($q) => $q->latest('completed_at')->limit(10),

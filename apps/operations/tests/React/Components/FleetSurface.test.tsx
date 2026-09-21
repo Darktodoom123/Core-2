@@ -1,4 +1,11 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import {
+    act,
+    fireEvent,
+    render,
+    screen,
+    waitFor,
+    within,
+} from '@testing-library/react';
 import React, { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -72,6 +79,7 @@ vi.mock('@inertiajs/react', () => {
                     setDataState(initialValues);
                     setErrors({});
                 },
+                setDefaults: vi.fn(),
                 processing,
                 setProcessing,
                 transform: vi.fn(),
@@ -207,6 +215,10 @@ function createAsset(
         latest_dvir: null,
         lockout: null,
         inspections: [],
+        inspections_count: 0,
+        dvir_inspections_count: 0,
+        maintenance_work_orders_count: 0,
+        documents_count: 0,
         maintenance_work_orders: [],
         ...overrides,
     };
@@ -576,7 +588,7 @@ describe('FleetSurface & Modular Fleet Components', () => {
             );
 
             // Rated capacity renders "55" without fabricated "MT" or "Tons"
-            const capacityDt = screen.getByText('Rated Capacity');
+            const capacityDt = screen.getByText(/rated capacity/i);
             const capacityDd = capacityDt.nextElementSibling;
             expect(capacityDd?.textContent?.trim()).toBe('55');
 
@@ -857,6 +869,118 @@ describe('FleetSurface & Modular Fleet Components', () => {
             ).toHaveAttribute('aria-selected', 'true');
         });
 
+        it('keeps unfinished inspection form data while reviewing another tab', () => {
+            const asset = createAsset(1, 'CRN-001', 'crane');
+
+            render(
+                <FleetDetailPane
+                    asset={asset}
+                    capabilities={createCapabilities({ inspect_asset: true })}
+                />,
+            );
+
+            fireEvent.click(screen.getByRole('tab', { name: /inspections/i }));
+            fireEvent.click(
+                screen.getByRole('button', {
+                    name: /record workshop inspection/i,
+                }),
+            );
+
+            const findings = screen.getByLabelText(/findings \/ remarks/i);
+            fireEvent.change(findings, {
+                target: { value: 'Keep this draft while checking status.' },
+            });
+
+            expect(
+                screen.getByRole('dialog', {
+                    name: /record workshop inspection/i,
+                }),
+            ).toBeInTheDocument();
+
+            fireEvent.click(
+                screen.getByRole('button', {
+                    name: /close inspection dialog/i,
+                }),
+            );
+
+            fireEvent.click(
+                screen.getByRole('tab', { name: /overview & specs/i }),
+            );
+            fireEvent.click(screen.getByRole('tab', { name: /inspections/i }));
+
+            fireEvent.click(
+                screen.getByRole('button', {
+                    name: /record workshop inspection/i,
+                }),
+            );
+
+            expect(screen.getByLabelText(/findings \/ remarks/i)).toHaveValue(
+                'Keep this draft while checking status.',
+            );
+        });
+
+        it('requires an explicit inspection type and result before submission', () => {
+            const asset = createAsset(1, 'CRN-001', 'crane');
+
+            render(
+                <FleetDetailPane
+                    asset={asset}
+                    capabilities={createCapabilities({ inspect_asset: true })}
+                />,
+            );
+
+            fireEvent.click(screen.getByRole('tab', { name: /inspections/i }));
+            fireEvent.click(
+                screen.getByRole('button', {
+                    name: /record workshop inspection/i,
+                }),
+            );
+
+            expect(screen.getByLabelText('Inspection type')).toHaveValue('');
+            expect(screen.getByLabelText(/result \*/i)).toHaveValue('');
+            expect(
+                screen.getByRole('button', {
+                    name: /save inspection record/i,
+                }),
+            ).toBeDisabled();
+            expect(mockPost).not.toHaveBeenCalled();
+        });
+
+        it('explains the backend-provided reason when an asset is not dispatchable', () => {
+            const asset = createAsset(1, 'CRN-001', 'crane', 'available', {
+                is_dispatchable: false,
+                dispatchability: {
+                    is_dispatchable: false,
+                    blockers: [
+                        {
+                            code: 'maintenance',
+                            label: 'Dispatch-blocking maintenance is open',
+                            detail: '1 open maintenance order(s) block dispatch.',
+                        },
+                    ],
+                },
+            });
+
+            render(
+                <FleetDetailPane
+                    asset={asset}
+                    capabilities={createCapabilities()}
+                />,
+            );
+
+            fireEvent.click(
+                screen.getByRole('tab', { name: /readiness & status/i }),
+            );
+
+            expect(screen.getAllByText('Available').length).toBeGreaterThan(0);
+            expect(
+                screen.getAllByText('Not dispatchable').length,
+            ).toBeGreaterThan(0);
+            expect(
+                screen.getByText('1 open maintenance order(s) block dispatch.'),
+            ).toBeInTheDocument();
+        });
+
         it('allows recording a new safety inspection', () => {
             const asset = createAsset(1, 'CRN-001', 'crane');
 
@@ -884,6 +1008,12 @@ describe('FleetSurface & Modular Fleet Components', () => {
             fireEvent.click(openFormBtn);
 
             expect(
+                screen.getByRole('dialog', {
+                    name: /record workshop inspection/i,
+                }),
+            ).toBeInTheDocument();
+
+            expect(
                 screen.getByText('Workshop / Post-Repair Verification'),
             ).toBeInTheDocument();
 
@@ -899,6 +1029,9 @@ describe('FleetSurface & Modular Fleet Components', () => {
             expect(screen.getByLabelText('Inspection type')).toHaveValue(
                 'post_repair',
             );
+            fireEvent.change(screen.getByLabelText(/result \*/i), {
+                target: { value: 'passed' },
+            });
 
             const remarksInput = screen.getByLabelText(/findings \/ remarks/i);
             fireEvent.change(remarksInput, {
@@ -975,6 +1108,8 @@ describe('FleetSurface & Modular Fleet Components', () => {
                         completed_at: '2026-09-05T10:00:00Z',
                     },
                 ],
+                inspections_count: 1,
+                dvir_inspections_count: 2,
             };
 
             render(
@@ -998,6 +1133,9 @@ describe('FleetSurface & Modular Fleet Components', () => {
             expect(screen.getByText('DVIR-000100')).toBeInTheDocument();
             expect(screen.getAllByText(/post-trip/i).length).toBeGreaterThan(0);
             expect(screen.getAllByText(/pre-trip/i).length).toBeGreaterThan(0);
+            fireEvent.click(
+                screen.getByRole('button', { name: /DVIR-000101/i }),
+            );
             expect(
                 screen.getAllByText('Carlos Operator').length,
             ).toBeGreaterThan(0);
@@ -1030,6 +1168,36 @@ describe('FleetSurface & Modular Fleet Components', () => {
             ).toBeGreaterThanOrEqual(2);
         });
 
+        it('uses authoritative backend totals instead of loaded detail rows for tab counts', () => {
+            const asset = createAsset(1, 'CRN-001', 'crane', 'available', {
+                inspections_count: 12,
+                dvir_inspections_count: 16,
+                maintenance_work_orders_count: 14,
+                documents_count: 7,
+            });
+
+            render(
+                <FleetDetailPane
+                    asset={asset}
+                    capabilities={createCapabilities()}
+                />,
+            );
+
+            expect(
+                screen.getByRole('tab', { name: /inspections/i }),
+            ).toHaveTextContent('28');
+            expect(
+                screen.getByRole('tab', { name: /work orders/i }),
+            ).toHaveTextContent('14');
+            expect(
+                screen.getByRole('tab', { name: /permits & docs/i }),
+            ).toHaveTextContent('7');
+
+            fireEvent.click(screen.getByRole('tab', { name: /inspections/i }));
+            expect(screen.getByText('16 total records')).toBeInTheDocument();
+            expect(screen.getByText('12 total records')).toBeInTheDocument();
+        });
+
         it('allows opening a maintenance work order', () => {
             const asset = createAsset(1, 'CRN-001', 'crane');
 
@@ -1058,16 +1226,20 @@ describe('FleetSurface & Modular Fleet Components', () => {
             });
             fireEvent.click(openOrderBtn);
 
+            const dialog = screen.getByRole('dialog', {
+                name: /open maintenance work order/i,
+            });
             expect(
-                screen.getByText('Open Maintenance Work Order'),
+                within(dialog).getByText('Describe the maintenance issue'),
             ).toBeInTheDocument();
 
-            const defectInput = screen.getByLabelText(/defect description \*/i);
+            const defectInput =
+                within(dialog).getByLabelText(/defect description/i);
             fireEvent.change(defectInput, {
                 target: { value: 'Hydraulic oil leakage' },
             });
 
-            const createBtn = screen.getByRole('button', {
+            const createBtn = within(dialog).getByRole('button', {
                 name: /create work order/i,
             });
             fireEvent.click(createBtn);
@@ -1076,6 +1248,59 @@ describe('FleetSurface & Modular Fleet Components', () => {
                 '/operations/assets/1/maintenance',
                 expect.any(Object),
             );
+        });
+
+        it('keeps an unfinished maintenance work-order draft when the dialog is closed', async () => {
+            const asset = createAsset(1, 'CRN-001', 'crane');
+
+            render(
+                <FleetDetailPane
+                    asset={asset}
+                    capabilities={createCapabilities({ maintain_asset: true })}
+                />,
+            );
+
+            fireEvent.click(screen.getByRole('tab', { name: /work orders/i }));
+            fireEvent.click(
+                screen.getByRole('button', {
+                    name: /open maintenance work order/i,
+                }),
+            );
+
+            const dialog = screen.getByRole('dialog', {
+                name: /open maintenance work order/i,
+            });
+            fireEvent.change(
+                within(dialog).getByLabelText(/defect description/i),
+                { target: { value: 'Hydraulic oil leakage' } },
+            );
+            fireEvent.click(
+                within(dialog).getByRole('button', {
+                    name: /close work order dialog/i,
+                }),
+            );
+
+            await waitFor(() =>
+                expect(
+                    screen.queryByRole('dialog', {
+                        name: /open maintenance work order/i,
+                    }),
+                ).not.toBeInTheDocument(),
+            );
+
+            fireEvent.click(
+                screen.getByRole('button', {
+                    name: /open maintenance work order/i,
+                }),
+            );
+
+            expect(
+                within(
+                    screen.getByRole('dialog', {
+                        name: /open maintenance work order/i,
+                    }),
+                ).getByLabelText(/defect description/i),
+            ).toHaveValue('Hydraulic oil leakage');
         });
 
         it('allows updating asset status with mandatory reason', () => {
@@ -1099,7 +1324,7 @@ describe('FleetSurface & Modular Fleet Components', () => {
             expect(screen.getByText(/transitioning to/i)).toBeInTheDocument();
 
             const reasonInput = screen.getByLabelText(
-                /reason for status change \*/i,
+                /reason for status change/i,
             );
             fireEvent.change(reasonInput, {
                 target: { value: 'Periodic maintenance completed' },
@@ -1115,6 +1340,142 @@ describe('FleetSurface & Modular Fleet Components', () => {
                 expect.any(Object),
             );
         });
+
+        it('keeps status mutations on the same asset and tab with inline success feedback', () => {
+            const asset = createAsset(1, 'CRN-001', 'crane');
+
+            render(
+                <FleetDetailPane
+                    asset={asset}
+                    capabilities={createCapabilities({
+                        update_asset_status: true,
+                    })}
+                />,
+            );
+
+            const statusTab = screen.getByRole('tab', {
+                name: /readiness & status/i,
+            });
+            fireEvent.click(statusTab);
+            fireEvent.change(
+                screen.getByLabelText(/reason for status change/i),
+                { target: { value: 'Routine availability check' } },
+            );
+            fireEvent.click(
+                screen.getByRole('button', { name: /update asset status/i }),
+            );
+
+            const [, options] = mockPost.mock.calls.at(-1) as [
+                string,
+                {
+                    onSuccess?: () => void;
+                    preserveScroll?: boolean;
+                    preserveState?: boolean;
+                },
+            ];
+            expect(options.preserveScroll).toBe(true);
+            expect(options.preserveState).toBe(true);
+
+            act(() => options.onSuccess?.());
+
+            expect(statusTab).toHaveAttribute('aria-selected', 'true');
+            expect(
+                screen.getByText('Status updated to Available.'),
+            ).toBeInTheDocument();
+            expect(
+                screen.queryByText('Operations overview'),
+            ).not.toBeInTheDocument();
+        });
+
+        it('keeps unauthorized detail tabs read-only while preserving their records', () => {
+            const asset = createAsset(1, 'CRN-001', 'crane', 'available', {
+                documents: [
+                    {
+                        id: 1,
+                        category: 'road_permits',
+                        category_label: 'Road Transit Permit',
+                        title: 'Transit permit',
+                        status: 'active',
+                        validity_status: 'valid',
+                        is_expired: false,
+                        expires_soon: false,
+                    },
+                ],
+            });
+
+            render(
+                <FleetDetailPane
+                    asset={asset}
+                    capabilities={createCapabilities({
+                        update_asset_status: false,
+                        inspect_asset: false,
+                        maintain_asset: false,
+                    })}
+                />,
+            );
+
+            fireEvent.click(
+                screen.getByRole('tab', { name: /readiness & status/i }),
+            );
+            expect(
+                screen.getByText(
+                    /does not have authorization to update status/i,
+                ),
+            ).toBeInTheDocument();
+
+            fireEvent.click(screen.getByRole('tab', { name: /inspections/i }));
+            expect(
+                screen.queryByRole('button', {
+                    name: /record workshop inspection/i,
+                }),
+            ).not.toBeInTheDocument();
+
+            fireEvent.click(screen.getByRole('tab', { name: /work orders/i }));
+            expect(
+                screen.queryByRole('button', {
+                    name: /open maintenance work order/i,
+                }),
+            ).not.toBeInTheDocument();
+
+            fireEvent.click(
+                screen.getByRole('tab', { name: /permits & docs/i }),
+            );
+            expect(screen.queryByText('Add Document')).not.toBeInTheDocument();
+            expect(screen.getByText('Transit permit')).toBeInTheDocument();
+        });
+    });
+
+    it('resets the detail pane to Overview only when the selected asset changes', () => {
+        const assets = [
+            createAsset(1, 'CRN-001', 'crane'),
+            createAsset(2, 'TRK-002', 'truck'),
+        ];
+
+        render(
+            <FleetSurface
+                assets={assets}
+                locations={[]}
+                capabilities={createCapabilities()}
+            />,
+        );
+
+        const statusTab = screen.getByRole('tab', {
+            name: /readiness & status/i,
+        });
+        fireEvent.click(statusTab);
+        expect(statusTab).toHaveAttribute('aria-selected', 'true');
+
+        fireEvent.click(screen.getByText('TRK-002'));
+
+        expect(
+            screen.getByRole('heading', { name: 'Asset TRK-002' }),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByRole('tab', { name: /overview & specs/i }),
+        ).toHaveAttribute('aria-selected', 'true');
+        expect(
+            screen.getByRole('tab', { name: /readiness & status/i }),
+        ).not.toHaveAttribute('aria-selected', 'true');
     });
 
     describe('Responsive Navigation & Mobile Touch Ergonomics', () => {

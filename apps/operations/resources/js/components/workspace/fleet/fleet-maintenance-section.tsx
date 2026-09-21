@@ -1,7 +1,7 @@
 import { useForm } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 import React, { useState } from 'react';
-import { Button } from '@/components/ui';
+import { Button, InlineNotice, Modal } from '@/components/ui';
 import { FleetInput } from '@/components/workspace/fleet/fleet-input';
 import { formatDateTime } from '@/lib/formatters';
 import type { AssetViewModel } from '@/types/workspace';
@@ -22,6 +22,7 @@ export function FleetMaintenanceSection({
     const [releasingOrderId, setReleasingOrderId] = useState<number | null>(
         null,
     );
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
     const openForm = useForm({
         defect: '',
@@ -50,6 +51,7 @@ export function FleetMaintenanceSection({
             onSuccess: () => {
                 setShowOpenForm(false);
                 openForm.reset();
+                setSuccessMessage('Maintenance work order opened.');
             },
         });
     };
@@ -74,6 +76,7 @@ export function FleetMaintenanceSection({
             onSuccess: () => {
                 setCompletingOrderId(null);
                 completeForm.reset();
+                setSuccessMessage('Repair completion recorded.');
             },
         });
     };
@@ -97,8 +100,41 @@ export function FleetMaintenanceSection({
             onSuccess: () => {
                 setReleasingOrderId(null);
                 releaseForm.reset();
+                setSuccessMessage('Work order released after verification.');
             },
         });
+    };
+
+    const sortedMaintenanceOrders = [...asset.maintenance_work_orders].sort(
+        (a, b) => {
+            const priority = (
+                order: (typeof asset.maintenance_work_orders)[number],
+            ) => (order.released_at ? 2 : order.dispatch_blocking ? 0 : 1);
+            const priorityDifference = priority(a) - priority(b);
+
+            if (priorityDifference !== 0) {
+                return priorityDifference;
+            }
+
+            const aDate = new Date(
+                a.created_at ?? a.completed_at ?? a.released_at ?? 0,
+            ).getTime();
+            const bDate = new Date(
+                b.created_at ?? b.completed_at ?? b.released_at ?? 0,
+            ).getTime();
+
+            return bDate - aDate || b.id - a.id;
+        },
+    );
+
+    const openWorkOrderDialog = () => {
+        setSuccessMessage(null);
+        openForm.clearErrors();
+        setShowOpenForm(true);
+    };
+
+    const closeWorkOrderDialog = () => {
+        setShowOpenForm(false);
     };
 
     return (
@@ -114,34 +150,88 @@ export function FleetMaintenanceSection({
                     </p>
                 </div>
                 {canMaintain && (
-                    <Button
-                        variant={showOpenForm ? 'secondary' : 'primary'}
-                        onClick={() => setShowOpenForm(!showOpenForm)}
-                    >
-                        {showOpenForm
-                            ? 'Cancel work order'
-                            : 'Open maintenance work order'}
+                    <Button variant="primary" onClick={openWorkOrderDialog}>
+                        Open maintenance work order
                     </Button>
                 )}
             </div>
 
-            {showOpenForm && canMaintain && (
+            {successMessage && (
+                <InlineNotice tone="success" title={successMessage} />
+            )}
+
+            <Modal
+                open={showOpenForm && canMaintain}
+                onClose={closeWorkOrderDialog}
+                title="Open maintenance work order"
+                description={`${asset.code} · ${asset.name}`}
+                size="lg"
+                closeOnBackdrop={false}
+                contentClassName="p-5 sm:p-6"
+                footer={
+                    <div className="flex w-full flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="max-w-sm text-xs leading-5 text-ink-soft">
+                            This creates a maintenance record for the selected
+                            asset. You can close this dialog without losing
+                            unfinished entries.
+                        </p>
+                        <div className="flex shrink-0 flex-col-reverse gap-2 sm:flex-row">
+                            <Button
+                                variant="secondary"
+                                onClick={closeWorkOrderDialog}
+                                aria-label="Close work order dialog"
+                            >
+                                Close
+                            </Button>
+                            <Button
+                                type="submit"
+                                form={`maintenance-open-form-${asset.id}`}
+                                variant="primary"
+                                disabled={
+                                    openForm.processing ||
+                                    !openForm.data.defect.trim()
+                                }
+                                className="whitespace-nowrap"
+                            >
+                                {openForm.processing
+                                    ? 'Opening…'
+                                    : 'Create work order'}
+                            </Button>
+                        </div>
+                    </div>
+                }
+            >
                 <form
+                    id={`maintenance-open-form-${asset.id}`}
                     onSubmit={submitOpen}
-                    className="space-y-4 border-y border-line py-4"
+                    className="space-y-5"
                     noValidate
                 >
-                    <h4 className="text-sm font-semibold text-ink">
-                        Open Maintenance Work Order
-                    </h4>
+                    <div>
+                        <h4 className="text-base font-semibold text-ink">
+                            Describe the maintenance issue
+                        </h4>
+                        <p className="mt-1 text-sm leading-5 text-ink-soft">
+                            Capture the defect clearly so the repair,
+                            inspection, and release trail can be verified later.
+                        </p>
+                    </div>
+                    <div
+                        role="note"
+                        className="rounded-lg bg-warning-soft p-3.5 text-sm leading-5 text-warning-strong"
+                    >
+                        A dispatch-blocking order prevents assignment or
+                        activation until repair completion, a passing
+                        post-repair inspection, and release are all recorded.
+                    </div>
                     <FleetInput
-                        label="Defect description *"
+                        label="Defect description"
                         value={openForm.data.defect}
                         error={openForm.errors.defect}
                         onChange={(v) => openForm.setData('defect', v)}
                         required
                     />
-                    <label className="flex items-center gap-2 text-sm font-medium text-ink">
+                    <label className="flex min-h-11 items-center gap-3 text-sm font-medium text-ink">
                         <input
                             type="checkbox"
                             checked={openForm.data.dispatch_blocking}
@@ -151,35 +241,24 @@ export function FleetMaintenanceSection({
                                     e.target.checked,
                                 )
                             }
-                            className="h-4 w-4 rounded border-line-strong text-brand-strong"
+                            className="h-5 w-5 shrink-0 rounded border-line-strong text-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                         />
                         <span>
-                            Dispatch Blocking (Asset cannot be assigned or
-                            activated until released)
+                            Dispatch blocking
+                            <span className="mt-0.5 block text-xs leading-5 font-normal text-ink-soft">
+                                The asset cannot be assigned or activated until
+                                the order is released.
+                            </span>
                         </span>
                     </label>
                     <FleetInput
-                        label="Remarks / Parts needed"
+                        label="Remarks / parts needed"
                         value={openForm.data.remarks}
                         error={openForm.errors.remarks}
                         onChange={(v) => openForm.setData('remarks', v)}
                     />
-                    <div className="flex justify-end border-t border-line pt-4">
-                        <Button
-                            type="submit"
-                            variant="primary"
-                            disabled={
-                                openForm.processing ||
-                                !openForm.data.defect.trim()
-                            }
-                        >
-                            {openForm.processing
-                                ? 'Opening…'
-                                : 'Create work order'}
-                        </Button>
-                    </div>
                 </form>
-            )}
+            </Modal>
 
             {asset.maintenance_work_orders.length === 0 ? (
                 <div className="border-y border-dashed border-line py-8 text-center">
@@ -193,7 +272,7 @@ export function FleetMaintenanceSection({
                 </div>
             ) : (
                 <ul className="divide-y divide-line">
-                    {asset.maintenance_work_orders.map((order) => {
+                    {sortedMaintenanceOrders.map((order) => {
                         const isUnreleased = !order.released_at;
                         const isCompletingThis = completingOrderId === order.id;
                         const isReleasingThis = releasingOrderId === order.id;

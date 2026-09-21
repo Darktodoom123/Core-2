@@ -1,12 +1,13 @@
 import { useForm } from '@inertiajs/react';
 import {
     ArrowLeft,
+    AlertTriangle,
     Camera,
-    Check,
     ClipboardCheck,
-    Copy,
+    Clock3,
     FileText,
     Gauge,
+    MapPin,
     Radio,
     ShieldAlert,
     ShieldCheck,
@@ -31,8 +32,9 @@ import { FleetStatusForm } from '@/components/workspace/fleet/fleet-status-form'
 import { HosDutyBadge } from '@/components/workspace/fleet/hos-duty-badge';
 import { OperatorBindingChip } from '@/components/workspace/fleet/operator-binding-chip';
 import { SafetyLockoutBanner } from '@/components/workspace/fleet/safety-lockout-banner';
-import { humanize } from '@/lib/formatters';
+import { formatDateTime, humanize } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
+import { usePreciseLocation } from '@/services/reverse-geocoder';
 import type {
     AssetViewModel,
     DvirInspectionViewModel,
@@ -91,24 +93,19 @@ export function FleetDetailPane({
         hasLocationCoordinates(assetLocation) &&
         assetLocation.freshness_status === 'fresh';
     const dispatchabilityState = getFleetDispatchabilityState(asset);
-
-    const [coordinatesCopied, setCoordinatesCopied] = useState(false);
-
-    const copyCoordinates = async () => {
-        if (!assetLocation || !hasLocationCoordinates(assetLocation)) {
-            return;
-        }
-
-        try {
-            await navigator.clipboard.writeText(
-                `${assetLocation.latitude.toFixed(5)}, ${assetLocation.longitude.toFixed(5)}`,
-            );
-            setCoordinatesCopied(true);
-            window.setTimeout(() => setCoordinatesCopied(false), 2000);
-        } catch {
-            setCoordinatesCopied(false);
-        }
-    };
+    const inspectionCount = asset.inspections_count ?? null;
+    const dvirInspectionCount = asset.dvir_inspections_count ?? null;
+    const totalInspectionsCount =
+        inspectionCount !== null && dvirInspectionCount !== null
+            ? inspectionCount + dvirInspectionCount
+            : null;
+    const maintenanceWorkOrdersCount =
+        asset.maintenance_work_orders_count ?? null;
+    const documentsCount = asset.documents_count ?? null;
+    const preciseLocation = usePreciseLocation(assetLocation);
+    const displayLocation = preciseLocation.startsWith('GPS ')
+        ? 'Location unavailable'
+        : preciseLocation;
 
     useEffect(() => {
         if (showLockdownModal) {
@@ -178,16 +175,8 @@ export function FleetDetailPane({
         tabRefs.current[nextTab]?.focus();
     };
 
-    const dvirCount =
-        asset.dvir_inspections && asset.dvir_inspections.length > 0
-            ? asset.dvir_inspections.length
-            : asset.latest_dvir
-              ? 1
-              : 0;
-    const totalInspectionsCount = asset.inspections.length + dvirCount;
-
     return (
-        <Panel className="flex min-h-0 flex-col gap-4 p-4 md:p-6 lg:h-full lg:overflow-hidden [&>*]:shrink-0">
+        <Panel className="@container flex min-h-0 flex-col gap-4 p-4 md:p-6 lg:h-full lg:overflow-hidden [&>*]:shrink-0">
             {onBackToList && (
                 <div className="pb-2 lg:hidden">
                     <Button
@@ -202,10 +191,10 @@ export function FleetDetailPane({
                 </div>
             )}
 
-            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-line pb-4">
+            <div className="flex flex-col items-stretch gap-4 border-b border-line pb-4 @lg:flex-row @lg:items-start @lg:justify-between">
                 <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                        <span className="text-xl font-bold text-ink">
+                        <span className="text-xl font-bold whitespace-nowrap text-ink">
                             {asset.code}
                         </span>
                         <CanonicalStatusBadge
@@ -264,49 +253,45 @@ export function FleetDetailPane({
                     <h2 className="mt-1 text-lg font-semibold text-ink">
                         {asset.name}
                     </h2>
-                    <p className="mt-0.5 text-sm text-ink-soft">
-                        {humanize(asset.kind)}{' '}
-                        {asset.subtype ? `· ${asset.subtype}` : ''} · Location:{' '}
+                    <div className="mt-1 space-y-1.5 text-sm">
+                        <p className="text-ink-soft">
+                            {humanize(asset.kind)}{' '}
+                            {asset.subtype ? `· ${asset.subtype}` : ''}
+                        </p>
                         {assetLocation &&
                         hasLocationCoordinates(assetLocation) ? (
-                            <span className="inline-flex flex-wrap items-center gap-2">
-                                <span className="tabular-nums">
-                                    {hasFreshLocation
-                                        ? 'Current position'
-                                        : 'Last known location'}{' '}
-                                    ({assetLocation.latitude.toFixed(4)},{' '}
-                                    {assetLocation.longitude.toFixed(4)})
+                            <div className="flex min-w-0 items-start gap-1.5 text-ink-soft">
+                                <span className="inline-flex min-w-0 items-start gap-1.5">
+                                    <MapPin
+                                        className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-strong"
+                                        aria-hidden="true"
+                                    />
+                                    <span className="shrink-0">
+                                        {hasFreshLocation
+                                            ? 'Current position'
+                                            : 'Last known location'}
+                                        :
+                                    </span>
+                                    <span className="min-w-0 font-medium text-ink">
+                                        {displayLocation}
+                                    </span>
                                 </span>
-                                <Button
-                                    type="button"
-                                    variant="quiet"
-                                    size="sm"
-                                    className="min-h-8 px-2 text-xs"
-                                    onClick={() => void copyCoordinates()}
-                                    aria-label={`Copy coordinates for ${asset.code}`}
-                                >
-                                    {coordinatesCopied ? (
-                                        <Check
-                                            className="mr-1 h-3.5 w-3.5 text-success-strong"
-                                            aria-hidden="true"
-                                        />
-                                    ) : (
-                                        <Copy
-                                            className="mr-1 h-3.5 w-3.5"
-                                            aria-hidden="true"
-                                        />
-                                    )}
-                                    {coordinatesCopied
-                                        ? 'Copied'
-                                        : 'Copy coordinates'}
-                                </Button>
-                            </span>
+                            </div>
                         ) : (
-                            (assetLocation?.recorded_location ??
-                            asset.location ??
-                            'Location not recorded')
+                            <p className="inline-flex items-start gap-1.5 text-ink-soft">
+                                <MapPin
+                                    className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-strong"
+                                    aria-hidden="true"
+                                />
+                                <span>
+                                    Location:{' '}
+                                    {assetLocation?.recorded_location ??
+                                        asset.location ??
+                                        'Location not recorded'}
+                                </span>
+                            </p>
                         )}
-                    </p>
+                    </div>
                 </div>
 
                 <FleetQuickActionToolbar
@@ -321,7 +306,7 @@ export function FleetDetailPane({
                         setShowDvirModal(true);
                     }}
                     lockdownTriggerRef={lockdownTriggerRef}
-                    className="w-full lg:w-auto lg:justify-end"
+                    className="w-full @lg:w-auto @lg:justify-end"
                 />
             </div>
 
@@ -460,7 +445,8 @@ export function FleetDetailPane({
             <div
                 className="flex min-w-0 flex-nowrap overflow-x-auto overscroll-x-contain border-b border-line"
                 role="tablist"
-                aria-label="Asset Details"
+                aria-label="Asset detail sections"
+                aria-orientation="horizontal"
             >
                 <button
                     type="button"
@@ -482,7 +468,10 @@ export function FleetDetailPane({
                     )}
                 >
                     <Gauge className="h-4 w-4" />
-                    Overview &amp; Specs
+                    <span className="@lg:hidden">Overview</span>
+                    <span className="hidden @lg:inline">
+                        Overview &amp; Specs
+                    </span>
                 </button>
                 <button
                     type="button"
@@ -504,7 +493,10 @@ export function FleetDetailPane({
                     )}
                 >
                     <ShieldCheck className="h-4 w-4" />
-                    Readiness &amp; Status
+                    <span className="@lg:hidden">Readiness</span>
+                    <span className="hidden @lg:inline">
+                        Readiness &amp; Status
+                    </span>
                 </button>
                 <button
                     type="button"
@@ -529,16 +521,18 @@ export function FleetDetailPane({
                 >
                     <ClipboardCheck className="h-4 w-4" />
                     Inspections
-                    <span
-                        className={cn(
-                            'text-xs font-semibold tabular-nums',
-                            totalInspectionsCount > 0
-                                ? 'text-brand-strong'
-                                : 'text-ink-soft',
-                        )}
-                    >
-                        {totalInspectionsCount}
-                    </span>
+                    {totalInspectionsCount !== null && (
+                        <span
+                            className={cn(
+                                'rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums',
+                                totalInspectionsCount > 0
+                                    ? 'bg-brand-soft text-brand-strong'
+                                    : 'bg-surface-subtle text-ink-soft',
+                            )}
+                        >
+                            {totalInspectionsCount}
+                        </span>
+                    )}
                 </button>
                 <button
                     type="button"
@@ -563,18 +557,20 @@ export function FleetDetailPane({
                 >
                     <Wrench className="h-4 w-4" />
                     Work Orders
-                    <span
-                        className={cn(
-                            'text-xs font-semibold tabular-nums',
-                            asset.blocking_work_orders_count > 0
-                                ? 'text-danger-strong'
-                                : asset.maintenance_work_orders.length > 0
-                                  ? 'text-brand-strong'
-                                  : 'text-ink-soft',
-                        )}
-                    >
-                        {asset.maintenance_work_orders.length}
-                    </span>
+                    {maintenanceWorkOrdersCount !== null && (
+                        <span
+                            className={cn(
+                                'rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums',
+                                asset.blocking_work_orders_count > 0
+                                    ? 'bg-danger-soft text-danger-strong'
+                                    : maintenanceWorkOrdersCount > 0
+                                      ? 'bg-brand-soft text-brand-strong'
+                                      : 'bg-surface-subtle text-ink-soft',
+                            )}
+                        >
+                            {maintenanceWorkOrdersCount}
+                        </span>
+                    )}
                 </button>
                 <button
                     type="button"
@@ -596,22 +592,26 @@ export function FleetDetailPane({
                     )}
                 >
                     <FileText className="h-4 w-4" />
-                    Permits &amp; Docs
-                    <span
-                        className={cn(
-                            'text-xs font-semibold tabular-nums',
-                            (asset.documents?.length ?? 0) > 0
-                                ? 'text-brand-strong'
-                                : 'text-ink-soft',
-                        )}
-                    >
-                        {asset.documents?.length ?? 0}
+                    <span className="@lg:hidden">Documents</span>
+                    <span className="hidden @lg:inline">
+                        Permits &amp; Docs
                     </span>
+                    {documentsCount !== null && (
+                        <span
+                            className={cn(
+                                'rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums',
+                                documentsCount > 0
+                                    ? 'bg-brand-soft text-brand-strong'
+                                    : 'bg-surface-subtle text-ink-soft',
+                            )}
+                        >
+                            {documentsCount}
+                        </span>
+                    )}
                 </button>
             </div>
 
             <div
-                key={activeTab}
                 className="min-h-0 space-y-5 pt-1 lg:flex-1 lg:shrink! lg:overflow-y-auto lg:overscroll-contain"
                 role="region"
                 aria-label="Asset detail content"
@@ -627,50 +627,69 @@ export function FleetDetailPane({
                     />
                 )}
 
-                {/* Safety Lockdown Modal */}
-                {activeTab === 'overview' && (
-                    <div
-                        role="tabpanel"
-                        id={`asset-tabpanel-overview-${asset.id}`}
-                        aria-labelledby={`asset-tab-overview-${asset.id}`}
-                        className="space-y-5"
-                    >
-                        {/* Field Mobile Parity: Active Operator, HoS, and Latest DVIR */}
-                        <section className="space-y-4 border-y border-line py-4">
-                            <h4 className="text-sm font-semibold text-ink">
-                                Field operations &amp; hours of service
-                            </h4>
-                            <div className="grid gap-5 md:grid-cols-2">
-                                <div>
-                                    <span className="mb-1.5 block text-xs font-medium text-ink-soft">
-                                        Active Field Operator &amp; Telemetry
-                                        Freshness
-                                    </span>
+                {/* Overview */}
+                <div
+                    hidden={activeTab !== 'overview'}
+                    role="tabpanel"
+                    id={`asset-tabpanel-overview-${asset.id}`}
+                    aria-labelledby={`asset-tab-overview-${asset.id}`}
+                    className="space-y-5"
+                >
+                    <section className="space-y-4 border-b border-line pb-5">
+                        <div>
+                            <h3 className="text-base font-semibold text-ink">
+                                Operational snapshot
+                            </h3>
+                            <p className="mt-1 text-sm leading-5 text-ink-soft">
+                                Field assignment, duty, and inspection context
+                                for this asset.
+                            </p>
+                        </div>
+
+                        <div className="grid border-y border-line md:grid-cols-2 md:divide-x md:divide-line">
+                            <div className="min-h-24 py-4 md:pr-5">
+                                <p className="text-xs font-semibold text-ink-soft">
+                                    Field operator &amp; telemetry
+                                </p>
+                                <div className="mt-2">
                                     <OperatorBindingChip
                                         activeOperator={asset.active_operator}
                                     />
                                 </div>
-                                <div>
-                                    <span className="mb-1.5 block text-xs font-medium text-ink-soft">
-                                        Duty Status &amp; DOLE 10h Compliance
-                                    </span>
-                                    {asset.hos ? (
-                                        <HosDutyBadge hos={asset.hos} />
-                                    ) : (
-                                        <p className="text-xs text-ink-soft italic">
-                                            No active duty log recorded for
-                                            current shift
-                                        </p>
-                                    )}
-                                </div>
+                                <p className="mt-2 text-xs leading-5 text-ink-soft">
+                                    No operator binding means no active field
+                                    telemetry is associated with this asset.
+                                </p>
                             </div>
+                            <div className="min-h-24 border-t border-line py-4 md:border-t-0 md:pl-5">
+                                <p className="text-xs font-semibold text-ink-soft">
+                                    Duty &amp; DOLE 10h compliance
+                                </p>
+                                {asset.hos ? (
+                                    <div className="mt-2">
+                                        <HosDutyBadge hos={asset.hos} />
+                                    </div>
+                                ) : (
+                                    <>
+                                        <p className="mt-2 text-sm font-medium text-ink">
+                                            No active duty log
+                                        </p>
+                                        <p className="mt-1 text-xs leading-5 text-ink-soft">
+                                            No current-shift compliance record
+                                            is available.
+                                        </p>
+                                    </>
+                                )}
+                            </div>
+                        </div>
 
-                            {asset.latest_dvir && (
-                                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line/60 pt-3">
-                                    <div>
-                                        <span className="mb-1 block text-xs font-medium text-ink-soft">
-                                            Latest DVIR Walkaround Inspection
-                                        </span>
+                        {asset.latest_dvir && (
+                            <div className="flex flex-wrap items-center justify-between gap-4 border-t border-line pt-4">
+                                <div className="min-w-0">
+                                    <p className="text-xs font-semibold text-ink-soft">
+                                        Latest field inspection
+                                    </p>
+                                    <div className="mt-2">
                                         <DvirStatusBadge
                                             dvir={asset.latest_dvir}
                                             onViewInspection={() =>
@@ -678,55 +697,68 @@ export function FleetDetailPane({
                                             }
                                         />
                                     </div>
-                                    <Button
-                                        size="sm"
-                                        variant="secondary"
-                                        onClick={() => setShowDvirModal(true)}
-                                    >
-                                        <Camera className="mr-1.5 h-3.5 w-3.5" />
-                                        View 4-Angle Walkaround Photos (
-                                        <span className="tabular-nums">
-                                            {asset.latest_dvir.photos.length}
-                                        </span>
-                                        )
-                                    </Button>
                                 </div>
-                            )}
-                        </section>
+                                <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    onClick={() => setShowDvirModal(true)}
+                                    className="shrink-0"
+                                >
+                                    <Camera className="mr-1.5 h-3.5 w-3.5" />
+                                    View walkaround photos (
+                                    <span className="tabular-nums">
+                                        {asset.latest_dvir.photos.length}
+                                    </span>
+                                    )
+                                </Button>
+                            </div>
+                        )}
+                    </section>
 
-                        <dl className="grid gap-x-6 gap-y-0 sm:grid-cols-2 md:grid-cols-3">
-                            <div className="border-b border-line py-3">
-                                <dt className="text-xs font-medium text-ink-soft">
-                                    Registration Number
+                    <section className="space-y-3">
+                        <div>
+                            <h3 className="text-base font-semibold text-ink">
+                                Asset profile
+                            </h3>
+                            <p className="mt-1 text-sm leading-5 text-ink-soft">
+                                Registered identity, capacity, and current
+                                readings.
+                            </p>
+                        </div>
+
+                        <dl className="grid gap-x-6 sm:grid-cols-2 md:grid-cols-3">
+                            <div className="border-b border-line py-4">
+                                <dt className="text-xs font-semibold text-ink-soft">
+                                    Registration number
                                 </dt>
-                                <dd className="mt-1 text-sm font-semibold text-ink tabular-nums">
+                                <dd className="mt-1 text-base font-semibold text-ink tabular-nums">
                                     {asset.registration_number ?? 'N/A'}
                                 </dd>
                             </div>
-                            <div className="border-b border-line py-3">
-                                <dt className="text-xs font-medium text-ink-soft">
-                                    Manufacturer &amp; Model
+                            <div className="border-b border-line py-4">
+                                <dt className="text-xs font-semibold text-ink-soft">
+                                    Manufacturer &amp; model
                                 </dt>
-                                <dd className="mt-1 text-sm font-semibold text-ink">
-                                    {asset.manufacturer ?? 'N/A'}{' '}
-                                    {asset.model ?? ''}
+                                <dd className="mt-1 text-base font-semibold text-ink">
+                                    {asset.manufacturer ?? 'N/A'}
+                                    {asset.model ? ` ${asset.model}` : ''}
                                 </dd>
                             </div>
-                            <div className="border-b border-line py-3">
-                                <dt className="text-xs font-medium text-ink-soft">
-                                    Rated Capacity
+                            <div className="border-b border-line py-4">
+                                <dt className="text-xs font-semibold text-ink-soft">
+                                    Rated capacity
                                 </dt>
-                                <dd className="mt-1 text-sm font-semibold text-ink tabular-nums">
+                                <dd className="mt-1 text-base font-semibold text-ink tabular-nums">
                                     {asset.rated_capacity
                                         ? `${asset.rated_capacity}${asset.capacity_unit ? ` ${asset.capacity_unit}` : ''}`
                                         : 'Not recorded'}
                                 </dd>
                             </div>
-                            <div className="border-b border-line py-3">
-                                <dt className="text-xs font-medium text-ink-soft">
-                                    Meter Reading
+                            <div className="border-b border-line py-4">
+                                <dt className="text-xs font-semibold text-ink-soft">
+                                    Meter reading
                                 </dt>
-                                <dd className="mt-1 text-sm font-semibold text-ink tabular-nums">
+                                <dd className="mt-1 text-base font-semibold text-ink tabular-nums">
                                     {asset.meter_value !== null &&
                                     asset.meter_value !== undefined &&
                                     asset.meter_value !== ''
@@ -734,11 +766,11 @@ export function FleetDetailPane({
                                         : 'N/A'}
                                 </dd>
                             </div>
-                            <div className="border-b border-line py-3">
-                                <dt className="text-xs font-medium text-ink-soft">
-                                    Unresolved Safety Blocks
+                            <div className="border-b border-line py-4">
+                                <dt className="text-xs font-semibold text-ink-soft">
+                                    Safety blocks
                                 </dt>
-                                <dd className="mt-1 text-sm font-semibold">
+                                <dd className="mt-1 text-base font-semibold">
                                     {asset.blocking_work_orders_count > 0 ? (
                                         <span className="text-danger">
                                             <span className="tabular-nums">
@@ -756,92 +788,297 @@ export function FleetDetailPane({
                                 </dd>
                             </div>
                         </dl>
+                    </section>
 
-                        {Object.keys(asset.specifications ?? {}).length > 0 && (
-                            <div className="pt-1">
-                                <h4 className="text-sm font-semibold text-ink">
-                                    Custom specifications
-                                </h4>
-                                <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                                    {Object.entries(asset.specifications).map(
-                                        ([key, val]) => (
-                                            <div
-                                                key={key}
-                                                className="flex justify-between rounded border border-line px-3 py-1.5 text-sm"
-                                            >
-                                                <span className="font-medium text-ink capitalize">
-                                                    {humanize(key)}:
-                                                </span>
-                                                <span className="text-ink-soft">
-                                                    {String(val)}
-                                                </span>
-                                            </div>
-                                        ),
-                                    )}
+                    {Object.keys(asset.specifications ?? {}).length > 0 && (
+                        <section className="space-y-3 border-t border-line pt-5">
+                            <div>
+                                <h3 className="text-base font-semibold text-ink">
+                                    Equipment specifications
+                                </h3>
+                                <p className="mt-1 text-sm leading-5 text-ink-soft">
+                                    Recorded configuration details for this
+                                    asset.
+                                </p>
+                            </div>
+                            <dl className="grid gap-x-6 sm:grid-cols-2">
+                                {Object.entries(asset.specifications).map(
+                                    ([key, val]) => (
+                                        <div
+                                            key={key}
+                                            className="flex min-h-12 items-center justify-between gap-4 border-b border-line py-3"
+                                        >
+                                            <dt className="text-sm font-medium text-ink">
+                                                {humanize(key)}
+                                            </dt>
+                                            <dd className="text-right text-sm text-ink-soft">
+                                                {String(val)}
+                                            </dd>
+                                        </div>
+                                    ),
+                                )}
+                            </dl>
+                        </section>
+                    )}
+                </div>
+
+                <div
+                    hidden={activeTab !== 'status'}
+                    role="tabpanel"
+                    id={`asset-tabpanel-status-${asset.id}`}
+                    aria-labelledby={`asset-tab-status-${asset.id}`}
+                    className="grid gap-8 @lg:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)] @lg:gap-10"
+                >
+                    <section
+                        aria-labelledby={`asset-readiness-heading-${asset.id}`}
+                        className="space-y-5"
+                    >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                                <h3
+                                    id={`asset-readiness-heading-${asset.id}`}
+                                    className="text-base font-semibold text-ink"
+                                >
+                                    Dispatch readiness
+                                </h3>
+                                <p className="mt-1 text-sm text-ink-soft">
+                                    Can this asset be assigned right now?
+                                </p>
+                            </div>
+                            <div
+                                className={cn(
+                                    'flex items-center gap-2 rounded-lg px-3 py-2',
+                                    asset.is_dispatchable
+                                        ? 'bg-success-soft text-success-strong'
+                                        : 'bg-warning-soft text-warning-strong',
+                                )}
+                                role="status"
+                            >
+                                {asset.is_dispatchable ? (
+                                    <ShieldCheck
+                                        className="h-4 w-4 shrink-0"
+                                        aria-hidden="true"
+                                    />
+                                ) : (
+                                    <AlertTriangle
+                                        className="h-4 w-4 shrink-0"
+                                        aria-hidden="true"
+                                    />
+                                )}
+                                <div>
+                                    <span className="block text-sm font-semibold">
+                                        {asset.is_dispatchable
+                                            ? 'Dispatchable'
+                                            : 'Dispatch blocked'}
+                                    </span>
+                                    <span className="block text-xs text-current/75">
+                                        {asset.is_dispatchable
+                                            ? 'Ready for assignment'
+                                            : 'Resolve blockers first'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <dl className="grid overflow-hidden rounded-lg border border-line bg-surface-subtle/50 text-sm sm:grid-cols-2 sm:divide-x sm:divide-line">
+                            <div className="p-4">
+                                <dt className="text-xs font-semibold text-ink-soft">
+                                    Operational status
+                                </dt>
+                                <dd className="mt-1.5 flex items-center gap-2 text-base font-semibold text-ink">
+                                    <span
+                                        className="h-2 w-2 rounded-full bg-brand-strong"
+                                        aria-hidden="true"
+                                    />
+                                    {asset.status.label}
+                                </dd>
+                                <p className="mt-1 text-xs text-ink-soft">
+                                    Recorded asset state
+                                </p>
+                            </div>
+                            <div className="border-t border-line p-4 sm:border-t-0">
+                                <dt className="text-xs font-semibold text-ink-soft">
+                                    Dispatchability
+                                </dt>
+                                <dd className="mt-1.5 text-base font-semibold text-ink">
+                                    {asset.is_dispatchable
+                                        ? 'Dispatchable'
+                                        : 'Not dispatchable'}
+                                </dd>
+                                <p className="mt-1 text-xs text-ink-soft">
+                                    Based on current status and blockers
+                                </p>
+                            </div>
+                        </dl>
+
+                        {!asset.is_dispatchable && (
+                            <div
+                                role="status"
+                                className="rounded-lg border border-warning/30 bg-warning-soft/60 p-4 text-sm text-warning-strong"
+                            >
+                                <div className="flex items-start gap-2">
+                                    <AlertTriangle
+                                        className="mt-0.5 h-4 w-4 shrink-0"
+                                        aria-hidden="true"
+                                    />
+                                    <div className="min-w-0">
+                                        <p className="font-semibold text-ink">
+                                            Resolve before assignment
+                                        </p>
+                                        <p className="mt-0.5 text-xs leading-5">
+                                            The following conditions currently
+                                            prevent dispatch.
+                                        </p>
+                                        {asset.dispatchability?.blockers
+                                            ?.length ? (
+                                            <ul className="mt-3 space-y-2 text-xs leading-5">
+                                                {asset.dispatchability.blockers.map(
+                                                    (blocker) => (
+                                                        <li
+                                                            key={blocker.code}
+                                                            className="flex items-start gap-2"
+                                                        >
+                                                            <span
+                                                                className="mt-2 h-1 w-1 shrink-0 rounded-full bg-current"
+                                                                aria-hidden="true"
+                                                            />
+                                                            <span>
+                                                                <span className="font-semibold text-ink">
+                                                                    {
+                                                                        blocker.label
+                                                                    }
+                                                                    :
+                                                                </span>{' '}
+                                                                {blocker.detail}
+                                                            </span>
+                                                        </li>
+                                                    ),
+                                                )}
+                                            </ul>
+                                        ) : (
+                                            <p className="mt-3 text-xs leading-5">
+                                                The current data does not
+                                                include a specific
+                                                dispatchability reason.
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         )}
-                    </div>
-                )}
 
-                {activeTab === 'status' && (
-                    <div
-                        role="tabpanel"
-                        id={`asset-tabpanel-status-${asset.id}`}
-                        aria-labelledby={`asset-tab-status-${asset.id}`}
-                    >
-                        <FleetStatusForm
-                            asset={asset}
-                            canUpdate={capabilities.update_asset_status}
-                        />
-                    </div>
-                )}
+                        <div className="border-t border-line pt-4">
+                            <div className="flex items-center gap-2">
+                                <Clock3
+                                    className="h-4 w-4 text-ink-soft"
+                                    aria-hidden="true"
+                                />
+                                <h4 className="text-sm font-semibold text-ink">
+                                    Last recorded status change
+                                </h4>
+                            </div>
+                            {asset.latest_status_change ? (
+                                <div className="mt-2 space-y-1 text-sm">
+                                    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-ink">
+                                        <span className="font-semibold">
+                                            {asset.latest_status_change
+                                                .from_status
+                                                ? humanize(
+                                                      asset.latest_status_change
+                                                          .from_status,
+                                                  )
+                                                : 'Status'}
+                                        </span>
+                                        <span
+                                            className="text-ink-soft"
+                                            aria-hidden="true"
+                                        >
+                                            →
+                                        </span>
+                                        <span className="font-semibold">
+                                            {asset.latest_status_change
+                                                .to_status
+                                                ? humanize(
+                                                      asset.latest_status_change
+                                                          .to_status,
+                                                  )
+                                                : 'Status not recorded'}
+                                        </span>
+                                        <span className="text-xs text-ink-soft">
+                                            {formatDateTime(
+                                                asset.latest_status_change
+                                                    .occurred_at,
+                                                'Time not recorded',
+                                            )}
+                                        </span>
+                                    </p>
+                                    {(asset.latest_status_change.actor ||
+                                        asset.latest_status_change.reason) && (
+                                        <p className="text-xs leading-5 text-ink-soft">
+                                            {asset.latest_status_change.actor
+                                                ? `Recorded by ${asset.latest_status_change.actor.name}`
+                                                : 'Recorded actor not available'}
+                                            {asset.latest_status_change.reason
+                                                ? ` · ${asset.latest_status_change.reason}`
+                                                : ''}
+                                        </p>
+                                    )}
+                                </div>
+                            ) : (
+                                <p className="mt-2 text-xs leading-5 text-ink-soft">
+                                    No recorded status-change metadata is
+                                    available for this asset.
+                                </p>
+                            )}
+                        </div>
+                    </section>
 
-                {activeTab === 'inspections' && (
-                    <div
-                        role="tabpanel"
-                        id={`asset-tabpanel-inspections-${asset.id}`}
-                        aria-labelledby={`asset-tab-inspections-${asset.id}`}
-                    >
-                        <FleetInspectionsSection
-                            asset={asset}
-                            canInspect={capabilities.inspect_asset}
-                            onViewDvir={(dvir) => {
-                                setSelectedDvir(dvir);
-                                setShowDvirModal(true);
-                            }}
-                        />
-                    </div>
-                )}
+                    <FleetStatusForm
+                        asset={asset}
+                        canUpdate={capabilities.update_asset_status}
+                    />
+                </div>
 
-                {activeTab === 'maintenance' && (
-                    <div
-                        role="tabpanel"
-                        id={`asset-tabpanel-maintenance-${asset.id}`}
-                        aria-labelledby={`asset-tab-maintenance-${asset.id}`}
-                    >
-                        <FleetMaintenanceSection
-                            asset={asset}
-                            canMaintain={capabilities.maintain_asset}
-                        />
-                    </div>
-                )}
+                <div
+                    hidden={activeTab !== 'inspections'}
+                    role="tabpanel"
+                    id={`asset-tabpanel-inspections-${asset.id}`}
+                    aria-labelledby={`asset-tab-inspections-${asset.id}`}
+                >
+                    <FleetInspectionsSection
+                        key={asset.id}
+                        asset={asset}
+                        canInspect={capabilities.inspect_asset}
+                        onViewDvir={(dvir) => {
+                            setSelectedDvir(dvir);
+                            setShowDvirModal(true);
+                        }}
+                    />
+                </div>
 
-                {activeTab === 'documents' && (
-                    <div
-                        role="tabpanel"
-                        id={`asset-tabpanel-documents-${asset.id}`}
-                        aria-labelledby={`asset-tab-documents-${asset.id}`}
-                    >
-                        <FleetDocumentsSection
-                            asset={asset}
-                            canManage={
-                                capabilities.maintain_asset ||
-                                capabilities.update_asset_status
-                            }
-                        />
-                    </div>
-                )}
+                <div
+                    hidden={activeTab !== 'maintenance'}
+                    role="tabpanel"
+                    id={`asset-tabpanel-maintenance-${asset.id}`}
+                    aria-labelledby={`asset-tab-maintenance-${asset.id}`}
+                >
+                    <FleetMaintenanceSection
+                        asset={asset}
+                        canMaintain={capabilities.maintain_asset}
+                    />
+                </div>
+
+                <div
+                    hidden={activeTab !== 'documents'}
+                    role="tabpanel"
+                    id={`asset-tabpanel-documents-${asset.id}`}
+                    aria-labelledby={`asset-tab-documents-${asset.id}`}
+                >
+                    <FleetDocumentsSection
+                        asset={asset}
+                        canManage={capabilities.update_asset_status}
+                    />
+                </div>
             </div>
 
             {(selectedDvir || asset.latest_dvir) && (

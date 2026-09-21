@@ -6,6 +6,7 @@ import { FuelSurface } from '@/components/workspace/fuel/fuel-surface';
 import { LiveWorkspaceSection } from '@/components/workspace/live-workspace-sections';
 import { JobReportSignatureCard } from '@/components/workspace/reports/job-report-signature-card';
 import { ReportsSurface } from '@/components/workspace/reports-workspace-section';
+import { setCachedLocationName } from '@/services/reverse-geocoder';
 import type {
     AssetViewModel,
     FuelRequestViewModel,
@@ -209,6 +210,7 @@ describe('Phase 1 Empirical Challenger: Factual and Semantic Verifications', () 
     beforeEach(() => {
         mockPageErrors = {};
         window.history.replaceState({}, '', '/operations');
+        setCachedLocationName(14.5995, 120.9842, 'Ayala Avenue, Makati');
     });
 
     describe('Verification 1: Telemetry freshness is distinct from operational status', () => {
@@ -270,9 +272,7 @@ describe('Phase 1 Empirical Challenger: Factual and Semantic Verifications', () 
 
             // Observation timestamp must be rendered in the location summary
             expect(
-                screen.getByText(
-                    /Last known location \(14\.5995, 120\.9842\)/i,
-                ),
+                screen.getByText('Ayala Avenue, Makati'),
             ).toBeInTheDocument();
         });
     });

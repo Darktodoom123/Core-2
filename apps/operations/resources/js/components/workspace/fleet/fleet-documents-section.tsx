@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import type { FormEvent } from 'react';
 import React, { useState } from 'react';
-import { Button } from '@/components/ui';
+import { Button, InlineNotice, Modal } from '@/components/ui';
 import { FleetInput } from '@/components/workspace/fleet/fleet-input';
 import { formatDate } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
@@ -51,8 +51,32 @@ export function FleetDocumentsSection({
     );
     const [replacingDoc, setReplacingDoc] =
         useState<AssetDocumentViewModel | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
     const documents = asset.documents ?? [];
+    const sortedDocuments = [...documents].sort((a, b) => {
+        const priority = (document: AssetDocumentViewModel) =>
+            document.is_expired ? 0 : document.expires_soon ? 1 : 2;
+        const priorityDifference = priority(a) - priority(b);
+
+        if (priorityDifference !== 0) {
+            return priorityDifference;
+        }
+
+        const expiryDate = (document: AssetDocumentViewModel) => {
+            if (!document.expires_at) {
+                return Number.POSITIVE_INFINITY;
+            }
+
+            const timestamp = Date.parse(document.expires_at);
+
+            return Number.isNaN(timestamp)
+                ? Number.POSITIVE_INFINITY
+                : timestamp;
+        };
+
+        return expiryDate(a) - expiryDate(b) || b.id - a.id;
+    });
 
     const form = useForm<{
         category: string;
@@ -113,6 +137,7 @@ export function FleetDocumentsSection({
             onSuccess: () => {
                 setShowUploadForm(false);
                 form.reset();
+                setSuccessMessage('Document uploaded.');
             },
         });
     };
@@ -146,6 +171,7 @@ export function FleetDocumentsSection({
                 onSuccess: () => {
                     setEditingDoc(null);
                     editForm.reset();
+                    setSuccessMessage('Document details updated.');
                 },
             },
         );
@@ -176,6 +202,7 @@ export function FleetDocumentsSection({
                 onSuccess: () => {
                     setReplacingDoc(null);
                     replaceForm.reset();
+                    setSuccessMessage('Document attachment replaced.');
                 },
             },
         );
@@ -193,7 +220,18 @@ export function FleetDocumentsSection({
         router.delete(`/operations/assets/${asset.id}/documents/${docId}`, {
             preserveScroll: true,
             preserveState: true,
+            onSuccess: () => setSuccessMessage('Document removed.'),
         });
+    };
+
+    const openUploadDialog = () => {
+        setSuccessMessage(null);
+        form.clearErrors();
+        setShowUploadForm(true);
+    };
+
+    const closeUploadDialog = () => {
+        setShowUploadForm(false);
     };
 
     const renderValidityBadge = (doc: AssetDocumentViewModel) => {
@@ -256,45 +294,100 @@ export function FleetDocumentsSection({
                 </div>
                 {canManage && (
                     <Button
-                        variant={showUploadForm ? 'quiet' : 'primary'}
+                        variant="primary"
                         size="sm"
-                        onClick={() => setShowUploadForm(!showUploadForm)}
+                        onClick={openUploadDialog}
                         className="flex items-center gap-1.5"
                     >
-                        {showUploadForm ? (
-                            <>
-                                <X className="h-3.5 w-3.5" /> Cancel
-                            </>
-                        ) : (
-                            <>
-                                <Plus className="h-3.5 w-3.5" /> Add Document
-                            </>
-                        )}
+                        <Plus className="h-3.5 w-3.5" /> Add Document
                     </Button>
                 )}
             </div>
 
-            {/* Upload Modal / Inline Form */}
-            {showUploadForm && (
-                <form
-                    onSubmit={submitUpload}
-                    className="space-y-4 border-y border-line py-4"
-                >
-                    <h4 className="text-sm font-semibold text-ink">
-                        Upload Authorized Permit / Certificate
-                    </h4>
+            {successMessage && (
+                <InlineNotice tone="success" title={successMessage} />
+            )}
 
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <Modal
+                open={showUploadForm && canManage}
+                onClose={closeUploadDialog}
+                title="Add compliance document"
+                description={`${asset.code} · ${asset.name ?? 'Fleet asset'}`}
+                size="lg"
+                closeOnBackdrop={false}
+                contentClassName="p-5 sm:p-6"
+                footer={
+                    <div className="flex w-full flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-xs leading-5 text-ink-soft">
+                            Your unfinished entries remain if you close this
+                            dialog.
+                        </p>
+                        <div className="flex flex-col-reverse gap-2 sm:flex-row">
+                            <Button
+                                variant="secondary"
+                                onClick={closeUploadDialog}
+                                aria-label="Close document dialog"
+                                disabled={form.processing}
+                            >
+                                Close
+                            </Button>
+                            <Button
+                                type="submit"
+                                form={`document-upload-form-${asset.id}`}
+                                variant="primary"
+                                disabled={form.processing || !form.data.file}
+                                className="flex items-center gap-1.5"
+                            >
+                                <Upload className="h-3.5 w-3.5" />
+                                {form.processing
+                                    ? 'Uploading…'
+                                    : 'Upload Document'}
+                            </Button>
+                        </div>
+                    </div>
+                }
+            >
+                <form
+                    id={`document-upload-form-${asset.id}`}
+                    onSubmit={submitUpload}
+                    className="space-y-5"
+                    noValidate
+                >
+                    <div>
+                        <h3 className="text-base font-semibold text-ink">
+                            Upload Authorized Permit / Certificate
+                        </h3>
+                        <p className="mt-1 text-sm leading-5 text-ink-soft">
+                            Add the compliance record and its source file so
+                            dispatchers can verify it before assignment.
+                        </p>
+                    </div>
+
+                    <div
+                        role="note"
+                        className="rounded-lg bg-surface-subtle p-3.5 text-xs leading-5 text-ink-soft"
+                    >
+                        Expired or expiring documents are surfaced first in the
+                        asset record. Verify the issuing authority and dates
+                        before uploading.
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
-                            <label className="block text-xs font-medium text-ink">
+                            <label
+                                htmlFor={`document-category-${asset.id}`}
+                                className="block text-sm font-medium text-ink"
+                            >
                                 Category *
                             </label>
                             <select
+                                id={`document-category-${asset.id}`}
                                 value={form.data.category}
+                                data-autofocus
                                 onChange={(e) =>
                                     form.setData('category', e.target.value)
                                 }
-                                className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                             >
                                 {CATEGORIES.map((c) => (
                                     <option key={c.value} value={c.value}>
@@ -310,10 +403,9 @@ export function FleetDocumentsSection({
                         </div>
 
                         <div>
-                            <label className="block text-xs font-medium text-ink">
-                                Document Title *
-                            </label>
                             <FleetInput
+                                label="Document Title"
+                                required
                                 value={form.data.title}
                                 onChange={(val) => form.setData('title', val)}
                                 placeholder="e.g. DPWH Special Transit Permit"
@@ -326,10 +418,8 @@ export function FleetDocumentsSection({
                         </div>
 
                         <div>
-                            <label className="block text-xs font-medium text-ink">
-                                Document / Permit Number
-                            </label>
                             <FleetInput
+                                label="Document / Permit Number"
                                 value={form.data.document_number}
                                 onChange={(val) =>
                                     form.setData('document_number', val)
@@ -344,10 +434,8 @@ export function FleetDocumentsSection({
                         </div>
 
                         <div>
-                            <label className="block text-xs font-medium text-ink">
-                                Issuing Authority
-                            </label>
                             <FleetInput
+                                label="Issuing Authority"
                                 value={form.data.issuing_authority}
                                 onChange={(val) =>
                                     form.setData('issuing_authority', val)
@@ -362,16 +450,20 @@ export function FleetDocumentsSection({
                         </div>
 
                         <div>
-                            <label className="block text-xs font-medium text-ink">
+                            <label
+                                htmlFor={`document-issued-at-${asset.id}`}
+                                className="block text-sm font-medium text-ink"
+                            >
                                 Issued Date
                             </label>
                             <input
+                                id={`document-issued-at-${asset.id}`}
                                 type="date"
                                 value={form.data.issued_at}
                                 onChange={(e) =>
                                     form.setData('issued_at', e.target.value)
                                 }
-                                className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                             />
                             {form.errors.issued_at && (
                                 <p className="mt-1 text-xs text-danger">
@@ -381,16 +473,20 @@ export function FleetDocumentsSection({
                         </div>
 
                         <div>
-                            <label className="block text-xs font-medium text-ink">
+                            <label
+                                htmlFor={`document-expires-at-${asset.id}`}
+                                className="block text-sm font-medium text-ink"
+                            >
                                 Expiry Date (Leave empty if permanent)
                             </label>
                             <input
+                                id={`document-expires-at-${asset.id}`}
                                 type="date"
                                 value={form.data.expires_at}
                                 onChange={(e) =>
                                     form.setData('expires_at', e.target.value)
                                 }
-                                className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                             />
                             {form.errors.expires_at && (
                                 <p className="mt-1 text-xs text-danger">
@@ -401,25 +497,33 @@ export function FleetDocumentsSection({
                     </div>
 
                     <div>
-                        <label className="block text-xs font-medium text-ink">
+                        <label
+                            htmlFor={`document-notes-${asset.id}`}
+                            className="block text-sm font-medium text-ink"
+                        >
                             Notes / Operating Restrictions
                         </label>
                         <textarea
+                            id={`document-notes-${asset.id}`}
                             rows={2}
                             value={form.data.notes}
                             onChange={(e) =>
                                 form.setData('notes', e.target.value)
                             }
                             placeholder="e.g. Permits off-peak transit along C-5 and EDSA (10 PM to 4 AM)."
-                            className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                            className="mt-1 w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-xs font-medium text-ink">
+                        <label
+                            htmlFor={`document-file-${asset.id}`}
+                            className="block text-sm font-medium text-ink"
+                        >
                             Document Attachment (PDF or Image, max 10MB) *
                         </label>
                         <input
+                            id={`document-file-${asset.id}`}
                             type="file"
                             accept="application/pdf,image/jpeg,image/png,image/heic"
                             onChange={(e) =>
@@ -428,7 +532,7 @@ export function FleetDocumentsSection({
                                     e.target.files?.[0] ?? null,
                                 )
                             }
-                            className="mt-1 block w-full cursor-pointer text-xs text-ink file:mr-3 file:rounded-md file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-brand-strong"
+                            className="mt-1 block min-h-11 w-full cursor-pointer rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink file:mr-3 file:rounded-md file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-brand-strong"
                         />
                         {form.errors.file && (
                             <p className="mt-1 text-xs text-danger">
@@ -436,29 +540,8 @@ export function FleetDocumentsSection({
                             </p>
                         )}
                     </div>
-
-                    <div className="flex justify-end gap-2 pt-2">
-                        <Button
-                            type="button"
-                            variant="quiet"
-                            size="sm"
-                            onClick={() => setShowUploadForm(false)}
-                            disabled={form.processing}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            type="submit"
-                            size="sm"
-                            disabled={form.processing || !form.data.file}
-                            className="flex items-center gap-1.5"
-                        >
-                            <Upload className="h-3.5 w-3.5" />
-                            {form.processing ? 'Uploading…' : 'Upload Document'}
-                        </Button>
-                    </div>
                 </form>
-            )}
+            </Modal>
 
             {/* Documents List */}
             {documents.length === 0 ? (
@@ -474,7 +557,7 @@ export function FleetDocumentsSection({
                 </div>
             ) : (
                 <div className="divide-y divide-line border-y border-line">
-                    {documents.map((doc) => (
+                    {sortedDocuments.map((doc) => (
                         <div
                             key={doc.id}
                             className="flex flex-col justify-between py-4 transition-colors hover:bg-surface-subtle/40"
@@ -784,10 +867,9 @@ export function FleetDocumentsSection({
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-medium text-ink">
-                                        Document Title *
-                                    </label>
                                     <FleetInput
+                                        label="Document Title"
+                                        required
                                         value={editForm.data.title}
                                         onChange={(val) =>
                                             editForm.setData('title', val)
@@ -802,10 +884,8 @@ export function FleetDocumentsSection({
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-medium text-ink">
-                                        Document / Permit Number
-                                    </label>
                                     <FleetInput
+                                        label="Document / Permit Number"
                                         value={editForm.data.document_number}
                                         onChange={(val) =>
                                             editForm.setData(
@@ -823,10 +903,8 @@ export function FleetDocumentsSection({
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-medium text-ink">
-                                        Issuing Authority
-                                    </label>
                                     <FleetInput
+                                        label="Issuing Authority"
                                         value={editForm.data.issuing_authority}
                                         onChange={(val) =>
                                             editForm.setData(
