@@ -2,7 +2,7 @@ import { useForm } from '@inertiajs/react';
 import {
     ArrowLeft,
     AlertTriangle,
-    Camera,
+    CheckCircle2,
     ClipboardCheck,
     Clock3,
     FileText,
@@ -17,7 +17,6 @@ import type { FormEvent, KeyboardEvent as ReactKeyboardEvent } from 'react';
 import React, { useEffect, useRef, useState } from 'react';
 import { Button, Panel } from '@/components/ui';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
-import { DvirStatusBadge } from '@/components/workspace/fleet/dvir-status-badge';
 import { DvirWalkaroundModal } from '@/components/workspace/fleet/dvir-walkaround-modal';
 import { getFleetDispatchabilityState } from '@/components/workspace/fleet/fleet-dispatchability';
 import { FleetDocumentsSection } from '@/components/workspace/fleet/fleet-documents-section';
@@ -30,7 +29,6 @@ import { FleetMaintenanceSection } from '@/components/workspace/fleet/fleet-main
 import { FleetQuickActionToolbar } from '@/components/workspace/fleet/fleet-quick-action-toolbar';
 import { FleetStatusForm } from '@/components/workspace/fleet/fleet-status-form';
 import { HosDutyBadge } from '@/components/workspace/fleet/hos-duty-badge';
-import { OperatorBindingChip } from '@/components/workspace/fleet/operator-binding-chip';
 import { SafetyLockoutBanner } from '@/components/workspace/fleet/safety-lockout-banner';
 import { formatDateTime, humanize } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
@@ -61,6 +59,38 @@ const DETAIL_TABS = [
 ] as const;
 
 type DetailTab = (typeof DETAIL_TABS)[number];
+
+function formatDurationMinutes(minutes: number | null | undefined): string {
+    if (
+        minutes === null ||
+        minutes === undefined ||
+        !Number.isFinite(minutes)
+    ) {
+        return 'Unavailable';
+    }
+
+    const rounded = Math.max(0, Math.round(minutes));
+
+    return `${Math.floor(rounded / 60)}h ${String(rounded % 60).padStart(2, '0')}m`;
+}
+
+function formatRecordedAt(value: string | null | undefined): string {
+    return value
+        ? formatDateTime(value, 'Time unavailable')
+        : 'Time unavailable';
+}
+
+function inspectionResultLabel(result: string): string {
+    return (
+        {
+            passed: 'Passed',
+            conditional: 'Conditional',
+            failed: 'Failed',
+            defect_flagged: 'Defects identified',
+            critical_defect: 'Critical defect',
+        }[result] ?? humanize(result)
+    );
+}
 
 export function FleetDetailPane({
     asset,
@@ -103,6 +133,26 @@ export function FleetDetailPane({
         asset.maintenance_work_orders_count ?? null;
     const documentsCount = asset.documents_count ?? null;
     const preciseLocation = usePreciseLocation(assetLocation);
+    const locationReportedAt =
+        assetLocation?.captured_at ?? assetLocation?.received_at;
+    const locationFreshnessLabel = assetLocation
+        ? getFleetLocationFreshnessLabel(assetLocation)
+        : null;
+    const latestWorkshopCheck = asset.inspections.find(
+        (inspection) => inspection.completed_at !== null,
+    );
+    const durationBreakdown: Array<[string, number | null | undefined]> =
+        asset.hos
+            ? [
+                  ['Operating', asset.hos.operating_minutes],
+                  ['Driving', asset.hos.driving_minutes],
+                  ['Standby', asset.hos.standby_minutes],
+                  ['Breaks', asset.hos.break_minutes],
+              ]
+            : [];
+    const dutyHistory = asset.hos?.duty_history ?? [];
+    const equipmentUsage = asset.hos?.equipment_usage ?? null;
+    const recentDutyHistory = dutyHistory.slice(-6).reverse();
     const displayLocation = preciseLocation.startsWith('GPS ')
         ? 'Location unavailable'
         : preciseLocation;
@@ -635,84 +685,435 @@ export function FleetDetailPane({
                     aria-labelledby={`asset-tab-overview-${asset.id}`}
                     className="space-y-5"
                 >
-                    <section className="space-y-4 border-b border-line pb-5">
-                        <div>
-                            <h3 className="text-base font-semibold text-ink">
-                                Operational snapshot
-                            </h3>
-                            <p className="mt-1 text-sm leading-5 text-ink-soft">
-                                Field assignment, duty, and inspection context
-                                for this asset.
-                            </p>
+                    <section
+                        aria-labelledby={`current-operation-${asset.id}`}
+                        className="space-y-4 border-b border-line pb-5"
+                    >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                                <h3
+                                    id={`current-operation-${asset.id}`}
+                                    className="text-base font-semibold text-ink"
+                                >
+                                    Current operation
+                                </h3>
+                                <p className="mt-1 text-sm leading-5 text-ink-soft">
+                                    Accepted field activity and inspection
+                                    context for this asset.
+                                </p>
+                            </div>
+                            <span className="text-xs font-medium text-ink-soft">
+                                {locationReportedAt
+                                    ? `Last reported ${formatRecordedAt(locationReportedAt)}`
+                                    : 'No accepted location update'}
+                            </span>
                         </div>
 
                         <div className="grid border-y border-line md:grid-cols-2 md:divide-x md:divide-line">
-                            <div className="min-h-24 py-4 md:pr-5">
-                                <p className="text-xs font-semibold text-ink-soft">
-                                    Field operator &amp; telemetry
+                            <div className="min-h-28 py-4 md:pr-5">
+                                <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
+                                    Operator
                                 </p>
-                                <div className="mt-2">
-                                    <OperatorBindingChip
-                                        activeOperator={asset.active_operator}
-                                    />
-                                </div>
-                                <p className="mt-2 text-xs leading-5 text-ink-soft">
-                                    No operator binding means no active field
-                                    telemetry is associated with this asset.
-                                </p>
-                            </div>
-                            <div className="min-h-24 border-t border-line py-4 md:border-t-0 md:pl-5">
-                                <p className="text-xs font-semibold text-ink-soft">
-                                    Duty &amp; DOLE 10h compliance
-                                </p>
-                                {asset.hos ? (
-                                    <div className="mt-2">
-                                        <HosDutyBadge hos={asset.hos} />
+                                {asset.active_operator ? (
+                                    <div className="mt-2 space-y-2">
+                                        <p className="text-sm font-semibold text-ink">
+                                            {asset.active_operator.name}
+                                        </p>
+                                        <p className="text-xs text-ink-soft">
+                                            Shift started{' '}
+                                            {formatRecordedAt(
+                                                asset.active_operator
+                                                    .shift_started_at,
+                                            )}
+                                        </p>
+                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-soft">
+                                            <span>
+                                                {formatDurationMinutes(
+                                                    asset.active_operator
+                                                        .shift_duration_minutes,
+                                                )}{' '}
+                                                elapsed
+                                            </span>
+                                            <span
+                                                className={cn(
+                                                    'inline-flex items-center gap-1.5 font-medium',
+                                                    assetLocation?.sharing_enabled ===
+                                                        false
+                                                        ? 'text-warning-strong'
+                                                        : assetLocation?.freshness_status ===
+                                                            'fresh'
+                                                          ? 'text-success-strong'
+                                                          : 'text-ink-soft',
+                                                )}
+                                            >
+                                                <span
+                                                    className={cn(
+                                                        'h-1.5 w-1.5 rounded-full',
+                                                        assetLocation?.sharing_enabled ===
+                                                            false
+                                                            ? 'bg-warning-strong'
+                                                            : assetLocation?.freshness_status ===
+                                                                'fresh'
+                                                              ? 'bg-success-strong'
+                                                              : 'bg-ink-soft/50',
+                                                    )}
+                                                    aria-hidden="true"
+                                                />
+                                                {assetLocation?.sharing_enabled ===
+                                                false
+                                                    ? 'Location sharing paused'
+                                                    : locationReportedAt
+                                                      ? `${locationFreshnessLabel ?? 'Location reported'} · ${formatRecordedAt(locationReportedAt)}`
+                                                      : 'Location unavailable'}
+                                            </span>
+                                        </div>
                                     </div>
                                 ) : (
-                                    <>
-                                        <p className="mt-2 text-sm font-medium text-ink">
-                                            No active duty log
+                                    <div className="mt-2 space-y-1">
+                                        <p className="text-sm font-medium text-ink">
+                                            No active operator
                                         </p>
-                                        <p className="mt-1 text-xs leading-5 text-ink-soft">
-                                            No current-shift compliance record
-                                            is available.
+                                        <p className="text-xs leading-5 text-ink-soft">
+                                            Assignment and field duty are
+                                            separate records.
                                         </p>
-                                    </>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="min-h-28 border-t border-line py-4 md:border-t-0 md:pl-5">
+                                <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
+                                    Duty
+                                </p>
+                                {asset.hos ? (
+                                    <div className="mt-2 space-y-2">
+                                        <HosDutyBadge hos={asset.hos} />
+                                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-ink-soft">
+                                            <span>
+                                                Status since{' '}
+                                                {formatRecordedAt(
+                                                    asset.hos
+                                                        .current_duty_started_at,
+                                                )}
+                                            </span>
+                                            <span>
+                                                Accepted{' '}
+                                                {formatRecordedAt(
+                                                    asset.hos
+                                                        .last_accepted_duty_at,
+                                                )}
+                                            </span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 border-t border-line pt-2 text-xs">
+                                            <span>
+                                                Shift elapsed{' '}
+                                                <strong className="font-semibold text-ink">
+                                                    {formatDurationMinutes(
+                                                        asset.hos
+                                                            .shift_elapsed_minutes,
+                                                    )}
+                                                </strong>
+                                            </span>
+                                            <span>
+                                                Limit counter · operating +
+                                                driving{' '}
+                                                <strong className="font-semibold text-ink">
+                                                    {asset.hos
+                                                        .limit_counter_minutes ===
+                                                        null ||
+                                                    asset.hos
+                                                        .limit_counter_minutes ===
+                                                        undefined
+                                                        ? 'Unavailable'
+                                                        : formatDurationMinutes(
+                                                              asset.hos
+                                                                  .limit_counter_minutes,
+                                                          )}
+                                                </strong>
+                                            </span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="mt-2 space-y-1">
+                                        <p className="text-sm font-medium text-ink">
+                                            No active duty
+                                        </p>
+                                        <p className="text-xs leading-5 text-ink-soft">
+                                            Hours unavailable until a
+                                            server-accepted shift begins.
+                                        </p>
+                                    </div>
                                 )}
                             </div>
                         </div>
 
-                        {asset.latest_dvir && (
-                            <div className="flex flex-wrap items-center justify-between gap-4 border-t border-line pt-4">
-                                <div className="min-w-0">
-                                    <p className="text-xs font-semibold text-ink-soft">
-                                        Latest field inspection
-                                    </p>
-                                    <div className="mt-2">
-                                        <DvirStatusBadge
-                                            dvir={asset.latest_dvir}
-                                            onViewInspection={() =>
-                                                setShowDvirModal(true)
-                                            }
-                                        />
+                        {asset.hos && (
+                            <div className="grid grid-cols-2 gap-3 border-b border-line pb-4 text-xs sm:grid-cols-4">
+                                {durationBreakdown.map(([label, minutes]) => (
+                                    <div key={label}>
+                                        <p className="text-ink-soft">{label}</p>
+                                        <p className="mt-1 font-semibold text-ink tabular-nums">
+                                            {formatDurationMinutes(minutes)}
+                                        </p>
                                     </div>
-                                </div>
-                                <Button
-                                    size="sm"
-                                    variant="secondary"
-                                    onClick={() => setShowDvirModal(true)}
-                                    className="shrink-0"
-                                >
-                                    <Camera className="mr-1.5 h-3.5 w-3.5" />
-                                    View walkaround photos (
-                                    <span className="tabular-nums">
-                                        {asset.latest_dvir.photos.length}
-                                    </span>
-                                    )
-                                </Button>
+                                ))}
                             </div>
                         )}
+
+                        {asset.hos && (
+                            <div className="grid gap-4 border-b border-line pb-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(16rem,0.75fr)]">
+                                <section
+                                    aria-labelledby={`duty-history-heading-${asset.id}`}
+                                    className="min-w-0"
+                                >
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <div>
+                                            <h4
+                                                id={`duty-history-heading-${asset.id}`}
+                                                className="text-xs font-semibold tracking-wide text-ink-soft uppercase"
+                                            >
+                                                Duty history
+                                            </h4>
+                                            <p className="mt-1 text-xs leading-5 text-ink-soft">
+                                                Server-accepted transitions
+                                                only.
+                                            </p>
+                                        </div>
+                                        {dutyHistory.length > 6 && (
+                                            <span className="text-xs text-ink-soft">
+                                                Showing latest 6
+                                            </span>
+                                        )}
+                                    </div>
+                                    {recentDutyHistory.length > 0 ? (
+                                        <ol className="mt-3 divide-y divide-line overflow-hidden rounded-lg border border-line">
+                                            {recentDutyHistory.map((log) => (
+                                                <li
+                                                    key={log.id}
+                                                    className="space-y-1.5 bg-surface-subtle/40 px-3 py-3 text-xs"
+                                                >
+                                                    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                                                        <span className="font-semibold text-ink">
+                                                            {log.previous_duty_status_label
+                                                                ? `${log.previous_duty_status_label} → `
+                                                                : ''}
+                                                            {log.new_duty_status_label ??
+                                                                humanize(
+                                                                    log.new_duty_status,
+                                                                )}
+                                                        </span>
+                                                        <span className="text-ink-soft tabular-nums">
+                                                            {formatDurationMinutes(
+                                                                log.duration_minutes,
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-ink-soft">
+                                                        Occurred{' '}
+                                                        {formatRecordedAt(
+                                                            log.occurred_at,
+                                                        )}
+                                                        {' · Server accepted '}
+                                                        {formatRecordedAt(
+                                                            log.accepted_at,
+                                                        )}
+                                                    </p>
+                                                    <p className="flex flex-wrap gap-x-3 gap-y-1 text-ink-soft">
+                                                        <span>
+                                                            Equipment:{' '}
+                                                            {log.equipment_code ??
+                                                                'Not linked'}
+                                                        </span>
+                                                        <span>
+                                                            {log.location_label ??
+                                                                (log.location_freshness ===
+                                                                'last_known'
+                                                                    ? 'Last known location'
+                                                                    : log.location_freshness ===
+                                                                        'unavailable'
+                                                                      ? 'Location unavailable'
+                                                                      : 'GPS position')}
+                                                        </span>
+                                                    </p>
+                                                    {log.location_observed_at && (
+                                                        <p className="text-ink-soft">
+                                                            Location observed{' '}
+                                                            {formatRecordedAt(
+                                                                log.location_observed_at,
+                                                            )}
+                                                        </p>
+                                                    )}
+                                                </li>
+                                            ))}
+                                        </ol>
+                                    ) : (
+                                        <p className="mt-3 rounded-lg border border-line bg-surface-subtle/40 px-3 py-3 text-xs leading-5 text-ink-soft">
+                                            No accepted duty transitions are
+                                            available for this operation.
+                                        </p>
+                                    )}
+                                </section>
+
+                                <section
+                                    aria-labelledby={`equipment-usage-heading-${asset.id}`}
+                                    className="min-w-0 border-t border-line pt-4 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-4"
+                                >
+                                    <h4
+                                        id={`equipment-usage-heading-${asset.id}`}
+                                        className="text-xs font-semibold tracking-wide text-ink-soft uppercase"
+                                    >
+                                        Equipment time
+                                    </h4>
+                                    <p className="mt-1 text-xs leading-5 text-ink-soft">
+                                        Kept separate from operator HOS and the
+                                        official meter.
+                                    </p>
+                                    <p className="mt-3 text-sm font-semibold text-ink tabular-nums">
+                                        Estimated usage:{' '}
+                                        {equipmentUsage?.policy_applied &&
+                                        equipmentUsage.estimated_minutes !==
+                                            null &&
+                                        equipmentUsage.estimated_minutes !==
+                                            undefined
+                                            ? formatDurationMinutes(
+                                                  equipmentUsage.estimated_minutes,
+                                              )
+                                            : 'No usage policy configured'}
+                                    </p>
+                                    <p className="mt-1 text-xs leading-5 text-ink-soft">
+                                        {equipmentUsage?.source ??
+                                            'Accepted linked intervals only'}
+                                    </p>
+                                    {equipmentUsage && (
+                                        <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs text-ink-soft">
+                                            <span>
+                                                Operating{' '}
+                                                <strong className="font-semibold text-ink">
+                                                    {formatDurationMinutes(
+                                                        equipmentUsage.operating_minutes,
+                                                    )}
+                                                </strong>
+                                            </span>
+                                            <span>
+                                                Driving{' '}
+                                                <strong className="font-semibold text-ink">
+                                                    {formatDurationMinutes(
+                                                        equipmentUsage.driving_minutes,
+                                                    )}
+                                                </strong>
+                                            </span>
+                                            <span>
+                                                Standby{' '}
+                                                <strong className="font-semibold text-ink">
+                                                    {formatDurationMinutes(
+                                                        equipmentUsage.standby_minutes,
+                                                    )}
+                                                </strong>
+                                            </span>
+                                            <span>
+                                                Break{' '}
+                                                <strong className="font-semibold text-ink">
+                                                    {formatDurationMinutes(
+                                                        equipmentUsage.break_minutes,
+                                                    )}
+                                                </strong>
+                                            </span>
+                                        </div>
+                                    )}
+                                </section>
+                            </div>
+                        )}
+
+                        <div className="space-y-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
+                                    Latest inspections
+                                </p>
+                                <button
+                                    type="button"
+                                    className="text-xs font-semibold text-brand-strong underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none"
+                                    onClick={() => setActiveTab('inspections')}
+                                    aria-controls={`asset-tabpanel-inspections-${asset.id}`}
+                                >
+                                    View inspections →
+                                </button>
+                            </div>
+                            <div className="grid gap-3 md:grid-cols-2">
+                                <div className="rounded-lg border border-line bg-surface-subtle/50 p-3">
+                                    <p className="text-xs font-semibold text-ink-soft">
+                                        Field DVIR
+                                    </p>
+                                    {asset.latest_dvir ? (
+                                        <>
+                                            <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-ink">
+                                                {asset.latest_dvir.status ===
+                                                'passed' ? (
+                                                    <CheckCircle2
+                                                        className="h-3.5 w-3.5 text-success-strong"
+                                                        aria-hidden="true"
+                                                    />
+                                                ) : (
+                                                    <AlertTriangle
+                                                        className="h-3.5 w-3.5 text-warning-strong"
+                                                        aria-hidden="true"
+                                                    />
+                                                )}
+                                                {inspectionResultLabel(
+                                                    asset.latest_dvir.status,
+                                                )}
+                                            </p>
+                                            <p className="mt-1 text-xs text-ink-soft">
+                                                Completed{' '}
+                                                {formatRecordedAt(
+                                                    asset.latest_dvir
+                                                        .completed_at,
+                                                )}
+                                            </p>
+                                        </>
+                                    ) : (
+                                        <p className="mt-1 text-sm font-medium text-ink">
+                                            No submission received
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="rounded-lg border border-line bg-surface-subtle/50 p-3">
+                                    <p className="text-xs font-semibold text-ink-soft">
+                                        Workshop check
+                                    </p>
+                                    {latestWorkshopCheck ? (
+                                        <>
+                                            <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-ink">
+                                                {latestWorkshopCheck.result ===
+                                                'passed' ? (
+                                                    <CheckCircle2
+                                                        className="h-3.5 w-3.5 text-success-strong"
+                                                        aria-hidden="true"
+                                                    />
+                                                ) : (
+                                                    <AlertTriangle
+                                                        className="h-3.5 w-3.5 text-warning-strong"
+                                                        aria-hidden="true"
+                                                    />
+                                                )}
+                                                {inspectionResultLabel(
+                                                    latestWorkshopCheck.result,
+                                                )}
+                                            </p>
+                                            <p className="mt-1 text-xs text-ink-soft">
+                                                Completed{' '}
+                                                {formatRecordedAt(
+                                                    latestWorkshopCheck.completed_at,
+                                                )}
+                                            </p>
+                                        </>
+                                    ) : (
+                                        <p className="mt-1 text-sm font-medium text-ink">
+                                            No check recorded
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
                     </section>
 
                     <section className="space-y-3">
@@ -756,7 +1157,7 @@ export function FleetDetailPane({
                             </div>
                             <div className="border-b border-line py-4">
                                 <dt className="text-xs font-semibold text-ink-soft">
-                                    Meter reading
+                                    Official equipment meter
                                 </dt>
                                 <dd className="mt-1 text-base font-semibold text-ink tabular-nums">
                                     {asset.meter_value !== null &&
@@ -765,6 +1166,9 @@ export function FleetDetailPane({
                                         ? `${asset.meter_value} (${asset.meter_type ?? 'units'})`
                                         : 'N/A'}
                                 </dd>
+                                <p className="mt-1 text-xs text-ink-soft">
+                                    Authorized meter or telemetry workflow
+                                </p>
                             </div>
                             <div className="border-b border-line py-4">
                                 <dt className="text-xs font-semibold text-ink-soft">

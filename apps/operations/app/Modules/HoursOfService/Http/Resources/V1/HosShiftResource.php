@@ -16,6 +16,10 @@ class HosShiftResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $activeDutyAcceptedAt = $this->activeDutyLog !== null
+            ? $this->activeDutyLog->accepted_at
+            : null;
+
         return [
             'id' => $this->id,
             'user_id' => $this->user_id,
@@ -23,6 +27,7 @@ class HosShiftResource extends JsonResource
             'status_label' => $this->status->label(),
             'started_at' => $this->started_at->toIso8601String(),
             'ended_at' => $this->ended_at?->toIso8601String(),
+            'accepted_at' => ($activeDutyAcceptedAt ?? $this->updated_at)->toIso8601String(),
             'operating_minutes' => $this->operating_minutes,
             'driving_minutes' => $this->driving_minutes,
             'standby_minutes' => $this->standby_minutes,

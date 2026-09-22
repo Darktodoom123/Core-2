@@ -280,6 +280,8 @@ describe('Mobile Lifecycle Modals & Operational Safeguards', () => {
                         dutyStatus: 'operating',
                         startedAt: '06:00 AM',
                         hoursElapsed: 9.2,
+                        limitCounterMinutes: 552,
+                        doleWarning: true,
                     }}
                 />,
             );
@@ -754,6 +756,8 @@ describe('Mobile Lifecycle Modals & Operational Safeguards', () => {
                         dutyStatus: 'operating',
                         startedAt: '06:00 AM',
                         hoursElapsed: 9.5,
+                        limitCounterMinutes: 570,
+                        doleWarning: true,
                     }}
                 />,
             );

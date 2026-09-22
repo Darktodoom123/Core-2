@@ -33,7 +33,7 @@ class HosShiftController extends Controller
 
         /** @var OperatorShift|null $activeShift */
         $activeShift = OperatorShift::query()
-            ->with(['dutyLogs', 'activeDutyLog'])
+            ->with(['dutyLogs.operationalAsset', 'activeDutyLog.operationalAsset'])
             ->where('user_id', $user->id)
             ->latest('started_at')
             ->first();
@@ -70,8 +70,12 @@ class HosShiftController extends Controller
                 initialDutyStatus: $initialDuty,
                 latitude: isset($validated['latitude']) ? (float) $validated['latitude'] : null,
                 longitude: isset($validated['longitude']) ? (float) $validated['longitude'] : null,
+                accuracyMetres: isset($validated['accuracy_metres']) ? (float) $validated['accuracy_metres'] : null,
+                locationObservedAt: isset($validated['location_observed_at']) ? Carbon::parse($validated['location_observed_at']) : null,
+                locationSource: $validated['location_source'] ?? null,
                 locationName: $validated['location_name'] ?? null,
                 remarks: $validated['remarks'] ?? null,
+                occurredAt: isset($validated['occurred_at']) ? Carbon::parse($validated['occurred_at']) : null,
             );
 
             return response()->json([
@@ -115,10 +119,16 @@ class HosShiftController extends Controller
                 user: $user,
                 nextStatus: $dutyStatus,
                 standbyReason: $standbyReason,
+                operationalAssetId: $request->filled('operational_asset_id') ? (int) $request->input('operational_asset_id') : null,
+                dispatchJobId: $request->filled('dispatch_job_id') ? (int) $request->input('dispatch_job_id') : null,
                 latitude: $request->filled('latitude') ? (float) $request->input('latitude') : null,
                 longitude: $request->filled('longitude') ? (float) $request->input('longitude') : null,
+                accuracyMetres: $request->filled('accuracy_metres') ? (float) $request->input('accuracy_metres') : null,
+                locationObservedAt: $request->filled('location_observed_at') ? Carbon::parse((string) $request->input('location_observed_at')) : null,
+                locationSource: $request->input('location_source'),
                 locationName: $request->input('location_name'),
                 remarks: $request->input('remarks'),
+                occurredAt: $request->filled('occurred_at') ? Carbon::parse((string) $request->input('occurred_at')) : null,
             );
 
             $clocks = $clocksQuery->execute($user);
@@ -163,6 +173,15 @@ class HosShiftController extends Controller
                 user: $user,
                 certificationStatement: (string) $request->input('certification_statement'),
                 remarks: $request->input('remarks'),
+                operationalAssetId: $request->filled('operational_asset_id') ? (int) $request->input('operational_asset_id') : null,
+                dispatchJobId: $request->filled('dispatch_job_id') ? (int) $request->input('dispatch_job_id') : null,
+                latitude: $request->filled('latitude') ? (float) $request->input('latitude') : null,
+                longitude: $request->filled('longitude') ? (float) $request->input('longitude') : null,
+                accuracyMetres: $request->filled('accuracy_metres') ? (float) $request->input('accuracy_metres') : null,
+                locationObservedAt: $request->filled('location_observed_at') ? Carbon::parse((string) $request->input('location_observed_at')) : null,
+                locationSource: $request->input('location_source'),
+                locationName: $request->input('location_name'),
+                occurredAt: $request->filled('occurred_at') ? Carbon::parse((string) $request->input('occurred_at')) : null,
             );
 
             $clocks = $clocksQuery->execute($user);
@@ -195,17 +214,18 @@ class HosShiftController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
-        $days = (int) $request->query('days', 8);
+        $days = min(8, max(1, (int) $request->query('days', 8)));
         $startDate = Carbon::now()->subDays($days)->startOfDay();
 
         $logs = OperatorDutyLog::query()
+            ->with('operationalAsset')
             ->where('user_id', $user->id)
             ->where('started_at', '>=', $startDate)
             ->orderBy('started_at', 'desc')
             ->get();
 
         $shifts = OperatorShift::query()
-            ->with(['dutyLogs'])
+            ->with(['dutyLogs.operationalAsset', 'activeDutyLog.operationalAsset'])
             ->where('user_id', $user->id)
             ->where('started_at', '>=', $startDate)
             ->orderBy('started_at', 'desc')

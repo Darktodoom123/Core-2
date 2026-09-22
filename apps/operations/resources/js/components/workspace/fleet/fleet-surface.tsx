@@ -126,9 +126,7 @@ export function FleetSurface({
             }
 
             const loc = locations.find((l) => l.asset?.id === asset.id);
-            const isStale =
-                loc?.freshness_status === 'stale' ||
-                (!loc && asset.active_operator?.telemetry_status === 'stale');
+            const isStale = loc?.freshness_status === 'stale';
 
             if (isStale) {
                 stale_gps += 1;
@@ -226,10 +224,7 @@ export function FleetSurface({
                 }
             } else if (triageFilter === 'stale_gps') {
                 const loc = locations.find((l) => l.asset?.id === asset.id);
-                const isStale =
-                    loc?.freshness_status === 'stale' ||
-                    (!loc &&
-                        asset.active_operator?.telemetry_status === 'stale');
+                const isStale = loc?.freshness_status === 'stale';
 
                 if (!isStale) {
                     return false;

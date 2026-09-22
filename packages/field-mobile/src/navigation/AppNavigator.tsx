@@ -47,6 +47,11 @@ import { EquipmentInspectionScreen } from '../screens/EquipmentInspectionScreen'
 import { FuelScreen } from '../screens/FuelScreen';
 import { HeavyCraneDriveModeScreen } from '../screens/HeavyCraneDriveModeScreen';
 import { HosScreen } from '../screens/HosScreen';
+import type {
+    ShiftLogEvent,
+    TimelineDayHistory,
+    TimelineSegment,
+} from '../screens/HosScreen';
 import { ProfileScreen } from '../screens/profile/ProfileScreen';
 import type {
     RentalCheckoutData,
@@ -103,6 +108,299 @@ import type {
 export { isAuthorizedFieldRole } from '../auth/fieldRoles';
 
 const SOS_LOCATION_TIMEOUT_MS = 4000;
+
+type HistoryRow = Record<string, unknown>;
+
+function historyString(row: HistoryRow, key: string): string | null {
+    const value = row[key];
+
+    return typeof value === 'string' && value.trim() !== '' ? value : null;
+}
+
+function historyDate(row: HistoryRow): Date | null {
+    const raw =
+        historyString(row, 'occurred_at') ?? historyString(row, 'started_at');
+
+    if (!raw) {
+        return null;
+    }
+
+    const date = new Date(raw);
+
+    return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function historyDuration(row: HistoryRow): number {
+    const raw = row.duration_minutes;
+
+    if (typeof raw === 'number' && Number.isFinite(raw)) {
+        return Math.max(0, raw);
+    }
+
+    const start = historyDate(row);
+
+    if (!start) {
+        return 0;
+    }
+
+    const endRaw = historyString(row, 'ended_at');
+    const end = endRaw ? new Date(endRaw) : new Date();
+
+    if (Number.isNaN(end.getTime())) {
+        return 0;
+    }
+
+    return Math.max(0, Math.floor((end.getTime() - start.getTime()) / 60000));
+}
+
+function historyDateKey(date: Date): string {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function formatHistoryTime(raw: string | null, fallback = 'Current'): string {
+    if (!raw) {
+        return fallback;
+    }
+
+    const date = new Date(raw);
+
+    if (Number.isNaN(date.getTime())) {
+        return fallback;
+    }
+
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatHistoryDuration(minutes: number): string {
+    return `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}m`;
+}
+
+function mapHosCycleHistory(data: {
+    shifts?: unknown[];
+    logs?: unknown[];
+}): TimelineDayHistory[] {
+    const rows = (Array.isArray(data.logs) ? data.logs : []).filter(
+        (row): row is HistoryRow => Boolean(row) && typeof row === 'object',
+    );
+    const shifts = (Array.isArray(data.shifts) ? data.shifts : []).filter(
+        (row): row is HistoryRow => Boolean(row) && typeof row === 'object',
+    );
+    const grouped = new Map<
+        string,
+        { logs: HistoryRow[]; shifts: HistoryRow[] }
+    >();
+
+    for (const row of rows) {
+        const date = historyDate(row);
+
+        if (!date) {
+            continue;
+        }
+
+        const key = historyDateKey(date);
+        const group = grouped.get(key) ?? { logs: [], shifts: [] };
+        group.logs.push(row);
+        grouped.set(key, group);
+    }
+
+    for (const row of shifts) {
+        const date = historyDate(row);
+
+        if (!date) {
+            continue;
+        }
+
+        const key = historyDateKey(date);
+        const group = grouped.get(key) ?? { logs: [], shifts: [] };
+        group.shifts.push(row);
+        grouped.set(key, group);
+    }
+
+    const todayKey = historyDateKey(new Date());
+
+    return [...grouped.entries()]
+        .sort(([left], [right]) => right.localeCompare(left))
+        .map(([key, group]) => {
+            const parsedDate = new Date(`${key}T12:00:00`);
+            const sortedLogs = [...group.logs].sort((left, right) => {
+                const leftDate = historyDate(left)?.getTime() ?? 0;
+                const rightDate = historyDate(right)?.getTime() ?? 0;
+
+                return leftDate - rightDate;
+            });
+            const events: ShiftLogEvent[] = sortedLogs.map((row, rowIndex) => {
+                const status =
+                    historyString(row, 'new_duty_status') ??
+                    historyString(row, 'duty_status') ??
+                    'off_duty';
+                const previous = historyString(
+                    row,
+                    'previous_duty_status_label',
+                );
+                const statusLabel =
+                    historyString(row, 'new_duty_status_label') ??
+                    historyString(row, 'duty_status_label') ??
+                    status.replace('_', ' ');
+                const observedAt = historyString(row, 'location_observed_at');
+                const acceptedAt = historyString(row, 'accepted_at');
+                const freshness = historyString(row, 'location_freshness');
+                const locationName = historyString(row, 'location_name');
+                const location =
+                    freshness === 'last_known'
+                        ? 'Last known location'
+                        : freshness === 'unavailable'
+                          ? 'Location unavailable'
+                          : (locationName ?? 'GPS position');
+                const equipment = historyString(row, 'equipment_code');
+                const duration = historyDuration(row);
+                const details = `${previous ? `${previous} → ` : ''}${statusLabel}${equipment ? ` · ${equipment}` : ''}`;
+                const observationLabel = observedAt
+                    ? `Observed ${formatHistoryTime(observedAt)}`
+                    : location;
+                const acceptedLabel = acceptedAt
+                    ? `Accepted ${formatHistoryTime(acceptedAt)}`
+                    : 'Accepted by server';
+
+                return {
+                    id: String(row.id ?? `${key}-${rowIndex}`),
+                    status: status as ShiftLogEvent['status'],
+                    startTime: formatHistoryTime(
+                        historyString(row, 'occurred_at') ??
+                            historyString(row, 'started_at'),
+                    ),
+                    endTime: formatHistoryTime(historyString(row, 'ended_at')),
+                    durationFormatted: formatHistoryDuration(duration),
+                    details: `${details} · ${acceptedLabel}`,
+                    location: `${location} · ${observationLabel}`,
+                    occurrenceTime:
+                        historyString(row, 'occurred_at') ??
+                        historyString(row, 'started_at'),
+                    acceptedTime: acceptedAt,
+                    equipmentLabel: equipment,
+                    locationStatus:
+                        freshness === 'fresh'
+                            ? 'fresh'
+                            : freshness === 'last_known'
+                              ? 'last_known'
+                              : 'unavailable',
+                    syncStatus: 'accepted',
+                };
+            });
+
+            const segments: TimelineDayHistory['segments'] = {
+                off: [],
+                brk: [],
+                drv: [],
+                on: [],
+            };
+
+            for (const row of sortedLogs) {
+                const start = historyDate(row);
+
+                if (!start) {
+                    continue;
+                }
+
+                const endRaw = historyString(row, 'ended_at');
+                const end = endRaw ? new Date(endRaw) : new Date();
+                const startMinutes = start.getHours() * 60 + start.getMinutes();
+                const endMinutes = Math.max(
+                    startMinutes + 1,
+                    end.getTime() > start.getTime()
+                        ? end.getHours() * 60 + end.getMinutes()
+                        : startMinutes + historyDuration(row),
+                );
+                const segment: TimelineSegment = {
+                    left: `${Math.min(100, (startMinutes / 1440) * 100)}%`,
+                    width: `${Math.max(0.25, Math.min(100, ((endMinutes - startMinutes) / 1440) * 100))}%`,
+                };
+                const status =
+                    historyString(row, 'new_duty_status') ??
+                    historyString(row, 'duty_status');
+
+                if (status === 'driving') {
+                    segments.drv.push(segment);
+                } else if (status === 'on_break') {
+                    segments.brk.push(segment);
+                } else if (status === 'off_duty') {
+                    segments.off.push(segment);
+                } else {
+                    segments.on.push(segment);
+                }
+            }
+
+            const driveMinutes = sortedLogs
+                .filter(
+                    (row) =>
+                        historyString(row, 'new_duty_status') === 'driving' ||
+                        historyString(row, 'duty_status') === 'driving',
+                )
+                .reduce((sum, row) => sum + historyDuration(row), 0);
+            const onDutyMinutes = sortedLogs
+                .filter((row) =>
+                    ['operating', 'driving', 'standby'].includes(
+                        historyString(row, 'new_duty_status') ??
+                            historyString(row, 'duty_status') ??
+                            '',
+                    ),
+                )
+                .reduce((sum, row) => sum + historyDuration(row), 0);
+            const totalMinutes = sortedLogs.reduce(
+                (sum, row) => sum + historyDuration(row),
+                0,
+            );
+            const certification = group.shifts.some(
+                (row) => row.is_certified === true,
+            )
+                ? 'certified'
+                : group.shifts.some(
+                        (row) => historyString(row, 'status') === 'active',
+                    )
+                  ? 'active'
+                  : 'restart';
+
+            return {
+                id: `server-${key}`,
+                dayLabel:
+                    key === todayKey
+                        ? 'Today'
+                        : parsedDate.toLocaleDateString([], {
+                              weekday: 'short',
+                              month: 'short',
+                              day: 'numeric',
+                          }),
+                dateFormatted: parsedDate.toLocaleDateString([], {
+                    weekday: 'long',
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                }),
+                shortDate:
+                    key === todayKey
+                        ? 'Today'
+                        : parsedDate.toLocaleDateString([], {
+                              month: 'short',
+                              day: 'numeric',
+                          }),
+                isToday: key === todayKey,
+                driveHoursFormatted: formatHistoryDuration(driveMinutes),
+                onDutyHoursFormatted: formatHistoryDuration(onDutyMinutes),
+                offDutyHoursFormatted: formatHistoryDuration(
+                    Math.max(0, 1440 - totalMinutes),
+                ),
+                totalShiftFormatted: formatHistoryDuration(totalMinutes),
+                certificationStatus: certification,
+                certifiedByText:
+                    certification === 'certified'
+                        ? 'Server-accepted and certified'
+                        : certification === 'active'
+                          ? 'Active shift in progress'
+                          : 'No accepted duty interval',
+                segments,
+                events,
+            };
+        });
+}
 
 async function captureBoundedEmergencyLocation(
     getLocation: () => Promise<{
@@ -264,11 +562,19 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         | 'profile'
     >('main');
     const [shiftInfo, setShiftInfo] = useState<ShiftInfo>({
-        status: 'on_shift',
-        dutyStatus: 'operating',
-        startedAt: '08:00 AM',
-        hoursElapsed: 4,
+        status: 'off_shift',
+        dutyStatus: 'off_duty',
+        startedAt: null,
+        hoursElapsed: undefined,
+        shiftElapsedMinutes: null,
+        operatingMinutes: null,
+        drivingMinutes: null,
+        standbyMinutes: null,
+        breakMinutes: null,
     });
+    const [timelineHistory, setTimelineHistory] = useState<
+        TimelineDayHistory[]
+    >([]);
     const [isUnitLinked, setIsUnitLinked] = useState<boolean>(false);
     const [dvirStatus, setDvirStatus] = useState<
         'pending' | 'cleared' | 'passed' | 'defect'
@@ -301,6 +607,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                 setJobs([]);
                 setJobsError(null);
                 setActiveAppView('main');
+                setTimelineHistory([]);
             });
             clearNotificationTokenCache();
         } else if (
@@ -315,6 +622,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                 setJobs([]);
                 setJobsError(null);
                 setActiveAppView('main');
+                setTimelineHistory([]);
             });
             clearNotificationTokenCache();
         }
@@ -883,6 +1191,14 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         try {
             const currentShift = await apiClient.fetchCurrentHosShift();
 
+            try {
+                const cycleHistory = await apiClient.fetchHosCycleHistory(8);
+                setTimelineHistory(mapHosCycleHistory(cycleHistory));
+            } catch {
+                // Keep the last server-accepted history when the audit request
+                // is temporarily unavailable.
+            }
+
             if (currentShift?.clocks && currentShift.clocks.shift_active) {
                 const clock = currentShift.clocks;
                 const statusMap: Record<string, DutyStatus> = {
@@ -911,15 +1227,48 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                               hour: '2-digit',
                               minute: '2-digit',
                           })
-                        : '08:00 AM',
-                    hoursElapsed: clock.hours_elapsed ?? 0,
+                        : null,
+                    hoursElapsed: clock.hours_elapsed ?? null,
+                    currentDutyStartedAt: clock.current_duty_started_at ?? null,
+                    lastAcceptedDutyAt: clock.last_accepted_duty_at ?? null,
+                    serverTime: clock.server_time ?? null,
+                    shiftElapsedMinutes: clock.shift_elapsed_minutes ?? null,
+                    operatingMinutes: clock.operating_minutes ?? null,
+                    drivingMinutes: clock.driving_minutes ?? null,
+                    standbyMinutes: clock.standby_minutes ?? null,
+                    breakMinutes: clock.break_minutes ?? null,
+                    limitCounterMinutes: clock.limit_counter_minutes ?? null,
+                    limitCounterLabel: clock.limit_counter_label ?? null,
+                    cycleRemainingMinutes:
+                        clock.cycle_remaining_minutes ?? null,
+                    cycleAccumulatedMinutes:
+                        clock.cycle_accumulated_minutes ?? null,
+                    cycleLimitMinutes: clock.cycle_limit_minutes ?? null,
+                    driveRemainingMinutes:
+                        clock.drive_remaining_minutes ?? null,
+                    shiftWindowRemainingMinutes:
+                        clock.shift_window_remaining_minutes ?? null,
+                    breakCountdownMinutes:
+                        clock.break_countdown_minutes ?? null,
+                    fatigueStatus: clock.fatigue_status ?? null,
+                    doleWarning: clock.dole_warning ?? false,
                 });
             } else if (currentShift && !currentShift.clocks?.shift_active) {
                 setShiftInfo({
                     status: 'off_shift',
                     dutyStatus: 'off_duty',
-                    startedAt: '--:--',
-                    hoursElapsed: 0,
+                    startedAt: null,
+                    hoursElapsed: null,
+                    currentDutyStartedAt: null,
+                    lastAcceptedDutyAt: null,
+                    serverTime: currentShift.clocks.server_time ?? null,
+                    shiftElapsedMinutes: null,
+                    operatingMinutes: null,
+                    drivingMinutes: null,
+                    standbyMinutes: null,
+                    breakMinutes: null,
+                    limitCounterMinutes: null,
+                    limitCounterLabel: null,
                 });
             }
         } catch {
@@ -942,12 +1291,14 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
 
         if (result.completed > 0) {
             await fetchJobs();
+            await refreshHosClocks();
         }
     }, [
         apiClient,
         commandOutbox,
         fetchJobs,
         handleLogout,
+        refreshHosClocks,
         isOnline,
         isOutboxReady,
         status,
@@ -1183,11 +1534,35 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         [jobs],
     );
 
-    const handleToggleShift = useCallback((nextStatus: ShiftStatus) => {
-        setShiftInfo((prev) => ({
-            ...prev,
-            status: nextStatus,
-        }));
+    const handleToggleShift = useCallback(() => {
+        // Shift status is server-confirmed HOS state. The outbox banner carries
+        // pending or failed intent until the accepted clocks are refreshed.
+    }, []);
+
+    const captureDutyLocation = useCallback(async () => {
+        const snapshot = await nativeLocationAdapter.getDutyLocationSnapshot();
+        let locationName: string | null = null;
+
+        if (snapshot.latitude !== null && snapshot.longitude !== null) {
+            try {
+                locationName = await Promise.race([
+                    nativeLocationAdapter.reverseGeocodeCity(
+                        snapshot.latitude,
+                        snapshot.longitude,
+                    ),
+                    new Promise<null>((resolve) =>
+                        setTimeout(() => resolve(null), 800),
+                    ),
+                ]);
+            } catch {
+                locationName = null;
+            }
+        }
+
+        return {
+            ...snapshot,
+            locationName,
+        };
     }, []);
 
     const handleChangeDutyStatus = useCallback(
@@ -1196,46 +1571,135 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
             standbyReason?: StandbyReason,
             remarks?: string,
         ) => {
-            const nextShiftStatus: ShiftStatus =
-                dutyStatus === 'off_duty'
-                    ? 'off_shift'
-                    : dutyStatus === 'on_break'
-                      ? 'on_break'
-                      : dutyStatus === 'standby'
-                        ? 'standby'
-                        : 'on_shift';
-
-            setShiftInfo((prev) => ({
-                ...prev,
-                status: nextShiftStatus,
-                dutyStatus,
-            }));
-
             if (dutyStatus === 'off_duty') {
                 setLocationSharingActive(false);
             }
 
             try {
+                const targetJob =
+                    jobs.find((job) => job.id === selectedJobId) ??
+                    (jobs.length === 1 ? jobs[0] : null);
+                const operationalAssetId =
+                    selectedAssetId ??
+                    (targetJob?.asset_assignments?.length === 1
+                        ? targetJob.asset_assignments[0].operational_asset_id
+                        : null);
+                const dispatchJobId = targetJob?.id ?? null;
+                const pendingHosCommands = outboxCommands
+                    .filter(
+                        (command) =>
+                            (command.type === 'start_hos_shift' ||
+                                command.type === 'change_hos_duty_status' ||
+                                command.type === 'certify_hos_shift') &&
+                            (command.state === 'queued' ||
+                                command.state === 'syncing'),
+                    )
+                    .sort(
+                        (left, right) =>
+                            left.createdAt.localeCompare(right.createdAt) ||
+                            left.id.localeCompare(right.id),
+                    );
+                const latestPending =
+                    pendingHosCommands[pendingHosCommands.length - 1];
+                const latestPendingEventAt = pendingHosCommands.reduce(
+                    (latest, command) => {
+                        const raw = command.payload.occurred_at;
+                        const timestamp =
+                            typeof raw === 'string'
+                                ? Date.parse(raw)
+                                : Number.NaN;
+
+                        return Number.isFinite(timestamp)
+                            ? Math.max(latest, timestamp)
+                            : latest;
+                    },
+                    0,
+                );
+                const occurredAtMs = Math.max(
+                    Date.now(),
+                    latestPendingEventAt + 1,
+                );
+                const occurredAt = new Date(occurredAtMs).toISOString();
+                const location = await captureDutyLocation();
+                const locationPayload = {
+                    latitude: location.latitude,
+                    longitude: location.longitude,
+                    accuracy_metres: location.accuracyMetres,
+                    location_observed_at: location.observedAt,
+                    location_source: location.source,
+                    location_name: location.locationName,
+                };
+                const hasPendingShiftStart = pendingHosCommands.some(
+                    (command) => command.type === 'start_hos_shift',
+                );
+                const localDutyStatus = latestPending
+                    ? latestPending.type === 'certify_hos_shift'
+                        ? 'off_duty'
+                        : ((latestPending.payload.duty_status as
+                              DutyStatus | undefined) ?? 'operating')
+                    : (shiftInfo.dutyStatus ?? 'off_duty');
+                const shouldStartShift =
+                    dutyStatus !== 'off_duty' &&
+                    !hasPendingShiftStart &&
+                    (shiftInfo.status === 'off_shift' ||
+                        shiftInfo.dutyStatus === 'off_duty' ||
+                        localDutyStatus === 'off_duty');
+
                 if (dutyStatus === 'off_duty') {
-                    await apiClient.certifyHosShift({
+                    await commandOutbox.enqueueCertifyHosShift({
+                        operational_asset_id: operationalAssetId,
+                        dispatch_job_id: dispatchJobId,
                         certification_statement:
                             'I certify that these duty status entries and hours of service are true, complete, and accurate for this shift.',
+                        occurred_at: occurredAt,
+                        ...locationPayload,
+                        remarks,
+                    });
+                } else if (shouldStartShift) {
+                    await commandOutbox.enqueueStartHosShift({
+                        operational_asset_id: operationalAssetId,
+                        dispatch_job_id: dispatchJobId,
+                        duty_status: dutyStatus,
+                        occurred_at: occurredAt,
+                        ...locationPayload,
                         remarks,
                     });
                 } else {
-                    await apiClient.updateHosDutyStatus({
+                    await commandOutbox.enqueueChangeHosDutyStatus({
+                        operational_asset_id: operationalAssetId,
+                        dispatch_job_id: dispatchJobId,
                         duty_status: dutyStatus,
                         standby_reason: standbyReason,
+                        occurred_at: occurredAt,
+                        ...locationPayload,
                         remarks,
                     });
                 }
 
-                await refreshHosClocks();
-            } catch {
-                // Offline fallback - state is preserved locally
+                await syncQueue();
+
+                return true;
+            } catch (error: unknown) {
+                await handleRequestFailure(
+                    error,
+                    'Duty update could not be saved on this device.',
+                );
+
+                return false;
             }
         },
-        [apiClient, refreshHosClocks],
+        [
+            commandOutbox,
+            captureDutyLocation,
+            handleRequestFailure,
+            jobs,
+            outboxCommands,
+            selectedAssetId,
+            selectedJobId,
+            shiftInfo.dutyStatus,
+            shiftInfo.status,
+            syncQueue,
+        ],
     );
 
     const activeJob = jobs.find((job) => job.id === selectedJobId) || null;
@@ -2170,6 +2634,34 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         .sort((left, right) =>
             right.createdAt.localeCompare(left.createdAt),
         )[0];
+    const pendingHosCommands = outboxCommands
+        .filter(
+            (command) =>
+                (command.type === 'start_hos_shift' ||
+                    command.type === 'change_hos_duty_status' ||
+                    command.type === 'certify_hos_shift') &&
+                (command.state === 'queued' ||
+                    command.state === 'syncing' ||
+                    command.state === 'failed'),
+        )
+        .sort(
+            (left, right) =>
+                left.createdAt.localeCompare(right.createdAt) ||
+                left.id.localeCompare(right.id),
+        );
+    const pendingHosCommand = pendingHosCommands[pendingHosCommands.length - 1];
+    const pendingHosDutyStatus = pendingHosCommand
+        ? pendingHosCommand.type === 'certify_hos_shift'
+            ? 'off_duty'
+            : ((pendingHosCommand.payload.duty_status as
+                  DutyStatus | undefined) ?? 'operating')
+        : null;
+    const pendingHosState =
+        pendingHosCommand?.state === 'queued' ||
+        pendingHosCommand?.state === 'syncing' ||
+        pendingHosCommand?.state === 'failed'
+            ? pendingHosCommand.state
+            : null;
     const sosDeliveryState: SosDeliveryState = activeSosIncident
         ? activeSosIncident.delivery_state
         : isSosActivating
@@ -2263,7 +2755,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 }
                                 onBack={() => setActiveAppView('main')}
                                 onEndShift={() => {
-                                    handleToggleShift('off_shift');
+                                    handleToggleShift();
                                     setLocationSharingActive(false);
                                 }}
                                 onReleaseUnit={() => {
@@ -2272,6 +2764,27 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 onToggleShift={handleToggleShift}
                                 onUpdateDutyStatus={handleChangeDutyStatus}
                                 operatorName={resolvedOperatorName}
+                                pendingDutyEvents={pendingHosCommands.map(
+                                    (command) => ({
+                                        id: command.id,
+                                        status:
+                                            command.type === 'certify_hos_shift'
+                                                ? 'off_duty'
+                                                : ((command.payload
+                                                      .duty_status as
+                                                      DutyStatus | undefined) ??
+                                                  'operating'),
+                                        state: command.state,
+                                        occurredAt:
+                                            typeof command.payload
+                                                .occurred_at === 'string'
+                                                ? command.payload.occurred_at
+                                                : null,
+                                    }),
+                                )}
+                                pendingDutyState={pendingHosState}
+                                pendingDutyStatus={pendingHosDutyStatus}
+                                timelineHistory={timelineHistory}
                                 shiftInfo={shiftInfo}
                                 userRole={
                                     user?.role

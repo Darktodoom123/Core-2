@@ -1,9 +1,13 @@
 import { Clock, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { AssetViewModel } from '@/types/workspace';
+import type {
+    AssetViewModel,
+    LocationUpdateViewModel,
+} from '@/types/workspace';
 
 interface OperatorBindingChipProps {
     activeOperator: AssetViewModel['active_operator'];
+    location?: LocationUpdateViewModel | null;
     compact?: boolean;
     className?: string;
 }
@@ -28,7 +32,7 @@ const TELEMETRY_STYLES: Record<
         badgeClass: 'bg-warning-soft/70 text-warning-strong border-warning/30',
     },
     offline: {
-        label: 'Offline (>30m)',
+        label: 'Location unavailable',
         dotClass: 'bg-ink-soft/40',
         badgeClass: 'bg-surface-subtle text-ink-soft border-line',
     },
@@ -36,6 +40,7 @@ const TELEMETRY_STYLES: Record<
 
 export function OperatorBindingChip({
     activeOperator,
+    location = null,
     compact = false,
     className,
 }: OperatorBindingChipProps) {
@@ -54,8 +59,15 @@ export function OperatorBindingChip({
     }
 
     const telemetry =
-        TELEMETRY_STYLES[activeOperator.telemetry_status] ??
-        TELEMETRY_STYLES.offline;
+        location?.sharing_enabled === false
+            ? {
+                  label: 'Sharing paused',
+                  dotClass: 'bg-ink-soft/40',
+                  badgeClass: 'bg-surface-subtle text-ink-soft border-line',
+              }
+            : (TELEMETRY_STYLES[
+                  location?.freshness_status ?? activeOperator.telemetry_status
+              ] ?? TELEMETRY_STYLES.offline);
 
     const initials = activeOperator.name
         .split(' ')

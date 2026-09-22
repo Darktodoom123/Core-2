@@ -16,6 +16,7 @@ use App\Modules\Fuel\ViewModels\FuelWorkspaceViewModel;
 use App\Modules\HoursOfService\Enums\DutyStatus;
 use App\Modules\HoursOfService\Enums\StandbyReason;
 use App\Modules\HoursOfService\Models\OperatorDutyLog;
+use App\Modules\HoursOfService\Queries\CalculateHosClocksQuery;
 use App\Modules\Rental\Models\RentalReservation;
 use App\Modules\Rental\ViewModels\RentalHandoffViewModel;
 use App\Modules\Sales\Models\SalesOrder;
@@ -408,53 +409,18 @@ final class OperationsWorkspaceViewModel
             $activeOperator = null;
             $hosData = null;
             if ($activeShift !== null) {
-                $shiftStartedAt = $activeShift->started_at;
-                $shiftDurationMinutes = (int) abs(now()->diffInMinutes($shiftStartedAt));
-                $hoursElapsed = round($shiftDurationMinutes / 60, 2);
-                $activeDutyLog = $activeShift->relationLoaded('activeDutyLog') ? $activeShift->activeDutyLog : null;
-                $dutyStatus = $activeDutyLog?->duty_status->value ?? ($activeShift->status->value === 'on_break' ? 'on_break' : 'operating');
-                $dutyStatusLabel = match ($dutyStatus) {
-                    'operating' => 'Operating',
-                    'driving' => 'Driving',
-                    'standby' => 'Standby',
-                    'on_break' => 'On Break',
-                    default => ucfirst($dutyStatus),
-                };
-                $doleWarning = $hoursElapsed >= 9.0;
-                $fatigueStatus = match (true) {
-                    $hoursElapsed >= 14.0 => 'violation',
-                    $hoursElapsed >= 10.0 => 'critical',
-                    $hoursElapsed >= 8.0 => 'warning',
-                    default => 'normal',
-                };
-
-                $telemetryTimestamp = $activeDutyLog !== null
-                    ? ($activeDutyLog->updated_at ?? $activeDutyLog->started_at)
-                    : $shiftStartedAt;
-                $telemetryAgeSeconds = (int) abs(now()->diffInSeconds($telemetryTimestamp));
-                $telemetryStatus = match (true) {
-                    $telemetryAgeSeconds > 1800 => 'offline',
-                    $telemetryAgeSeconds <= 180 => 'fresh',
-                    $telemetryAgeSeconds < 900 => 'delayed',
-                    default => 'stale',
-                };
+                $hosData = app(CalculateHosClocksQuery::class)->activeShiftSummary($activeShift);
 
                 $activeOperator = [
                     'id' => (int) $activeShift->user->id,
                     'name' => $activeShift->user->name,
                     'avatar' => null,
-                    'shift_started_at' => $shiftStartedAt->toIso8601String(),
-                    'shift_duration_minutes' => $shiftDurationMinutes,
-                    'hours_elapsed' => $hoursElapsed,
-                    'telemetry_status' => $telemetryStatus,
-                ];
-
-                $hosData = [
-                    'duty_status' => $dutyStatus,
-                    'duty_status_label' => $dutyStatusLabel,
-                    'hours_elapsed' => $hoursElapsed,
-                    'fatigue_status' => $fatigueStatus,
-                    'dole_warning' => $doleWarning,
+                    'shift_started_at' => $hosData['started_at'],
+                    'shift_duration_minutes' => $hosData['shift_elapsed_minutes'],
+                    'hours_elapsed' => $hosData['hours_elapsed'],
+                    // Tracking freshness comes from the tracking projection passed
+                    // to the web surface, never from a duty-log timestamp.
+                    'telemetry_status' => 'offline',
                 ];
             }
 

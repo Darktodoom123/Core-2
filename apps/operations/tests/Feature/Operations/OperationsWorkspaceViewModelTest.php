@@ -107,7 +107,7 @@ it('serializes authoritative fleet detail totals and the latest recorded status 
         ->and($item['latest_status_change']['actor']['name'])->toBe('Fleet Operations Manager');
 });
 
-it('maps asset active operator with DOLE 9-hour fatigue warning and fresh telemetry', function (): void {
+it('maps asset active operator with canonical DOLE clocks without inferring telemetry', function (): void {
     $operator = User::factory()->create(['name' => 'Maria Lead Operator']);
     $operator->syncRoles([RoleName::CraneOperator->value]);
 
@@ -123,6 +123,7 @@ it('maps asset active operator with DOLE 9-hour fatigue warning and fresh teleme
         'operational_asset_id' => $asset->id,
         'status' => ShiftStatus::ACTIVE,
         'started_at' => now()->subMinutes(570), // 9.5 hours
+        'break_minutes' => 90,
     ]);
 
     OperatorDutyLog::query()->create([
@@ -150,7 +151,7 @@ it('maps asset active operator with DOLE 9-hour fatigue warning and fresh teleme
 
     expect($item['active_operator'])->not()->toBeNull()
         ->and($item['active_operator']['name'])->toBe('Maria Lead Operator')
-        ->and($item['active_operator']['telemetry_status'])->toBe('fresh')
+        ->and($item['active_operator']['telemetry_status'])->toBe('offline')
         ->and($item['active_operator']['hours_elapsed'])->toBeGreaterThanOrEqual(9.5)
         ->and($item['hos']['duty_status'])->toBe('operating')
         ->and($item['hos']['duty_status_label'])->toBe('Operating')
@@ -158,10 +159,10 @@ it('maps asset active operator with DOLE 9-hour fatigue warning and fresh teleme
         ->and($item['hos']['fatigue_status'])->toBe('warning');
 });
 
-it('maps telemetry status accurately based on last activity age', function (): void {
+it('does not derive telemetry status from duty-log activity age', function (): void {
     $testCases = [
-        ['minutesAgo' => 5, 'expected' => 'delayed'],
-        ['minutesAgo' => 20, 'expected' => 'stale'],
+        ['minutesAgo' => 5, 'expected' => 'offline'],
+        ['minutesAgo' => 20, 'expected' => 'offline'],
         ['minutesAgo' => 45, 'expected' => 'offline'],
     ];
 

@@ -606,6 +606,56 @@ describe('FleetSurface & Modular Fleet Components', () => {
             );
             expect(screen.getByText('Speed not recorded')).toBeInTheDocument();
         });
+
+        it('renders the Current operation empty states and both inspection summaries', () => {
+            const asset = createAsset(1, 'CRN-001', 'crane', 'available', {
+                latest_dvir: {
+                    id: 21,
+                    type: 'pre_trip',
+                    status: 'passed',
+                    has_defects: false,
+                    critical_defects_count: 0,
+                    completed_at: '2026-09-07T07:00:00Z',
+                    inspector_name: 'Mobile operator',
+                    photos: [],
+                },
+                inspections: [
+                    {
+                        id: 22,
+                        type: 'safety',
+                        result: 'conditional',
+                        checklist: {},
+                        findings: 'Monitor hydraulic pressure',
+                        completed_at: '2026-09-07T08:00:00Z',
+                    },
+                ],
+            });
+
+            render(
+                <FleetDetailPane
+                    asset={asset}
+                    capabilities={createCapabilities()}
+                />,
+            );
+
+            expect(
+                screen.getByRole('heading', { name: 'Current operation' }),
+            ).toBeInTheDocument();
+            expect(
+                screen.queryByText('Operational snapshot'),
+            ).not.toBeInTheDocument();
+            expect(screen.getByText('No active operator')).toBeInTheDocument();
+            expect(screen.getByText('No active duty')).toBeInTheDocument();
+            expect(screen.getByText('Passed')).toBeInTheDocument();
+            expect(screen.getByText('Conditional')).toBeInTheDocument();
+
+            fireEvent.click(
+                screen.getByRole('button', { name: /view inspections/i }),
+            );
+            expect(
+                screen.getByRole('tab', { name: /inspections/i }),
+            ).toHaveAttribute('aria-selected', 'true');
+        });
     });
 
     describe('Prominent Safety Lockout Alerts & Lockdown Enforcement', () => {
@@ -2183,7 +2233,7 @@ describe('FleetSurface & Modular Fleet Components', () => {
             expect(onSelectMock).toHaveBeenCalledWith(1);
         });
 
-        it('FleetSurface counts stale GPS from operator telemetry status when location coordinates are missing', () => {
+        it('FleetSurface does not infer stale GPS from operator duty activity when tracking is missing', () => {
             const assetWithStaleOperator = createAsset(
                 1,
                 'CRN-001',
@@ -2209,16 +2259,16 @@ describe('FleetSurface & Modular Fleet Components', () => {
             );
 
             const needsAttention = screen.getByRole('button', {
-                name: /needs attention \(1\)/i,
+                name: /needs attention \(0\)/i,
             });
             expect(needsAttention).toBeInTheDocument();
 
             fireEvent.click(needsAttention);
             expect(
-                screen.getByRole('menuitemcheckbox', {
-                    name: /stale gps \(1\)/i,
+                screen.queryByRole('menuitemcheckbox', {
+                    name: /stale gps/i,
                 }),
-            ).toBeInTheDocument();
+            ).not.toBeInTheDocument();
         });
     });
 });

@@ -150,6 +150,7 @@ export function FleetAssetCard({
                             <OperatorBindingChip
                                 activeOperator={asset.active_operator}
                                 compact
+                                location={location}
                             />
                         ) : asset.hos ? (
                             <HosDutyBadge hos={asset.hos} compact />

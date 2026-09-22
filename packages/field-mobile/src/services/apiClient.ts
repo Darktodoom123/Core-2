@@ -884,8 +884,12 @@ export class FieldApiClient {
             operational_asset_id?: number | null;
             dispatch_job_id?: number | null;
             duty_status?: string | null;
+            occurred_at?: string;
             latitude?: number | null;
             longitude?: number | null;
+            accuracy_metres?: number | null;
+            location_observed_at?: string | null;
+            location_source?: string | null;
             location_name?: string | null;
             remarks?: string | null;
         },
@@ -910,10 +914,16 @@ export class FieldApiClient {
     public async updateHosDutyStatus(
         payload: {
             duty_status: string;
+            operational_asset_id?: number | null;
+            dispatch_job_id?: number | null;
             standby_reason?: string | null;
+            occurred_at?: string;
             remarks?: string | null;
             latitude?: number | null;
             longitude?: number | null;
+            accuracy_metres?: number | null;
+            location_observed_at?: string | null;
+            location_source?: string | null;
             location_name?: string | null;
         },
         commandId?: string,
@@ -937,6 +947,15 @@ export class FieldApiClient {
     public async certifyHosShift(
         payload?: {
             certification_statement?: string;
+            operational_asset_id?: number | null;
+            dispatch_job_id?: number | null;
+            occurred_at?: string;
+            latitude?: number | null;
+            longitude?: number | null;
+            accuracy_metres?: number | null;
+            location_observed_at?: string | null;
+            location_source?: string | null;
+            location_name?: string | null;
             remarks?: string | null;
         },
         commandId?: string,

@@ -14,6 +14,9 @@ import type {
     OutboxCommand,
     OutboxCommandPriority,
     OutboxCommandType,
+    HosCertifyCommandPayload,
+    HosDutyStatusCommandPayload,
+    HosStartCommandPayload,
     RentalHandoverCommandPayload,
     ReportDelayPayload,
     SalesDeliveryCommandPayload,
@@ -77,6 +80,14 @@ export async function createCommandId(): Promise<string> {
 function commandScope(command: OutboxCommand): string {
     if (command.type === 'activate_sos') {
         return `sos:${command.id}`;
+    }
+
+    if (
+        command.type === 'start_hos_shift' ||
+        command.type === 'change_hos_duty_status' ||
+        command.type === 'certify_hos_shift'
+    ) {
+        return `hos:${command.actorId}`;
     }
 
     return command.jobId === null || command.jobId === undefined
@@ -524,6 +535,39 @@ export class CommandOutboxManager {
             null,
             payload as unknown as Record<string, unknown>,
             expectedVersion,
+        );
+    }
+
+    public enqueueStartHosShift(
+        payload: HosStartCommandPayload,
+    ): Promise<OutboxCommand> {
+        return this.enqueue(
+            'start_hos_shift',
+            payload.dispatch_job_id ?? null,
+            null,
+            payload as unknown as Record<string, unknown>,
+        );
+    }
+
+    public enqueueChangeHosDutyStatus(
+        payload: HosDutyStatusCommandPayload,
+    ): Promise<OutboxCommand> {
+        return this.enqueue(
+            'change_hos_duty_status',
+            payload.dispatch_job_id ?? null,
+            null,
+            payload as unknown as Record<string, unknown>,
+        );
+    }
+
+    public enqueueCertifyHosShift(
+        payload: HosCertifyCommandPayload,
+    ): Promise<OutboxCommand> {
+        return this.enqueue(
+            'certify_hos_shift',
+            payload.dispatch_job_id ?? null,
+            null,
+            payload as unknown as Record<string, unknown>,
         );
     }
 
@@ -1325,6 +1369,21 @@ export class CommandOutboxManager {
             } else if (command.type === 'share_location') {
                 response = await apiClient.shareLocation(
                     command.payload as unknown as LocationSharePayload,
+                    command.id,
+                );
+            } else if (command.type === 'start_hos_shift') {
+                response = await apiClient.startHosShift(
+                    command.payload as unknown as HosStartCommandPayload,
+                    command.id,
+                );
+            } else if (command.type === 'change_hos_duty_status') {
+                response = await apiClient.updateHosDutyStatus(
+                    command.payload as unknown as HosDutyStatusCommandPayload,
+                    command.id,
+                );
+            } else if (command.type === 'certify_hos_shift') {
+                response = await apiClient.certifyHosShift(
+                    command.payload as unknown as HosCertifyCommandPayload,
                     command.id,
                 );
             } else if (command.type === 'activate_sos') {

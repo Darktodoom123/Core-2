@@ -19,7 +19,7 @@ import { colors, shadows, sharedStyles } from '../nativeStyles';
 export interface DutyStatusSelectorModalProps {
     visible: boolean;
     currentDutyStatus: DutyStatus;
-    hoursElapsed?: number;
+    hoursElapsed?: number | null;
     maxShiftHours?: number;
     onClose: () => void;
     onSelectDutyStatus: (
@@ -141,7 +141,7 @@ export const DutyStatusSelectorModal: React.FC<
 > = ({
     visible,
     currentDutyStatus,
-    hoursElapsed = 4.5,
+    hoursElapsed = null,
     maxShiftHours = 10,
     onClose,
     onSelectDutyStatus,
@@ -161,12 +161,14 @@ export const DutyStatusSelectorModal: React.FC<
             ? overriddenStatus.localStatus
             : currentDutyStatus;
 
-    const shiftProgressPercent = Math.min(
-        100,
-        Math.round((hoursElapsed / maxShiftHours) * 100),
-    );
-    const isShiftNearLimit = hoursElapsed >= maxShiftHours * 0.8;
-    const isShiftExceeded = hoursElapsed >= maxShiftHours;
+    const shiftProgressPercent =
+        hoursElapsed === null
+            ? null
+            : Math.min(100, Math.round((hoursElapsed / maxShiftHours) * 100));
+    const isShiftNearLimit =
+        hoursElapsed !== null && hoursElapsed >= maxShiftHours * 0.8;
+    const isShiftExceeded =
+        hoursElapsed !== null && hoursElapsed >= maxShiftHours;
 
     const handleSelectStatus = (status: DutyStatus) => {
         try {
@@ -312,7 +314,10 @@ export const DutyStatusSelectorModal: React.FC<
                                         isDarkHud && styles.darkGaugeTitle,
                                     ]}
                                 >
-                                    Shift Duty Clock: {hoursElapsed.toFixed(1)}h
+                                    Shift Duty Clock:{' '}
+                                    {hoursElapsed === null
+                                        ? 'Unavailable'
+                                        : `${hoursElapsed.toFixed(1)}h`}{' '}
                                     / {maxShiftHours}h Limit
                                 </Text>
                             </View>
@@ -332,11 +337,13 @@ export const DutyStatusSelectorModal: React.FC<
                                             : styles.gaugeStatusNormal,
                                 ]}
                             >
-                                {isShiftExceeded
-                                    ? 'Limit Reached'
-                                    : isShiftNearLimit
-                                      ? 'Rest Due Soon'
-                                      : 'Normal Duty'}
+                                {hoursElapsed === null
+                                    ? 'Unavailable'
+                                    : isShiftExceeded
+                                      ? 'Limit Reached'
+                                      : isShiftNearLimit
+                                        ? 'Rest Due Soon'
+                                        : 'Normal Duty'}
                             </Text>
                         </View>
                         <View
@@ -348,7 +355,7 @@ export const DutyStatusSelectorModal: React.FC<
                             <View
                                 style={[
                                     styles.progressBarFill,
-                                    { width: `${shiftProgressPercent}%` },
+                                    { width: `${shiftProgressPercent ?? 0}%` },
                                     isShiftExceeded
                                         ? styles.progressFillRed
                                         : isShiftNearLimit

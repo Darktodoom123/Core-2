@@ -69,10 +69,10 @@ export function HosDutyBadge({
 
     const fatigueAlert = isViolation
         ? {
-              label: 'DOLE 14h Limit Exceeded',
+              label: '10h Operating Limit Exceeded',
               badgeClass: 'bg-danger text-canvas font-bold animate-pulse',
               description:
-                  'Mandatory halt: Daily operating limit exceeded per DOLE guidelines.',
+                  'Mandatory halt: the configured 10-hour operating limit has been exceeded.',
           }
         : isCritical
           ? {
@@ -87,7 +87,8 @@ export function HosDutyBadge({
                   label: 'DOLE Caution (9h+)',
                   badgeClass:
                       'bg-warning-soft text-warning-strong border-warning/30 font-medium',
-                  description: 'Approaching maximum continuous duty shift.',
+                  description:
+                      'Approaching the configured 10-hour operating limit.',
               }
             : null;
 

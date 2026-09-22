@@ -397,9 +397,31 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
         localDefectLockout !== null
             ? localDefectLockout
             : preTripDefectLockout || currentDvirStatus === 'defect';
-    const hoursElapsed = shiftInfo.hoursElapsed ?? 4;
-    const isDoleWarning = hoursElapsed >= 9.0 && hoursElapsed < 10.0;
-    const isDoleCapExceeded = hoursElapsed >= 10.0;
+    const hoursElapsed = shiftInfo.hoursElapsed ?? null;
+    const limitCounterHours =
+        shiftInfo.limitCounterMinutes !== null &&
+        shiftInfo.limitCounterMinutes !== undefined
+            ? shiftInfo.limitCounterMinutes / 60
+            : null;
+    const isDoleWarning =
+        shiftInfo.doleWarning ??
+        (limitCounterHours !== null && limitCounterHours >= 9.0);
+    const isDoleCapExceeded =
+        (limitCounterHours !== null && limitCounterHours >= 10.0) ||
+        shiftInfo.fatigueStatus === 'critical' ||
+        shiftInfo.fatigueStatus === 'violation';
+    const elapsedClock =
+        hoursElapsed === null
+            ? 'Unavailable'
+            : `${Math.floor(hoursElapsed).toString().padStart(2, '0')}:${Math.round(
+                  (hoursElapsed % 1) * 60,
+              )
+                  .toString()
+                  .padStart(2, '0')}`;
+    const limitCounterLabel =
+        limitCounterHours === null
+            ? 'Limit counter unavailable'
+            : `${limitCounterHours.toFixed(1)}h operating + driving`;
 
     const [handoverPin, setHandoverPin] = useState<string>('');
     const [handoverReliefName, setHandoverReliefName] = useState<string>(
@@ -777,7 +799,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 {/* Samsara-Style Persistent Duty Status Bar */}
                 <Pressable
                     accessibilityHint="Tap to change active duty status or view shift fatigue gauge"
-                    accessibilityLabel={`Duty status: ${getDutyLabel(currentDuty)}, ${(shiftInfo.hoursElapsed ?? 4).toFixed(1)} hours active`}
+                    accessibilityLabel={`Duty status: ${getDutyLabel(currentDuty)}, ${hoursElapsed === null ? 'hours unavailable' : `${hoursElapsed.toFixed(1)} hours active`}`}
                     accessibilityRole="button"
                     onPress={() => setDutyModalOpen(true)}
                     style={({ pressed }) => [
@@ -818,15 +840,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                     isDarkHud && styles.darkDutyStatusElapsed,
                                 ]}
                             >
-                                (
-                                {Math.floor(hoursElapsed)
-                                    .toString()
-                                    .padStart(2, '0')}
-                                :
-                                {Math.round((hoursElapsed % 1) * 60)
-                                    .toString()
-                                    .padStart(2, '0')}{' '}
-                                elapsed · 10h max)
+                                ({elapsedClock} elapsed · {limitCounterLabel})
                             </Text>
                         </View>
                     </View>
@@ -1454,7 +1468,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
             {/* Duty Status Selector Sheet Modal */}
             <DutyStatusSelectorModal
                 currentDutyStatus={currentDuty}
-                hoursElapsed={shiftInfo.hoursElapsed ?? 4}
+                hoursElapsed={hoursElapsed}
                 maxShiftHours={shiftInfo.maxShiftHours ?? 10}
                 onClose={() => setDutyModalOpen(false)}
                 onSelectDutyStatus={(status, reason, remarks) => {

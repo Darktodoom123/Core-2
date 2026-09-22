@@ -198,7 +198,7 @@ test('OperationsWorkspaceViewModel serializes active operator, HoS, latest DVIR,
 
     expect($item['active_operator'])->not()->toBeNull()
         ->and($item['active_operator']['name'])->toBe('Dan Driver')
-        ->and($item['active_operator']['telemetry_status'])->toBe('fresh')
+        ->and($item['active_operator']['telemetry_status'])->toBe('offline')
         ->and($item['hos']['duty_status'])->toBe('driving')
         ->and($item['hos']['dole_warning'])->toBeFalse()
         ->and($item['latest_dvir']['status'])->toBe('passed')

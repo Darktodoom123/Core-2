@@ -315,6 +315,10 @@ export interface OperatorBindingViewModel {
     shift_duration_minutes?: number;
     hours_elapsed: number;
     telemetry_status: TelemetryFreshnessStatus;
+    current_duty_status?: HosDutyStatusValue | null;
+    current_duty_status_label?: string | null;
+    current_duty_started_at?: string | null;
+    last_accepted_duty_at?: string | null;
 }
 
 export type HosDutyStatusValue =
@@ -327,13 +331,65 @@ export interface EquipmentHosViewModel {
     duty_status: HosDutyStatusValue;
     duty_status_label: string;
     hours_elapsed: number;
+    shift_active?: boolean;
+    shift_status?: string | null;
+    started_at?: string | null;
+    current_duty_started_at?: string | null;
+    last_accepted_duty_at?: string | null;
+    server_time?: string | null;
+    shift_elapsed_minutes?: number | null;
+    operating_minutes?: number | null;
+    driving_minutes?: number | null;
+    standby_minutes?: number | null;
+    break_minutes?: number | null;
+    daily_operating_hours?: number | null;
+    limit_counter_minutes?: number | null;
+    limit_counter_label?: string | null;
     fatigue_status: FatigueStatusValue;
     dole_warning: boolean;
-    daily_operating_hours?: number;
     drive_remaining_minutes?: number;
     shift_window_remaining_minutes?: number;
     break_countdown_minutes?: number;
     active_demurrage?: boolean;
+    duty_history?: Array<{
+        id: number;
+        previous_duty_status?: HosDutyStatusValue | null;
+        previous_duty_status_label?: string | null;
+        new_duty_status: HosDutyStatusValue;
+        new_duty_status_label?: string | null;
+        duty_status?: HosDutyStatusValue;
+        duty_status_label?: string | null;
+        started_at?: string | null;
+        ended_at?: string | null;
+        occurred_at?: string | null;
+        accepted_at?: string | null;
+        duration_minutes?: number | null;
+        operational_asset_id?: number | null;
+        dispatch_job_id?: number | null;
+        equipment_code?: string | null;
+        equipment_name?: string | null;
+        latitude?: number | string | null;
+        longitude?: number | string | null;
+        accuracy_metres?: number | string | null;
+        location_observed_at?: string | null;
+        location_source?: string | null;
+        location_freshness?: 'fresh' | 'last_known' | 'unavailable' | string;
+        location_label?: string | null;
+        location_name?: string | null;
+        remarks?: string | null;
+    }>;
+    equipment_usage?: {
+        policy_applied: boolean;
+        policy_key?: string | null;
+        allowed_duty_statuses?: string[];
+        estimated_minutes?: number | null;
+        estimated_hours?: number | null;
+        source?: string | null;
+        operating_minutes?: number | null;
+        driving_minutes?: number | null;
+        standby_minutes?: number | null;
+        break_minutes?: number | null;
+    } | null;
 }
 
 export type DvirOverallStatusValue =

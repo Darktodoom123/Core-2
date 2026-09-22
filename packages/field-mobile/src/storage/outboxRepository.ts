@@ -43,6 +43,9 @@ const commandTypes: OutboxCommandType[] = [
     'submit_sales_delivery',
     'submit_equipment_inspection',
     'submit_maintenance_work_order',
+    'start_hos_shift',
+    'change_hos_duty_status',
+    'certify_hos_shift',
     'report_delay',
 ];
 const commandStates: OutboxCommandState[] = [

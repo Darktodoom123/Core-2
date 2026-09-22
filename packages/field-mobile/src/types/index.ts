@@ -271,7 +271,53 @@ export type OutboxCommandType =
     | 'submit_equipment_inspection'
     | 'submit_maintenance_work_order'
     | 'release_maintenance_work_order'
+    | 'start_hos_shift'
+    | 'change_hos_duty_status'
+    | 'certify_hos_shift'
     | 'report_delay';
+
+export interface HosStartCommandPayload {
+    operational_asset_id?: number | null;
+    dispatch_job_id?: number | null;
+    duty_status?: string | null;
+    occurred_at: string;
+    latitude?: number | null;
+    longitude?: number | null;
+    accuracy_metres?: number | null;
+    location_observed_at?: string | null;
+    location_source?: string | null;
+    location_name?: string | null;
+    remarks?: string | null;
+}
+
+export interface HosDutyStatusCommandPayload {
+    operational_asset_id?: number | null;
+    dispatch_job_id?: number | null;
+    duty_status: string;
+    standby_reason?: string | null;
+    occurred_at: string;
+    latitude?: number | null;
+    longitude?: number | null;
+    accuracy_metres?: number | null;
+    location_observed_at?: string | null;
+    location_source?: string | null;
+    location_name?: string | null;
+    remarks?: string | null;
+}
+
+export interface HosCertifyCommandPayload {
+    operational_asset_id?: number | null;
+    dispatch_job_id?: number | null;
+    certification_statement: string;
+    occurred_at: string;
+    latitude?: number | null;
+    longitude?: number | null;
+    accuracy_metres?: number | null;
+    location_observed_at?: string | null;
+    location_source?: string | null;
+    location_name?: string | null;
+    remarks?: string | null;
+}
 
 export interface EquipmentInspectionCommandPayload {
     operational_asset_id: number;
@@ -532,13 +578,27 @@ export interface ShiftInfo {
     status: ShiftStatus;
     dutyStatus?: DutyStatus;
     startedAt?: string | null;
-    hoursElapsed?: number;
+    hoursElapsed?: number | null;
     breakCount?: number;
-    drivingMinutes?: number;
-    operatingMinutes?: number;
-    standbyMinutes?: number;
-    breakMinutes?: number;
+    drivingMinutes?: number | null;
+    operatingMinutes?: number | null;
+    standbyMinutes?: number | null;
+    breakMinutes?: number | null;
+    limitCounterMinutes?: number | null;
+    limitCounterLabel?: string | null;
     maxShiftHours?: number;
+    currentDutyStartedAt?: string | null;
+    lastAcceptedDutyAt?: string | null;
+    serverTime?: string | null;
+    shiftElapsedMinutes?: number | null;
+    cycleRemainingMinutes?: number | null;
+    cycleAccumulatedMinutes?: number | null;
+    cycleLimitMinutes?: number | null;
+    driveRemainingMinutes?: number | null;
+    shiftWindowRemainingMinutes?: number | null;
+    breakCountdownMinutes?: number | null;
+    fatigueStatus?: string | null;
+    doleWarning?: boolean;
 }
 
 // ==========================================
@@ -862,7 +922,19 @@ export interface HosClocks {
     shift_status: string;
     current_duty_status: string;
     started_at: string | null;
+    current_duty_status_label?: string | null;
+    current_duty_started_at?: string | null;
+    last_accepted_duty_at?: string | null;
+    server_time?: string | null;
+    shift_elapsed_minutes?: number | null;
     hours_elapsed: number;
+    operating_minutes?: number | null;
+    driving_minutes?: number | null;
+    standby_minutes?: number | null;
+    break_minutes?: number | null;
+    daily_operating_hours?: number | null;
+    limit_counter_minutes?: number | null;
+    limit_counter_label?: string | null;
     drive_remaining_minutes: number;
     shift_window_remaining_minutes: number;
     break_countdown_minutes: number;
@@ -871,6 +943,19 @@ export interface HosClocks {
     cycle_limit_minutes: number;
     timeline_segments?: Array<Record<string, unknown>>;
     recent_logs?: Array<Record<string, unknown>>;
+    duty_history?: Array<Record<string, unknown>>;
+    equipment_usage?: {
+        policy_applied: boolean;
+        policy_key?: string | null;
+        allowed_duty_statuses?: string[];
+        estimated_minutes?: number | null;
+        estimated_hours?: number | null;
+        source?: string | null;
+        operating_minutes?: number;
+        driving_minutes?: number;
+        standby_minutes?: number;
+        break_minutes?: number;
+    } | null;
     active_demurrage?: boolean;
     is_certified?: boolean;
     fatigue_status?: string;

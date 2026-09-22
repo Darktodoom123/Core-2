@@ -104,6 +104,156 @@ describe('CommandOutboxManager', () => {
         assert.equal((await repository.listForActor(7)).length, 1);
     });
 
+    test('serializes HOS events per operator, reuses the idempotency UUID, and rehydrates after restart', async () => {
+        const repository = new MemoryOutboxRepository();
+        const outbox = await createOutbox(7, { repository });
+        const first = await outbox.enqueueChangeHosDutyStatus({
+            duty_status: 'driving',
+            occurred_at: '2026-08-01T08:00:00.000Z',
+        });
+        const duplicate = await outbox.enqueueChangeHosDutyStatus({
+            duty_status: 'driving',
+            occurred_at: '2026-08-01T08:00:00.000Z',
+        });
+        const second = await outbox.enqueueCertifyHosShift({
+            occurred_at: '2026-08-01T09:00:00.000Z',
+            certification_statement: 'The duty record is accurate.',
+        });
+
+        assert.equal(duplicate.id, first.id);
+        assert.equal(first.type, 'change_hos_duty_status');
+        assert.equal(second.type, 'certify_hos_shift');
+
+        const calls: string[] = [];
+        const apiClient = {
+            updateHosDutyStatus: async (
+                _payload: unknown,
+                commandId?: string,
+            ) => {
+                calls.push(`change:${commandId}`);
+
+                return { shift: null, clocks: {} };
+            },
+            certifyHosShift: async (_payload?: unknown, commandId?: string) => {
+                calls.push(`certify:${commandId}`);
+
+                return { shift: null, clocks: {} };
+            },
+        } as unknown as FieldApiClient;
+
+        const result = await outbox.processQueue(apiClient);
+
+        assert.equal(result.completed, 2);
+        assert.deepEqual(calls, [`change:${first.id}`, `certify:${second.id}`]);
+        assert.equal(first.state, 'completed');
+        assert.equal(second.state, 'completed');
+
+        first.state = 'syncing';
+        await repository.save(first);
+        outbox.deactivateActor();
+
+        const restarted = await createOutbox(7, { repository });
+        assert.equal(
+            restarted.getCommand(first.id)?.type,
+            'change_hos_duty_status',
+        );
+        assert.equal(restarted.getCommand(first.id)?.state, 'queued');
+    });
+
+    test('keeps an offline shift start and multiple transition snapshots ordered before replay', async () => {
+        const repository = new MemoryOutboxRepository();
+        const outbox = await createOutbox(7, { repository });
+        const start = await outbox.enqueueStartHosShift({
+            duty_status: 'operating',
+            occurred_at: '2026-08-01T08:00:00.000Z',
+            latitude: 14.5995,
+            longitude: 120.9842,
+            accuracy_metres: 7,
+            location_observed_at: '2026-08-01T08:00:00.000Z',
+            location_source: 'gps',
+        });
+        const driving = await outbox.enqueueChangeHosDutyStatus({
+            duty_status: 'driving',
+            occurred_at: '2026-08-01T09:00:00.000Z',
+            latitude: 14.6095,
+            longitude: 120.9942,
+            accuracy_metres: 12,
+            location_observed_at: '2026-08-01T09:00:00.000Z',
+            location_source: 'gps',
+        });
+        const standby = await outbox.enqueueChangeHosDutyStatus({
+            duty_status: 'standby',
+            occurred_at: '2026-08-01T10:00:00.000Z',
+            latitude: null,
+            longitude: null,
+            location_observed_at: null,
+            location_source: 'permission_denied',
+        });
+        const calls: Array<{
+            type: string;
+            payload: Record<string, unknown>;
+            id?: string;
+        }> = [];
+        const apiClient = {
+            startHosShift: async (
+                payload: Record<string, unknown>,
+                commandId?: string,
+            ) => {
+                calls.push({ type: 'start', payload, id: commandId });
+
+                return { shift: null, clocks: {} };
+            },
+            updateHosDutyStatus: async (
+                payload: Record<string, unknown>,
+                commandId?: string,
+            ) => {
+                calls.push({ type: 'change', payload, id: commandId });
+
+                return { shift: null, clocks: {} };
+            },
+        } as unknown as FieldApiClient;
+
+        const result = await outbox.processQueue(apiClient);
+
+        assert.equal(result.completed, 3);
+        assert.deepEqual(
+            calls.map((call) => call.type),
+            ['start', 'change', 'change'],
+        );
+        assert.equal(calls[0].payload.latitude, 14.5995);
+        assert.equal(calls[1].payload.location_source, 'gps');
+        assert.equal(calls[2].payload.location_source, 'permission_denied');
+        assert.equal(calls[0].id, start.id);
+        assert.equal(calls[1].id, driving.id);
+        assert.equal(calls[2].id, standby.id);
+    });
+
+    test('keeps a server-rejected HOS event visible as failed and non-retryable', async () => {
+        const outbox = await createOutbox(7);
+        const command = await outbox.enqueueChangeHosDutyStatus({
+            duty_status: 'driving',
+            occurred_at: '2026-08-01T08:00:00.000Z',
+        });
+        const apiClient = {
+            updateHosDutyStatus: async () => {
+                throw new ApiClientError(
+                    'Older than the accepted duty record.',
+                    422,
+                    {
+                        errorCode: 'VALIDATION_FAILED',
+                    },
+                );
+            },
+        } as unknown as FieldApiClient;
+
+        const result = await outbox.processQueue(apiClient);
+
+        assert.equal(result.failed, 1);
+        assert.equal(command.state, 'failed');
+        assert.equal(command.error?.code, 'VALIDATION_FAILED');
+        assert.equal(command.error?.retryable, false);
+    });
+
     test('restores queued commands and recovers interrupted syncing after restart', async () => {
         const repository = new MemoryOutboxRepository();
         let currentTime = new Date('2026-08-01T00:00:00.000Z');

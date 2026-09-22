@@ -5,6 +5,21 @@ export interface LocationCoordinates {
     latitude: number;
     longitude: number;
     accuracyMetres?: number | null;
+    observedAt?: string | null;
+    source?: 'gps' | 'last_known' | 'browser_gps' | string | null;
+}
+
+export interface DutyLocationSnapshot {
+    latitude: number | null;
+    longitude: number | null;
+    accuracyMetres: number | null;
+    observedAt: string | null;
+    source:
+        | 'gps'
+        | 'last_known'
+        | 'browser_gps'
+        | 'permission_denied'
+        | 'unavailable';
 }
 
 export class LocationSharingService {

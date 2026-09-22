@@ -1,5 +1,8 @@
 import * as Location from 'expo-location';
-import type { LocationCoordinates } from '../services/locationService';
+import type {
+    DutyLocationSnapshot,
+    LocationCoordinates,
+} from '../services/locationService';
 
 export interface LocationPermissionState {
     foregroundGranted: boolean;
@@ -77,6 +80,10 @@ export class NativeLocationAdapter {
                                 latitude: pos.coords.latitude,
                                 longitude: pos.coords.longitude,
                                 accuracyMetres: pos.coords.accuracy ?? null,
+                                observedAt: pos.timestamp
+                                    ? new Date(pos.timestamp).toISOString()
+                                    : null,
+                                source: 'browser_gps',
                             }),
                         (err) => reject(new Error(err.message)),
                         {
@@ -107,6 +114,10 @@ export class NativeLocationAdapter {
                     latitude: recentKnown.coords.latitude,
                     longitude: recentKnown.coords.longitude,
                     accuracyMetres: recentKnown.coords.accuracy ?? null,
+                    observedAt: recentKnown.timestamp
+                        ? new Date(recentKnown.timestamp).toISOString()
+                        : null,
+                    source: 'last_known',
                 };
             }
         } catch {
@@ -132,6 +143,10 @@ export class NativeLocationAdapter {
                 latitude: position.coords.latitude,
                 longitude: position.coords.longitude,
                 accuracyMetres: position.coords.accuracy ?? null,
+                observedAt: position.timestamp
+                    ? new Date(position.timestamp).toISOString()
+                    : null,
+                source: 'gps',
             };
         } catch {
             // 3. Fallback to any last known position if live fix fails or times out
@@ -148,6 +163,10 @@ export class NativeLocationAdapter {
                         latitude: fallbackLast.coords.latitude,
                         longitude: fallbackLast.coords.longitude,
                         accuracyMetres: fallbackLast.coords.accuracy ?? null,
+                        observedAt: fallbackLast.timestamp
+                            ? new Date(fallbackLast.timestamp).toISOString()
+                            : null,
+                        source: 'last_known',
                     };
                 }
             } catch {
@@ -155,6 +174,56 @@ export class NativeLocationAdapter {
             }
 
             throw new Error('Device GPS location timed out or is unavailable.');
+        }
+    }
+
+    /**
+     * Duty logging must remain available when permission or hardware GPS is
+     * unavailable. The explicit unavailable snapshot is persisted with the
+     * event instead of borrowing a later synchronization location.
+     */
+    public async getDutyLocationSnapshot(): Promise<DutyLocationSnapshot> {
+        const timeoutPromise = new Promise<never>((_, reject) =>
+            setTimeout(
+                () => reject(new Error('Duty location capture timed out')),
+                1500,
+            ),
+        );
+
+        try {
+            const location = await Promise.race([
+                this.getCurrentLocation(false),
+                timeoutPromise,
+            ]);
+
+            return {
+                latitude: location.latitude,
+                longitude: location.longitude,
+                accuracyMetres: location.accuracyMetres ?? null,
+                observedAt: location.observedAt ?? null,
+                source:
+                    location.source === 'last_known'
+                        ? 'last_known'
+                        : location.source === 'browser_gps'
+                          ? 'browser_gps'
+                          : 'gps',
+            };
+        } catch (error: unknown) {
+            const message =
+                error instanceof Error ? error.message.toLowerCase() : '';
+
+            return {
+                latitude: null,
+                longitude: null,
+                accuracyMetres: null,
+                observedAt: null,
+                source:
+                    message.includes('permission') ||
+                    message.includes('denied') ||
+                    message.includes('settings')
+                        ? 'permission_denied'
+                        : 'unavailable',
+            };
         }
     }
 

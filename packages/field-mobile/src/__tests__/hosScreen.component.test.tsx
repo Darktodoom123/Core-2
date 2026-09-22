@@ -44,6 +44,34 @@ describe('HosScreen Component & Workflows', () => {
         expect(view.getByTestId('hos-activity-logs')).toBeTruthy();
     });
 
+    it('shows server-accepted duration breakdowns and separates pending duty sync', async () => {
+        const view = await render(
+            <HosScreen
+                pendingDutyState="queued"
+                pendingDutyStatus="driving"
+                shiftInfo={{
+                    status: 'on_shift',
+                    dutyStatus: 'operating',
+                    startedAt: '08:00 AM',
+                    hoursElapsed: 4.5,
+                    shiftElapsedMinutes: 270,
+                    operatingMinutes: 120,
+                    drivingMinutes: 60,
+                    standbyMinutes: 30,
+                    breakMinutes: 60,
+                }}
+            />,
+        );
+
+        expect(view.getByTestId('hos-duty-sync-status')).toBeTruthy();
+        expect(
+            view.getByText('Duty update pending sync: driving'),
+        ).toBeTruthy();
+        expect(view.getByTestId('hos-duration-breakdown')).toBeTruthy();
+        expect(view.getAllByText('2h 00m').length).toBeGreaterThanOrEqual(1);
+        expect(view.getAllByText('server accepted').length).toBe(4);
+    });
+
     it('allows toggling between all 5 duty statuses and shows demurrage options for standby', async () => {
         const view = await render(<HosScreen />);
 
@@ -224,7 +252,7 @@ describe('HosScreen Component & Workflows', () => {
         expect(view.getAllByText('24h 00m').length).toBeGreaterThanOrEqual(1);
     });
 
-    it('renders empty log rest placeholder when historical day has no transition events', async () => {
+    it('renders a neutral empty state when historical day has no accepted transition events', async () => {
         const customHistory = [
             {
                 id: 'day-empty',
@@ -252,12 +280,10 @@ describe('HosScreen Component & Workflows', () => {
             <HosScreen timelineHistory={customHistory} />,
         );
 
-        expect(
-            view.getByText('34-Hour Restart / Full Off-Duty Rest Period'),
-        ).toBeTruthy();
+        expect(view.getByText('No server-accepted duty events')).toBeTruthy();
         expect(
             view.getByText(
-                'No duty status transitions recorded. Consecutive 24-hour off-duty rest period logged.',
+                'Pending or rejected mobile actions stay out of confirmed history until the server accepts them.',
             ),
         ).toBeTruthy();
     });

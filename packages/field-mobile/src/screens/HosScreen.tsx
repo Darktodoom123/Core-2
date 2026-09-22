@@ -35,7 +35,15 @@ export interface HosScreenProps {
         dutyStatus: DutyStatus,
         standbyReason?: StandbyReason,
         remarks?: string,
-    ) => void;
+    ) => Promise<boolean | void> | boolean | void;
+    pendingDutyStatus?: DutyStatus | null;
+    pendingDutyState?: 'queued' | 'syncing' | 'failed' | null;
+    pendingDutyEvents?: Array<{
+        id: string;
+        status: DutyStatus;
+        state: string;
+        occurredAt: string | null;
+    }>;
     onReleaseUnit?: (assetCode: string) => void;
     onToggleShift?: (nextStatus: 'on_shift' | 'off_shift') => void;
     onEndShift?: () => void;
@@ -132,6 +140,11 @@ export interface ShiftLogEvent {
     durationFormatted: string;
     details: string;
     location: string;
+    occurrenceTime?: string | null;
+    acceptedTime?: string | null;
+    equipmentLabel?: string | null;
+    locationStatus?: 'fresh' | 'last_known' | 'unavailable';
+    syncStatus?: 'accepted' | 'pending' | 'rejected';
 }
 
 export interface TimelineSegment {
@@ -158,6 +171,41 @@ export interface TimelineDayHistory {
         on: TimelineSegment[];
     };
     events: ShiftLogEvent[];
+}
+
+const EMPTY_TIMELINE_DAY: TimelineDayHistory = {
+    id: 'empty',
+    dayLabel: 'No accepted history',
+    dateFormatted: 'No server-accepted duty history is available',
+    shortDate: 'No history',
+    isToday: true,
+    driveHoursFormatted: '0h 00m',
+    onDutyHoursFormatted: '0h 00m',
+    offDutyHoursFormatted: '0h 00m',
+    totalShiftFormatted: '0h 00m',
+    certificationStatus: 'restart',
+    certifiedByText: 'Accepted duty events will appear after synchronization',
+    segments: { off: [], brk: [], drv: [], on: [] },
+    events: [],
+};
+
+function formatAuditTimestamp(raw: string | null | undefined): string | null {
+    if (!raw) {
+        return null;
+    }
+
+    const date = new Date(raw);
+
+    if (Number.isNaN(date.getTime())) {
+        return raw;
+    }
+
+    return date.toLocaleString([], {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
 }
 
 export const INITIAL_LOG_EVENTS: ShiftLogEvent[] = [
@@ -677,13 +725,16 @@ export const HosScreen: React.FC<HosScreenProps> = ({
     onReleaseUnit,
     onToggleShift,
     onEndShift,
+    pendingDutyStatus = null,
+    pendingDutyState = null,
+    pendingDutyEvents = [],
 }) => {
     const { isDarkHud } = useTheme();
     const [selectedDayIndex, setSelectedDayIndex] = useState(0);
     const historyDays =
         timelineHistory && timelineHistory.length > 0
             ? timelineHistory
-            : TIMELINE_HISTORY_DAYS;
+            : [EMPTY_TIMELINE_DAY];
     const selectedDay = historyDays[selectedDayIndex] ?? historyDays[0];
 
     const handlePrevDay = () => {
@@ -791,29 +842,87 @@ export const HosScreen: React.FC<HosScreenProps> = ({
         }
     }, [isSaved, stampOpacity, stampScale]);
 
-    const hoursElapsed = shiftInfo.hoursElapsed ?? 4.5;
-    const driveHoursElapsed = 3.5;
-    const cycleHoursElapsed = 52.5;
+    const hoursElapsed = shiftInfo.hoursElapsed ?? null;
+    const hasServerClock =
+        shiftInfo.shiftElapsedMinutes !== null &&
+        shiftInfo.shiftElapsedMinutes !== undefined;
+    const limitCounterHours =
+        shiftInfo.limitCounterMinutes !== null &&
+        shiftInfo.limitCounterMinutes !== undefined
+            ? shiftInfo.limitCounterMinutes / 60
+            : null;
+    const cycleHoursElapsed =
+        shiftInfo.cycleAccumulatedMinutes !== null &&
+        shiftInfo.cycleAccumulatedMinutes !== undefined
+            ? shiftInfo.cycleAccumulatedMinutes / 60
+            : null;
 
     // DOLE 10-Hour Shift Limit Compliance Checks
-    const isDoleWarning = hoursElapsed >= 9.0 && hoursElapsed < 10.0;
-    const isDoleCapExceeded = hoursElapsed >= 10.0;
+    const isDoleWarning =
+        shiftInfo.doleWarning ??
+        (limitCounterHours !== null && limitCounterHours >= 9.0);
+    const isDoleCapExceeded =
+        (limitCounterHours !== null && limitCounterHours >= 10.0) ||
+        shiftInfo.fatigueStatus === 'critical' ||
+        shiftInfo.fatigueStatus === 'violation';
 
     // Remaining ELD calculations
-    const driveRemainingHours = Math.max(0, maxDriveHours - driveHoursElapsed);
-    const shiftRemainingHours = Math.max(0, maxShiftHours - hoursElapsed);
-    const cycleRemainingHours = Math.max(
-        0,
-        cycleHoursLimit - cycleHoursElapsed,
-    );
-    const breakCountdownHours = Math.max(0, 8.0 - hoursElapsed);
+    const driveRemainingHours =
+        shiftInfo.driveRemainingMinutes !== null &&
+        shiftInfo.driveRemainingMinutes !== undefined
+            ? shiftInfo.driveRemainingMinutes / 60
+            : null;
+    const shiftRemainingHours =
+        shiftInfo.shiftWindowRemainingMinutes !== null &&
+        shiftInfo.shiftWindowRemainingMinutes !== undefined
+            ? shiftInfo.shiftWindowRemainingMinutes / 60
+            : null;
+    const cycleRemainingHours =
+        shiftInfo.cycleRemainingMinutes !== null &&
+        shiftInfo.cycleRemainingMinutes !== undefined
+            ? shiftInfo.cycleRemainingMinutes / 60
+            : null;
+    const breakCountdownHours =
+        shiftInfo.breakCountdownMinutes !== null &&
+        shiftInfo.breakCountdownMinutes !== undefined
+            ? shiftInfo.breakCountdownMinutes / 60
+            : null;
+    const shiftOperatingHours =
+        shiftInfo.operatingMinutes !== null &&
+        shiftInfo.operatingMinutes !== undefined
+            ? shiftInfo.operatingMinutes / 60
+            : null;
+    const shiftDrivingHours =
+        shiftInfo.drivingMinutes !== null &&
+        shiftInfo.drivingMinutes !== undefined
+            ? shiftInfo.drivingMinutes / 60
+            : null;
+    const shiftStandbyHours =
+        shiftInfo.standbyMinutes !== null &&
+        shiftInfo.standbyMinutes !== undefined
+            ? shiftInfo.standbyMinutes / 60
+            : null;
+    const shiftBreakHours =
+        shiftInfo.breakMinutes !== null && shiftInfo.breakMinutes !== undefined
+            ? shiftInfo.breakMinutes / 60
+            : null;
+    const durationBreakdown: Array<[string, number | null]> = [
+        ['Operating', shiftOperatingHours],
+        ['Driving', shiftDrivingHours],
+        ['Standby', shiftStandbyHours],
+        ['Breaks', shiftBreakHours],
+    ];
 
-    const shiftProgressPercent = Math.min(
-        100,
-        Math.round((hoursElapsed / maxShiftHours) * 100),
-    );
+    const shiftProgressPercent =
+        hasServerClock && hoursElapsed !== null
+            ? Math.min(100, Math.round((hoursElapsed / maxShiftHours) * 100))
+            : null;
 
-    const formatHoursMinutes = (hoursFloat: number): string => {
+    const formatHoursMinutes = (hoursFloat: number | null): string => {
+        if (hoursFloat === null || !Number.isFinite(hoursFloat)) {
+            return 'Unavailable';
+        }
+
         const totalMinutes = Math.round(hoursFloat * 60);
         const hrs = Math.floor(totalMinutes / 60);
         const mins = totalMinutes % 60;
@@ -821,13 +930,22 @@ export const HosScreen: React.FC<HosScreenProps> = ({
         return `${hrs}h ${mins.toString().padStart(2, '0')}m`;
     };
 
-    const executeDutyUpdate = (statusToSet: DutyStatus = selectedStatus) => {
-        setIsSaved(true);
-        onUpdateDutyStatus?.(
-            statusToSet,
-            statusToSet === 'standby' ? standbyReason : undefined,
-            remarks.trim() ? remarks.trim() : undefined,
-        );
+    const executeDutyUpdate = async (
+        statusToSet: DutyStatus = selectedStatus,
+    ) => {
+        try {
+            const accepted = await onUpdateDutyStatus?.(
+                statusToSet,
+                statusToSet === 'standby' ? standbyReason : undefined,
+                remarks.trim() ? remarks.trim() : undefined,
+            );
+
+            if (accepted !== false) {
+                setIsSaved(true);
+            }
+        } catch {
+            setIsSaved(false);
+        }
     };
 
     const handleConfirm = () => {
@@ -890,7 +1008,7 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                         </Text>
                     </View>
                 }
-                subtitle={`Operator: ${operatorName} · Shift Started: ${shiftInfo?.startedAt ?? '08:00 AM'} (${hoursElapsed.toFixed(1)}h Elapsed)`}
+                subtitle={`Operator: ${operatorName} · Shift Started: ${shiftInfo?.startedAt ?? 'Unavailable'} (${shiftInfo.hoursElapsed == null ? 'Unavailable' : `${shiftInfo.hoursElapsed.toFixed(1)}h`} Elapsed)`}
                 title="Duty Status & Shift Management"
             />
 
@@ -900,6 +1018,93 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                 contentContainerStyle={styles.contentContainer}
                 style={styles.scrollView}
             >
+                {pendingDutyState && pendingDutyStatus ? (
+                    <View
+                        accessibilityRole={
+                            pendingDutyState === 'failed' ? 'alert' : undefined
+                        }
+                        style={[
+                            styles.syncStatusBanner,
+                            isDarkHud && styles.darkSyncStatusBanner,
+                            pendingDutyState === 'failed' &&
+                                styles.syncStatusBannerFailed,
+                            isDarkHud &&
+                                pendingDutyState === 'failed' &&
+                                styles.darkSyncStatusBannerFailed,
+                        ]}
+                        testID="hos-duty-sync-status"
+                    >
+                        <Icon
+                            color={
+                                pendingDutyState === 'failed'
+                                    ? '#DC2626'
+                                    : '#2563EB'
+                            }
+                            name={
+                                pendingDutyState === 'failed'
+                                    ? 'alert'
+                                    : 'cloud'
+                            }
+                            size={17}
+                        />
+                        <Text
+                            style={[
+                                styles.syncStatusText,
+                                isDarkHud && styles.darkSyncStatusText,
+                                pendingDutyState === 'failed' &&
+                                    styles.syncStatusTextFailed,
+                            ]}
+                        >
+                            {pendingDutyState === 'failed'
+                                ? 'Duty update was not accepted. Review the failed action in Outbox.'
+                                : `Duty update pending sync: ${pendingDutyStatus.replace('_', ' ')}`}
+                        </Text>
+                    </View>
+                ) : null}
+
+                {pendingDutyEvents.length > 1 ? (
+                    <View
+                        accessibilityLabel={`${pendingDutyEvents.length} duty events waiting for synchronization`}
+                        style={[
+                            styles.syncStatusBanner,
+                            isDarkHud && styles.darkSyncStatusBanner,
+                        ]}
+                        testID="hos-duty-sync-queue"
+                    >
+                        <Icon
+                            color={isDarkHud ? '#93C5FD' : '#2563EB'}
+                            name="list"
+                            size={17}
+                        />
+                        <View style={{ flex: 1 }}>
+                            <Text
+                                style={[
+                                    styles.syncStatusText,
+                                    isDarkHud && styles.darkSyncStatusText,
+                                ]}
+                            >
+                                Pending duty events are ordered locally; server
+                                totals remain unchanged.
+                            </Text>
+                            {pendingDutyEvents.map((event, index) => (
+                                <Text
+                                    key={event.id}
+                                    style={[
+                                        styles.syncStatusText,
+                                        isDarkHud && styles.darkSyncStatusText,
+                                    ]}
+                                >
+                                    {index + 1}.{' '}
+                                    {event.status.replace('_', ' ')} ·{' '}
+                                    {event.state === 'failed'
+                                        ? 'Rejected'
+                                        : 'Pending'}
+                                </Text>
+                            ))}
+                        </View>
+                    </View>
+                ) : null}
+
                 {/* DOLE 10-Hour Shift Limit Compliance Warning / Hard Stop Banner */}
                 {isDoleWarning || isDoleCapExceeded ? (
                     <View
@@ -1078,7 +1283,7 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                                     isDarkHud && styles.darkClockCellLabel,
                                 ]}
                             >
-                                70-Hr 8-Day Cycle
+                                {cycleHoursLimit}-Hr 8-Day Cycle
                             </Text>
                             <Text
                                 style={[
@@ -1094,7 +1299,9 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                                     isDarkHud && styles.darkClockCellSub,
                                 ]}
                             >
-                                {cycleHoursElapsed.toFixed(1)}h logged
+                                {cycleHoursElapsed === null
+                                    ? 'Unavailable'
+                                    : `${cycleHoursElapsed.toFixed(1)}h logged`}
                             </Text>
                         </View>
 
@@ -1133,6 +1340,33 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                         </View>
                     </View>
 
+                    <View
+                        accessibilityLabel="DOLE operating limit counter"
+                        style={[
+                            styles.limitCounterRow,
+                            isDarkHud && styles.darkLimitCounterRow,
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.clockCellLabel,
+                                isDarkHud && styles.darkClockCellLabel,
+                            ]}
+                        >
+                            {shiftInfo.limitCounterLabel ??
+                                'Operating + driving'}{' '}
+                            limit counter
+                        </Text>
+                        <Text
+                            style={[
+                                styles.clockCellValueBlue,
+                                isDarkHud && styles.darkClockCellValueBlue,
+                            ]}
+                        >
+                            {formatHoursMinutes(limitCounterHours)}
+                        </Text>
+                    </View>
+
                     {/* Shift Progress Gauge Bar */}
                     <View style={styles.gaugeContainer}>
                         <View style={styles.gaugeMetaRow}>
@@ -1142,8 +1376,10 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                                     isDarkHud && styles.darkGaugeMetaLabel,
                                 ]}
                             >
-                                Daily Shift Elapsed: {hoursElapsed.toFixed(1)} /{' '}
-                                {maxShiftHours}h
+                                Daily Shift Elapsed:{' '}
+                                {hasServerClock && hoursElapsed !== null
+                                    ? `${hoursElapsed.toFixed(1)} / ${maxShiftHours}h`
+                                    : 'Unavailable'}
                             </Text>
                             <Text
                                 style={[
@@ -1151,7 +1387,9 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                                     isDarkHud && styles.darkGaugeMetaPercent,
                                 ]}
                             >
-                                {shiftProgressPercent}% Used
+                                {shiftProgressPercent === null
+                                    ? 'Unavailable'
+                                    : `${shiftProgressPercent}% Used`}
                             </Text>
                         </View>
                         <View
@@ -1163,15 +1401,59 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                             <View
                                 style={[
                                     styles.gaugeFill,
-                                    { width: `${shiftProgressPercent}%` },
-                                    shiftProgressPercent > 85
+                                    {
+                                        width: `${shiftProgressPercent ?? 0}%`,
+                                    },
+                                    (shiftProgressPercent ?? 0) > 85
                                         ? styles.gaugeFillRed
-                                        : shiftProgressPercent > 70
+                                        : (shiftProgressPercent ?? 0) > 70
                                           ? styles.gaugeFillAmber
                                           : styles.gaugeFillGreen,
                                 ]}
                             />
                         </View>
+                    </View>
+
+                    <View
+                        accessibilityLabel="Accepted shift duration breakdown"
+                        style={styles.clocksGrid}
+                        testID="hos-duration-breakdown"
+                    >
+                        {durationBreakdown.map(([label, value]) => (
+                            <View
+                                key={label}
+                                style={[
+                                    styles.clockCell,
+                                    isDarkHud && styles.darkClockCell,
+                                ]}
+                            >
+                                <Text
+                                    style={[
+                                        styles.clockCellLabel,
+                                        isDarkHud && styles.darkClockCellLabel,
+                                    ]}
+                                >
+                                    {label}
+                                </Text>
+                                <Text
+                                    style={[
+                                        styles.clockCellValueBlue,
+                                        isDarkHud &&
+                                            styles.darkClockCellValueBlue,
+                                    ]}
+                                >
+                                    {formatHoursMinutes(value)}
+                                </Text>
+                                <Text
+                                    style={[
+                                        styles.clockCellSub,
+                                        isDarkHud && styles.darkClockCellSub,
+                                    ]}
+                                >
+                                    server accepted
+                                </Text>
+                            </View>
+                        ))}
                     </View>
                 </View>
 
@@ -1509,7 +1791,11 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                                     isDarkHud && styles.darkSignedStampTitle,
                                 ]}
                             >
-                                ✓ DUTY STATUS UPDATED &amp; CERTIFIED
+                                {pendingDutyState === 'failed'
+                                    ? '⚠ DUTY STATUS NOT ACCEPTED'
+                                    : pendingDutyState
+                                      ? '↻ DUTY STATUS PENDING SYNC'
+                                      : '✓ DUTY STATUS UPDATED & CERTIFIED'}
                             </Text>
                             <Text
                                 style={[
@@ -1517,8 +1803,11 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                                     isDarkHud && styles.darkSignedStampSub,
                                 ]}
                             >
-                                Active: {activeConfig.title} (
-                                {new Date().toLocaleTimeString()})
+                                {pendingDutyState === 'failed'
+                                    ? 'Review the failed action in Outbox.'
+                                    : pendingDutyState
+                                      ? `Waiting for server acceptance · ${activeConfig.title}`
+                                      : `Accepted: ${activeConfig.title} (${new Date().toLocaleTimeString()})`}
                             </Text>
                         </Animated.View>
                     )}
@@ -2570,7 +2859,7 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                                         isDarkHud && styles.darkEmptyLogTitle,
                                     ]}
                                 >
-                                    34-Hour Restart / Full Off-Duty Rest Period
+                                    No server-accepted duty events
                                 </Text>
                                 <Text
                                     style={[
@@ -2578,9 +2867,9 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                                         isDarkHud && styles.darkEmptyLogSub,
                                     ]}
                                 >
-                                    No duty status transitions recorded.
-                                    Consecutive 24-hour off-duty rest period
-                                    logged.
+                                    Pending or rejected mobile actions stay out
+                                    of confirmed history until the server
+                                    accepts them.
                                 </Text>
                             </View>
                         ) : (
@@ -2655,6 +2944,24 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                                     >
                                         {evt.details}
                                     </Text>
+                                    {evt.occurrenceTime || evt.acceptedTime ? (
+                                        <Text
+                                            style={[
+                                                styles.logLocation,
+                                                isDarkHud &&
+                                                    styles.darkLogLocation,
+                                            ]}
+                                        >
+                                            Occurred:{' '}
+                                            {formatAuditTimestamp(
+                                                evt.occurrenceTime,
+                                            ) ?? 'Unavailable'}{' '}
+                                            · Server accepted:{' '}
+                                            {formatAuditTimestamp(
+                                                evt.acceptedTime,
+                                            ) ?? 'Recorded'}
+                                        </Text>
+                                    ) : null}
                                     <Text
                                         style={[
                                             styles.logLocation,
@@ -2801,6 +3108,22 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
         gap: 10,
         marginBottom: 14,
+    },
+    limitCounterRow: {
+        alignItems: 'center',
+        backgroundColor: '#EFF6FF',
+        borderColor: '#BFDBFE',
+        borderRadius: 10,
+        borderWidth: 1,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 14,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+    },
+    darkLimitCounterRow: {
+        backgroundColor: '#172554',
+        borderColor: '#1D4ED8',
     },
     clockCell: {
         backgroundColor: '#F8FAFC',
@@ -3923,6 +4246,43 @@ const styles = StyleSheet.create({
     pressed: {
         opacity: 0.82,
         transform: [{ scale: 0.96 }],
+    },
+    syncStatusBanner: {
+        alignItems: 'center',
+        backgroundColor: '#EFF6FF',
+        borderColor: '#BFDBFE',
+        borderRadius: 12,
+        borderWidth: 1,
+        flexDirection: 'row',
+        gap: 8,
+        marginBottom: 14,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+    },
+    darkSyncStatusBanner: {
+        backgroundColor: '#172554',
+        borderColor: '#1D4ED8',
+    },
+    syncStatusBannerFailed: {
+        backgroundColor: '#FEF2F2',
+        borderColor: '#FECACA',
+    },
+    darkSyncStatusBannerFailed: {
+        backgroundColor: '#450A0A',
+        borderColor: '#B91C1C',
+    },
+    syncStatusText: {
+        color: '#1D4ED8',
+        flex: 1,
+        fontSize: 12,
+        fontWeight: '700',
+        lineHeight: 16,
+    },
+    darkSyncStatusText: {
+        color: '#BFDBFE',
+    },
+    syncStatusTextFailed: {
+        color: '#B91C1C',
     },
     doleWarningBanner: {
         alignItems: 'center',
