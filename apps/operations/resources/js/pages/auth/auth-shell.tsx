@@ -1,30 +1,35 @@
 import type { PropsWithChildren } from 'react';
-import { ApplicationLogo } from '@/components/application-logo';
 import { DevUserSwitcher } from '@/components/dev-user-switcher';
 
 export function AuthShell({ children }: PropsWithChildren) {
     return (
-        <main className="flex min-h-screen items-center justify-center bg-canvas px-4 py-10">
-            <section
-                className="w-full max-w-md rounded-2xl border border-line bg-surface p-6 sm:p-8"
-                aria-labelledby="auth-title"
-            >
-                <div className="mb-7 flex items-center gap-3">
-                    <ApplicationLogo
-                        variant="badge"
-                        badgeClassName="h-10 w-10"
+        <main className="min-h-screen bg-surface text-ink">
+            <div className="grid min-h-screen lg:grid-cols-2 xl:grid-cols-[3fr_2fr]">
+                <section
+                    className="relative min-h-[18rem] overflow-hidden bg-[#111214] lg:min-h-screen"
+                    aria-label="Core 2 operations platform"
+                >
+                    <img
+                        src="/images/core2-auth-left-panel.png"
+                        alt=""
+                        aria-hidden="true"
+                        className="absolute inset-0 h-full w-full object-cover object-top lg:object-left"
                     />
-                    <div>
-                        <p className="font-semibold text-ink">
-                            Alibaton Construction
-                        </p>
-                        <p className="text-sm text-ink-soft">
-                            Secure operations access
-                        </p>
+                </section>
+                <section
+                    className="relative flex min-h-[calc(100vh-18rem)] flex-col justify-center bg-surface px-6 py-12 sm:px-10 lg:min-h-screen lg:px-14 xl:px-20"
+                    aria-labelledby="auth-title"
+                >
+                    <div className="mx-auto w-full max-w-[30rem] xl:translate-x-6">
+                        <img
+                            src="/images/alibaton-logo-black.png"
+                            alt="Alibaton Construction Incorporated"
+                            className="block h-auto w-[min(100%,22rem)]"
+                        />
+                        <div className="mt-10">{children}</div>
                     </div>
-                </div>
-                {children}
-            </section>
+                </section>
+            </div>
             <DevUserSwitcher />
         </main>
     );

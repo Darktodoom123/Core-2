@@ -103,7 +103,7 @@ export async function signIn(page: Page, username?: string, password?: string) {
 
     await page.goto('/login');
     await page.getByLabel('Username').fill(resolvedUser);
-    await page.getByLabel('Password').fill(resolvedPass);
+    await page.getByRole('textbox', { name: 'Password' }).fill(resolvedPass);
     await page.getByRole('button', { name: 'Sign in' }).click();
 
     await page.waitForURL(

@@ -9,7 +9,7 @@ test.describe('UI-6 WCAG 2.2 AA Accessibility & Responsive Hardening', () => {
         await page.goto('/');
         await expect(page).toHaveURL(/\/login$/);
         await expect(
-            page.getByRole('heading', { name: 'Sign in to operations' }),
+            page.getByRole('heading', { name: 'Welcome back.' }),
         ).toBeVisible();
         await expect(page.getByLabel('Username')).toBeFocused();
         await expect(
@@ -17,6 +17,25 @@ test.describe('UI-6 WCAG 2.2 AA Accessibility & Responsive Hardening', () => {
         ).toBeEnabled();
         const results = await new AxeBuilder({ page }).analyze();
         expect(results.violations).toEqual([]);
+    });
+
+    test('password visibility control exposes and hides the password value', async ({
+        page,
+    }) => {
+        await page.goto('/login');
+
+        const password = page.getByRole('textbox', { name: 'Password' });
+
+        await expect(password).toHaveAttribute('type', 'password');
+        await password.fill('preview-secret');
+        await page.getByRole('button', { name: 'Show password' }).click();
+        await expect(password).toHaveAttribute('type', 'text');
+        await expect(
+            page.getByRole('button', { name: 'Hide password' }),
+        ).toBeVisible();
+
+        await page.getByRole('button', { name: 'Hide password' }).click();
+        await expect(password).toHaveAttribute('type', 'password');
     });
 
     test('forgot password page passes axe accessibility audit and WCAG 2.2 AA contrast', async ({
@@ -40,7 +59,7 @@ test.describe('UI-6 WCAG 2.2 AA Accessibility & Responsive Hardening', () => {
         await page.setViewportSize({ width: 320, height: 640 });
         await page.goto('/login');
         await expect(
-            page.getByRole('heading', { name: 'Sign in to operations' }),
+            page.getByRole('heading', { name: 'Welcome back.' }),
         ).toBeVisible();
         const hasHorizontalScroll = await page.evaluate(
             () => document.documentElement.scrollWidth > window.innerWidth,
@@ -56,7 +75,7 @@ test.describe('UI-6 WCAG 2.2 AA Accessibility & Responsive Hardening', () => {
         await page.setViewportSize({ width: 390, height: 844 });
         await page.goto('/login');
         await expect(
-            page.getByRole('heading', { name: 'Sign in to operations' }),
+            page.getByRole('heading', { name: 'Welcome back.' }),
         ).toBeVisible();
         const hasHorizontalScroll = await page.evaluate(
             () => document.documentElement.scrollWidth > window.innerWidth,
