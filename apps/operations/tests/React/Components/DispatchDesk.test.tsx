@@ -7,6 +7,7 @@ import {
     jobOverlapsPeriod,
     nextActionForJob,
 } from '@/components/workspace/dispatch-desk/dispatch-desk-helpers';
+import { DispatchResourceSummary } from '@/components/workspace/dispatch-desk/dispatch-resource-summary';
 import {
     DispatchResources,
     hasResourceOverlap,
@@ -98,6 +99,43 @@ function job(
 }
 
 describe('dispatch resources', () => {
+    it('does not infer equipment operators or coverage from assigned counts', () => {
+        const dispatch = job(1);
+        dispatch.requirements = [];
+        dispatch.asset_assignments = [
+            {
+                id: 1,
+                operational_asset_id: 10,
+                code: 'CRN-10',
+                name: 'Tandem crane',
+                type: 'crane',
+            },
+        ];
+        render(
+            <DispatchResourceSummary
+                job={dispatch}
+                assets={[]}
+                assignmentHref="/operations/dispatch-jobs/1#assignment-summary"
+            />,
+        );
+        expect(
+            screen.getByText('Staffing & equipment needs unconfirmed'),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByText(
+                /Required crew and equipment quantities are not recorded/,
+            ),
+        ).toBeInTheDocument();
+        expect(screen.getByText(/Not confirmed/)).toBeInTheDocument();
+        expect(screen.getByText('No personnel assigned.')).toBeInTheDocument();
+        expect(
+            screen.getByRole('link', { name: 'Review assignments' }),
+        ).toHaveAttribute(
+            'href',
+            '/operations/dispatch-jobs/1#assignment-summary',
+        );
+    });
+
     const assignment = {
         id: 1,
         user_id: 21,
@@ -236,9 +274,19 @@ describe('dispatch resources', () => {
             screen.getByRole('heading', { name: 'Assigned equipment' }),
         ).toBeInTheDocument();
         expect(screen.getByText('CR-21 · Mobile crane')).toBeInTheDocument();
-        expect(
-            screen.getByRole('link', { name: 'AI assistance' }),
-        ).toHaveAttribute('href', '#dispatch-ai-assistance');
+        const aiAssistanceTarget = document.getElementById(
+            'dispatch-ai-assistance',
+        );
+        const scrollIntoView = vi.fn();
+        aiAssistanceTarget!.scrollIntoView = scrollIntoView;
+
+        fireEvent.click(screen.getByRole('button', { name: 'AI assistance' }));
+
+        expect(scrollIntoView).toHaveBeenCalledWith({
+            behavior: 'smooth',
+            block: 'start',
+        });
+        expect(document.activeElement).toBe(aiAssistanceTarget);
     });
 });
 

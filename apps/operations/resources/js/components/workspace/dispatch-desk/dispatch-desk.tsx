@@ -39,10 +39,11 @@ import {
     localDateKey,
     shiftLocalDate,
 } from '@/lib/date-utils';
-import { formatDateTime, humanize } from '@/lib/formatters';
+import { formatDateTime } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import type { Auth } from '@/types/auth';
 import type {
+    AssetViewModel,
     DispatchJobViewModel,
     GptRecommendationViewModel,
     WorkspaceCapabilities,
@@ -61,6 +62,7 @@ import {
     resourceLabel,
     sourceMatches,
 } from './dispatch-desk-helpers';
+import { DispatchResourceSummary } from './dispatch-resource-summary';
 import { DispatchResources } from './dispatch-resources';
 import type {
     DispatchDeskMode,
@@ -209,26 +211,6 @@ function isUndatedPreparation(job: DispatchJobViewModel): boolean {
         job.scheduled_start === null &&
         job.scheduled_end === null
     );
-}
-
-function getInitials(name?: string | null): string {
-    if (!name) {
-        return '';
-    }
-
-    const clean = name.trim();
-
-    if (!clean) {
-        return '';
-    }
-
-    const parts = clean.split(/\s+/);
-
-    if (parts.length === 1) {
-        return parts[0].substring(0, 2).toUpperCase();
-    }
-
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 export function DispatchDesk({
@@ -631,7 +613,7 @@ export function DispatchDesk({
                                     key={value}
                                     type="button"
                                     className={cn(
-                                        'inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
+                                        'inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
                                         state.view === value
                                             ? 'bg-brand-soft font-semibold text-ink'
                                             : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
@@ -914,6 +896,7 @@ export function DispatchDesk({
                                             </Button>
                                             <DispatchReviewPanel
                                                 job={selectedJob}
+                                                assets={assets}
                                                 conflicts={selectedConflicts}
                                                 returnTo={returnTo}
                                                 recommendations={
@@ -966,6 +949,7 @@ export function DispatchDesk({
                                         </Button>
                                         <DispatchReviewPanel
                                             job={selectedJob}
+                                            assets={assets}
                                             conflicts={selectedConflicts}
                                             returnTo={returnTo}
                                             recommendations={gptRecommendations}
@@ -1086,7 +1070,7 @@ function DeskFilters({
                     value={query}
                     onChange={(event) => onQuery(event.target.value)}
                     placeholder="Search job, site, client"
-                    className="h-9 w-full rounded-md border border-line bg-surface pr-3 pl-8.5 text-xs text-ink transition-colors placeholder:text-ink-soft focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-hidden"
+                    className="h-9 w-full rounded-md border border-line bg-surface pr-3 pl-8.5 text-xs text-ink transition-colors placeholder:text-ink-soft focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong/30 focus-visible:outline-hidden"
                 />
             </label>
             <label className="min-w-[11rem]">
@@ -1096,7 +1080,7 @@ function DeskFilters({
                     onChange={(event) =>
                         onSource(event.target.value as DispatchSourceFilter)
                     }
-                    className="h-9 w-full rounded-md border border-line bg-surface px-2.5 text-xs text-ink transition-colors focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-hidden"
+                    className="h-9 w-full rounded-md border border-line bg-surface px-2.5 text-xs text-ink transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong/30 focus-visible:outline-hidden"
                 >
                     {SOURCE_FILTERS.map((item) => (
                         <option key={item.value} value={item.value}>
@@ -1182,7 +1166,7 @@ function ScheduleControls({
                             aria-pressed={mode === value}
                             onClick={() => onMode(value)}
                             className={cn(
-                                'h-7 rounded-md px-2.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:outline-hidden',
+                                'h-7 rounded-md px-2.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong/40 focus-visible:outline-hidden',
                                 mode === value
                                     ? 'border border-line/50 bg-surface-subtle font-semibold text-ink shadow-2xs'
                                     : 'text-ink-soft hover:bg-surface-subtle/50 hover:text-ink',
@@ -1206,7 +1190,7 @@ function ScheduleControls({
                                     aria-pressed={period === value}
                                     onClick={() => onPeriod(value)}
                                     className={cn(
-                                        'h-7 rounded-md px-2.5 text-xs font-medium capitalize transition-colors focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:outline-hidden',
+                                        'h-7 rounded-md px-2.5 text-xs font-medium capitalize transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong/40 focus-visible:outline-hidden',
                                         period === value
                                             ? 'border border-line/50 bg-surface-subtle font-semibold text-ink shadow-2xs'
                                             : 'text-ink-soft hover:bg-surface-subtle/50 hover:text-ink',
@@ -1230,7 +1214,7 @@ function ScheduleControls({
                         type="date"
                         value={date}
                         onChange={(event) => onDate(event.target.value)}
-                        className="focus-visible:ring-1.5 h-8 rounded-md border border-line bg-surface px-2 text-xs text-ink focus-visible:ring-brand focus-visible:outline-hidden"
+                        className="focus-visible:ring-1.5 h-8 rounded-md border border-line bg-surface px-2 text-xs text-ink focus-visible:ring-brand-strong focus-visible:outline-hidden"
                     />
                 </label>
             )}
@@ -1415,9 +1399,9 @@ function DeskJobList({
                                             : undefined
                                     }
                                     className={cn(
-                                        'flex min-h-[104px] w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden focus-visible:ring-inset',
+                                        'flex min-h-[104px] w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden focus-visible:ring-inset',
                                         selectedJobId === job.id &&
-                                            'bg-brand-soft/50 ring-1 ring-brand/25 ring-inset',
+                                            'bg-brand-soft/50 ring-1 ring-brand-strong/25 ring-inset',
                                     )}
                                 >
                                     <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-surface-subtle text-ink-soft">
@@ -1454,10 +1438,10 @@ function DeskJobList({
                                                     }
                                                     aria-label={`View reported delay for ${job.reference}: ${job.latest_delay.reason_label}${job.latest_delay.estimated_minutes ? `, estimated impact ${job.latest_delay.estimated_minutes} minutes` : ''}`}
                                                     title={`Reported delay: ${job.latest_delay.reason_label}${job.latest_delay.estimated_minutes ? ` (+${job.latest_delay.estimated_minutes}m)` : ''}. Click to view details.`}
-                                                    className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900 transition-colors hover:bg-amber-200 focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:ring-offset-2 focus-visible:outline-none dark:border-amber-700 dark:bg-amber-900/50 dark:text-amber-200 dark:hover:bg-amber-900/75"
+                                                    className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-warning/40 bg-warning-soft px-2 py-0.5 text-[11px] font-semibold text-warning-strong transition-colors hover:bg-warning-soft/80 focus-visible:ring-2 focus-visible:ring-warning-strong focus-visible:ring-offset-2 focus-visible:outline-none dark:border-warning/30 dark:bg-warning/15 dark:text-warning-on-dark dark:hover:bg-warning/20"
                                                 >
                                                     <AlertTriangle
-                                                        className="size-3 text-amber-700 dark:text-amber-400"
+                                                        className="size-3 text-warning-strong dark:text-warning-on-dark"
                                                         aria-hidden="true"
                                                     />
                                                     <span>
@@ -1548,18 +1532,21 @@ function DeskJobList({
 
 function DispatchReviewPanel({
     job,
+    assets,
     conflicts,
     returnTo,
     recommendations,
     capabilities,
 }: {
     job: DispatchJobViewModel | null;
+    assets: AssetViewModel[];
     conflicts: DerivedConflict[];
     returnTo: string;
     recommendations: GptRecommendationViewModel[];
     capabilities: WorkspaceCapabilities;
 }) {
     const [expandedJobId, setExpandedJobId] = useState<number | null>(null);
+    const aiAssistanceRef = useRef<HTMLDivElement>(null);
 
     if (!job) {
         return (
@@ -1592,8 +1579,8 @@ function DispatchReviewPanel({
             className="@container min-w-0 bg-canvas p-4 md:p-6"
             aria-labelledby="dispatch-review-heading"
         >
-            <div className="grid min-w-0 items-start gap-5 @2xl:grid-cols-[minmax(0,1fr)_20rem] @5xl:grid-cols-[minmax(0,1fr)_22rem]">
-                <Panel className="min-w-0 overflow-hidden">
+            <div className="grid min-w-0 items-start gap-5 @5xl:grid-cols-[minmax(0,1fr)_20rem]">
+                <Panel className="@container min-w-0 overflow-hidden">
                     <div className="border-b border-line px-4 py-4 md:px-5">
                         <div className="flex flex-wrap items-start justify-between gap-3">
                             <div className="min-w-0">
@@ -1607,10 +1594,10 @@ function DispatchReviewPanel({
                                             href={`/operations/dispatch-jobs/${job.id}#reported-delays`}
                                             aria-label={`View reported delay for ${job.reference}: ${job.latest_delay.reason_label}${job.latest_delay.estimated_minutes ? `, estimated impact ${job.latest_delay.estimated_minutes} minutes` : ''}`}
                                             title={`Reported delay: ${job.latest_delay.reason_label}${job.latest_delay.estimated_minutes ? ` (+${job.latest_delay.estimated_minutes}m)` : ''}. Click to view details.`}
-                                            className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900 transition-colors hover:bg-amber-200 focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:ring-offset-2 focus-visible:outline-none dark:border-amber-700 dark:bg-amber-900/50 dark:text-amber-200 dark:hover:bg-amber-900/75"
+                                                className="inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning-soft px-2 py-0.5 text-xs font-semibold text-warning-strong transition-colors hover:bg-warning-soft/80 focus-visible:ring-2 focus-visible:ring-warning-strong focus-visible:ring-offset-2 focus-visible:outline-none dark:border-warning/30 dark:bg-warning/15 dark:text-warning-on-dark dark:hover:bg-warning/20"
                                         >
                                             <AlertTriangle
-                                                className="size-3 text-amber-700 dark:text-amber-400"
+                                                className="size-3 text-warning-strong dark:text-warning-on-dark"
                                                 aria-hidden="true"
                                             />
                                             <span>
@@ -1619,7 +1606,7 @@ function DispatchReviewPanel({
                                             </span>
                                             {job.latest_delay
                                                 .estimated_minutes && (
-                                                <span className="font-normal text-amber-800 dark:text-amber-300">
+                                                <span className="font-normal text-warning-strong dark:text-warning-on-dark">
                                                     +
                                                     {
                                                         job.latest_delay
@@ -1681,7 +1668,7 @@ function DispatchReviewPanel({
                             <div className="flex flex-wrap items-center gap-3">
                                 <Link
                                     href={href}
-                                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-brand px-4 text-sm font-semibold text-brand-contrast shadow-xs transition-colors hover:bg-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-hidden"
+                                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-brand px-4 text-sm font-semibold text-brand-contrast shadow-xs transition-colors hover:bg-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:ring-offset-2 focus-visible:outline-hidden"
                                 >
                                     {nextAction.label}
                                     <ChevronRight
@@ -1697,20 +1684,30 @@ function DispatchReviewPanel({
                                           : 'Review outcome and dispatch history.'}
                                 </span>
                             </div>
-                            <a
-                                href="#dispatch-ai-assistance"
-                                className="inline-flex min-h-9 items-center gap-1.5 self-start rounded-md border border-line/60 bg-surface px-2.5 text-xs font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden sm:self-auto"
+                            <button
+                                type="button"
+                                aria-controls="dispatch-ai-assistance"
+                                onClick={() => {
+                                    aiAssistanceRef.current?.scrollIntoView({
+                                        behavior: 'smooth',
+                                        block: 'start',
+                                    });
+                                    aiAssistanceRef.current?.focus({
+                                        preventScroll: true,
+                                    });
+                                }}
+                                className="inline-flex min-h-9 items-center gap-1.5 self-start rounded-md border border-line/60 bg-surface px-2.5 text-xs font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden sm:self-auto"
                             >
                                 <Sparkles
-                                    className="h-3.5 w-3.5 text-brand"
+                                    className="h-3.5 w-3.5 text-brand-strong"
                                     aria-hidden="true"
                                 />
                                 <span>AI assistance</span>
-                            </a>
+                            </button>
                         </div>
                     </div>
 
-                    <div className="grid gap-x-8 border-b border-line px-4 py-2 md:px-5 @lg:grid-cols-2">
+                    <div className="grid gap-x-8 border-b border-line px-4 py-2 md:px-5 @3xl:grid-cols-2">
                         <div className="divide-y divide-line/60">
                             <div className="grid grid-cols-[minmax(6rem,0.65fr)_1.35fr] items-baseline gap-3 py-2.5 text-sm">
                                 <span className="text-xs font-medium text-ink-soft">
@@ -1721,7 +1718,7 @@ function DispatchReviewPanel({
                                         className="h-3.5 w-3.5 shrink-0 text-ink-soft"
                                         aria-hidden="true"
                                     />
-                                    <span className="truncate">
+                                    <span className="break-words">
                                         {job.site || 'Site not recorded'}
                                     </span>
                                 </span>
@@ -1782,170 +1779,11 @@ function DispatchReviewPanel({
                         </div>
                     </div>
 
-                    <div className="grid gap-5 px-4 py-4 md:px-5 @lg:grid-cols-2">
-                        <section aria-labelledby="assigned-personnel-heading">
-                            <div className="flex items-center justify-between">
-                                <h3
-                                    id="assigned-personnel-heading"
-                                    className="text-sm font-semibold text-ink"
-                                >
-                                    Assigned personnel
-                                </h3>
-                                <Link
-                                    href={assignmentHref}
-                                    className="inline-flex items-center gap-1 text-xs font-semibold text-ink underline decoration-brand underline-offset-2 transition-colors hover:text-brand-strong"
-                                >
-                                    {job.personnel_assignments.length === 0
-                                        ? '+ Assign crew'
-                                        : 'Manage crew'}
-                                </Link>
-                            </div>
-                            {job.personnel_assignments.length === 0 ? (
-                                <div className="mt-2.5 flex items-center justify-between rounded-lg border border-line bg-surface-subtle/50 p-3 text-xs text-ink-soft">
-                                    <span>No personnel assigned.</span>
-                                    <Link
-                                        href={assignmentHref}
-                                        className="font-semibold text-ink underline decoration-brand underline-offset-2 hover:text-brand-strong"
-                                    >
-                                        + Assign crew
-                                    </Link>
-                                </div>
-                            ) : (
-                                <ul className="mt-2.5 space-y-2">
-                                    {job.personnel_assignments.map(
-                                        (assignment) => (
-                                            <li
-                                                key={assignment.id}
-                                                className="flex items-center justify-between gap-3 rounded-lg border border-line bg-surface p-2.5 shadow-2xs"
-                                            >
-                                                <div className="flex min-w-0 items-center gap-2.5">
-                                                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-line bg-surface-subtle text-[11px] font-semibold text-ink">
-                                                        {getInitials(
-                                                            assignment.name,
-                                                        ) || (
-                                                            <Users
-                                                                className="h-3.5 w-3.5 text-ink-soft"
-                                                                aria-hidden="true"
-                                                            />
-                                                        )}
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <p className="truncate text-xs font-semibold text-ink">
-                                                            {assignment.name}
-                                                        </p>
-                                                        <p className="text-[11px] text-ink-soft">
-                                                            {humanize(
-                                                                assignment.type,
-                                                            )}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <span
-                                                    className={cn(
-                                                        'inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium',
-                                                        assignment
-                                                            .response_status
-                                                            .value ===
-                                                            'accepted'
-                                                            ? 'bg-success-soft text-success-strong'
-                                                            : assignment
-                                                                    .response_status
-                                                                    .value ===
-                                                                'rejected'
-                                                              ? 'bg-danger-soft text-danger-strong'
-                                                              : 'border border-line bg-surface-subtle text-ink-soft',
-                                                    )}
-                                                >
-                                                    <span
-                                                        className={cn(
-                                                            'h-1.5 w-1.5 rounded-full',
-                                                            assignment
-                                                                .response_status
-                                                                .value ===
-                                                                'accepted'
-                                                                ? 'bg-success-strong'
-                                                                : assignment
-                                                                        .response_status
-                                                                        .value ===
-                                                                    'rejected'
-                                                                  ? 'bg-danger-strong'
-                                                                  : 'bg-warning-strong',
-                                                        )}
-                                                        aria-hidden="true"
-                                                    />
-                                                    {
-                                                        assignment
-                                                            .response_status
-                                                            .label
-                                                    }
-                                                </span>
-                                            </li>
-                                        ),
-                                    )}
-                                </ul>
-                            )}
-                        </section>
-                        <section aria-labelledby="assigned-equipment-heading">
-                            <div className="flex items-center justify-between">
-                                <h3
-                                    id="assigned-equipment-heading"
-                                    className="text-sm font-semibold text-ink"
-                                >
-                                    Assigned equipment
-                                </h3>
-                                <Link
-                                    href={assignmentHref}
-                                    className="inline-flex items-center gap-1 text-xs font-semibold text-ink underline decoration-brand underline-offset-2 transition-colors hover:text-brand-strong"
-                                >
-                                    {job.asset_assignments.length === 0
-                                        ? '+ Assign equipment'
-                                        : 'Change / Reassign'}
-                                </Link>
-                            </div>
-                            {job.asset_assignments.length === 0 ? (
-                                <div className="mt-2.5 flex items-center justify-between rounded-lg border border-line bg-surface-subtle/50 p-3 text-xs text-ink-soft">
-                                    <span>No equipment assigned.</span>
-                                    <Link
-                                        href={assignmentHref}
-                                        className="font-semibold text-ink underline decoration-brand underline-offset-2 hover:text-brand-strong"
-                                    >
-                                        + Assign equipment
-                                    </Link>
-                                </div>
-                            ) : (
-                                <ul className="mt-2.5 space-y-2">
-                                    {job.asset_assignments.map((assignment) => (
-                                        <li
-                                            key={assignment.id}
-                                            className="flex items-center justify-between gap-3 rounded-lg border border-line bg-surface p-2.5 shadow-2xs"
-                                        >
-                                            <div className="flex min-w-0 items-center gap-2.5">
-                                                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-line bg-surface-subtle text-ink">
-                                                    <Truck
-                                                        className="h-3.5 w-3.5 text-ink-soft"
-                                                        aria-hidden="true"
-                                                    />
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <p className="truncate text-xs font-semibold text-ink">
-                                                        {assignment.code} ·{' '}
-                                                        {assignment.name}
-                                                    </p>
-                                                    <p className="text-[11px] text-ink-soft">
-                                                        {humanize(
-                                                            assignment.subtype ??
-                                                                assignment.kind ??
-                                                                assignment.type,
-                                                        )}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                        </section>
-                    </div>
+                    <DispatchResourceSummary
+                        job={job}
+                        assets={assets}
+                        assignmentHref={assignmentHref}
+                    />
 
                     {conflicts.length > 0 && (
                         <div
@@ -1954,7 +1792,7 @@ function DispatchReviewPanel({
                         >
                             <div className="flex items-start gap-2.5">
                                 <AlertTriangle
-                                    className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400"
+                                    className="mt-0.5 h-4 w-4 shrink-0 text-warning-strong dark:text-warning-on-dark"
                                     aria-hidden="true"
                                 />
                                 <div className="min-w-0 flex-1">
@@ -1964,7 +1802,7 @@ function DispatchReviewPanel({
                                         </h3>
                                         <Link
                                             href={assignmentHref}
-                                            className="text-xs font-medium text-ink underline decoration-line-strong underline-offset-2 transition-colors hover:text-brand hover:decoration-brand"
+                                            className="text-xs font-medium text-ink underline decoration-line-strong underline-offset-2 transition-colors hover:text-brand-strong hover:decoration-brand"
                                         >
                                             Resolve / Reassign in workspace →
                                         </Link>
@@ -1979,7 +1817,7 @@ function DispatchReviewPanel({
                                                 className="flex items-start gap-2 text-ink-soft"
                                             >
                                                 <span
-                                                    className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-amber-500"
+                                                    className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-warning-strong"
                                                     aria-hidden="true"
                                                 />
                                                 <div className="min-w-0 flex-1">
@@ -2019,7 +1857,7 @@ function DispatchReviewPanel({
                                                         : job.id,
                                                 )
                                             }
-                                            className="mt-2 inline-flex min-h-8 items-center rounded text-xs font-semibold text-ink underline underline-offset-2 hover:text-brand focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                            className="mt-2 inline-flex min-h-8 items-center rounded text-xs font-semibold text-ink underline underline-offset-2 hover:text-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                                         >
                                             {expandedJobId === job.id
                                                 ? 'Show fewer issues'
@@ -2047,8 +1885,10 @@ function DispatchReviewPanel({
                     </div>
                 </Panel>
                 <div
+                    ref={aiAssistanceRef}
                     id="dispatch-ai-assistance"
-                    className="min-w-0 scroll-mt-4"
+                    tabIndex={-1}
+                    className="min-w-0 scroll-mt-4 outline-none"
                 >
                     <DispatchGptAdvisory
                         key={job.id}
