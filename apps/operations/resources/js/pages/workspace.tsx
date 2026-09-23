@@ -79,7 +79,12 @@ const SECTION_PROPS: Record<WorkspaceSection, string[]> = {
     ],
     notifications: ['notifications'],
     archive: ['archivedJobs'],
-    'gpt-recommendations': ['gptRecommendations', 'jobs'],
+    'gpt-recommendations': [
+        'gptRecommendations',
+        'gptRecommendationHistory_pagination',
+        'gptSelectedRecommendation',
+        'jobs',
+    ],
     users: ['users', 'auditEvents'],
     audit: ['auditEvents'],
     sos: [],
@@ -797,6 +802,12 @@ export default function Workspace(props: WorkspacePageProps) {
                         notifications={props.notifications}
                         archivedJobs={props.archivedJobs}
                         gptRecommendations={props.gptRecommendations}
+                        gptRecommendationHistoryPagination={
+                            props.gptRecommendationHistory_pagination
+                        }
+                        gptSelectedRecommendation={
+                            props.gptSelectedRecommendation
+                        }
                         jobs={props.jobs ?? []}
                         users={props.users ?? []}
                         activeSosIncidents={props.activeSosIncidents}

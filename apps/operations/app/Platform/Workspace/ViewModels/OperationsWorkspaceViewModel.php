@@ -991,6 +991,7 @@ final class OperationsWorkspaceViewModel
             'inspect_asset' => $user->can(PermissionName::FleetInspect->value) || $user->can(PermissionName::EquipmentInspect->value),
             'maintain_asset' => $user->can(PermissionName::FleetMaintain->value) || $user->can(PermissionName::EquipmentMaintain->value),
             'request_gpt_assistance' => $user->can(PermissionName::GptUseDispatch->value) || $user->can(PermissionName::GptUseOperations->value) || $user->can(PermissionName::GptUseMaintenance->value),
+            'view_gpt_governance' => $user->can(PermissionName::GptConfigure->value),
             'proactive_gpt_assistance' => (bool) config('services.openai.proactive_enabled', true),
             'decide_gpt_recommendation' => $user->can(PermissionName::GptUseDispatch->value) || $user->can(PermissionName::GptUseOperations->value),
             'retry_gpt_recommendation' => $user->can(PermissionName::GptUseDispatch->value) || $user->can(PermissionName::GptUseOperations->value),

@@ -6,6 +6,8 @@ use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Fuel\Enums\FuelRequestStatus;
 use App\Modules\Fuel\Models\FuelLog;
 use App\Modules\Fuel\Models\FuelRequest;
+use App\Platform\Gpt\Models\GptRecommendation;
+use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
 use App\Platform\Reporting\Enums\JobReportStatus;
@@ -68,6 +70,73 @@ it('paginates and searches assets beyond 100 records with stable ordering and wi
     $wildcardSearch = $query->paginate($dispatcher, ['search' => 'AST_SPECIAL%']);
     expect($wildcardSearch->total())->toBe(1);
     expect($wildcardSearch->items()[0]->code)->toBe('AST_SPECIAL%01');
+});
+
+it('paginates GPT decision history and resolves a deep-linked recommendation outside the current page', function (): void {
+    $admin = User::factory()->create();
+    $admin->syncRoles([RoleName::SystemAdministrator->value]);
+    $admin->givePermissionTo(PermissionName::GptUseDispatch->value);
+
+    $job = DispatchJob::query()->create([
+        'reference' => 'JOB-GPT-HISTORY',
+        'client' => 'History Client',
+        'title' => 'History audit test',
+        'site' => 'Makati yard',
+        'priority' => DispatchPriority::Routine,
+        'status' => DispatchStatus::Draft,
+        'created_by' => $admin->id,
+        'version' => 1,
+    ]);
+
+    $selectedId = null;
+    for ($i = 1; $i <= 26; $i++) {
+        $recommendation = GptRecommendation::query()->create([
+            'subject_type' => $job->getMorphClass(),
+            'subject_id' => $job->id,
+            'requested_by' => $admin->id,
+            'decided_by' => $admin->id,
+            'decided_at' => now()->subSeconds($i),
+            'purpose' => 'dispatch_assignment',
+            'context_hash' => "history-{$i}",
+            'input_references' => [],
+            'recommendation' => [],
+            'conflicts' => [],
+            'model' => 'test-model',
+            'status' => 'rejected',
+            'created_at' => now()->subSeconds($i),
+            'updated_at' => now()->subSeconds($i),
+        ]);
+
+        if ($i === 1) {
+            $selectedId = $recommendation->id;
+        }
+    }
+
+    $manifest = public_path('build/manifest.json');
+    $version = file_exists($manifest) ? hash_file('xxh128', $manifest) : '';
+    $response = $this->actingAs($admin)
+        ->withHeaders([
+            'X-Inertia' => 'true',
+            'X-Inertia-Version' => $version,
+            'X-Inertia-Partial-Component' => 'workspace',
+            'X-Inertia-Partial-Data' => 'gptRecommendations,gptRecommendationHistory_pagination,gptSelectedRecommendation',
+        ])
+        ->get("/operations?view=gpt-recommendations&gpt_history_page=2&selected={$selectedId}");
+
+    $response->assertOk();
+    $page = $response->json('props');
+
+    expect($page['gptRecommendationHistory_pagination'])->toMatchArray([
+        'current_page' => 2,
+        'last_page' => 2,
+        'per_page' => 25,
+        'total' => 26,
+        'from' => 26,
+        'to' => 26,
+    ])
+        ->and($page['gptRecommendations'])->toHaveCount(1)
+        ->and($page['gptRecommendations'][0]['subject_id'])->toBe($job->id)
+        ->and($page['gptSelectedRecommendation']['id'])->toBe($selectedId);
 });
 
 it('paginates fuel requests beyond 100 records and computes truthful stage counts', function (): void {

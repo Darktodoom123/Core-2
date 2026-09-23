@@ -6,7 +6,6 @@ import {
     RecommendationDetails,
     RejectGptModal,
 } from '@/components/workspace/gpt-workspace-section';
-import type { Auth } from '@/types/auth';
 import type {
     DispatchJobViewModel,
     GptRecommendationViewModel,
@@ -30,9 +29,9 @@ export function DispatchGptAdvisory({
     recommendations = [],
     capabilities,
 }: DispatchGptAdvisoryProps) {
-    const page = usePage<{ auth?: Auth }>();
+    const page = usePage();
     const returnTo = page.url;
-    const { auth, errors } = page.props;
+    const { errors } = page.props;
     const errorBag = `dispatchAdvisory${job.id}`;
     const persistedErrors = errors?.[errorBag];
     const persistedRequestError =
@@ -41,10 +40,6 @@ export function DispatchGptAdvisory({
             : persistedErrors && typeof persistedErrors === 'object'
               ? Object.values(persistedErrors).join(' ')
               : null;
-    const isAdmin =
-        auth?.role === 'system_administrator' ||
-        auth?.role === 'admin' ||
-        auth?.prototype_role === 'system_administrator';
     const [selectedForAccept, setSelectedForAccept] =
         useState<GptRecommendationViewModel | null>(null);
     const [selectedForReject, setSelectedForReject] =
@@ -54,10 +49,12 @@ export function DispatchGptAdvisory({
         number[] | undefined
     >();
     const [modalAssetIds, setModalAssetIds] = useState<number[] | undefined>();
-    const [applying, setApplying] = useState(false);
-    const [appliedNotice, setAppliedNotice] = useState<string | null>(null);
     const [requesting, setRequesting] = useState(false);
     const [requestError, setRequestError] = useState<string | null>(null);
+    const [pollingCycle, setPollingCycle] = useState(0);
+    const [pollingStoppedFor, setPollingStoppedFor] = useState<string | null>(
+        null,
+    );
     const recommendation = useMemo(
         () =>
             recommendations
@@ -81,24 +78,39 @@ export function DispatchGptAdvisory({
         requesting ||
         recommendation?.status === 'draft' ||
         recommendation?.status === 'processing';
+    const pendingKey = recommendation
+        ? `${job.id}:${recommendation.id}`
+        : `${job.id}:requesting`;
+    const pollingStopped = pollingStoppedFor === pendingKey;
 
     useEffect(() => {
         if (!isPending) {
             return;
         }
 
+        let attempts = 0;
+        const maxAttempts = 15;
         const interval = window.setInterval(() => {
+            if (attempts >= maxAttempts) {
+                window.clearInterval(interval);
+                setPollingStoppedFor(pendingKey);
+
+                return;
+            }
+
+            attempts += 1;
             router.reload({
                 only: ['gptRecommendations'],
             });
         }, 3500);
 
         return () => window.clearInterval(interval);
-    }, [isPending]);
+    }, [isPending, pendingKey, pollingCycle]);
 
     const requestRecommendation = (retry = false) => {
         setRequestError(null);
         setRequesting(true);
+        setPollingStoppedFor(null);
         router.post(
             retry && recommendation
                 ? recommendation.retry_url
@@ -121,33 +133,10 @@ export function DispatchGptAdvisory({
         );
     };
 
-    const handleApply = (personnelIds: number[], assetIds: number[]) => {
-        if (!recommendation) {
-            return;
-        }
-
-        setRequestError(null);
-        setApplying(true);
-        setAppliedNotice(null);
-
-        router.post(
-            `/operations/gpt-recommendations/${recommendation.id}/accept`,
-            {
-                selected_personnel_ids: personnelIds,
-                selected_asset_ids: assetIds,
-            },
-            {
-                preserveScroll: true,
-                errorBag,
-                only: ['gptRecommendations', 'jobs', 'errors', 'flash'],
-                onSuccess: () => {
-                    setAppliedNotice('Resource plan applied successfully.');
-                },
-                onError: (errors) =>
-                    setRequestError(Object.values(errors).join(' ')),
-                onFinish: () => setApplying(false),
-            },
-        );
+    const refreshPendingStatus = () => {
+        setPollingStoppedFor(null);
+        setPollingCycle((cycle) => cycle + 1);
+        router.reload({ only: ['gptRecommendations'] });
     };
 
     return (
@@ -156,15 +145,14 @@ export function DispatchGptAdvisory({
                 jobId={job.id}
                 recommendation={recommendation}
                 automatic={Boolean(capabilities.proactive_gpt_assistance)}
-                busy={requesting || applying}
+                busy={requesting}
+                pollingStopped={pollingStopped}
                 canRequest={capabilities.request_gpt_assistance}
                 canReview={capabilities.decide_gpt_recommendation}
                 canRetry={capabilities.retry_gpt_recommendation}
-                canViewHistory={isAdmin || capabilities.request_gpt_assistance}
+                canViewHistory={capabilities.view_gpt_governance ?? false}
                 error={
-                    requesting || applying
-                        ? null
-                        : (requestError ?? persistedRequestError)
+                    requesting ? null : (requestError ?? persistedRequestError)
                 }
                 assignmentUrl={
                     !['draft', 'pending_approval', 'scheduled'].includes(
@@ -176,8 +164,7 @@ export function DispatchGptAdvisory({
                 manualAssignmentUrl={assignmentWorkspaceUrl(job.id, returnTo)}
                 onRequest={() => requestRecommendation()}
                 onRetry={() => requestRecommendation(true)}
-                onApply={handleApply}
-                appliedNotice={appliedNotice}
+                onRefreshStatus={refreshPendingStatus}
                 onReview={(personnelIds, assetIds) => {
                     if (!recommendation) {
                         return;

@@ -39,6 +39,7 @@ function capabilities(
         inspect_asset: false,
         maintain_asset: false,
         request_gpt_assistance: true,
+        view_gpt_governance: true,
         proactive_gpt_assistance: false,
         decide_gpt_recommendation: true,
         retry_gpt_recommendation: true,
@@ -201,6 +202,7 @@ describe('dispatch GPT advisory', () => {
     it('posts the bounded request payload and respects request capability', () => {
         vi.mocked(router.post).mockImplementationOnce(
             (_url, _data, options) => {
+                options?.onSuccess?.({} as never);
                 options?.onFinish?.({} as never);
             },
         );
@@ -387,6 +389,37 @@ describe('dispatch GPT advisory', () => {
         }
     });
 
+    it('stops automatic polling after 15 checks and provides a manual refresh', () => {
+        vi.useFakeTimers();
+
+        try {
+            render(
+                <DispatchGptAdvisory
+                    job={job(10)}
+                    capabilities={capabilities()}
+                    recommendations={[
+                        recommendation({ id: 7, status: 'draft' }),
+                    ]}
+                />,
+            );
+
+            act(() => {
+                vi.advanceTimersByTime(3500 * 16);
+            });
+
+            expect(router.reload).toHaveBeenCalledTimes(15);
+            expect(
+                screen.getByText(/Automatic status checks paused\./),
+            ).toBeInTheDocument();
+            fireEvent.click(
+                screen.getByRole('button', { name: 'Check status' }),
+            );
+            expect(router.reload).toHaveBeenCalledTimes(16);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
     it('does not poll when recommendation is in ready or terminal state', () => {
         vi.useFakeTimers();
 
@@ -414,7 +447,7 @@ describe('dispatch GPT advisory', () => {
         }
     });
 
-    it('applies clean recommendation directly in-place via Smart Apply without opening modal', () => {
+    it('requires confirmation before applying a clean recommendation', () => {
         vi.mocked(router.post).mockImplementationOnce(
             (_url, _data, options) => {
                 options?.onSuccess?.({} as never);
@@ -443,10 +476,15 @@ describe('dispatch GPT advisory', () => {
             />,
         );
 
-        const applyButton = screen.getByRole('button', {
-            name: 'Apply 1 crew',
+        const reviewButton = screen.getByRole('button', {
+            name: 'Review & apply 1 crew',
         });
-        fireEvent.click(applyButton);
+        fireEvent.click(reviewButton);
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+        expect(router.post).not.toHaveBeenCalled();
+        fireEvent.click(
+            screen.getByRole('button', { name: 'Confirm & Apply 1 crew' }),
+        );
 
         expect(router.post).toHaveBeenCalledWith(
             '/operations/gpt-recommendations/1/accept',
@@ -454,22 +492,16 @@ describe('dispatch GPT advisory', () => {
                 selected_personnel_ids: [2],
                 selected_asset_ids: [],
             },
-            expect.objectContaining({
-                errorBag: 'dispatchAdvisory10',
-                preserveScroll: true,
-                only: ['gptRecommendations', 'jobs', 'errors', 'flash'],
-            }),
+            expect.objectContaining({ onSuccess: expect.any(Function) }),
         );
 
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-        expect(
-            screen.getByText('Resource plan applied successfully.'),
-        ).toBeInTheDocument();
     });
 
     it('supports modular resource selection on card before applying in-place', () => {
         vi.mocked(router.post).mockImplementationOnce(
             (_url, _data, options) => {
+                options?.onSuccess?.({} as never);
                 options?.onFinish?.({} as never);
             },
         );
@@ -514,7 +546,9 @@ describe('dispatch GPT advisory', () => {
         );
 
         expect(
-            screen.getByRole('button', { name: 'Apply 2 crew & 2 assets' }),
+            screen.getByRole('button', {
+                name: 'Review & apply 2 crew & 2 assets',
+            }),
         ).toBeInTheDocument();
 
         // Deselect the rigger and the prime mover
@@ -529,9 +563,27 @@ describe('dispatch GPT advisory', () => {
         fireEvent.click(primeMoverCheckbox);
 
         const applyButton = screen.getByRole('button', {
-            name: 'Apply 1 crew & 1 asset',
+            name: 'Review & apply 1 crew & 1 asset',
         });
         fireEvent.click(applyButton);
+
+        const confirmation = screen.getByRole('dialog');
+        expect(confirmation).toBeInTheDocument();
+        expect(
+            within(confirmation).getByRole('checkbox', {
+                name: 'Select Lead Operator',
+            }),
+        ).toBeChecked();
+        expect(
+            within(confirmation).getByRole('checkbox', {
+                name: 'Select Rigger Specialist',
+            }),
+        ).not.toBeChecked();
+        fireEvent.click(
+            screen.getByRole('button', {
+                name: 'Confirm & Apply 1 crew & 1 asset',
+            }),
+        );
 
         expect(router.post).toHaveBeenCalledWith(
             '/operations/gpt-recommendations/1/accept',
@@ -539,10 +591,7 @@ describe('dispatch GPT advisory', () => {
                 selected_personnel_ids: [2],
                 selected_asset_ids: [4],
             },
-            expect.objectContaining({
-                errorBag: 'dispatchAdvisory10',
-                preserveScroll: true,
-            }),
+            expect.objectContaining({ onSuccess: expect.any(Function) }),
         );
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });

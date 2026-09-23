@@ -124,7 +124,7 @@ final class GptRecommendationController extends Controller
         $accepted = $recommendations->where('status', 'accepted')->count();
         $rejected = $recommendations->where('status', 'rejected')->count();
         $totalDecided = $accepted + $rejected;
-        $acceptanceRate = $totalDecided > 0 ? round(($accepted / $totalDecided) * 100, 1) : 100.0;
+        $acceptanceRate = $totalDecided > 0 ? round(($accepted / $totalDecided) * 100, 1) : null;
 
         return response()->json([
             'monthly_spend_usd' => $monthlySpend,

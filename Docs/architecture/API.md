@@ -291,7 +291,7 @@ change.
 | POST | `/operations/gpt-recommendations/{recommendation}/reject` | Reject a recommendation with an optional reason | Redirect/flash |
 | POST | `/operations/gpt-recommendations/{recommendation}/retry` | Atomically create one authorized retry | Redirect/flash |
 | POST | `/operations/gpt-circuit-breaker/toggle` | Toggle GPT recommendation circuit breaker | Redirect/flash |
-| GET | `/operations/gpt-governance/telemetry` | Operational GPT cost, token, and latency metrics | Transitional JSON |
+| GET | `/operations/gpt-governance/telemetry` | Operational GPT cost, token, latency, and decision metrics (`acceptance_rate` is `null` when no decisions exist) | Transitional JSON |
 
 ### SOS Emergency Response Operations
 

@@ -15,7 +15,11 @@ import {
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Button } from '@/components/ui';
-import { formatResourceCount, humanize } from '@/lib/formatters';
+import {
+    formatDateTime,
+    formatResourceCount,
+    humanize,
+} from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import type { GptRecommendationViewModel } from '@/types/workspace';
 
@@ -33,15 +37,13 @@ export interface DispatchAdvisoryCardProps {
     error: string | null;
     assignmentUrl?: string;
     manualAssignmentUrl?: string;
+    pollingStopped?: boolean;
     onRequest: () => void;
     onRetry: () => void;
+    onRefreshStatus?: () => void;
     onReview: (
         selectedPersonnelIds?: number[],
         selectedAssetIds?: number[],
-    ) => void;
-    onApply?: (
-        selectedPersonnelIds: number[],
-        selectedAssetIds: number[],
     ) => void;
     onReject: () => void;
     details?: ReactNode;
@@ -56,13 +58,15 @@ export function DispatchAdvisoryCard({
     canRequest,
     canReview,
     canRetry,
+    canViewHistory = false,
     error,
     assignmentUrl,
     manualAssignmentUrl,
+    pollingStopped = false,
     onRequest,
     onRetry,
+    onRefreshStatus,
     onReview,
-    onApply,
     onReject,
     details,
     appliedNotice,
@@ -81,6 +85,7 @@ export function DispatchAdvisoryCard({
     const [selectedAssetIds, setSelectedAssetIds] = useState<number[]>(() =>
         (rec?.proposed_assets ?? []).map((a) => a.operational_asset_id),
     );
+    const [clockNow, setClockNow] = useState(() => Date.now());
 
     const currentRecKey = rec
         ? `${rec.id}:${rec.context_hash}:${rec.status}`
@@ -142,10 +147,31 @@ export function DispatchAdvisoryCard({
         };
     }, [pending]);
 
+    useEffect(() => {
+        if (!rec?.expires_at || rec.status === 'accepted') {
+            return;
+        }
+
+        const timer = window.setInterval(() => {
+            setClockNow(Date.now());
+        }, 1000);
+
+        return () => window.clearInterval(timer);
+    }, [rec?.expires_at, rec?.status]);
+
     const isProlonged = pending && elapsedSeconds >= 25;
+    const expiresAt = rec?.expires_at ? Date.parse(rec.expires_at) : null;
     const expired =
         rec?.status !== 'accepted' &&
-        (rec?.is_expired || rec?.status === 'expired');
+        (rec?.is_expired ||
+            rec?.status === 'expired' ||
+            (expiresAt !== null &&
+                Number.isFinite(expiresAt) &&
+                expiresAt <= clockNow));
+    const secondsUntilExpiry =
+        expiresAt !== null && Number.isFinite(expiresAt)
+            ? Math.max(0, Math.ceil((expiresAt - clockNow) / 1000))
+            : null;
     const stale =
         rec?.status !== 'accepted' &&
         (rec?.is_stale || rec?.status === 'stale');
@@ -266,7 +292,7 @@ export function DispatchAdvisoryCard({
                     <h4 className="mt-0.5 text-xs font-semibold text-ink">
                         GPT dispatch advisory
                     </h4>
-                    {rec && (
+                    {rec && canViewHistory && (
                         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
                             <span className="font-medium text-ink-soft">
                                 Recommendation #{rec.id}
@@ -323,6 +349,22 @@ export function DispatchAdvisoryCard({
                             <p className="mt-0.5 text-xs leading-relaxed text-ink-soft">
                                 {description}
                             </p>
+                            {rec && (rec.generated_at || rec.expires_at) && (
+                                <p className="mt-2 text-[11px] text-ink-soft">
+                                    {rec.generated_at
+                                        ? `Generated ${formatDateTime(rec.generated_at)}`
+                                        : 'Generation time unavailable'}
+                                    {rec.expires_at &&
+                                        rec.status !== 'accepted' && (
+                                            <>
+                                                {' · '}
+                                                {expired
+                                                    ? `Expired ${formatDateTime(rec.expires_at)}`
+                                                    : `Expires ${formatDateTime(rec.expires_at)} (${Math.floor((secondsUntilExpiry ?? 0) / 60)}m ${(secondsUntilExpiry ?? 0) % 60}s left)`}
+                                            </>
+                                        )}
+                                </p>
+                            )}
                             {canRefreshExpired && (
                                 <div className="mt-2.5">
                                     <Button
@@ -447,7 +489,7 @@ export function DispatchAdvisoryCard({
                                         )}
                                     >
                                         {ready && canReview && (
-                                            <label className="-m-0.5 flex shrink-0 cursor-pointer items-center justify-center rounded-md p-1 transition-colors hover:bg-surface-subtle/60">
+                                            <label className="flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-surface-subtle/60">
                                                 <input
                                                     type="checkbox"
                                                     checked={isSelected}
@@ -457,7 +499,7 @@ export function DispatchAdvisoryCard({
                                                         )
                                                     }
                                                     aria-label={`Select ${displayName}`}
-                                                    className="h-3.5 w-3.5 cursor-pointer rounded border-line-strong text-brand-strong accent-brand transition-shadow focus-visible:ring-2 focus-visible:ring-brand-strong/40 focus-visible:outline-hidden"
+                                                    className="h-4 w-4 cursor-pointer rounded border-line-strong text-brand-strong accent-brand transition-shadow focus-visible:ring-2 focus-visible:ring-brand-strong/40 focus-visible:outline-hidden"
                                                     disabled={busy}
                                                 />
                                             </label>
@@ -579,7 +621,7 @@ export function DispatchAdvisoryCard({
                                             )}
                                         >
                                             {ready && canReview && (
-                                                <label className="-m-0.5 flex shrink-0 cursor-pointer items-center justify-center rounded-md p-1 transition-colors hover:bg-surface-subtle/60">
+                                                <label className="flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-surface-subtle/60">
                                                     <input
                                                         type="checkbox"
                                                         checked={isSelected}
@@ -589,7 +631,7 @@ export function DispatchAdvisoryCard({
                                                             )
                                                         }
                                                         aria-label={`Select ${assetLabel}`}
-                                                        className="h-3.5 w-3.5 cursor-pointer rounded border-line-strong text-brand-strong accent-brand transition-shadow focus-visible:ring-2 focus-visible:ring-brand-strong/40 focus-visible:outline-hidden"
+                                                        className="h-4 w-4 cursor-pointer rounded border-line-strong text-brand-strong accent-brand transition-shadow focus-visible:ring-2 focus-visible:ring-brand-strong/40 focus-visible:outline-hidden"
                                                         disabled={busy}
                                                     />
                                                 </label>
@@ -729,6 +771,25 @@ export function DispatchAdvisoryCard({
                     </div>
                 )}
 
+                {pending && pollingStopped && (
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/30 bg-warning-soft/40 p-3 text-xs text-ink">
+                        <p role="status">
+                            Automatic status checks paused. Refresh to check the
+                            latest proposal state.
+                        </p>
+                        {onRefreshStatus && (
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={onRefreshStatus}
+                                disabled={busy}
+                            >
+                                Check status
+                            </Button>
+                        )}
+                    </div>
+                )}
+
                 {!pending && Boolean(rec?.conflicts.length) && (
                     <div className="flex items-start gap-2 rounded-lg bg-warning-soft p-3 text-xs text-warning-strong">
                         <AlertTriangle
@@ -775,7 +836,7 @@ export function DispatchAdvisoryCard({
                         {assignmentUrl ? (
                             <Link
                                 href={assignmentUrl}
-                                className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand px-3 py-2 text-center text-sm font-semibold text-ink shadow-xs transition-all duration-150 hover:bg-brand-strong hover:text-white dark:hover:text-brand-contrast dark:text-brand-contrast active:scale-[0.98]"
+                                className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand px-3 py-2 text-center text-sm font-semibold text-ink shadow-xs transition-all duration-150 hover:bg-brand-strong hover:text-white active:scale-[0.98] dark:text-brand-contrast dark:hover:text-brand-contrast"
                             >
                                 Review in assignment workspace{' '}
                                 <ArrowUpRight
@@ -816,24 +877,15 @@ export function DispatchAdvisoryCard({
                                     className="w-full whitespace-normal shadow-xs transition-transform duration-150 ease-out active:scale-[0.98]"
                                     disabled={totalSelected === 0 || busy}
                                     onClick={() => {
-                                        if (onApply) {
-                                            onApply(
-                                                selectedPersonnelIds,
-                                                selectedAssetIds,
-                                            );
-                                        } else {
-                                            onReview(
-                                                selectedPersonnelIds,
-                                                selectedAssetIds,
-                                            );
-                                        }
+                                        onReview(
+                                            selectedPersonnelIds,
+                                            selectedAssetIds,
+                                        );
                                     }}
                                 >
-                                    {busy
-                                        ? 'Applying Assignment…'
-                                        : totalSelected === 0
-                                          ? 'Apply selected'
-                                          : `Apply ${formatResourceCount(selectedPersonnelCount, selectedAssetCount)}`}
+                                    {totalSelected === 0
+                                        ? 'Review & apply selected'
+                                        : `Review & apply ${formatResourceCount(selectedPersonnelCount, selectedAssetCount)}`}
                                 </Button>
                                 <Button
                                     variant="secondary"

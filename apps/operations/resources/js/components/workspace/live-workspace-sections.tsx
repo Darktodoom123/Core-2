@@ -70,6 +70,8 @@ export function LiveWorkspaceSection({
     notifications = [],
     archivedJobs = [],
     gptRecommendations = [],
+    gptRecommendationHistoryPagination,
+    gptSelectedRecommendation,
     jobs = [],
     users = [],
     activeSosIncidents,
@@ -95,6 +97,8 @@ export function LiveWorkspaceSection({
     notifications?: NotificationViewModel[];
     archivedJobs?: ArchivedJobViewModel[];
     gptRecommendations?: GptRecommendationViewModel[];
+    gptRecommendationHistoryPagination?: PaginationMeta;
+    gptSelectedRecommendation?: GptRecommendationViewModel | null;
     jobs?: DispatchJobViewModel[];
     users?: WorkspaceUserViewModel[];
     activeSosIncidents?: SosIncidentViewModel[];
@@ -170,6 +174,8 @@ export function LiveWorkspaceSection({
             return (
                 <GptRecommendationsSurface
                     recommendations={gptRecommendations}
+                    historyPagination={gptRecommendationHistoryPagination}
+                    selectedRecommendation={gptSelectedRecommendation}
                     capabilities={capabilities}
                     onSectionChange={onSectionChange}
                 />
@@ -876,7 +882,7 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                                 className={cn(
                                     'rounded-lg px-2.5 py-1 text-xs font-medium transition-colors',
                                     actionFilter === cat.id
-                                        ? 'bg-brand-strong text-white dark:text-brand-contrast shadow-xs'
+                                        ? 'bg-brand-strong text-white shadow-xs dark:text-brand-contrast'
                                         : 'bg-surface-subtle text-ink-soft hover:bg-surface-subtle/80 hover:text-ink',
                                 )}
                             >

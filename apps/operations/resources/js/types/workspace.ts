@@ -948,6 +948,7 @@ export interface WorkspaceCapabilities {
     inspect_asset: boolean;
     maintain_asset: boolean;
     request_gpt_assistance: boolean;
+    view_gpt_governance?: boolean;
     proactive_gpt_assistance?: boolean;
     decide_gpt_recommendation: boolean;
     retry_gpt_recommendation: boolean;
@@ -1175,6 +1176,8 @@ export interface WorkspacePageProps {
     dispatchResourceUsers?: DispatchResourceUserViewModel[];
     auditEvents?: AuditEventViewModel[];
     gptRecommendations?: GptRecommendationViewModel[];
+    gptRecommendationHistory_pagination?: PaginationMeta;
+    gptSelectedRecommendation?: GptRecommendationViewModel | null;
     jobReports?: JobReportViewModel[];
     jobReports_total?: number;
     jobReports_stats?: JobReportStatsViewModel;

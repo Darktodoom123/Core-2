@@ -273,6 +273,38 @@ describe('dispatch advisory', () => {
         ).not.toBeInTheDocument();
     });
 
+    it('disables an inline proposal as soon as its validity window expires', () => {
+        vi.useFakeTimers();
+
+        try {
+            vi.setSystemTime(new Date('2026-09-23T02:00:00.000Z'));
+            const expiresAt = new Date(Date.now() + 2000).toISOString();
+            show({
+                recommendation: {
+                    ...proposal,
+                    expires_at: expiresAt,
+                    is_expired: false,
+                },
+            });
+
+            expect(screen.getByText(/Expires .*left/)).toBeInTheDocument();
+
+            act(() => {
+                vi.advanceTimersByTime(3000);
+            });
+
+            expect(screen.getByText('Expired')).toBeInTheDocument();
+            expect(
+                screen.getByRole('button', { name: 'Refresh suggestions' }),
+            ).toBeInTheDocument();
+            expect(
+                screen.queryByRole('button', { name: /Review & apply/ }),
+            ).not.toBeInTheDocument();
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
     it('respects permissions and announces request errors', () => {
         show({
             recommendation: proposal,
@@ -304,12 +336,42 @@ describe('dispatch advisory', () => {
         ).not.toBeInTheDocument();
     });
 
-    it('does not render the confirmation footer or advisory history link', () => {
+    it('does not render the legacy confirmation footer or history label', () => {
         show({ recommendation: proposal, canViewHistory: true });
         expect(
             screen.queryByText('You confirm every assignment'),
         ).not.toBeInTheDocument();
         expect(screen.queryByText('Advisory history')).not.toBeInTheDocument();
+    });
+
+    it('shows the full advisory link only when governance access is granted', () => {
+        const { unmount } = render(
+            <DispatchAdvisoryCard
+                jobId={10}
+                recommendation={proposal}
+                automatic={false}
+                busy={false}
+                canRequest={true}
+                canReview={true}
+                canRetry={true}
+                canViewHistory={true}
+                error={null}
+                onRequest={vi.fn()}
+                onRetry={vi.fn()}
+                onReview={vi.fn()}
+                onReject={vi.fn()}
+            />,
+        );
+
+        expect(
+            screen.getByRole('link', { name: 'View full advisory' }),
+        ).toBeInTheDocument();
+
+        unmount();
+        show({ recommendation: proposal, canViewHistory: false });
+        expect(
+            screen.queryByRole('link', { name: 'View full advisory' }),
+        ).not.toBeInTheDocument();
     });
 
     it('differentiates crew and equipment placeholders between queued and processing', () => {
@@ -429,11 +491,11 @@ describe('dispatch advisory', () => {
         );
     });
 
-    it('toggles crew and equipment checkboxes and dynamically updates the apply button count', () => {
+    it('toggles crew and equipment checkboxes and dynamically updates the review button count', () => {
         show({ recommendation: proposal });
 
         const applyButton = screen.getByRole('button', {
-            name: 'Apply 1 crew & 1 asset',
+            name: 'Review & apply 1 crew & 1 asset',
         });
         expect(applyButton).toBeEnabled();
 
@@ -443,57 +505,60 @@ describe('dispatch advisory', () => {
         const assetCheckbox = screen.getByRole('checkbox', {
             name: 'Select CR-03 · Crawler Crane',
         });
+        expect(crewCheckbox.closest('label')).toHaveClass(
+            'min-h-11',
+            'min-w-11',
+        );
+        expect(assetCheckbox.closest('label')).toHaveClass(
+            'min-h-11',
+            'min-w-11',
+        );
 
         expect(crewCheckbox).toBeChecked();
         expect(assetCheckbox).toBeChecked();
 
-        // Uncheck crew -> dynamic count changes to "Apply 1 asset"
+        // Uncheck crew -> dynamic count changes to "Review & apply 1 asset"
         fireEvent.click(crewCheckbox);
         expect(crewCheckbox).not.toBeChecked();
         expect(
-            screen.getByRole('button', { name: 'Apply 1 asset' }),
+            screen.getByRole('button', { name: 'Review & apply 1 asset' }),
         ).toBeEnabled();
 
-        // Uncheck asset -> 0 selected -> button shows "Apply selected" and is disabled
+        // Uncheck asset -> 0 selected -> review button is disabled
         fireEvent.click(assetCheckbox);
         expect(assetCheckbox).not.toBeChecked();
         const disabledButton = screen.getByRole('button', {
-            name: 'Apply selected',
+            name: 'Review & apply selected',
         });
         expect(disabledButton).toBeDisabled();
 
-        // Re-check crew -> dynamic count changes to "Apply 1 crew" and enabled
+        // Re-check crew -> dynamic count changes to "Review & apply 1 crew"
         fireEvent.click(crewCheckbox);
         expect(crewCheckbox).toBeChecked();
         expect(
-            screen.getByRole('button', { name: 'Apply 1 crew' }),
+            screen.getByRole('button', { name: 'Review & apply 1 crew' }),
         ).toBeEnabled();
     });
 
-    it('triggers Smart Apply directly in-place on clean suggestions without modal', () => {
-        const onApply = vi.fn();
+    it('opens confirmation before applying clean suggestions', () => {
         const onReview = vi.fn();
 
         show({
             recommendation: proposal,
-            onApply,
             onReview,
         });
 
         const applyButton = screen.getByRole('button', {
-            name: 'Apply 1 crew & 1 asset',
+            name: 'Review & apply 1 crew & 1 asset',
         });
         fireEvent.click(applyButton);
 
-        expect(onApply).toHaveBeenCalledOnce();
-        expect(onApply).toHaveBeenCalledWith([2], [3]);
-        expect(onReview).not.toHaveBeenCalled();
+        expect(onReview).toHaveBeenCalledOnce();
+        expect(onReview).toHaveBeenCalledWith([2], [3]);
     });
 
     it('shows Review & Resolve Conflicts button when recommendation has conflicts', () => {
         const onReview = vi.fn();
-        const onApply = vi.fn();
-
         show({
             recommendation: {
                 ...proposal,
@@ -502,7 +567,6 @@ describe('dispatch advisory', () => {
                 ],
             },
             onReview,
-            onApply,
         });
 
         expect(
@@ -517,7 +581,6 @@ describe('dispatch advisory', () => {
         fireEvent.click(conflictButton);
         expect(onReview).toHaveBeenCalledOnce();
         expect(onReview).toHaveBeenCalledWith([2], [3]);
-        expect(onApply).not.toHaveBeenCalled();
     });
 
     it('allows opening full review modal from clean suggestions via Review details', () => {
@@ -609,6 +672,9 @@ describe('dispatch advisory', () => {
         const assetCheckbox = screen.getByRole('checkbox', {
             name: 'Select CR-03 · Crawler Crane',
         });
+
+        expect(crewCheckbox.closest('label')).toHaveClass('min-h-11');
+        expect(assetCheckbox.closest('label')).toHaveClass('min-h-11');
 
         expect(crewCheckbox).toBeChecked();
         expect(assetCheckbox).toBeChecked();

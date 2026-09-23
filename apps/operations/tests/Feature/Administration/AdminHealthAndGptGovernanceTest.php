@@ -64,4 +64,5 @@ it('returns governance telemetry to authorized users', function (): void {
         'avg_latency_ms',
         'acceptance_rate',
     ]);
+    expect($response->json('acceptance_rate'))->toBeNull();
 });

@@ -15,7 +15,7 @@ import {
     User,
     XCircle,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Button, Modal, PageHeading, Panel } from '@/components/ui';
 import {
@@ -27,16 +27,45 @@ import { cn } from '@/lib/utils';
 import type { Auth } from '@/types/auth';
 import type {
     GptRecommendationViewModel,
+    PaginationMeta,
     WorkspaceCapabilities,
     WorkspaceSection,
 } from '@/types/workspace';
 
+interface GptGovernanceTelemetry {
+    monthly_spend_usd: number;
+    monthly_budget_ceiling_usd: number;
+    total_tokens: number;
+    avg_latency_ms: number;
+    acceptance_rate: number | null;
+    accepted_count: number;
+    rejected_count: number;
+    circuit_breaker_active: boolean;
+}
+
+const GOVERNANCE_STATUS_ERROR =
+    'Governance status could not be loaded. Retry before changing the AI circuit breaker.';
+
+async function readGptGovernanceTelemetry(): Promise<GptGovernanceTelemetry> {
+    const response = await fetch('/operations/gpt-governance/telemetry');
+
+    if (!response.ok) {
+        throw new Error('Governance status request failed.');
+    }
+
+    return response.json();
+}
+
 export function GptRecommendationsSurface({
     recommendations = [],
+    historyPagination,
+    selectedRecommendation,
     capabilities,
     onSectionChange,
 }: {
     recommendations?: GptRecommendationViewModel[];
+    historyPagination?: PaginationMeta;
+    selectedRecommendation?: GptRecommendationViewModel | null;
     capabilities: WorkspaceCapabilities;
     onSectionChange?: (section: WorkspaceSection) => void;
 }) {
@@ -44,37 +73,80 @@ export function GptRecommendationsSurface({
         useState<GptRecommendationViewModel | null>(null);
     const [selectedForReject, setSelectedForReject] =
         useState<GptRecommendationViewModel | null>(null);
+    const [selectedForDetails, setSelectedForDetails] =
+        useState<GptRecommendationViewModel | null>(null);
+    const [dismissedDeepLinkId, setDismissedDeepLinkId] = useState<
+        string | null
+    >(null);
     const [modalTrigger, setModalTrigger] = useState<HTMLElement | null>(null);
     const [retryingId, setRetryingId] = useState<number | null>(null);
+    const page = usePage<{ url: string }>();
+    const selectedId = new URL(page.url, 'http://localhost').searchParams.get(
+        'selected',
+    );
+    const deepLinkedRecommendation =
+        selectedId && selectedId !== dismissedDeepLinkId
+            ? ((selectedRecommendation?.id === Number(selectedId)
+                  ? selectedRecommendation
+                  : recommendations.find(
+                        (recommendation) =>
+                            recommendation.id === Number(selectedId),
+                    )) ?? null)
+            : null;
+    const recommendationDetails =
+        selectedForDetails ?? deepLinkedRecommendation;
     const [pollingStoppedFor, setPollingStoppedFor] = useState<string | null>(
         null,
     );
 
     // AI Governance & Telemetry state
-    const [telemetry, setTelemetry] = useState<{
-        monthly_spend_usd: number;
-        monthly_budget_ceiling_usd: number;
-        total_tokens: number;
-        avg_latency_ms: number;
-        acceptance_rate: number;
-        accepted_count: number;
-        rejected_count: number;
-        circuit_breaker_active: boolean;
-    } | null>(null);
+    const [telemetry, setTelemetry] = useState<GptGovernanceTelemetry | null>(
+        null,
+    );
+    const [telemetryLoading, setTelemetryLoading] = useState(true);
+    const [telemetryError, setTelemetryError] = useState<string | null>(null);
     const [togglingCircuitBreaker, setTogglingCircuitBreaker] = useState(false);
     const [circuitBreakerError, setCircuitBreakerError] = useState<
         string | null
     >(null);
 
+    const refreshTelemetry = useCallback(async () => {
+        setTelemetryLoading(true);
+        setTelemetryError(null);
+
+        try {
+            setTelemetry(await readGptGovernanceTelemetry());
+        } catch {
+            setTelemetry(null);
+            setTelemetryError(GOVERNANCE_STATUS_ERROR);
+        } finally {
+            setTelemetryLoading(false);
+        }
+    }, []);
+
     useEffect(() => {
-        fetch('/operations/gpt-governance/telemetry')
-            .then((res) => (res.ok ? res.json() : null))
+        let active = true;
+
+        readGptGovernanceTelemetry()
             .then((data) => {
-                if (data) {
+                if (active) {
                     setTelemetry(data);
                 }
             })
-            .catch(() => {});
+            .catch(() => {
+                if (active) {
+                    setTelemetryError(GOVERNANCE_STATUS_ERROR);
+                }
+            })
+            .finally(() => {
+                if (active) {
+                    setTelemetryLoading(false);
+                }
+            });
+
+        return () => {
+            active = false;
+        };
     }, []);
 
     const handleToggleCircuitBreaker = async () => {
@@ -232,6 +304,24 @@ export function GptRecommendationsSurface({
         });
     };
 
+    const navigateHistoryPage = (nextPage: number) => {
+        const url = new URL(window.location.href);
+        url.searchParams.set('gpt_history_page', String(nextPage));
+        url.searchParams.delete('selected');
+        router.get(
+            url.toString(),
+            {},
+            {
+                only: [
+                    'gptRecommendations',
+                    'gptRecommendationHistory_pagination',
+                ],
+                preserveState: true,
+                preserveScroll: true,
+            },
+        );
+    };
+
     return (
         <div className="workspace-width-contained">
             <PageHeading
@@ -311,7 +401,9 @@ export function GptRecommendationsSurface({
                                 Manager Acceptance
                             </span>
                             <p className="mt-1 text-2xl font-bold text-ink">
-                                {telemetry.acceptance_rate}%
+                                {telemetry.acceptance_rate === null
+                                    ? 'No decisions'
+                                    : `${telemetry.acceptance_rate}%`}
                             </p>
                             <p className="mt-0.5 text-xs text-ink-soft">
                                 {telemetry.accepted_count} accepted,{' '}
@@ -343,6 +435,33 @@ export function GptRecommendationsSurface({
                             </p>
                         </div>
                     </div>
+                )}
+
+                {telemetryLoading && (
+                    <Panel
+                        role="status"
+                        aria-live="polite"
+                        className="p-4 text-sm text-ink-soft"
+                    >
+                        Loading AI governance status…
+                    </Panel>
+                )}
+                {telemetryError && (
+                    <Panel
+                        role="alert"
+                        className="flex flex-wrap items-center justify-between gap-3 border-danger/30 p-4"
+                    >
+                        <p className="text-sm text-danger-strong">
+                            {telemetryError}
+                        </p>
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => void refreshTelemetry()}
+                        >
+                            Retry governance status
+                        </Button>
+                    </Panel>
                 )}
 
                 {/* Informational Guidance Banner */}
@@ -536,15 +655,15 @@ export function GptRecommendationsSurface({
                                 Recommendation Decision History
                             </h3>
                             <p className="mt-0.5 text-xs text-ink-soft">
-                                Forensic audit archive of accepted, rejected,
-                                and expired proposals.
+                                Retained decisions are available for 90 days.
+                                Filters apply to the current page.
                             </p>
                         </div>
                         {history.length > 0 && (
                             <div
                                 className="flex flex-wrap gap-1 rounded-lg bg-surface-subtle p-1 text-xs"
                                 role="group"
-                                aria-label="Filter decision history"
+                                aria-label="Filter this page of decision history"
                             >
                                 <button
                                     type="button"
@@ -769,47 +888,65 @@ export function GptRecommendationsSurface({
                                                 </td>
 
                                                 <td className="px-4 py-3 text-right">
-                                                    {capabilities.retry_gpt_recommendation &&
-                                                        rec.is_retryable && (
-                                                            <Button
-                                                                size="sm"
-                                                                variant="secondary"
-                                                                disabled={
-                                                                    retryingId ===
-                                                                    rec.id
-                                                                }
-                                                                onClick={() => {
-                                                                    setRetryingId(
-                                                                        rec.id,
-                                                                    );
-                                                                    router.post(
-                                                                        rec.retry_url,
-                                                                        {},
-                                                                        {
-                                                                            onFinish:
-                                                                                () =>
-                                                                                    setRetryingId(
-                                                                                        null,
-                                                                                    ),
-                                                                        },
-                                                                    );
-                                                                }}
-                                                            >
-                                                                <RefreshCw
-                                                                    className={cn(
-                                                                        'mr-1 h-3.5 w-3.5',
+                                                    <div className="flex justify-end gap-2">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="quiet"
+                                                            onClick={(
+                                                                event,
+                                                            ) => {
+                                                                setModalTrigger(
+                                                                    event.currentTarget,
+                                                                );
+                                                                setSelectedForDetails(
+                                                                    rec,
+                                                                );
+                                                            }}
+                                                        >
+                                                            View details
+                                                        </Button>
+                                                        {capabilities.retry_gpt_recommendation &&
+                                                            rec.is_retryable && (
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="secondary"
+                                                                    disabled={
                                                                         retryingId ===
-                                                                            rec.id &&
-                                                                            'animate-spin',
-                                                                    )}
-                                                                    aria-hidden="true"
-                                                                />
-                                                                {retryingId ===
-                                                                rec.id
-                                                                    ? 'Retrying…'
-                                                                    : 'Retry'}
-                                                            </Button>
-                                                        )}
+                                                                        rec.id
+                                                                    }
+                                                                    onClick={() => {
+                                                                        setRetryingId(
+                                                                            rec.id,
+                                                                        );
+                                                                        router.post(
+                                                                            rec.retry_url,
+                                                                            {},
+                                                                            {
+                                                                                onFinish:
+                                                                                    () =>
+                                                                                        setRetryingId(
+                                                                                            null,
+                                                                                        ),
+                                                                            },
+                                                                        );
+                                                                    }}
+                                                                >
+                                                                    <RefreshCw
+                                                                        className={cn(
+                                                                            'mr-1 h-3.5 w-3.5',
+                                                                            retryingId ===
+                                                                                rec.id &&
+                                                                                'animate-spin',
+                                                                        )}
+                                                                        aria-hidden="true"
+                                                                    />
+                                                                    {retryingId ===
+                                                                    rec.id
+                                                                        ? 'Retrying…'
+                                                                        : 'Retry'}
+                                                                </Button>
+                                                            )}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
@@ -818,8 +955,92 @@ export function GptRecommendationsSurface({
                             </div>
                         </Panel>
                     )}
+                    {historyPagination && historyPagination.last_page > 1 && (
+                        <nav
+                            aria-label="Recommendation history pages"
+                            className="flex items-center justify-between gap-3"
+                        >
+                            <Button
+                                variant="secondary"
+                                disabled={historyPagination.current_page <= 1}
+                                onClick={() =>
+                                    navigateHistoryPage(
+                                        historyPagination.current_page - 1,
+                                    )
+                                }
+                            >
+                                Previous page
+                            </Button>
+                            <span className="text-xs text-ink-soft tabular-nums">
+                                Showing {historyPagination.from ?? 0}–
+                                {historyPagination.to ?? 0} of{' '}
+                                {historyPagination.total} retained decisions ·
+                                page {historyPagination.current_page} of{' '}
+                                {historyPagination.last_page}
+                            </span>
+                            <Button
+                                variant="secondary"
+                                disabled={
+                                    historyPagination.current_page >=
+                                    historyPagination.last_page
+                                }
+                                onClick={() =>
+                                    navigateHistoryPage(
+                                        historyPagination.current_page + 1,
+                                    )
+                                }
+                            >
+                                Next page
+                            </Button>
+                        </nav>
+                    )}
                 </div>
             </div>
+
+            {recommendationDetails && (
+                <Modal
+                    open
+                    size="md"
+                    onClose={() => {
+                        setSelectedForDetails(null);
+
+                        if (selectedId) {
+                            setDismissedDeepLinkId(selectedId);
+                        }
+                    }}
+                    returnFocusTo={modalTrigger}
+                    title={`Recommendation #${recommendationDetails.id}`}
+                    description={`Dispatch #${recommendationDetails.subject_id} · ${recommendationDetails.purpose.replace('_', ' ')}`}
+                >
+                    <div className="space-y-4">
+                        <div className="space-y-1 text-xs text-ink-soft">
+                            <p>
+                                Requested by{' '}
+                                {recommendationDetails.requested_by.name}
+                                {(recommendationDetails.decided_by?.name ||
+                                    recommendationDetails.decided_by_name) &&
+                                    ` · decided by ${recommendationDetails.decided_by?.name ?? recommendationDetails.decided_by_name}`}
+                            </p>
+                            <p>
+                                Generated{' '}
+                                {recommendationDetails.generated_at
+                                    ? formatDateTime(
+                                          recommendationDetails.generated_at,
+                                      )
+                                    : 'time unavailable'}
+                                {recommendationDetails.expires_at &&
+                                    ` · valid until ${formatDateTime(recommendationDetails.expires_at)}`}
+                            </p>
+                        </div>
+                        {recommendationDetails.response_summary && (
+                            <p className="text-sm leading-relaxed text-ink">
+                                {recommendationDetails.response_summary}
+                            </p>
+                        )}
+                        <RecommendationDetails rec={recommendationDetails} />
+                    </div>
+                </Modal>
+            )}
 
             {/* Accept Modal */}
             {selectedForAccept && (
@@ -1384,39 +1605,43 @@ export function AcceptGptModal({
                             return (
                                 <li
                                     key={`${person.user_id}-${person.assignment_type}`}
-                                    className={cn(
-                                        'flex items-start gap-2.5 rounded-md p-1.5 transition-colors',
-                                        isSelected
-                                            ? 'bg-surface'
-                                            : 'bg-transparent opacity-60',
-                                    )}
                                 >
-                                    <input
-                                        type="checkbox"
-                                        checked={isSelected}
-                                        onChange={() =>
-                                            togglePersonnel(person.user_id)
-                                        }
-                                        aria-label={`Select ${displayName}`}
-                                        className="mt-0.5 h-4 w-4 cursor-pointer rounded accent-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-                                        disabled={processing}
-                                    />
-                                    <div className="min-w-0 flex-1">
-                                        <span className="font-medium text-ink">
-                                            {displayName}
-                                        </span>{' '}
-                                        · {humanize(person.assignment_type)}
-                                        {person.role &&
-                                            humanize(person.role) !==
-                                                humanize(
-                                                    person.assignment_type,
-                                                ) && (
-                                                <span className="text-ink-soft">
-                                                    {' '}
-                                                    ({humanize(person.role)})
-                                                </span>
-                                            )}
-                                    </div>
+                                    <label
+                                        className={cn(
+                                            'flex min-h-11 cursor-pointer items-start gap-2.5 rounded-md p-2 transition-colors',
+                                            isSelected
+                                                ? 'bg-surface'
+                                                : 'bg-transparent opacity-60',
+                                        )}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={isSelected}
+                                            onChange={() =>
+                                                togglePersonnel(person.user_id)
+                                            }
+                                            aria-label={`Select ${displayName}`}
+                                            className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer rounded accent-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                                            disabled={processing}
+                                        />
+                                        <div className="min-w-0 flex-1">
+                                            <span className="font-medium text-ink">
+                                                {displayName}
+                                            </span>{' '}
+                                            · {humanize(person.assignment_type)}
+                                            {person.role &&
+                                                humanize(person.role) !==
+                                                    humanize(
+                                                        person.assignment_type,
+                                                    ) && (
+                                                    <span className="text-ink-soft">
+                                                        {' '}
+                                                        ({humanize(person.role)}
+                                                        )
+                                                    </span>
+                                                )}
+                                        </div>
+                                    </label>
                                 </li>
                             );
                         })}
@@ -1435,37 +1660,40 @@ export function AcceptGptModal({
                             return (
                                 <li
                                     key={`${asset.operational_asset_id}-${asset.assignment_type}`}
-                                    className={cn(
-                                        'flex items-start gap-2.5 rounded-md p-1.5 transition-colors',
-                                        isSelected
-                                            ? 'bg-surface'
-                                            : 'bg-transparent opacity-60',
-                                    )}
                                 >
-                                    <input
-                                        type="checkbox"
-                                        checked={isSelected}
-                                        onChange={() =>
-                                            toggleAsset(
-                                                asset.operational_asset_id,
-                                            )
-                                        }
-                                        aria-label={`Select ${assetLabel}`}
-                                        className="mt-0.5 h-4 w-4 cursor-pointer rounded accent-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-                                        disabled={processing}
-                                    />
-                                    <div className="min-w-0 flex-1">
-                                        <span className="font-medium text-ink">
-                                            {assetLabel}
-                                        </span>{' '}
-                                        · {humanize(asset.assignment_type)}
-                                        {asset.capacity && (
-                                            <span className="text-ink-soft">
-                                                {' '}
-                                                ({asset.capacity})
-                                            </span>
+                                    <label
+                                        className={cn(
+                                            'flex min-h-11 cursor-pointer items-start gap-2.5 rounded-md p-2 transition-colors',
+                                            isSelected
+                                                ? 'bg-surface'
+                                                : 'bg-transparent opacity-60',
                                         )}
-                                    </div>
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={isSelected}
+                                            onChange={() =>
+                                                toggleAsset(
+                                                    asset.operational_asset_id,
+                                                )
+                                            }
+                                            aria-label={`Select ${assetLabel}`}
+                                            className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer rounded accent-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                                            disabled={processing}
+                                        />
+                                        <div className="min-w-0 flex-1">
+                                            <span className="font-medium text-ink">
+                                                {assetLabel}
+                                            </span>{' '}
+                                            · {humanize(asset.assignment_type)}
+                                            {asset.capacity && (
+                                                <span className="text-ink-soft">
+                                                    {' '}
+                                                    ({asset.capacity})
+                                                </span>
+                                            )}
+                                        </div>
+                                    </label>
                                 </li>
                             );
                         })}

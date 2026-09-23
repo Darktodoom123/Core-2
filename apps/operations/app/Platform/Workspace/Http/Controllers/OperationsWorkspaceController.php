@@ -24,15 +24,17 @@ use App\Platform\Reporting\Models\JobReport;
 use App\Platform\Reporting\Models\ReportExport;
 use App\Platform\Tracking\Contracts\TrackingClientInterface;
 use App\Platform\Tracking\Data\LatestLocationDto;
-use App\Platform\Workspace\Queries\WorkspaceAssetsQuery;
 use App\Platform\Workspace\Queries\DispatchDeskIncomingQuery;
+use App\Platform\Workspace\Queries\WorkspaceAssetsQuery;
 use App\Platform\Workspace\Queries\WorkspaceFuelRequestsQuery;
 use App\Platform\Workspace\Queries\WorkspaceJobReportsQuery;
 use App\Platform\Workspace\ViewModels\OperationsWorkspaceViewModel;
 use App\Shared\Assets\Models\OperationalAsset;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
@@ -58,7 +60,7 @@ final class OperationsWorkspaceController extends Controller
         'reports' => ['jobReports', 'jobReports_total', 'jobReports_stats', 'jobReports_pagination', 'reportExports', 'jobs'],
         'notifications' => ['notifications'],
         'archive' => ['archivedJobs'],
-        'gpt-recommendations' => ['gptRecommendations', 'jobs'],
+        'gpt-recommendations' => ['gptRecommendations', 'gptRecommendationHistory_pagination', 'gptSelectedRecommendation', 'jobs'],
         'users' => ['users', 'auditEvents'],
         'audit' => ['auditEvents'],
         'sos' => [],
@@ -270,10 +272,29 @@ final class OperationsWorkspaceController extends Controller
             })(),
             'notifications' => ['notifications' => OperationsWorkspaceViewModel::notifications($this->fetchNotifications($user))],
             'archive' => ['archivedJobs' => OperationsWorkspaceViewModel::archivedJobs($this->fetchArchivedJobs($user))],
-            'gpt-recommendations' => [
-                'gptRecommendations' => OperationsWorkspaceViewModel::gptRecommendations($this->fetchGptRecommendations($user)),
-                'jobs' => OperationsWorkspaceViewModel::jobs($this->fetchJobs($user, $canViewAllAssignments)),
-            ],
+            'gpt-recommendations' => (function () use ($user, $canViewAllAssignments): array {
+                [$recommendations, $history, $selected] = $this->fetchGptRecommendationsForGovernance(
+                    $user,
+                    max(1, request()->integer('gpt_history_page', 1)),
+                    request()->integer('selected') ?: null,
+                );
+
+                return [
+                    'gptRecommendations' => OperationsWorkspaceViewModel::gptRecommendations($recommendations),
+                    'gptSelectedRecommendation' => $selected === null
+                        ? null
+                        : (OperationsWorkspaceViewModel::gptRecommendations(collect([$selected]))[0] ?? null),
+                    'gptRecommendationHistory_pagination' => [
+                        'current_page' => $history->currentPage(),
+                        'last_page' => $history->lastPage(),
+                        'per_page' => $history->perPage(),
+                        'total' => $history->total(),
+                        'from' => $history->firstItem(),
+                        'to' => $history->lastItem(),
+                    ],
+                    'jobs' => OperationsWorkspaceViewModel::jobs($this->fetchJobs($user, $canViewAllAssignments)),
+                ];
+            })(),
             'users' => [
                 'users' => OperationsWorkspaceViewModel::users($this->fetchUsers($user)),
                 'auditEvents' => OperationsWorkspaceViewModel::auditEvents($this->fetchAuditEvents($user)),
@@ -885,22 +906,75 @@ final class OperationsWorkspaceController extends Controller
             return collect();
         }
 
+        return $this->gptRecommendationQuery($user)
+            ->with(['requestedBy:id,name', 'decidedBy:id,name'])
+            ->latest()
+            ->limit(50)
+            ->get();
+    }
+
+    /**
+     * @return array{0: Collection<int, GptRecommendation>, 1: LengthAwarePaginator<int, GptRecommendation>, 2: GptRecommendation|null}
+     */
+    private function fetchGptRecommendationsForGovernance(User $user, int $historyPage, ?int $selectedId): array
+    {
+        $base = $this->gptRecommendationQuery($user)
+            ->with(['requestedBy:id,name', 'decidedBy:id,name']);
+
+        $active = (clone $base)
+            ->where(function (Builder $query): void {
+                $query->whereIn('status', ['draft', 'processing'])
+                    ->orWhere(function (Builder $pending): void {
+                        $pending->where('status', 'pending_review')
+                            ->where(function (Builder $expiry): void {
+                                $expiry->whereNull('expires_at')->orWhere('expires_at', '>', now());
+                            });
+                    });
+            })
+            ->latest()
+            ->get();
+
+        $history = (clone $base)
+            ->where(function (Builder $query): void {
+                $query->whereNotIn('status', ['draft', 'processing', 'pending_review'])
+                    ->orWhere(function (Builder $pending): void {
+                        $pending->where('status', 'pending_review')
+                            ->whereNotNull('expires_at')
+                            ->where('expires_at', '<=', now());
+                    });
+            })
+            ->latest()
+            ->orderByDesc('id')
+            ->paginate(25, ['*'], 'gpt_history_page', $historyPage);
+
+        $recommendations = $active->merge($history->getCollection());
+
+        $selected = $selectedId === null
+            ? null
+            : (clone $base)->whereKey($selectedId)->first();
+
+        return [$recommendations->unique('id')->values(), $history, $selected];
+    }
+
+    /** @return Builder<GptRecommendation> */
+    private function gptRecommendationQuery(User $user): Builder
+    {
         $purposes = array_values(array_filter([
             $user->can(PermissionName::GptUseDispatch->value) ? 'dispatch_assignment' : null,
             $user->can(PermissionName::GptUseOperations->value) ? 'operations_review' : null,
             $user->can(PermissionName::GptUseMaintenance->value) ? 'maintenance_advice' : null,
         ]));
 
-        $dispatchMorphClass = (new DispatchJob)->getMorphClass();
-
-        return GptRecommendation::query()
+        $query = GptRecommendation::query()
             ->whereIn('purpose', $purposes)
-            ->where('subject_type', $dispatchMorphClass)
-            ->whereIn('subject_id', DispatchJob::query()->visibleTo($user)->select('id'))
-            ->with(['requestedBy:id,name', 'decidedBy:id,name'])
-            ->latest()
-            ->limit(50)
-            ->get();
+            ->where('subject_type', (new DispatchJob)->getMorphClass())
+            ->whereIn('subject_id', DispatchJob::query()->visibleTo($user)->select('id'));
+
+        if (! Gate::forUser($user)->allows('viewAny', GptRecommendation::class)) {
+            $query->whereRaw('1 = 0');
+        }
+
+        return $query;
     }
 
     /** @return Collection<int, JobReport> */
