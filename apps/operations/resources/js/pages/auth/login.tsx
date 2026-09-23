@@ -18,7 +18,7 @@ export default function Login({ status }: { status?: string }) {
             <Head title="Sign in" />
             <h1
                 id="auth-title"
-                className="text-4xl leading-[1.05] font-semibold tracking-[-0.03em] text-ink sm:text-[3.25rem]"
+                className="text-4xl leading-[1.05] font-semibold tracking-[-0.03em] text-ink sm:text-[3.25rem] xl:text-4xl 2xl:text-5xl"
             >
                 Welcome back.
             </h1>
@@ -44,6 +44,7 @@ export default function Login({ status }: { status?: string }) {
                     <input
                         id="username"
                         type="text"
+                        required
                         value={form.data.username}
                         onChange={(e) =>
                             form.setData('username', e.target.value)
@@ -78,6 +79,7 @@ export default function Login({ status }: { status?: string }) {
                         <input
                             id="password"
                             type={showPassword ? 'text' : 'password'}
+                            required
                             value={form.data.password}
                             onChange={(e) =>
                                 form.setData('password', e.target.value)
