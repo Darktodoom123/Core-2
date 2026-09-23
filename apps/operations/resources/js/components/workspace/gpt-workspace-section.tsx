@@ -346,7 +346,7 @@ export function GptRecommendationsSurface({
                 )}
 
                 {/* Informational Guidance Banner */}
-                <div className="flex items-start gap-3 rounded-xl border border-brand/30 bg-brand-soft/40 p-4">
+                <div className="flex items-start gap-3 rounded-xl border border-brand-strong/30 bg-brand-soft/40 p-4">
                     <Bot className="mt-0.5 h-5 w-5 shrink-0 text-brand-strong" />
                     <div className="text-xs text-ink">
                         <span className="font-semibold text-brand-strong">
@@ -861,7 +861,7 @@ function PendingRecommendationCard({
         auth?.prototype_role === 'system_administrator';
 
     return (
-        <Panel className="space-y-4 border-brand/30 bg-surface p-5 shadow-sm">
+        <Panel className="space-y-4 border-brand-strong/30 bg-surface p-5 shadow-sm">
             {/* Header / Purpose & 15-Minute Expiry Countdown */}
             <div className="flex items-start justify-between border-b border-line pb-3">
                 <div>
@@ -1571,7 +1571,7 @@ export function RejectGptModal({
                             autoFocus
                             data-autofocus=""
                             type="text"
-                            className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-brand focus:outline-none"
+                            className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-brand-strong focus:outline-none"
                             placeholder="e.g. Driver requested off shift / Site requires 80T crane instead"
                             value={form.data.reason}
                             onChange={(e) =>

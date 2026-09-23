@@ -211,7 +211,7 @@ export function NotificationCenterPopover({
                     ref={closeRef}
                     type="button"
                     onClick={() => setOpen(false)}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-soft hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-soft hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none"
                     aria-label="Close notifications"
                 >
                     <X className="h-4 w-4" aria-hidden="true" />
@@ -229,7 +229,7 @@ export function NotificationCenterPopover({
                             type="button"
                             onClick={() => setFilter(option)}
                             aria-pressed={selected}
-                            className={`min-h-11 min-w-11 rounded-lg px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none ${
+                            className={`min-h-11 min-w-11 rounded-lg px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none ${
                                 selected
                                     ? 'bg-brand-soft text-brand-strong'
                                     : 'text-ink-soft hover:bg-surface-subtle hover:text-ink'
@@ -297,7 +297,7 @@ export function NotificationCenterPopover({
                                                     );
                                                 }
                                             }}
-                                            className="cursor-pointer rounded focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                                            className="cursor-pointer rounded focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none"
                                         >
                                             <div className="flex items-start justify-between gap-3">
                                                 <div className="min-w-0">
@@ -351,7 +351,7 @@ export function NotificationCenterPopover({
                                                     disabled={
                                                         processingId !== null
                                                     }
-                                                    className="inline-flex min-h-7 items-center rounded px-2 text-xs font-semibold text-brand-strong hover:bg-brand-soft focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                                                    className="inline-flex min-h-7 items-center rounded px-2 text-xs font-semibold text-brand-strong hover:bg-brand-soft focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
                                                 >
                                                     {processingId ===
                                                     notification.id
@@ -372,7 +372,7 @@ export function NotificationCenterPopover({
                 <button
                     type="button"
                     onClick={handleViewAll}
-                    className="flex min-h-11 w-full items-center justify-center rounded-lg border border-line-strong bg-surface px-3 text-sm font-semibold text-ink hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                    className="flex min-h-11 w-full items-center justify-center rounded-lg border border-line-strong bg-surface px-3 text-sm font-semibold text-ink hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none"
                 >
                     View all notifications
                 </button>
@@ -400,7 +400,7 @@ export function NotificationCenterPopover({
                 ref={triggerRef}
                 type="button"
                 onClick={toggleOpen}
-                className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none"
                 aria-label={
                     unreadCount > 0
                         ? `Notifications, ${unreadCount} unread`

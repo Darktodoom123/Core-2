@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
     badgeText: {
         fontSize: 12,
         fontWeight: '700',
-        color: '#D97706',
+        color: '#FFBF00',
     },
     title: {
         fontSize: 18,
@@ -396,14 +396,14 @@ const styles = StyleSheet.create({
         width: 22,
         height: 22,
         borderRadius: 11,
-        backgroundColor: '#D97706',
+        backgroundColor: '#FFBF00',
         justifyContent: 'center',
         alignItems: 'center',
     },
     methodNumberText: {
         fontSize: 12,
         fontWeight: '700',
-        color: '#FFFFFF',
+        color: '#0F172A',
     },
     sectionHeading: {
         fontSize: 14,
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
     },
     primaryButton: {
         flexDirection: 'row',
-        backgroundColor: '#D97706',
+        backgroundColor: '#FFBF00',
         borderRadius: 10,
         paddingVertical: 12,
         alignItems: 'center',
@@ -440,7 +440,7 @@ const styles = StyleSheet.create({
     primaryButtonText: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#FFFFFF',
+        color: '#0F172A',
     },
     pinInstructions: {
         fontSize: 13,
@@ -460,19 +460,19 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         backgroundColor: '#FFFFFF',
         borderWidth: 2,
-        borderColor: '#D97706',
+        borderColor: '#FFBF00',
         justifyContent: 'center',
         alignItems: 'center',
         ...shadows.sm,
     },
     darkPinBox: {
         backgroundColor: '#1E293B',
-        borderColor: '#F59E0B',
+        borderColor: '#FFBF00',
     },
     pinDigit: {
         fontSize: 26,
         fontWeight: '800',
-        color: '#D97706',
+        color: '#FFBF00',
     },
     pinInputWrap: {
         marginTop: 14,

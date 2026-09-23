@@ -3099,8 +3099,8 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                     <View
                                         testID="sos-responder-notice-banner"
                                         style={{
-                                            backgroundColor: '#fef2f2',
-                                            borderColor: '#dc2626',
+                                            backgroundColor: '#FEF2F2',
+                                            borderColor: '#DC2626',
                                             borderWidth: 1,
                                             borderRadius: 8,
                                             padding: 12,
@@ -3112,7 +3112,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                         <Text
                                             style={{
                                                 fontWeight: 'bold',
-                                                color: '#b91c1c',
+                                                color: '#B91C1C',
                                                 fontSize: 14,
                                             }}
                                         >
@@ -3120,7 +3120,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                         </Text>
                                         <Text
                                             style={{
-                                                color: '#7f1d1d',
+                                                color: '#7F1D1D',
                                                 marginTop: 4,
                                                 fontSize: 13,
                                             }}
@@ -3134,7 +3134,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                         </Text>
                                         <Text
                                             style={{
-                                                color: '#991b1b',
+                                                color: '#991B1B',
                                                 marginTop: 4,
                                                 fontSize: 12,
                                                 fontStyle: 'italic',
@@ -3156,13 +3156,13 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                                 marginTop: 8,
                                                 paddingHorizontal: 10,
                                                 paddingVertical: 5,
-                                                backgroundColor: '#dc2626',
+                                                backgroundColor: '#DC2626',
                                                 borderRadius: 4,
                                             }}
                                         >
                                             <Text
                                                 style={{
-                                                    color: '#ffffff',
+                                                    color: '#FFFFFF',
                                                     fontSize: 12,
                                                     fontWeight: '600',
                                                 }}
@@ -3356,7 +3356,7 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     actionButton: {
-        backgroundColor: colors.amber,
+        backgroundColor: colors.primary,
         minHeight: 48,
         width: '100%',
     },

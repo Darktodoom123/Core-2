@@ -119,7 +119,7 @@ export function SosResponseQueue({
                                     <li key={incident.id}>
                                         <button
                                             type="button"
-                                            className={`min-h-11 w-full px-4 py-3 text-left transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none focus-visible:ring-inset ${selected ? 'bg-danger-soft/60' : ''}`}
+                                            className={`min-h-11 w-full px-4 py-3 text-left transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none focus-visible:ring-inset ${selected ? 'bg-danger-soft/60' : ''}`}
                                             onClick={() =>
                                                 setSelectedId(incident.id)
                                             }

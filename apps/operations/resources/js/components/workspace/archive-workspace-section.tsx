@@ -72,7 +72,7 @@ export function ArchiveSurface({
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder="Search by reference, client, or reason…"
-                                className="h-11 w-full rounded-lg border border-line bg-surface pr-14 pl-8 text-xs text-ink placeholder:text-ink-soft focus:border-brand focus:outline-none"
+                                className="h-11 w-full rounded-lg border border-line bg-surface pr-14 pl-8 text-xs text-ink placeholder:text-ink-soft focus:border-brand-strong focus:outline-none"
                             />
                             {searchQuery && (
                                 <button
@@ -246,7 +246,7 @@ function RestoreJobModal({
                             onChange={(e) =>
                                 form.setData('reason', e.target.value)
                             }
-                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
+                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand-strong focus:outline-none"
                             placeholder="e.g. Accidental archive / Reopened with client approval"
                             required
                         />

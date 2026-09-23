@@ -401,7 +401,7 @@ export function GuidedDispatch({
                     <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
                             <Bot
-                                className="h-5 w-5 text-brand"
+                                className="h-5 w-5 text-brand-strong"
                                 aria-hidden="true"
                             />
                             <h2 className="font-semibold text-ink">
@@ -729,8 +729,8 @@ export function DispatchBoard({
                                                                 'absolute top-2 bottom-2 min-w-24 overflow-hidden rounded-lg border px-2 py-1.5 text-left',
                                                                 job.id ===
                                                                     selectedJobId
-                                                                    ? 'border-brand bg-brand-soft ring-2 ring-brand/20'
-                                                                    : 'border-blue-200 bg-blue-50 hover:border-brand',
+                                                                    ? 'border-brand-strong bg-brand-soft ring-2 ring-brand-strong/20'
+                                                                    : 'border-blue-200 bg-blue-50 hover:border-brand-strong',
                                                                 conflict &&
                                                                     'border-warning bg-warning-soft',
                                                             )}

@@ -152,7 +152,7 @@ export function DvirWalkaroundModal({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="rounded-lg p-1.5 text-ink-soft hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                        className="rounded-lg p-1.5 text-ink-soft hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                         aria-label="Close dialog"
                     >
                         <X className="h-5 w-5" />
@@ -231,7 +231,7 @@ export function DvirWalkaroundModal({
                                                             photos.length,
                                                     )
                                                 }
-                                                className="absolute top-1/2 left-2 -translate-y-1/2 rounded-full bg-black/60 p-2 text-white/80 transition-colors hover:bg-black/80 hover:text-white focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                                className="absolute top-1/2 left-2 -translate-y-1/2 rounded-full bg-black/60 p-2 text-white/80 transition-colors hover:bg-black/80 hover:text-white focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                                                 aria-label="Previous photo"
                                             >
                                                 <ChevronLeft className="h-5 w-5" />
@@ -245,7 +245,7 @@ export function DvirWalkaroundModal({
                                                             photos.length,
                                                     )
                                                 }
-                                                className="absolute top-1/2 right-2 -translate-y-1/2 rounded-full bg-black/60 p-2 text-white/80 transition-colors hover:bg-black/80 hover:text-white focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                                className="absolute top-1/2 right-2 -translate-y-1/2 rounded-full bg-black/60 p-2 text-white/80 transition-colors hover:bg-black/80 hover:text-white focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                                                 aria-label="Next photo"
                                             >
                                                 <ChevronRight className="h-5 w-5" />
@@ -282,9 +282,9 @@ export function DvirWalkaroundModal({
                                                 setSelectedPhotoIndex(index)
                                             }
                                             className={cn(
-                                                'group relative aspect-4/3 overflow-hidden rounded-lg border text-left transition-all focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
+                                                'group relative aspect-4/3 overflow-hidden rounded-lg border text-left transition-all focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
                                                 isSelected
-                                                    ? 'border-brand-strong ring-2 ring-brand/40'
+                                                    ? 'border-brand-strong ring-2 ring-brand-strong/40'
                                                     : 'border-line opacity-75 hover:opacity-100',
                                             )}
                                         >

@@ -142,9 +142,9 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                                 <Icon
                                     color={
                                         !isDarkHud
-                                            ? '#D97706'
+                                            ? '#FFBF00'
                                             : isDarkHud
-                                              ? '#F59E0B'
+                                              ? '#FFBF00'
                                               : colors.secondary
                                     }
                                     name="sun"
@@ -219,7 +219,7 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                             >
                                 <Icon
                                     color={
-                                        isDarkHud ? '#F59E0B' : colors.secondary
+                                        isDarkHud ? '#FFBF00' : colors.secondary
                                     }
                                     name="moon"
                                     size={20}
@@ -384,8 +384,8 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                                             ? '#EF4444'
                                             : pendingCount > 0
                                               ? isDarkHud
-                                                  ? '#FBBF24'
-                                                  : '#D97706'
+                                                  ? '#FFBF00'
+                                                  : '#806000'
                                               : isDarkHud
                                                 ? '#34D399'
                                                 : '#059669'
@@ -474,7 +474,7 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                                 testID="sync-outbox-now-btn"
                             >
                                 <Icon
-                                    color={isDarkHud ? '#FDE68A' : '#B45309'}
+                                    color={isDarkHud ? '#FFF3C4' : '#806000'}
                                     name="sync"
                                     size={16}
                                 />
@@ -864,10 +864,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     themeIconSquircleActive: {
-        backgroundColor: '#FEF3C7',
+        backgroundColor: '#FFF3C4',
     },
     themeIconSquircleActiveDark: {
-        backgroundColor: '#78350F40',
+        backgroundColor: '#33280040',
     },
     themeIconSquircleInactive: {
         backgroundColor: '#E2E8F0',
@@ -883,14 +883,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     checkCircleActive: {
-        backgroundColor: '#FEF3C7',
+        backgroundColor: '#FFF3C4',
         borderWidth: 1.5,
-        borderColor: '#D97706',
+        borderColor: '#FFBF00',
     },
     checkCircleActiveDark: {
-        backgroundColor: '#78350F',
+        backgroundColor: '#332800',
         borderWidth: 1.5,
-        borderColor: '#F59E0B',
+        borderColor: '#FFBF00',
     },
     checkCircleInactive: {
         borderWidth: 1.5,
@@ -901,12 +901,12 @@ const styles = StyleSheet.create({
         borderColor: '#475569',
     },
     themeOptionActive: {
-        borderColor: '#D97706',
-        backgroundColor: '#FFFBEB',
+        borderColor: '#FFBF00',
+        backgroundColor: '#FFF3C4',
     },
     themeOptionActiveDark: {
-        borderColor: '#F59E0B',
-        backgroundColor: '#78350F26',
+        borderColor: '#FFBF00',
+        backgroundColor: '#33280026',
     },
     themeOptionCopy: {
         gap: 2,
@@ -917,10 +917,10 @@ const styles = StyleSheet.create({
         color: '#0F172A',
     },
     themeOptionTitleActive: {
-        color: '#B45309',
+        color: '#806000',
     },
     themeOptionTitleActiveDark: {
-        color: '#FDE68A',
+        color: '#FFBF00',
     },
     darkThemeOptionTitle: {
         color: '#F8FAFC',
@@ -930,10 +930,10 @@ const styles = StyleSheet.create({
         color: '#64748B',
     },
     themeOptionSublabelActive: {
-        color: '#92400E',
+        color: '#806000',
     },
     themeOptionSublabelActiveDark: {
-        color: '#FCD34D',
+        color: '#FFBF00',
     },
     darkThemeOptionSublabel: {
         color: '#94A3B8',
@@ -941,12 +941,12 @@ const styles = StyleSheet.create({
     themeCheckmark: {
         fontSize: 12,
         fontWeight: '800',
-        color: '#D97706',
+        color: '#FFBF00',
     },
     themeCheckmarkDark: {
         fontSize: 12,
         fontWeight: '800',
-        color: '#F59E0B',
+        color: '#FFBF00',
     },
     healthInsetContainer: {
         marginTop: 14,
@@ -979,10 +979,10 @@ const styles = StyleSheet.create({
         backgroundColor: '#064E3B60',
     },
     healthSquircleWarning: {
-        backgroundColor: '#FEF3C7',
+        backgroundColor: '#FFF3C4',
     },
     darkHealthSquircleWarning: {
-        backgroundColor: '#78350F60',
+        backgroundColor: '#33280060',
     },
     healthSquircleNeutral: {
         backgroundColor: '#F1F5F9',
@@ -1038,10 +1038,10 @@ const styles = StyleSheet.create({
         color: '#F8FAFC',
     },
     healthValueWarning: {
-        color: '#D97706',
+        color: '#FFBF00',
     },
     darkHealthValueWarning: {
-        color: '#FBBF24',
+        color: '#FFBF00',
     },
     healthValueAttention: {
         color: '#DC2626',
@@ -1099,25 +1099,25 @@ const styles = StyleSheet.create({
     syncNowBtn: {
         minHeight: 48,
         borderRadius: 10,
-        backgroundColor: '#FEF3C7',
+        backgroundColor: '#FFF3C4',
         borderWidth: 1,
-        borderColor: '#FDE68A',
+        borderColor: '#FFF3C4',
         flexDirection: 'row',
         gap: 8,
         justifyContent: 'center',
         alignItems: 'center',
     },
     darkSyncNowBtn: {
-        backgroundColor: '#78350F',
-        borderColor: '#B45309',
+        backgroundColor: '#332800',
+        borderColor: '#332800',
     },
     syncNowBtnText: {
         fontSize: 13,
         fontWeight: '700',
-        color: '#B45309',
+        color: '#806000',
     },
     darkSyncNowBtnText: {
-        color: '#FDE68A',
+        color: '#FFBF00',
     },
     pushPermBtn: {
         minHeight: 48,
@@ -1259,16 +1259,16 @@ const styles = StyleSheet.create({
         color: '#94A3B8',
     },
     warningCallout: {
-        backgroundColor: '#FEF3C7',
+        backgroundColor: '#FFF3C4',
         borderRadius: 10,
         padding: 12,
         marginBottom: 20,
         borderWidth: 1,
-        borderColor: '#FDE68A',
+        borderColor: '#FFF3C4',
     },
     warningCalloutText: {
         fontSize: 13,
-        color: '#92400E',
+        color: '#806000',
         lineHeight: 18,
         textAlign: 'center',
         fontWeight: '500',

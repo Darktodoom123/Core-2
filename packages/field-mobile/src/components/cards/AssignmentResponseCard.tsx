@@ -169,15 +169,15 @@ export const AssignmentResponseCard: React.FC<AssignmentResponseCardProps> = ({
 
 const styles = StyleSheet.create({
     card: {
-        backgroundColor: colors.amberLight,
-        borderColor: colors.amberBorder,
+        backgroundColor: colors.warningLight,
+        borderColor: colors.warningBorder,
         borderRadius: 12,
         borderWidth: 1,
         marginBottom: 16,
         padding: 16,
     },
     heading: {
-        color: colors.amberDark,
+        color: colors.warningDark,
         fontSize: 17,
         fontWeight: '800',
     },
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
         gap: 10,
     },
     acceptButton: {
-        backgroundColor: colors.amber,
+        backgroundColor: colors.primary,
         width: '100%',
     },
     rejectButton: {

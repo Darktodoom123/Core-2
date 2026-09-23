@@ -322,7 +322,7 @@ export function FuelScreen({
                                     style={[
                                         textStyle,
                                         {
-                                            color: '#ef4444',
+                                            color: '#EF4444',
                                             fontWeight: 'bold',
                                         },
                                     ]}

@@ -168,7 +168,7 @@ export function SafetyLockoutBanner({
                             <button
                                 type="button"
                                 onClick={() => setShowClearModal(false)}
-                                className="rounded-lg p-1.5 text-ink-soft hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                className="rounded-lg p-1.5 text-ink-soft hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                             >
                                 <X className="h-5 w-5" />
                             </button>
@@ -236,7 +236,7 @@ export function SafetyLockoutBanner({
                                         )
                                     }
                                     placeholder="List mechanical repairs, component replacements, hydraulic adjustments, or safety tests conducted…"
-                                    className="mt-1 w-full rounded-lg border border-line bg-surface p-2.5 text-xs text-ink placeholder:text-ink-soft focus:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                    className="mt-1 w-full rounded-lg border border-line bg-surface p-2.5 text-xs text-ink placeholder:text-ink-soft focus:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                                 />
                                 {form.errors.work_performed && (
                                     <p className="mt-1 text-xs text-danger">
@@ -256,7 +256,7 @@ export function SafetyLockoutBanner({
                                                 e.target.checked,
                                             )
                                         }
-                                        className="mt-0.5 rounded border-line text-brand focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                        className="mt-0.5 rounded border-line text-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                                     />
                                     <div>
                                         <span className="text-xs font-semibold text-ink">
@@ -292,7 +292,7 @@ export function SafetyLockoutBanner({
                                                 )
                                             }
                                             placeholder="e.g. Visual re-inspection verified; hydraulics holding pressure at 250 bar"
-                                            className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                            className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                                         />
                                         {form.errors.override_reason && (
                                             <p className="mt-1 text-xs text-danger">

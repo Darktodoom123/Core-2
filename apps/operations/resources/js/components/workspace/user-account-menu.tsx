@@ -263,7 +263,7 @@ export function UserAccountMenu({
             {/* Identity Header */}
             <div className="flex items-center gap-2.5 px-2 py-1.5">
                 <div className="relative shrink-0">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-soft text-xs font-bold text-brand-strong ring-1 ring-brand/20">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-soft text-xs font-bold text-brand-strong ring-1 ring-brand-strong/20">
                         {userInitials}
                     </span>
                     <span
@@ -297,7 +297,7 @@ export function UserAccountMenu({
                 <Link
                     href="/account"
                     onClick={onClose}
-                    className="group flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-xs font-medium text-ink transition-all duration-150 hover:bg-surface-subtle focus-visible:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none active:scale-[0.99]"
+                    className="group flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-xs font-medium text-ink transition-all duration-150 hover:bg-surface-subtle focus-visible:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none active:scale-[0.99]"
                     role="menuitem"
                 >
                     <UserIcon
@@ -330,7 +330,7 @@ export function UserAccountMenu({
                                 onClick={() => setTheme(value)}
                                 className={cn(
                                     'relative flex h-8 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-medium transition-colors duration-150',
-                                    'focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none',
+                                    'focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none',
                                     isSelected
                                         ? 'text-ink dark:text-white'
                                         : 'text-ink-soft hover:bg-surface/50 hover:text-ink dark:text-ink-soft dark:hover:bg-white/[0.04] dark:hover:text-white',

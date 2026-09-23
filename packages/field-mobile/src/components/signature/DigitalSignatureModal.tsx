@@ -223,7 +223,7 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
                                     style={[
                                         styles.canvasActionBtn,
                                         meterType === 'odometer_km' && {
-                                            backgroundColor: colors.amber,
+                                            backgroundColor: colors.primary,
                                         },
                                     ]}
                                 >
@@ -231,7 +231,7 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
                                         style={[
                                             styles.canvasActionText,
                                             meterType === 'odometer_km' && {
-                                                color: '#0f172a',
+                                                color: '#0F172A',
                                                 fontWeight: '700',
                                             },
                                         ]}
@@ -246,7 +246,7 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
                                     style={[
                                         styles.canvasActionBtn,
                                         meterType === 'engine_hours' && {
-                                            backgroundColor: colors.amber,
+                                            backgroundColor: colors.primary,
                                         },
                                     ]}
                                 >
@@ -254,7 +254,7 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
                                         style={[
                                             styles.canvasActionText,
                                             meterType === 'engine_hours' && {
-                                                color: '#0f172a',
+                                                color: '#0F172A',
                                                 fontWeight: '700',
                                             },
                                         ]}
@@ -411,7 +411,7 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
                                         name="check"
                                         size={18}
                                         color={
-                                            canSubmit ? '#0f172a' : colors.muted
+                                            canSubmit ? '#0F172A' : colors.muted
                                         }
                                     />
                                     <Text
@@ -529,7 +529,7 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     canvas: {
-        backgroundColor: '#ffffff',
+        backgroundColor: '#FFFFFF',
         borderColor: colors.borderStrong,
         borderRadius: 12,
         borderWidth: 1.5,
@@ -555,7 +555,7 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
     strokePoint: {
-        backgroundColor: '#0f172a',
+        backgroundColor: '#0F172A',
         borderRadius: 3,
         height: 5,
         position: 'absolute',
@@ -598,7 +598,7 @@ const styles = StyleSheet.create({
     },
     submitButton: {
         alignItems: 'center',
-        backgroundColor: colors.amber,
+        backgroundColor: colors.primary,
         borderRadius: 10,
         flexDirection: 'row',
         gap: 6,
@@ -612,7 +612,7 @@ const styles = StyleSheet.create({
         opacity: 0.6,
     },
     submitButtonText: {
-        color: '#0f172a',
+        color: '#0F172A',
         fontSize: 14,
         fontWeight: '700',
     },

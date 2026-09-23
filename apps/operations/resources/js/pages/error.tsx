@@ -82,9 +82,9 @@ export default function ErrorPage({
                 <div className="mx-auto flex max-w-5xl items-center justify-between">
                     <Link
                         href="/"
-                        className="flex items-center gap-2 outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                        className="flex items-center gap-2 outline-none focus-visible:ring-2 focus-visible:ring-brand-strong"
                     >
-                        <ApplicationLogo className="h-7 w-auto text-brand" />
+                        <ApplicationLogo className="h-7 w-auto text-brand-strong" />
                         <span className="text-sm font-semibold tracking-wide text-ink">
                             Core Operations
                         </span>

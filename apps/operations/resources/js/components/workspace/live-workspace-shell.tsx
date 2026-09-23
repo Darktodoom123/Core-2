@@ -483,7 +483,7 @@ export function LiveWorkspaceShell({
                                                             closeMobileNavigation();
                                                         }}
                                                         className={cn(
-                                                            'relative flex min-h-11 w-full items-center rounded-lg text-sm transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none',
+                                                            'relative flex min-h-11 w-full items-center rounded-lg text-sm transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none',
                                                             collapsed
                                                                 ? 'justify-center'
                                                                 : 'gap-3 px-3',
@@ -682,18 +682,13 @@ export function LiveWorkspaceShell({
                                           )?.label ?? 'Workspace')
                                         : 'Workspace'}
                                 </h1>
-                                <p className="truncate text-xs text-ink-soft">
-                                    {stale ? (
+                                {stale && (
+                                    <p className="truncate text-xs text-ink-soft">
                                         <span className="block max-w-full truncate font-medium text-warning-strong">
                                             Data may be stale · Refresh to sync
                                         </span>
-                                    ) : (
-                                        <span className="block max-w-full truncate">
-                                            {auth.user?.name ?? 'User'} ·{' '}
-                                            {auth.role_label ?? 'Operations'}
-                                        </span>
-                                    )}
-                                </p>
+                                    </p>
+                                )}
                             </div>
                         </div>
                         <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2.5">
@@ -774,7 +769,7 @@ export function LiveWorkspaceShell({
                                         setUserMenuOpen((prev) => !prev)
                                     }
                                     className={cn(
-                                        'flex min-h-11 min-w-11 shrink-0 items-center gap-2 rounded-lg px-2 py-1 text-left text-sm transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none',
+                                        'flex min-h-11 min-w-11 shrink-0 items-center gap-2 rounded-lg px-2 py-1 text-left text-sm transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none',
                                         userMenuOpen && 'bg-surface-subtle',
                                     )}
                                     aria-expanded={userMenuOpen}
@@ -782,7 +777,7 @@ export function LiveWorkspaceShell({
                                     aria-controls="user-account-menu"
                                     aria-label="User account menu"
                                 >
-                                    <span className="relative flex h-8 w-8 items-center justify-center rounded-lg bg-brand-soft text-xs font-bold text-brand-strong ring-1 ring-brand/20">
+                                    <span className="relative flex h-8 w-8 items-center justify-center rounded-lg bg-brand-soft text-xs font-bold text-brand-strong ring-1 ring-brand-strong/20">
                                         {userInitials}
                                         <span
                                             className="absolute -right-0.5 -bottom-0.5 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-surface"

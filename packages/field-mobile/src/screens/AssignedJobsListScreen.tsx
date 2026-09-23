@@ -335,11 +335,11 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     const getDutyColor = (duty: DutyStatus): string => {
         switch (duty) {
             case 'operating':
-                return '#D97706';
+                return '#FFBF00';
             case 'driving':
                 return '#2563EB';
             case 'standby':
-                return '#EA580C';
+                return '#FFBF00';
             case 'on_break':
                 return '#059669';
             case 'off_duty':
@@ -467,15 +467,15 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 title: 'Hours of\nService',
                 sublabel: 'Shift & Hours',
                 iconName: 'clock',
-                bgColor: '#D97706',
-                lightHaloBg: 'rgba(217, 119, 6, 0.12)',
-                lightIconColor: '#D97706',
+                bgColor: colors.amberDark,
+                lightHaloBg: 'rgba(255, 191, 0, 0.12)',
+                lightIconColor: '#806000',
                 borderColor: 'transparent',
                 iconColor: '#FFFFFF',
                 darkBgColor: '#1E293B',
-                darkBorderColor: 'rgba(245, 158, 11, 0.45)',
-                darkIconColor: '#F59E0B',
-                darkHaloBg: 'rgba(245, 158, 11, 0.15)',
+                darkBorderColor: 'rgba(255, 191, 0, 0.45)',
+                darkIconColor: '#FFBF00',
+                darkHaloBg: 'rgba(255, 191, 0, 0.15)',
             },
             {
                 id: 'dvir',
@@ -720,7 +720,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                         colors={[colors.primary]}
                         onRefresh={onRefresh}
                         refreshing={isLoading}
-                        tintColor={colors.primary}
+                        tintColor={colors.amber}
                     />
                 }
                 style={styles.scrollView}
@@ -754,7 +754,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                         <View style={styles.doleWarningContent}>
                             <Icon
                                 color={
-                                    isDoleCapExceeded ? '#EF4444' : '#F59E0B'
+                                isDoleCapExceeded ? '#EF4444' : colors.warning
                                 }
                                 name="alert"
                                 size={18}
@@ -819,7 +819,13 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                             <Text
                                 style={[
                                     styles.dutyBadgeText,
-                                    { color: '#FFFFFF' },
+                                    {
+                                        color:
+                                            currentDuty === 'operating' ||
+                                            currentDuty === 'standby'
+                                                ? '#0F172A'
+                                                : '#FFFFFF',
+                                    },
                                 ]}
                             >
                                 {getDutyBadge(currentDuty)}
@@ -968,7 +974,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                 testID="fallback-standby-btn"
                             >
                                 <Icon
-                                    color={isDarkHud ? '#F59E0B' : '#D97706'}
+                                    color={isDarkHud ? '#FFBF00' : '#806000'}
                                     name="clock"
                                     size={14}
                                 />
@@ -1068,8 +1074,8 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                     color={
                                         locationSharingActive
                                             ? isDarkHud
-                                                ? '#F59E0B'
-                                                : '#D97706'
+                                                ? '#FFBF00'
+                                                : '#806000'
                                             : isDarkHud
                                               ? '#10B981'
                                               : '#059669'
@@ -1142,7 +1148,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                 ]}
                             >
                                 <Icon
-                                    color={isDarkHud ? '#F59E0B' : '#D97706'}
+                                    color={isDarkHud ? '#FFBF00' : '#806000'}
                                     name="alert-circle"
                                     size={14}
                                 />
@@ -1353,7 +1359,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                 accessibilityLiveRegion="polite"
                                 style={styles.loadingBox}
                             >
-                                <ActivityIndicator color={colors.primary} />
+                                <ActivityIndicator color={colors.amber} />
                                 <Text style={sharedStyles.statusText}>
                                     Loading assignments…
                                 </Text>
@@ -1379,7 +1385,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                         size={22}
                                         color={
                                             isDarkHud
-                                                ? '#F59E0B'
+                                                ? '#FFBF00'
                                                 : colors.primaryDark
                                         }
                                     />
@@ -1899,7 +1905,7 @@ const styles = StyleSheet.create({
         zIndex: 2,
     },
     darkTileBadgePill: {
-        backgroundColor: '#F59E0B',
+        backgroundColor: '#FFBF00',
     },
     tileBadgePillText: {
         color: '#0F172A',
@@ -1958,8 +1964,8 @@ const styles = StyleSheet.create({
         width: 40,
     },
     darkEmptyMark: {
-        backgroundColor: 'rgba(245, 158, 11, 0.16)',
-        borderColor: '#F59E0B',
+        backgroundColor: 'rgba(255, 191, 0, 0.16)',
+        borderColor: '#FFBF00',
     },
     emptyTitle: {
         color: colors.text,
@@ -1993,8 +1999,8 @@ const styles = StyleSheet.create({
         transform: [{ scale: 0.96 }],
     },
     doleWarningBanner: {
-        backgroundColor: '#FEF3C7',
-        borderColor: '#F59E0B',
+        backgroundColor: colors.warningSoft,
+        borderColor: colors.warningBorder,
         borderRadius: 12,
         borderWidth: 1.5,
         flexDirection: 'row',
@@ -2012,7 +2018,7 @@ const styles = StyleSheet.create({
     },
     darkDoleWarningBanner: {
         backgroundColor: '#1E293B',
-        borderColor: '#D97706',
+        borderColor: '#FDBA74',
     },
     doleWarningContent: {
         flexDirection: 'row',
@@ -2021,32 +2027,32 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     doleWarningText: {
-        color: '#92400E',
+        color: colors.warningDark,
         fontSize: 12,
         fontWeight: '700',
         flex: 1,
         lineHeight: 16,
     },
     darkDoleWarningText: {
-        color: '#FBBF24',
+        color: '#FDBA74',
     },
     doleCapText: {
         color: '#991B1B',
     },
     doleHandoverBtn: {
-        backgroundColor: '#D97706',
+        backgroundColor: '#FFBF00',
         borderRadius: 8,
         paddingHorizontal: 10,
         paddingVertical: 6,
     },
     doleHandoverBtnText: {
-        color: '#FFFFFF',
+        color: '#0F172A',
         fontSize: 11,
         fontWeight: '800',
     },
     startUnitBtn: {
         alignItems: 'center',
-        backgroundColor: '#F59E0B',
+        backgroundColor: '#FFBF00',
         borderRadius: 12,
         elevation: 4,
         justifyContent: 'center',
@@ -2054,15 +2060,15 @@ const styles = StyleSheet.create({
         marginTop: 6,
         paddingHorizontal: 16,
         paddingVertical: 14,
-        shadowColor: '#F59E0B',
+        shadowColor: '#FFBF00',
         shadowOffset: { height: 3, width: 0 },
         shadowOpacity: 0.25,
         shadowRadius: 6,
     },
     darkStartUnitBtn: {
-        backgroundColor: '#F59E0B',
+        backgroundColor: '#FFBF00',
         elevation: 6,
-        shadowColor: '#F59E0B',
+        shadowColor: '#FFBF00',
         shadowOffset: { height: 4, width: 0 },
         shadowOpacity: 0.35,
         shadowRadius: 8,
@@ -2080,8 +2086,8 @@ const styles = StyleSheet.create({
     },
     // State 2: DVIR Pending Banner
     dvirPendingBanner: {
-        backgroundColor: '#FFFBEB',
-        borderColor: '#F59E0B',
+        backgroundColor: colors.warningSoft,
+        borderColor: colors.warningBorder,
         borderWidth: 1.5,
         borderRadius: 14,
         padding: 16,
@@ -2090,8 +2096,8 @@ const styles = StyleSheet.create({
         ...shadows.sm,
     },
     darkDvirPendingBanner: {
-        backgroundColor: '#78350F25',
-        borderColor: '#D97706',
+        backgroundColor: 'rgba(234, 88, 12, 0.14)',
+        borderColor: '#FDBA74',
     },
     dvirPendingHeaderRow: {
         flexDirection: 'row',
@@ -2103,56 +2109,56 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
-        backgroundColor: '#FEF3C7',
+        backgroundColor: colors.warningSoft,
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 8,
     },
     darkDvirPendingBadge: {
-        backgroundColor: '#451A03',
+        backgroundColor: 'rgba(234, 88, 12, 0.2)',
     },
     dvirPendingBadgeText: {
         fontSize: 11,
         fontWeight: '800',
-        color: '#B45309',
+        color: colors.warningDark,
         letterSpacing: 0.5,
     },
     darkDvirPendingBadgeText: {
-        color: '#FBBF24',
+        color: '#FDBA74',
     },
     dvirPendingUnitCode: {
         fontSize: 13,
         fontWeight: '800',
-        color: '#78350F',
+        color: colors.warningDark,
     },
     darkDvirPendingUnitCode: {
-        color: '#FDE68A',
+        color: '#FDBA74',
     },
     dvirPendingNotice: {
         fontSize: 13,
         lineHeight: 18,
-        color: '#92400E',
+        color: colors.warningDark,
         marginBottom: 12,
     },
     darkDvirPendingNotice: {
-        color: '#FDE68A',
+        color: '#FDBA74',
     },
     startPreTripBtn: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 8,
-        backgroundColor: '#D97706',
+        backgroundColor: '#FFBF00',
         paddingVertical: 14,
         paddingHorizontal: 16,
         borderRadius: 10,
         ...shadows.sm,
     },
     darkStartPreTripBtn: {
-        backgroundColor: '#F59E0B',
+        backgroundColor: '#FFBF00',
     },
     startPreTripBtnText: {
-        color: '#FFFFFF',
+        color: '#0F172A',
         fontSize: 15,
         fontWeight: '800',
     },
@@ -2338,24 +2344,24 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         gap: 6,
-        backgroundColor: '#FEF3C7',
-        borderColor: '#F59E0B',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFBF00',
         borderWidth: 1,
         paddingVertical: 12,
         paddingHorizontal: 10,
         borderRadius: 8,
     },
     darkFallbackStandbyBtn: {
-        backgroundColor: '#78350F25',
-        borderColor: '#D97706',
+        backgroundColor: '#33280025',
+        borderColor: '#FFBF00',
     },
     fallbackStandbyBtnText: {
-        color: '#B45309',
+        color: '#806000',
         fontSize: 12,
         fontWeight: '700',
     },
     darkFallbackStandbyBtnText: {
-        color: '#FBBF24',
+        color: '#FFBF00',
     },
     accessibleHeader: {
         height: 1,

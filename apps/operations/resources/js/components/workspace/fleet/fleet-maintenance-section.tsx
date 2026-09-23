@@ -241,7 +241,7 @@ export function FleetMaintenanceSection({
                                     e.target.checked,
                                 )
                             }
-                            className="h-5 w-5 shrink-0 rounded border-line-strong text-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                            className="h-5 w-5 shrink-0 rounded border-line-strong text-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                         />
                         <span>
                             Dispatch blocking
@@ -470,7 +470,7 @@ export function FleetMaintenanceSection({
                                                                 e.target.value,
                                                             )
                                                         }
-                                                        className="mt-1 w-full rounded-lg border border-line-strong bg-surface p-2 text-sm text-ink transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                                        className="mt-1 w-full rounded-lg border border-line-strong bg-surface p-2 text-sm text-ink transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                                                     />
                                                 </label>
                                                 <FleetInput
@@ -607,7 +607,7 @@ export function FleetMaintenanceSection({
                                                                 e.target.value,
                                                             )
                                                         }
-                                                        className="mt-1 w-full rounded-lg border border-line-strong bg-surface p-2 text-sm text-ink transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                                        className="mt-1 w-full rounded-lg border border-line-strong bg-surface p-2 text-sm text-ink transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                                                     />
                                                 </label>
                                                 <FleetInput

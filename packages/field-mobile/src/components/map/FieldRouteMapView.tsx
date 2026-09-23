@@ -287,7 +287,7 @@ export const FieldRouteMapView: React.FC<FieldRouteMapViewProps> = ({
                                         {wp.hazardNote ? (
                                             <View style={styles.hazardCallout}>
                                                 <Icon
-                                                    color="#f87171"
+                                                    color="#F87171"
                                                     name="alert"
                                                     size={13}
                                                 />
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     modeButtonTextActive: {
-        color: colors.white,
+        color: colors.text,
         fontWeight: '800',
     },
     mapLibreContainer: {
@@ -533,13 +533,13 @@ const styles = StyleSheet.create({
         borderWidth: 1,
     },
     pinPendingInner: {
-        backgroundColor: '#94a3b8',
+        backgroundColor: '#94A3B8',
         borderRadius: 3,
         height: 6,
         width: 6,
     },
     pinDestination: {
-        backgroundColor: colors.amber,
+        backgroundColor: colors.primary,
     },
     waypointCopy: {
         flex: 1,
@@ -586,7 +586,7 @@ const styles = StyleSheet.create({
         paddingVertical: 5,
     },
     hazardWarning: {
-        color: '#fca5a5',
+        color: '#FCA5A5',
         fontSize: 11,
         fontWeight: '700',
         flex: 1,
@@ -625,7 +625,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.green,
     },
     statusCached: {
-        backgroundColor: colors.amber,
+        backgroundColor: colors.primary,
     },
     statusUnavailable: {
         backgroundColor: colors.muted,

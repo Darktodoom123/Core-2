@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
         paddingVertical: 4,
     },
     viewDetailsText: {
-        color: colors.primary,
+        color: colors.amber,
         fontSize: 12,
         fontWeight: '700',
     },

@@ -43,6 +43,41 @@
     --color-warning-on-dark: oklch(0.84 0.13 76);
     --color-info-on-dark: oklch(0.82 0.12 250);
     --color-ink-on-dark-muted: oklch(0.8 0.01 255);
+
+    /* Keep Tailwind's legacy hue utilities in the same accessible gold family. */
+    --color-amber-50: #fff9e6;
+    --color-amber-100: #fff3c4;
+    --color-amber-200: #ffe08a;
+    --color-amber-300: #b38a00;
+    --color-amber-400: #9e7800;
+    --color-amber-500: #8a6700;
+    --color-amber-600: #806000;
+    --color-amber-700: #6b5000;
+    --color-amber-800: #564000;
+    --color-amber-900: #3d2e00;
+    --color-amber-950: #2b2100;
+    --color-yellow-50: #fff9e6;
+    --color-yellow-100: #fff3c4;
+    --color-yellow-200: #ffe08a;
+    --color-yellow-300: #b38a00;
+    --color-yellow-400: #9e7800;
+    --color-yellow-500: #8a6700;
+    --color-yellow-600: #806000;
+    --color-yellow-700: #6b5000;
+    --color-yellow-800: #564000;
+    --color-yellow-900: #3d2e00;
+    --color-yellow-950: #2b2100;
+    --color-orange-50: #fff9e6;
+    --color-orange-100: #fff3c4;
+    --color-orange-200: #ffe08a;
+    --color-orange-300: #b38a00;
+    --color-orange-400: #9e7800;
+    --color-orange-500: #8a6700;
+    --color-orange-600: #806000;
+    --color-orange-700: #6b5000;
+    --color-orange-800: #564000;
+    --color-orange-900: #3d2e00;
+    --color-orange-950: #2b2100;
 }
 
 :root {
@@ -55,10 +90,10 @@
     --color-muted: #64748b;
     --color-line: oklch(0.88 0.01 255);
     --color-line-strong: oklch(0.78 0.01 255);
-    --color-brand: #e6a719;
-    --color-brand-strong: #c98f12;
-    --color-brand-soft: #fdf0d5;
-    --color-brand-contrast: #000000;
+    --color-brand: #ffbf00;
+    --color-brand-strong: #806000;
+    --color-brand-soft: #fff3c4;
+    --color-brand-contrast: #0f172a;
     --color-accent: #2563eb;
     --color-accent-strong: #1d4ed8;
     --color-accent-soft: #eff6ff;
@@ -93,10 +128,10 @@
     --color-muted: #71717a;
     --color-line: #2e2e32;
     --color-line-strong: #3f3f46;
-    --color-brand: #e6a719;
-    --color-brand-strong: #f5b62b;
-    --color-brand-soft: rgba(230, 167, 25, 0.15);
-    --color-brand-contrast: #000000;
+    --color-brand: #ffbf00;
+    --color-brand-strong: #ffbf00;
+    --color-brand-soft: rgba(255, 191, 0, 0.15);
+    --color-brand-contrast: #0f172a;
     --color-accent: #3b82f6;
     --color-accent-strong: #60a5fa;
     --color-accent-soft: rgba(59, 130, 246, 0.15);
@@ -154,7 +189,7 @@ textarea:focus-visible,
 [role='button']:focus-visible,
 [role='checkbox']:focus-visible,
 [role='tab']:focus-visible {
-    outline: 2px solid var(--color-brand);
+    outline: 2px solid var(--color-brand-strong);
     outline-offset: 2px;
 }
 

@@ -100,7 +100,7 @@ describe('LoginScreen', () => {
         const submit = view.getByTestId('login-submit-button');
 
         expect(submit).toBeDisabled();
-        expect(submit).toHaveStyle({ backgroundColor: '#D97706' });
+        expect(submit).toHaveStyle({ backgroundColor: '#FFBF00' });
 
         await fireEvent.changeText(
             view.getByTestId('login-username-input'),

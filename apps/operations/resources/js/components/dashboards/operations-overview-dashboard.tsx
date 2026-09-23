@@ -531,7 +531,7 @@ function OperationsManagerDashboardView({
                                 aria-pressed={actionFilter === 'all'}
                                 onClick={() => setActionFilter('all')}
                                 className={cn(
-                                    'min-h-8 rounded-md px-2.5 py-1 font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
+                                    'min-h-8 rounded-md px-2.5 py-1 font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
                                     actionFilter === 'all'
                                         ? 'bg-surface font-semibold text-ink shadow-xs'
                                         : 'text-ink-soft hover:text-ink',
@@ -545,7 +545,7 @@ function OperationsManagerDashboardView({
                                     aria-pressed={actionFilter === 'sos'}
                                     onClick={() => setActionFilter('sos')}
                                     className={cn(
-                                        'min-h-8 rounded-md px-2.5 py-1 font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
+                                        'min-h-8 rounded-md px-2.5 py-1 font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
                                         actionFilter === 'sos'
                                             ? 'bg-surface font-semibold text-danger-strong shadow-xs'
                                             : 'text-danger hover:text-danger-strong',
@@ -561,7 +561,7 @@ function OperationsManagerDashboardView({
                                     aria-pressed={actionFilter === 'approvals'}
                                     onClick={() => setActionFilter('approvals')}
                                     className={cn(
-                                        'min-h-8 rounded-md px-2.5 py-1 font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
+                                        'min-h-8 rounded-md px-2.5 py-1 font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
                                         actionFilter === 'approvals'
                                             ? 'bg-surface font-semibold text-ink shadow-xs'
                                             : 'text-ink-soft hover:text-ink',
@@ -577,7 +577,7 @@ function OperationsManagerDashboardView({
                                     aria-pressed={actionFilter === 'assets'}
                                     onClick={() => setActionFilter('assets')}
                                     className={cn(
-                                        'min-h-8 rounded-md px-2.5 py-1 font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
+                                        'min-h-8 rounded-md px-2.5 py-1 font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
                                         actionFilter === 'assets'
                                             ? 'bg-surface font-semibold text-ink shadow-xs'
                                             : 'text-ink-soft hover:text-ink',
@@ -593,7 +593,7 @@ function OperationsManagerDashboardView({
                                     aria-pressed={actionFilter === 'fuel'}
                                     onClick={() => setActionFilter('fuel')}
                                     className={cn(
-                                        'min-h-8 rounded-md px-2.5 py-1 font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
+                                        'min-h-8 rounded-md px-2.5 py-1 font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
                                         actionFilter === 'fuel'
                                             ? 'bg-surface font-semibold text-ink shadow-xs'
                                             : 'text-ink-soft hover:text-ink',
@@ -1281,7 +1281,7 @@ function SystemAdminDashboardView({
                     <button
                         type="button"
                         onClick={() => onSectionChange('users')}
-                        className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                        className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                     >
                         <Users className="h-3.5 w-3.5" aria-hidden="true" />
                         <span>Users &amp; Credentials</span>
@@ -1296,7 +1296,7 @@ function SystemAdminDashboardView({
                     <button
                         type="button"
                         onClick={() => onSectionChange('audit')}
-                        className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                        className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                     >
                         <FileText className="h-3.5 w-3.5" aria-hidden="true" />
                         <span>Audit Trail &amp; Diffs</span>
@@ -1306,7 +1306,7 @@ function SystemAdminDashboardView({
                     <button
                         type="button"
                         onClick={() => onSectionChange('gpt-recommendations')}
-                        className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                        className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                     >
                         <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
                         <span>AI Advisory Governance</span>
@@ -1316,7 +1316,7 @@ function SystemAdminDashboardView({
                     <button
                         type="button"
                         onClick={() => onSectionChange('dispatch')}
-                        className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                        className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                     >
                         <Layers className="h-3.5 w-3.5" aria-hidden="true" />
                         <span>Dispatch Workspace</span>
@@ -1326,7 +1326,7 @@ function SystemAdminDashboardView({
                     <button
                         type="button"
                         onClick={() => onSectionChange('assets')}
-                        className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                        className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                     >
                         <Truck className="h-3.5 w-3.5" aria-hidden="true" />
                         <span>Fleet &amp; Telemetry</span>
@@ -2574,7 +2574,7 @@ function KpiCard({
             className={cn(
                 'group relative flex flex-col justify-between bg-surface p-4 text-left transition-colors sm:p-5',
                 onClick &&
-                    'cursor-pointer hover:bg-surface-subtle/70 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden focus-visible:ring-inset',
+                    'cursor-pointer hover:bg-surface-subtle/70 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden focus-visible:ring-inset',
             )}
         >
             <div>
@@ -2631,7 +2631,7 @@ function DashboardActionRow({
             <button
                 type="button"
                 onClick={onClick}
-                className="group flex min-h-16 w-full items-center gap-3.5 px-4 py-3 text-left transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                className="group flex min-h-16 w-full items-center gap-3.5 px-4 py-3 text-left transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
             >
                 <span
                     className={cn(
@@ -2699,7 +2699,7 @@ function JobOverviewRow({
             <button
                 type="button"
                 onClick={onClick}
-                className="group flex min-h-16 w-full flex-col justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden sm:flex-row sm:items-center"
+                className="group flex min-h-16 w-full flex-col justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden sm:flex-row sm:items-center"
             >
                 <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
                     <CalendarClock
@@ -2726,7 +2726,7 @@ function JobOverviewRow({
                                             ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300'
                                             : job.source?.type === 'sales_order'
                                               ? 'bg-purple-500/10 text-purple-700 dark:text-purple-300'
-                                              : 'bg-amber-500/10 text-amber-800 dark:text-amber-300',
+                                              : 'bg-amber-500/10 text-amber-800 dark:text-brand',
                                     )}
                                 >
                                     {sourceLabel}
@@ -2812,7 +2812,7 @@ function ReadinessRow({
             className={cn(
                 'flex w-full items-center gap-3 px-4 py-3 text-left transition-colors',
                 onClick &&
-                    'cursor-pointer hover:bg-surface-subtle/70 focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
+                    'cursor-pointer hover:bg-surface-subtle/70 focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
             )}
         >
             <span

@@ -51,7 +51,7 @@ export function ActivationPanel({
             className="group overflow-hidden rounded-xl border border-line bg-surface"
             aria-busy={form.processing}
         >
-            <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden [&::-webkit-details-marker]:hidden">
+            <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden [&::-webkit-details-marker]:hidden">
                 <span className="min-w-0">
                     <span className="flex items-center gap-2">
                         <span className="font-semibold text-ink">

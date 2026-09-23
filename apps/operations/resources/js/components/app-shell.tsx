@@ -325,7 +325,7 @@ export function AppShell({
                                             }
                                             aria-label={accessibleLabel}
                                             className={cn(
-                                                'nav-btn relative flex min-h-11 flex-1 items-center rounded-lg py-2 text-sm transition-colors duration-150 ease-out focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:outline-none',
+                                                'nav-btn relative flex min-h-11 flex-1 items-center rounded-lg py-2 text-sm transition-colors duration-150 ease-out focus-visible:ring-2 focus-visible:ring-brand-strong/50 focus-visible:outline-none',
                                                 collapsed
                                                     ? 'justify-center'
                                                     : 'gap-3 pr-2 pl-4',
@@ -473,7 +473,7 @@ export function AppShell({
                             type="button"
                             onClick={() => onSectionChange('administration')}
                             className={cn(
-                                'mt-1 flex min-h-11 w-full items-center rounded-lg text-sm text-ink-soft transition-colors duration-200 ease-out hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:outline-none',
+                                'mt-1 flex min-h-11 w-full items-center rounded-lg text-sm text-ink-soft transition-colors duration-200 ease-out hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-strong/50 focus-visible:outline-none',
                                 collapsed ? 'justify-center' : 'gap-3 px-3',
                             )}
                             title={collapsed ? 'Settings' : undefined}
@@ -489,7 +489,7 @@ export function AppShell({
                         type="button"
                         onClick={onToggleSidebar}
                         className={cn(
-                            'mt-1 flex min-h-11 w-full items-center rounded-lg text-sm text-ink-soft transition-colors duration-200 ease-out hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:outline-none',
+                            'mt-1 flex min-h-11 w-full items-center rounded-lg text-sm text-ink-soft transition-colors duration-200 ease-out hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-strong/50 focus-visible:outline-none',
                             collapsed ? 'justify-center' : 'gap-3 px-3',
                         )}
                         aria-label={
@@ -519,7 +519,7 @@ export function AppShell({
                         <button
                             type="button"
                             onClick={() => setMobileOpen(true)}
-                            className="flex h-11 w-11 items-center justify-center rounded-lg bg-surface-subtle text-ink transition-colors hover:bg-line focus-visible:ring-2 focus-visible:ring-brand"
+                            className="flex h-11 w-11 items-center justify-center rounded-lg bg-surface-subtle text-ink transition-colors hover:bg-line focus-visible:ring-2 focus-visible:ring-brand-strong"
                             aria-label="Open navigation menu"
                         >
                             <Menu className="h-5 w-5" />
@@ -628,7 +628,7 @@ export function AppShell({
 
                         <Link
                             href="/account"
-                            className="hidden min-w-0 rounded-lg p-1 text-right transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand sm:block"
+                            className="hidden min-w-0 rounded-lg p-1 text-right transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand-strong sm:block"
                             title="My Account Settings"
                             aria-label="My Account Settings"
                         >

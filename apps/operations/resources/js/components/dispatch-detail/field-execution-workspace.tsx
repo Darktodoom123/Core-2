@@ -70,7 +70,7 @@ export function FieldExecutionWorkspace({
             >
                 <a
                     href="#field-execution"
-                    className="rounded px-1.5 py-0.5 font-semibold text-brand-strong underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                    className="rounded px-1.5 py-0.5 font-semibold text-brand-strong underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                 >
                     Execution
                 </a>
@@ -79,7 +79,7 @@ export function FieldExecutionWorkspace({
                     job.source?.type === 'sales_order') && (
                     <a
                         href="#handoff-evidence"
-                        className="rounded px-1.5 py-0.5 text-ink-soft underline-offset-4 hover:text-ink hover:underline focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                        className="rounded px-1.5 py-0.5 text-ink-soft underline-offset-4 hover:text-ink hover:underline focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                     >
                         Evidence
                     </a>
@@ -87,7 +87,7 @@ export function FieldExecutionWorkspace({
                 {execution.delays && execution.delays.length > 0 && (
                     <a
                         href="#reported-delays"
-                        className="rounded px-1.5 py-0.5 font-medium text-amber-700 underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden dark:text-amber-400"
+                        className="rounded px-1.5 py-0.5 font-medium text-amber-700 underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden dark:text-brand"
                     >
                         Delays ({execution.delays.length})
                     </a>
@@ -95,7 +95,7 @@ export function FieldExecutionWorkspace({
                 {execution.activity.length > 0 && (
                     <a
                         href="#execution-activity"
-                        className="rounded px-1.5 py-0.5 text-ink-soft underline-offset-4 hover:text-ink hover:underline focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                        className="rounded px-1.5 py-0.5 text-ink-soft underline-offset-4 hover:text-ink hover:underline focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                     >
                         Activity
                     </a>
@@ -103,7 +103,7 @@ export function FieldExecutionWorkspace({
                 {(assignmentCount > 0 || capabilities.reassign_resources) && (
                     <a
                         href="#assignment-summary"
-                        className="rounded px-1.5 py-0.5 text-ink-soft underline-offset-4 hover:text-ink hover:underline focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                        className="rounded px-1.5 py-0.5 text-ink-soft underline-offset-4 hover:text-ink hover:underline focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                     >
                         Resources
                     </a>
@@ -175,7 +175,7 @@ export function FieldExecutionWorkspace({
                                 value={
                                     <span className="inline-flex items-start gap-2">
                                         <CalendarDays
-                                            className="mt-0.5 size-4 shrink-0 text-brand"
+                                            className="mt-0.5 size-4 shrink-0 text-brand-strong"
                                             aria-hidden="true"
                                         />
                                         <span>
@@ -456,7 +456,7 @@ function SiteEvidence({
                                         location.longitude,
                                         location.latitude,
                                     ]}
-                                    color="#e6a719"
+                                    color="#806000"
                                     label="Latest shared location"
                                 />
                             )}
@@ -565,13 +565,13 @@ function ReportedDelays({
     return (
         <Panel
             id="reported-delays"
-            className="overflow-hidden border-amber-300 bg-amber-50/20 dark:border-amber-700/40 dark:bg-amber-950/10"
+            className="overflow-hidden border-warning/40 bg-warning-soft/20 dark:border-warning/30 dark:bg-warning/10"
         >
-            <div className="border-b border-amber-200/80 px-4 py-3 sm:px-5 dark:border-amber-800/40">
+            <div className="border-b border-warning/30 px-4 py-3 sm:px-5 dark:border-warning/20">
                 <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
                         <AlertTriangle
-                            className="size-5 text-amber-600 dark:text-amber-400"
+                            className="size-5 text-warning-strong dark:text-warning-on-dark"
                             aria-hidden="true"
                         />
                         <div>
@@ -587,14 +587,14 @@ function ReportedDelays({
                 </div>
             </div>
             <ul
-                className="divide-y divide-amber-200/60 dark:divide-amber-800/30"
+                className="divide-y divide-warning/20 dark:divide-warning/15"
                 aria-label="Reported delays"
             >
                 {delays.map((delay) => (
                     <li key={delay.id} className="p-4 sm:px-5">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                             <div className="flex items-center gap-2">
-                                <span className="inline-flex items-center rounded-md bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-900/60 dark:text-amber-200">
+                                <span className="inline-flex items-center rounded-md bg-warning-soft px-2 py-0.5 text-xs font-semibold text-warning-strong dark:bg-warning/15 dark:text-warning-on-dark">
                                     {delay.context.label}
                                 </span>
                                 <span className="text-sm font-semibold text-ink">
@@ -602,7 +602,7 @@ function ReportedDelays({
                                 </span>
                             </div>
                             {delay.estimated_minutes !== null && (
-                                <span className="text-xs font-medium text-amber-700 dark:text-amber-300">
+                                <span className="text-xs font-medium text-warning-strong dark:text-warning-on-dark">
                                     +{delay.estimated_minutes}m estimated impact
                                 </span>
                             )}
@@ -691,12 +691,12 @@ function ExecutionActivity({
                         >
                             {item.kind === 'delay' ? (
                                 <AlertTriangle
-                                    className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400"
+                                    className="mt-0.5 size-4 shrink-0 text-warning-strong dark:text-warning-on-dark"
                                     aria-hidden="true"
                                 />
                             ) : (
                                 <Activity
-                                    className="mt-0.5 size-4 shrink-0 text-brand"
+                                    className="mt-0.5 size-4 shrink-0 text-brand-strong"
                                     aria-hidden="true"
                                 />
                             )}
@@ -821,7 +821,7 @@ function HandoffEvidencePanel({
     return (
         <Panel
             id="handoff-evidence"
-            className="scroll-mt-24 overflow-hidden border-brand/30"
+            className="scroll-mt-24 overflow-hidden border-brand-strong/30"
         >
             <div className="border-b border-line bg-surface-subtle/50 px-4 py-4 sm:px-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -842,7 +842,7 @@ function HandoffEvidencePanel({
                                         ? '/operations/rental-reservations'
                                         : '/operations/sales/orders'
                                 }
-                                className="font-mono text-xs text-ink-soft underline decoration-dotted hover:text-brand"
+                                className="font-mono text-xs text-ink-soft underline decoration-dotted hover:text-brand-strong"
                                 title={`Open commercial ${isRental ? 'rental' : 'sales'} orders workspace`}
                             >
                                 {evidence.source_reference}{' '}
@@ -1077,7 +1077,7 @@ function HandoffEvidencePanel({
                 )}
 
                 {/* Managerial Authoritative Action Box */}
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-brand/20 bg-brand-soft/30 p-3 sm:p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-brand-strong/20 bg-brand-soft/30 p-3 sm:p-4">
                     <div className="max-w-xl text-xs">
                         <p className="font-semibold text-ink">
                             Commercial Order State &amp; Managerial Control

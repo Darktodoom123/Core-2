@@ -24,7 +24,7 @@ export function DispatchDetailHeader({
                 <Link
                     href={capabilities.update_own_status ? '/' : returnTo}
                     onClick={onConfirmLeave}
-                    className="inline-flex min-h-9 items-center gap-1.5 rounded-md px-2 text-xs font-semibold text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                    className="inline-flex min-h-9 items-center gap-1.5 rounded-md px-2 text-xs font-semibold text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                 >
                     <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
                     {capabilities.update_own_status

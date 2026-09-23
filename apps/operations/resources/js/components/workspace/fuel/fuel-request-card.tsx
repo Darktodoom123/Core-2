@@ -121,7 +121,7 @@ export function FuelRequestCard({
 
                         {request.shift && (
                             <span className="inline-flex items-center gap-1 rounded-md border border-line bg-surface-subtle px-2 py-0.5 text-[11px] font-medium text-ink-soft tabular-nums">
-                                <Clock className="h-3 w-3 text-brand" />
+                                <Clock className="h-3 w-3 text-brand-strong" />
                                 <span>Shift #{request.shift.id}</span>
                                 {request.shift.operator_name && (
                                     <span className="font-semibold text-ink">
@@ -235,7 +235,7 @@ export function FuelRequestCard({
                 showDecisionInput && (
                     <div
                         onClick={(e) => e.stopPropagation()}
-                        className="space-y-3 rounded-lg border border-brand/40 bg-brand-soft/20 p-3 text-xs"
+                        className="space-y-3 rounded-lg border border-brand-strong/40 bg-brand-soft/20 p-3 text-xs"
                     >
                         {isSelfReview ? (
                             <div
@@ -294,7 +294,7 @@ export function FuelRequestCard({
                                         setDecisionReason(e.target.value)
                                     }
                                     placeholder="Add reason or guidance (recommended for rejections, optional for approvals)..."
-                                    className="h-9 w-full rounded-lg border border-line-strong bg-surface px-3 text-xs text-ink transition-colors placeholder:text-ink-soft focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-hidden"
+                                    className="h-9 w-full rounded-lg border border-line-strong bg-surface px-3 text-xs text-ink transition-colors placeholder:text-ink-soft focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong/30 focus-visible:outline-hidden"
                                 />
                                 <div className="flex items-center justify-end gap-2 pt-1">
                                     <Button
@@ -587,7 +587,7 @@ export function FuelRequestCard({
             {asset && (
                 <div className="flex flex-wrap items-center gap-3 rounded-lg border border-line bg-surface-subtle px-3 py-2 text-xs">
                     <div className="flex items-center gap-1.5 font-semibold text-ink">
-                        <Truck className="h-3.5 w-3.5 text-brand" />
+                        <Truck className="h-3.5 w-3.5 text-brand-strong" />
                         <span>{asset.name || asset.code}</span>
                     </div>
                     <span className="text-ink-soft">·</span>
@@ -622,7 +622,7 @@ export function FuelRequestCard({
                         <>
                             <span className="text-ink-soft">·</span>
                             <div className="flex items-center gap-1">
-                                <Gauge className="h-3 w-3 text-brand" />
+                                <Gauge className="h-3 w-3 text-brand-strong" />
                                 <span className="text-ink-soft">Meter: </span>
                                 <span className="font-mono font-medium text-ink tabular-nums">
                                     {asset.meter_value} {meterUnit}
@@ -797,7 +797,7 @@ export function FuelRequestCard({
                                                     log.receipt_url ?? null,
                                                 )
                                             }
-                                            className="inline-flex items-center gap-1.5 rounded-lg border border-brand/50 bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand-strong transition-colors hover:bg-brand-soft/80 focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                            className="inline-flex items-center gap-1.5 rounded-lg border border-brand-strong/50 bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand-strong transition-colors hover:bg-brand-soft/80 focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                                             aria-label="Inspect station receipt photo in lightbox"
                                         >
                                             <Camera className="h-3.5 w-3.5" />
@@ -807,7 +807,7 @@ export function FuelRequestCard({
                                             href={log.receipt_url}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2 py-1 text-[11px] font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                            className="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2 py-1 text-[11px] font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                                         >
                                             <FileText className="h-3 w-3" />
                                             <span>Direct link</span>
@@ -836,7 +836,7 @@ export function FuelRequestCard({
                     >
                         <div className="mb-3 flex items-center justify-between border-b border-line pb-2.5">
                             <div className="flex items-center gap-2">
-                                <FileText className="h-4 w-4 text-brand" />
+                                <FileText className="h-4 w-4 text-brand-strong" />
                                 <span className="font-mono text-xs font-semibold text-ink tabular-nums">
                                     Station Receipt Audit · {request.reference}
                                 </span>
@@ -846,7 +846,7 @@ export function FuelRequestCard({
                                 size="sm"
                                 onClick={() => setViewingReceiptUrl(null)}
                                 aria-label="Close receipt inspection"
-                                className="focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                className="focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                             >
                                 <X className="h-4 w-4" />
                             </Button>
@@ -881,7 +881,7 @@ export function FuelRequestCard({
                                 href={viewingReceiptUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 font-semibold text-brand-strong hover:underline focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                className="inline-flex items-center gap-1 font-semibold text-brand-strong hover:underline focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                             >
                                 <span>Open full resolution</span>
                                 <ExternalLink className="h-3 w-3" />

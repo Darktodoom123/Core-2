@@ -452,7 +452,7 @@ export function FleetDetailPane({
                                     }
                                     placeholder="Specify safety defect, hydraulic fault, structural crack, or regulatory recall notice…"
                                     className={cn(
-                                        'mt-1 w-full rounded-lg border bg-surface p-2.5 text-xs text-ink placeholder:text-ink-soft focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
+                                        'mt-1 w-full rounded-lg border bg-surface p-2.5 text-xs text-ink placeholder:text-ink-soft focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
                                         lockdownForm.errors.reason
                                             ? 'border-danger focus:border-danger'
                                             : 'border-line focus:border-brand-strong',
@@ -511,7 +511,7 @@ export function FleetDetailPane({
                     onClick={() => setActiveTab('overview')}
                     onKeyDown={(event) => handleTabKeyDown(event, 'overview')}
                     className={cn(
-                        'flex min-h-11 shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
+                        'flex min-h-11 shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
                         activeTab === 'overview'
                             ? 'border-brand-strong font-semibold text-brand-strong'
                             : 'border-transparent text-ink-soft hover:text-ink',
@@ -536,7 +536,7 @@ export function FleetDetailPane({
                     onClick={() => setActiveTab('status')}
                     onKeyDown={(event) => handleTabKeyDown(event, 'status')}
                     className={cn(
-                        'flex min-h-11 shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
+                        'flex min-h-11 shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
                         activeTab === 'status'
                             ? 'border-brand-strong font-semibold text-brand-strong'
                             : 'border-transparent text-ink-soft hover:text-ink',
@@ -563,7 +563,7 @@ export function FleetDetailPane({
                         handleTabKeyDown(event, 'inspections')
                     }
                     className={cn(
-                        'flex min-h-11 shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
+                        'flex min-h-11 shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
                         activeTab === 'inspections'
                             ? 'border-brand-strong font-semibold text-brand-strong'
                             : 'border-transparent text-ink-soft hover:text-ink',
@@ -599,7 +599,7 @@ export function FleetDetailPane({
                         handleTabKeyDown(event, 'maintenance')
                     }
                     className={cn(
-                        'flex min-h-11 shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
+                        'flex min-h-11 shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
                         activeTab === 'maintenance'
                             ? 'border-brand-strong font-semibold text-brand-strong'
                             : 'border-transparent text-ink-soft hover:text-ink',
@@ -635,7 +635,7 @@ export function FleetDetailPane({
                     onClick={() => setActiveTab('documents')}
                     onKeyDown={(event) => handleTabKeyDown(event, 'documents')}
                     className={cn(
-                        'flex min-h-11 shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
+                        'flex min-h-11 shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
                         activeTab === 'documents'
                             ? 'border-brand-strong font-semibold text-brand-strong'
                             : 'border-transparent text-ink-soft hover:text-ink',
@@ -1031,7 +1031,7 @@ export function FleetDetailPane({
                                 </p>
                                 <button
                                     type="button"
-                                    className="text-xs font-semibold text-brand-strong underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none"
+                                    className="text-xs font-semibold text-brand-strong underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:ring-offset-2 focus-visible:outline-none"
                                     onClick={() => setActiveTab('inspections')}
                                     aria-controls={`asset-tabpanel-inspections-${asset.id}`}
                                 >

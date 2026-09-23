@@ -867,7 +867,7 @@ function SuccessToast({ flash }: { flash: WorkspaceFlash }) {
                 <button
                     type="button"
                     onClick={() => setDismissed(true)}
-                    className="-m-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg hover:bg-black/5 focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                    className="-m-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg hover:bg-black/5 focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                     aria-label="Dismiss success message"
                 >
                     <X className="h-4 w-4" aria-hidden="true" />

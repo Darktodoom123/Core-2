@@ -553,7 +553,7 @@ export function ResourcePicker({
                                             ? 'Search employee name'
                                             : 'Search asset code or name'
                                     }
-                                    className="min-h-11 w-full rounded-lg border border-line bg-surface py-2 pr-3 pl-10 text-sm text-ink placeholder:text-ink-soft/70 focus:border-brand focus:ring-2 focus:ring-brand/30 focus:outline-none"
+                                    className="min-h-11 w-full rounded-lg border border-line bg-surface py-2 pr-3 pl-10 text-sm text-ink placeholder:text-ink-soft/70 focus:border-brand-strong focus:ring-2 focus:ring-brand-strong/30 focus:outline-none"
                                     aria-label={`Search ${resourceTab === 'personnel' ? 'employees' : 'assets'}`}
                                 />
                             </label>
@@ -911,7 +911,7 @@ function PickerTab({
             aria-label={`${label}: ${count} selected`}
             onClick={onClick}
             className={cn(
-                'min-h-11 rounded-md px-3 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none',
+                'min-h-11 rounded-md px-3 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none',
                 active
                     ? 'bg-surface text-ink shadow-sm'
                     : 'text-ink-soft hover:text-ink',
@@ -1321,7 +1321,7 @@ function CandidateDetails({ children }: { children: React.ReactNode }) {
             className="group mt-1"
             onClick={(event) => event.stopPropagation()}
         >
-            <summary className="flex min-h-8 w-fit cursor-pointer list-none items-center gap-1 text-xs font-semibold text-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+            <summary className="flex min-h-8 w-fit cursor-pointer list-none items-center gap-1 text-xs font-semibold text-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none [&::-webkit-details-marker]:hidden">
                 <ChevronDown
                     className="h-3.5 w-3.5 transition-transform group-open:rotate-180"
                     aria-hidden="true"
@@ -1399,7 +1399,7 @@ function ReviewAside({
                 />
             </div>
             <details className="overflow-hidden rounded-xl border border-line bg-surface-subtle/40 lg:hidden">
-                <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+                <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none [&::-webkit-details-marker]:hidden">
                     <span>
                         {mode === 'replacement'
                             ? 'Review replacement'
@@ -1565,7 +1565,7 @@ function SelectedResourceRow({
     onRemove: () => void;
 }) {
     return (
-        <div className="flex min-w-0 items-start justify-between gap-2 rounded-lg border border-brand/25 bg-brand-soft/60 p-2.5">
+        <div className="flex min-w-0 items-start justify-between gap-2 rounded-lg border border-brand-strong/25 bg-brand-soft/60 p-2.5">
             <div className="min-w-0">
                 <p className="text-xs font-semibold break-words text-ink">
                     {label}
@@ -1576,7 +1576,7 @@ function SelectedResourceRow({
             </div>
             <button
                 type="button"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-ink-soft hover:bg-surface hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-ink-soft hover:bg-surface hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none"
                 onClick={onRemove}
                 aria-label={`Remove ${label}`}
             >
@@ -1619,7 +1619,7 @@ function ReplacementReview({
                     Chosen replacement
                 </p>
                 {candidate ? (
-                    <div className="mt-2 rounded-lg border border-brand/25 bg-brand-soft/60 p-2.5">
+                    <div className="mt-2 rounded-lg border border-brand-strong/25 bg-brand-soft/60 p-2.5">
                         <p className="text-xs font-semibold break-words text-ink">
                             {candidateLabel(candidate)}
                         </p>
@@ -1653,7 +1653,7 @@ function ReplacementReview({
                         value={reason}
                         onChange={(event) => onReasonChange(event.target.value)}
                         placeholder="Add context for the reassignment…"
-                        className="mt-2 block w-full resize-y rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-soft/70 focus:border-brand focus:ring-2 focus:ring-brand/30 focus:outline-none"
+                        className="mt-2 block w-full resize-y rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-soft/70 focus:border-brand-strong focus:ring-2 focus:ring-brand-strong/30 focus:outline-none"
                     />
                 </div>
             )}

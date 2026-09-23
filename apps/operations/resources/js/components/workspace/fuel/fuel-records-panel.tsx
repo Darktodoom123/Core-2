@@ -148,7 +148,7 @@ export function FuelRecordsPanel({
                             )}
                             {!consumption && log.receipt_url && (
                                 <a
-                                    className="mt-3 inline-flex min-h-11 items-center rounded-xs text-sm font-medium text-brand-strong underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                    className="mt-3 inline-flex min-h-11 items-center rounded-xs text-sm font-medium text-brand-strong underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                                     href={log.receipt_url}
                                     target="_blank"
                                     rel="noreferrer"

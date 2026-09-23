@@ -309,7 +309,7 @@ export function PersonnelWorkspaceSection({
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder="Search personnel..."
-                                className="w-full rounded-md border border-line bg-surface py-1.5 pr-3 pl-8 text-sm text-ink placeholder:text-ink-soft focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none"
+                                className="w-full rounded-md border border-line bg-surface py-1.5 pr-3 pl-8 text-sm text-ink placeholder:text-ink-soft focus:border-brand-strong focus:ring-1 focus:ring-brand-strong focus:outline-none"
                                 aria-label="Search personnel"
                             />
                         </div>
@@ -342,7 +342,7 @@ export function PersonnelWorkspaceSection({
                                         className={cn(
                                             'w-full p-3 text-left transition hover:bg-surface-subtle',
                                             isSelected &&
-                                                'bg-surface-subtle ring-1 ring-brand/30 ring-inset',
+                                                'bg-surface-subtle ring-1 ring-brand-strong/30 ring-inset',
                                         )}
                                     >
                                         <div className="flex items-center justify-between">
@@ -494,7 +494,7 @@ export function PersonnelWorkspaceSection({
                                     {credentials.map((cred) => (
                                         <div
                                             key={cred.id}
-                                            className="rounded-lg border border-line bg-surface p-4 shadow-sm transition hover:border-brand/40"
+                                            className="rounded-lg border border-line bg-surface p-4 shadow-sm transition hover:border-brand-strong/40"
                                             data-testid={`credential-card-${cred.id}`}
                                         >
                                             <div className="flex flex-wrap items-start justify-between gap-2">
@@ -551,7 +551,7 @@ export function PersonnelWorkspaceSection({
                                             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line/60 pt-3">
                                                 {cred.attachment ? (
                                                     <div className="flex items-center gap-2 text-xs text-ink-soft">
-                                                        <FileText className="h-4 w-4 text-brand" />
+                                                        <FileText className="h-4 w-4 text-brand-strong" />
                                                         <span className="font-medium text-ink">
                                                             {
                                                                 cred.attachment
@@ -572,7 +572,7 @@ export function PersonnelWorkspaceSection({
                                                                 cred.attachment
                                                                     .download_url
                                                             }
-                                                            className="inline-flex items-center gap-1 font-semibold text-brand hover:underline"
+                                                            className="inline-flex items-center gap-1 font-semibold text-brand-strong hover:underline"
                                                             target="_blank"
                                                             rel="noopener noreferrer"
                                                             data-testid={`download-credential-${cred.id}`}
@@ -587,7 +587,7 @@ export function PersonnelWorkspaceSection({
                                                                     cred,
                                                                 )
                                                             }
-                                                            className="inline-flex items-center gap-1 font-semibold text-ink hover:text-brand"
+                                                            className="inline-flex items-center gap-1 font-semibold text-ink hover:text-brand-strong"
                                                             data-testid={`preview-credential-${cred.id}`}
                                                         >
                                                             <Eye className="h-3.5 w-3.5" />
@@ -699,7 +699,7 @@ export function PersonnelWorkspaceSection({
                                             e.target.value,
                                         )
                                     }
-                                    className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand focus:outline-none"
+                                    className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand-strong focus:outline-none"
                                 >
                                     {CREDENTIAL_KINDS.map((k) => (
                                         <option key={k.value} value={k.value}>
@@ -723,7 +723,7 @@ export function PersonnelWorkspaceSection({
                                         )
                                     }
                                     placeholder="e.g. Heavy Mobile Crane NC-III"
-                                    className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand focus:outline-none"
+                                    className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand-strong focus:outline-none"
                                 />
                             </div>
                             <div>
@@ -741,7 +741,7 @@ export function PersonnelWorkspaceSection({
                                         )
                                     }
                                     placeholder="e.g. TESDA-NC3-99120"
-                                    className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand focus:outline-none"
+                                    className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand-strong focus:outline-none"
                                 />
                             </div>
                             <div className="grid gap-3 sm:grid-cols-2">
@@ -761,7 +761,7 @@ export function PersonnelWorkspaceSection({
                                             )
                                         }
                                         placeholder="e.g. TESDA Central Office"
-                                        className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand focus:outline-none"
+                                        className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand-strong focus:outline-none"
                                     />
                                 </div>
                                 <div>
@@ -777,7 +777,7 @@ export function PersonnelWorkspaceSection({
                                                 e.target.value,
                                             )
                                         }
-                                        className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand focus:outline-none"
+                                        className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand-strong focus:outline-none"
                                     />
                                 </div>
                             </div>
@@ -794,7 +794,7 @@ export function PersonnelWorkspaceSection({
                                             e.target.value,
                                         )
                                     }
-                                    className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand focus:outline-none"
+                                    className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand-strong focus:outline-none"
                                 />
                                 <span className="mt-0.5 block text-[11px] text-ink-soft">
                                     Leave blank if no expiration date is
@@ -831,7 +831,7 @@ export function PersonnelWorkspaceSection({
                                     }
                                     rows={2}
                                     placeholder="Optional restrictions or endorsement details..."
-                                    className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand focus:outline-none"
+                                    className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand-strong focus:outline-none"
                                 />
                             </div>
                             <div className="flex justify-end gap-2 border-t border-line pt-3">
@@ -894,7 +894,7 @@ export function PersonnelWorkspaceSection({
                                             e.target.value,
                                         )
                                     }
-                                    className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand focus:outline-none"
+                                    className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand-strong focus:outline-none"
                                 >
                                     <option value="active">Active</option>
                                     <option value="revoked">Revoked</option>
@@ -917,7 +917,7 @@ export function PersonnelWorkspaceSection({
                                             e.target.value,
                                         )
                                     }
-                                    className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand focus:outline-none"
+                                    className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand-strong focus:outline-none"
                                 />
                             </div>
                             <div>
@@ -934,7 +934,7 @@ export function PersonnelWorkspaceSection({
                                             e.target.value,
                                         )
                                     }
-                                    className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand focus:outline-none"
+                                    className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand-strong focus:outline-none"
                                 />
                             </div>
                             <div className="grid gap-3 sm:grid-cols-2">
@@ -951,7 +951,7 @@ export function PersonnelWorkspaceSection({
                                                 e.target.value,
                                             )
                                         }
-                                        className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand focus:outline-none"
+                                        className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand-strong focus:outline-none"
                                     />
                                 </div>
                                 <div>
@@ -967,7 +967,7 @@ export function PersonnelWorkspaceSection({
                                                 e.target.value,
                                             )
                                         }
-                                        className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand focus:outline-none"
+                                        className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand-strong focus:outline-none"
                                     />
                                 </div>
                             </div>
@@ -984,7 +984,7 @@ export function PersonnelWorkspaceSection({
                                             e.target.value,
                                         )
                                     }
-                                    className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand focus:outline-none"
+                                    className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand-strong focus:outline-none"
                                 />
                                 <span className="mt-0.5 block text-[11px] text-ink-soft">
                                     Leave blank if no expiration date is
@@ -1004,7 +1004,7 @@ export function PersonnelWorkspaceSection({
                                         )
                                     }
                                     rows={2}
-                                    className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand focus:outline-none"
+                                    className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand-strong focus:outline-none"
                                 />
                             </div>
                             <div className="flex justify-end gap-2 border-t border-line pt-3">
@@ -1093,7 +1093,7 @@ export function PersonnelWorkspaceSection({
                                             e.target.value,
                                         )
                                     }
-                                    className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand focus:outline-none"
+                                    className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand-strong focus:outline-none"
                                 />
                             </div>
                             <div>
@@ -1110,7 +1110,7 @@ export function PersonnelWorkspaceSection({
                                     }
                                     rows={2}
                                     placeholder="e.g. Renewed license for 2026-2029 cycle."
-                                    className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand focus:outline-none"
+                                    className="mt-1 w-full rounded-md border border-line bg-surface p-2 text-sm text-ink focus:border-brand-strong focus:outline-none"
                                 />
                             </div>
                             <div className="flex justify-end gap-2 border-t border-line pt-3">
@@ -1176,7 +1176,7 @@ export function PersonnelWorkspaceSection({
                                 />
                             ) : (
                                 <div className="flex flex-col items-center justify-center py-12 text-center">
-                                    <FileText className="h-16 w-16 text-brand" />
+                                    <FileText className="h-16 w-16 text-brand-strong" />
                                     <p className="mt-3 text-sm font-semibold text-ink">
                                         {
                                             previewCred.attachment
@@ -1197,7 +1197,7 @@ export function PersonnelWorkspaceSection({
                                         }
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-xs font-semibold text-white shadow hover:bg-brand-strong"
+                                        className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-xs font-semibold text-brand-contrast shadow hover:bg-brand-strong hover:text-white dark:hover:text-brand-contrast"
                                     >
                                         <Download className="h-4 w-4" />
                                         Download PDF Document

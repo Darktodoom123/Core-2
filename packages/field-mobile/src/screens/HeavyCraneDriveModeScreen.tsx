@@ -959,7 +959,7 @@ export const HeavyCraneDriveModeScreen: React.FC<
 
                 {/* Critical Persistent Overhead Clearance Warning (NEVER TRUNCATED) */}
                 <View style={styles.hazardAlertStrip}>
-                    <Icon color="#FDE047" name="alert" size={15} />
+                    <Icon color="#FFBF00" name="alert" size={15} />
                     <Text style={styles.hazardAlertText}>
                         CAUTION: Bridge clearance only 4.1m — DO NOT ENTER Old
                         Mill Road.
@@ -1020,7 +1020,7 @@ export const HeavyCraneDriveModeScreen: React.FC<
                         ]}
                         testID="report-delay-trigger-btn"
                     >
-                        <Icon color="#F59E0B" name="alert" size={22} />
+                        <Icon color="#FFBF00" name="alert" size={22} />
                     </Pressable>
 
                     <Pressable
@@ -1060,7 +1060,7 @@ export const HeavyCraneDriveModeScreen: React.FC<
             {/* 4. Active Reported Delay Notification Banner */}
             {delayReported ? (
                 <View style={styles.floatingReportedDelayCard}>
-                    <Icon color="#F59E0B" name="check-circle" size={16} />
+                    <Icon color="#FFBF00" name="check-circle" size={16} />
                     <View style={styles.reportedDelayTextCol}>
                         <Text style={styles.reportedDelayTitle}>
                             ✓ Delay reported to Dispatch:
@@ -1329,7 +1329,7 @@ export const HeavyCraneDriveModeScreen: React.FC<
                                     color={
                                         clearanceAssessment.passed
                                             ? '#10B981'
-                                            : '#F59E0B'
+                                            : '#FFBF00'
                                     }
                                     name="shield-check"
                                     size={18}
@@ -1483,7 +1483,7 @@ export const HeavyCraneDriveModeScreen: React.FC<
                     <View style={styles.delayPickerModal}>
                         <View style={styles.modalHeaderRow}>
                             <View style={styles.modalTitleRow}>
-                                <Icon color="#F59E0B" name="alert" size={20} />
+                                <Icon color="#FFBF00" name="alert" size={20} />
                                 <Text style={styles.delayPickerModalTitle}>
                                     Report Route Delay / Obstruction
                                 </Text>
@@ -1810,7 +1810,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     categoryBadgeText: {
-        color: '#FDE047',
+        color: '#FFBF00',
         fontSize: 7.5,
         fontWeight: '800',
         letterSpacing: 0.3,
@@ -1957,7 +1957,7 @@ const styles = StyleSheet.create({
         paddingVertical: 4,
     },
     wideLanePill: {
-        backgroundColor: 'rgba(253, 224, 71, 0.2)',
+        backgroundColor: 'rgba(255, 191, 0, 0.2)',
     },
     lanePillActive: {
         backgroundColor: '#FFFFFF',
@@ -2091,13 +2091,13 @@ const styles = StyleSheet.create({
         ...shadows.md,
     },
     hazardBtn: {
-        backgroundColor: 'rgba(69, 26, 3, 0.96)',
-        borderColor: '#F59E0B',
+        backgroundColor: 'rgba(51, 40, 0, 0.96)',
+        borderColor: '#FFBF00',
     },
     floatingReportedDelayCard: {
         alignItems: 'center',
-        backgroundColor: '#451A03',
-        borderColor: '#B45309',
+        backgroundColor: '#332800',
+        borderColor: '#332800',
         borderRadius: 12,
         borderWidth: 1,
         bottom: 185,
@@ -2115,12 +2115,12 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     reportedDelayTitle: {
-        color: '#FDE68A',
+        color: '#FFBF00',
         fontSize: 11,
         fontWeight: '800',
     },
     reportedDelayText: {
-        color: '#FEF3C7',
+        color: '#FFBF00',
         fontSize: 11,
     },
     dismissDelayBtn: {
@@ -2237,7 +2237,7 @@ const styles = StyleSheet.create({
         fontWeight: '800',
     },
     dockGateBadge: {
-        color: '#F59E0B',
+        color: '#FFBF00',
         fontSize: 10.5,
         fontWeight: '700',
     },
@@ -2382,8 +2382,8 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
     },
     clearanceCard: {
-        backgroundColor: '#1C1917',
-        borderColor: '#78350F',
+        backgroundColor: '#1E293B',
+        borderColor: '#332800',
         borderRadius: 8,
         borderWidth: 1,
         gap: 3,
@@ -2396,7 +2396,7 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     clearanceRatingText: {
-        color: '#F59E0B',
+        color: '#FFBF00',
         fontSize: 11,
         fontWeight: '900',
         letterSpacing: 0.5,
@@ -2407,7 +2407,7 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     clearanceWarningText: {
-        color: '#FECA57',
+        color: '#FFBF00',
         fontSize: 10,
         fontWeight: '700',
         marginTop: 2,
@@ -2495,7 +2495,7 @@ const styles = StyleSheet.create({
         padding: 12,
     },
     stepCardHazard: {
-        backgroundColor: '#1C1917',
+        backgroundColor: '#1E293B',
         borderColor: '#DC2626',
         borderWidth: 1.5,
     },
@@ -2541,7 +2541,7 @@ const styles = StyleSheet.create({
     },
     cautionBox: {
         backgroundColor: '#292524',
-        borderColor: '#78350F',
+        borderColor: '#332800',
         borderRadius: 6,
         borderWidth: 1,
         flexDirection: 'row',
@@ -2553,13 +2553,13 @@ const styles = StyleSheet.create({
         borderColor: '#991B1B',
     },
     cautionTag: {
-        color: '#F59E0B',
+        color: '#FFBF00',
         fontSize: 9.5,
         fontWeight: '900',
         letterSpacing: 0.5,
     },
     cautionDescription: {
-        color: '#FEF3C7',
+        color: '#FFBF00',
         flex: 1,
         fontSize: 11,
         fontWeight: '600',
@@ -2671,8 +2671,8 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
     },
     minuteChipActive: {
-        backgroundColor: '#F59E0B',
-        borderColor: '#FCD34D',
+        backgroundColor: '#FFBF00',
+        borderColor: '#FFBF00',
     },
     minuteChipText: {
         color: '#94A3B8',

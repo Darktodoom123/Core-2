@@ -805,7 +805,7 @@ function TrackingMapContent({
                 'circle-stroke-color': [
                     'case',
                     ['>', ['coalesce', ['get', 'selectedCount'], 0], 0],
-                    '#c98f12',
+                    '#806000',
                     '#ffffff',
                 ],
                 'circle-stroke-width': [
@@ -1869,7 +1869,7 @@ function CompactMapToolbar({
                             onSearchQueryChange(event.target.value)
                         }
                         placeholder="Search asset code, name, or operator…"
-                        className="h-10 w-full rounded-lg border border-line bg-surface-subtle py-2 pr-3 pl-9 text-sm text-ink placeholder:text-ink-soft focus:border-brand-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
+                        className="h-10 w-full rounded-lg border border-line bg-surface-subtle py-2 pr-3 pl-9 text-sm text-ink placeholder:text-ink-soft focus:border-brand-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-strong/30"
                     />
                 </label>
                 <div className="flex flex-wrap items-center gap-1.5">
@@ -2128,7 +2128,7 @@ const MAP_FRESHNESS_COLORS: Record<
     string
 > = {
     fresh: '#15803d',
-    delayed: '#b45309',
+    delayed: '#806000',
     stale: '#dc2626',
     offline: '#64748b',
 };

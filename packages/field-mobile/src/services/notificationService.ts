@@ -63,21 +63,21 @@ export async function setupAndroidNotificationChannels(): Promise<void> {
             name: 'Urgent Dispatch Alerts',
             importance: Notifications.AndroidImportance.MAX,
             vibrationPattern: [0, 250, 250, 250],
-            lightColor: '#ef4444',
+            lightColor: '#EF4444',
         });
 
         await Notifications.setNotificationChannelAsync('dispatch-updates', {
             name: 'Dispatch Updates',
             importance: Notifications.AndroidImportance.DEFAULT,
             vibrationPattern: [0, 150, 100, 150],
-            lightColor: '#3b82f6',
+            lightColor: '#3B82F6',
         });
 
         await Notifications.setNotificationChannelAsync('sos-emergency', {
             name: 'Emergency SOS Alerts',
             importance: Notifications.AndroidImportance.MAX,
             vibrationPattern: [0, 500, 200, 500],
-            lightColor: '#dc2626',
+            lightColor: '#DC2626',
             bypassDnd: true,
         });
     } catch {

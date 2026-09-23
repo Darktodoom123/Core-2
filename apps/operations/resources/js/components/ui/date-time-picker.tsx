@@ -495,35 +495,35 @@ export function DateTimePicker({
                             <button
                                 type="button"
                                 onClick={() => handlePreset('now')}
-                                className="rounded-md border border-line bg-surface-subtle px-2 py-1 font-medium text-ink hover:bg-brand-soft hover:text-brand transition-colors"
+                                className="rounded-md border border-line bg-surface-subtle px-2 py-1 font-medium text-ink hover:bg-brand-soft hover:text-brand-strong transition-colors"
                             >
                                 Now
                             </button>
                             <button
                                 type="button"
                                 onClick={() => handlePreset('plus-1h')}
-                                className="rounded-md border border-line bg-surface-subtle px-2 py-1 font-medium text-ink hover:bg-brand-soft hover:text-brand transition-colors"
+                                className="rounded-md border border-line bg-surface-subtle px-2 py-1 font-medium text-ink hover:bg-brand-soft hover:text-brand-strong transition-colors"
                             >
                                 +1 Hour
                             </button>
                             <button
                                 type="button"
                                 onClick={() => handlePreset('today-9')}
-                                className="rounded-md border border-line bg-surface-subtle px-2 py-1 font-medium text-ink hover:bg-brand-soft hover:text-brand transition-colors"
+                                className="rounded-md border border-line bg-surface-subtle px-2 py-1 font-medium text-ink hover:bg-brand-soft hover:text-brand-strong transition-colors"
                             >
                                 9:00 AM
                             </button>
                             <button
                                 type="button"
                                 onClick={() => handlePreset('today-17')}
-                                className="rounded-md border border-line bg-surface-subtle px-2 py-1 font-medium text-ink hover:bg-brand-soft hover:text-brand transition-colors"
+                                className="rounded-md border border-line bg-surface-subtle px-2 py-1 font-medium text-ink hover:bg-brand-soft hover:text-brand-strong transition-colors"
                             >
                                 5:00 PM
                             </button>
                             <button
                                 type="button"
                                 onClick={() => handlePreset('tomorrow-9')}
-                                className="rounded-md border border-line bg-surface-subtle px-2 py-1 font-medium text-ink hover:bg-brand-soft hover:text-brand transition-colors"
+                                className="rounded-md border border-line bg-surface-subtle px-2 py-1 font-medium text-ink hover:bg-brand-soft hover:text-brand-strong transition-colors"
                             >
                                 Tomorrow 9 AM
                             </button>
@@ -579,7 +579,7 @@ export function DateTimePicker({
                                         'relative flex h-7 w-7 items-center justify-center rounded-md font-medium transition-colors mx-auto text-xs',
                                         item.month !== 'current' && 'text-ink-soft/40',
                                         item.month === 'current' && !isSelected && 'text-ink hover:bg-surface-subtle',
-                                        isToday && !isSelected && 'font-bold text-brand ring-1 ring-brand/40',
+                                        isToday && !isSelected && 'font-bold text-brand-strong ring-1 ring-brand-strong/40',
                                         isSelected && 'bg-brand text-brand-contrast font-semibold shadow-sm'
                                     )}
                                 >
@@ -594,7 +594,7 @@ export function DateTimePicker({
                         <div className="mt-2.5 border-t border-line pt-2.5">
                             <div className="flex items-center justify-between mb-1.5">
                                 <div className="flex items-center gap-1.5 text-xs font-semibold text-ink-soft">
-                                    <Clock className="h-3.5 w-3.5 text-brand" />
+                                    <Clock className="h-3.5 w-3.5 text-brand-strong" />
                                     <span>Time</span>
                                 </div>
                                 <span className="text-xs font-mono font-medium text-ink">
@@ -610,7 +610,7 @@ export function DateTimePicker({
                                     value={manualTimeInput}
                                     onChange={(e) => handleManualTimeInputChange(e.target.value)}
                                     placeholder="Type time e.g. 2:30 PM or 14:30"
-                                    className="h-8 w-full rounded-lg border border-line-strong bg-surface px-2.5 text-xs text-ink placeholder:text-ink-soft/60 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand/30"
+                                    className="h-8 w-full rounded-lg border border-line-strong bg-surface px-2.5 text-xs text-ink placeholder:text-ink-soft/60 focus:border-brand-strong focus:outline-none focus:ring-1 focus:ring-brand-strong/30"
                                 />
                             </div>
 
@@ -630,7 +630,7 @@ export function DateTimePicker({
                                                 ampm
                                             )
                                         }
-                                        className="h-8 w-full rounded-lg border border-line-strong bg-surface px-2 text-center text-xs font-medium text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand/30"
+                                        className="h-8 w-full rounded-lg border border-line-strong bg-surface px-2 text-center text-xs font-medium text-ink focus:border-brand-strong focus:outline-none focus:ring-1 focus:ring-brand-strong/30"
                                     />
                                     <span className="absolute right-1 text-[10px] text-ink-soft/50 pointer-events-none">
                                         Hr
@@ -652,7 +652,7 @@ export function DateTimePicker({
                                                 ampm
                                             )
                                         }
-                                        className="h-8 w-full rounded-lg border border-line-strong bg-surface px-2 text-center text-xs font-medium text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand/30"
+                                        className="h-8 w-full rounded-lg border border-line-strong bg-surface px-2 text-center text-xs font-medium text-ink focus:border-brand-strong focus:outline-none focus:ring-1 focus:ring-brand-strong/30"
                                     />
                                     <span className="absolute right-1 text-[10px] text-ink-soft/50 pointer-events-none">
                                         Min
@@ -669,7 +669,7 @@ export function DateTimePicker({
                                             ampm === 'AM' ? 'PM' : 'AM'
                                         )
                                     }
-                                    className="h-8 rounded-lg border border-line-strong bg-surface-subtle font-semibold text-xs text-ink hover:bg-brand-soft hover:text-brand transition-colors"
+                                    className="h-8 rounded-lg border border-line-strong bg-surface-subtle font-semibold text-xs text-ink hover:bg-brand-soft hover:text-brand-strong transition-colors"
                                 >
                                     {ampm}
                                 </button>
@@ -734,11 +734,11 @@ export function DateTimePicker({
                     aria-invalid={error ? 'true' : undefined}
                     aria-describedby={errorId}
                     className={cn(
-                        'flex h-11 w-full items-center justify-between rounded-lg border bg-surface px-3.5 text-left text-sm font-normal transition-all focus:outline-none focus:ring-2 focus:ring-brand/30',
+                        'flex h-11 w-full items-center justify-between rounded-lg border bg-surface px-3.5 text-left text-sm font-normal transition-all focus:outline-none focus:ring-2 focus:ring-brand-strong/30',
                         error
                             ? 'border-danger focus:border-danger'
                             : isOpen
-                            ? 'border-brand ring-2 ring-brand/20'
+                            ? 'border-brand-strong ring-2 ring-brand-strong/20'
                             : 'border-line-strong hover:border-ink-soft/50',
                         disabled && 'cursor-not-allowed opacity-50 bg-surface-subtle'
                     )}
@@ -772,7 +772,7 @@ export function DateTimePicker({
                                 <X className="h-4 w-4" />
                             </span>
                         )}
-                        <CalendarIcon className="h-4 w-4 text-brand" />
+                        <CalendarIcon className="h-4 w-4 text-brand-strong" />
                     </div>
                 </button>
             </div>

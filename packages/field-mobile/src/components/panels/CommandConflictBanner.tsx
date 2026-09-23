@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
         marginTop: 4,
     },
     retryButton: {
-        backgroundColor: colors.amber,
+        backgroundColor: colors.primary,
         flexGrow: 1,
     },
     pressed: {

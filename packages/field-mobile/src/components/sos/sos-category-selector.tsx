@@ -42,8 +42,8 @@ export const EMERGENCY_CATEGORIES: EmergencyCategoryConfig[] = [
         subtitle: 'Boom failure, hydraulic burst, brake loss, runaway load',
         badge: 'MACHINERY',
         icon: 'crane',
-        color: '#D97706',
-        darkColor: '#F59E0B',
+        color: '#FFBF00',
+        darkColor: '#FFBF00',
     },
     {
         value: 'site_accident',
@@ -62,8 +62,8 @@ export const EMERGENCY_CATEGORIES: EmergencyCategoryConfig[] = [
         subtitle: 'Power line contact, gas leak, fire/smoke, sinkhole',
         badge: 'DANGER',
         icon: 'flash',
-        color: '#EA580C',
-        darkColor: '#FB923C',
+        color: '#FFBF00',
+        darkColor: '#FFBF00',
     },
 ];
 
@@ -219,13 +219,13 @@ export const SosCategorySelector: React.FC<SosCategorySelectorProps> = ({
                                                       ? '#334155'
                                                       : category.value ===
                                                           'critical_asset_malfunction'
-                                                        ? '#FEF3C7'
+                                                        ? '#FFF3C4'
                                                         : category.value ===
                                                             'site_accident'
                                                           ? '#FEE2E2'
                                                           : category.value ===
                                                               'other_immediate_danger'
-                                                            ? '#FFEDD5'
+                                                            ? '#FFF3C4'
                                                             : '#FEE2E2',
                                             },
                                         ]}
@@ -348,7 +348,7 @@ export const SosCategorySelector: React.FC<SosCategorySelectorProps> = ({
                                     color={
                                         isChipActive
                                             ? isDarkHud
-                                                ? '#FBBF24'
+                                                ? '#FFBF00'
                                                 : colors.amberDark
                                             : isDarkHud
                                               ? colors.hudTextDim
@@ -644,7 +644,7 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     darkTransmitBtn: {
-        backgroundColor: '#F59E0B',
+        backgroundColor: '#FFBF00',
     },
     transmitBtnText: {
         color: '#FFFFFF',

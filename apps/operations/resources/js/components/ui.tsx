@@ -315,7 +315,7 @@ export function PrototypeSandboxBanner({
                 </div>
                 <a
                     href="/operations"
-                    className="inline-flex items-center gap-1 font-semibold text-brand-strong underline hover:text-brand"
+                    className="inline-flex items-center gap-1 font-semibold text-brand-strong underline hover:text-brand-strong"
                 >
                     Go to Live Operations Workspace →
                 </a>

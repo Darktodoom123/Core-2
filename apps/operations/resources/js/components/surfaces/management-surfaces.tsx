@@ -308,7 +308,7 @@ export function AdministrationSurface() {
                         <Panel className="p-5">
                             <div className="flex items-center gap-3">
                                 <Gauge
-                                    className="h-5 w-5 text-brand"
+                                    className="h-5 w-5 text-brand-strong"
                                     aria-hidden="true"
                                 />
                                 <h2 className="font-semibold text-ink">
@@ -347,7 +347,7 @@ export function AdministrationSurface() {
                         <Panel className="p-5">
                             <div className="flex items-center gap-3">
                                 <MapPin
-                                    className="h-5 w-5 text-brand"
+                                    className="h-5 w-5 text-brand-strong"
                                     aria-hidden="true"
                                 />
                                 <h2 className="font-semibold text-ink">
@@ -465,7 +465,7 @@ export function ManagerOverview({
                                         key={job.id}
                                         type="button"
                                         onClick={() => onNavigate('board')}
-                                        className="group relative flex w-full flex-col justify-between gap-4 rounded-lg p-4 text-left transition-all duration-300 hover:bg-surface-subtle hover:shadow-sm focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:outline-none sm:flex-row sm:items-center"
+                                        className="group relative flex w-full flex-col justify-between gap-4 rounded-lg p-4 text-left transition-all duration-300 hover:bg-surface-subtle hover:shadow-sm focus-visible:ring-2 focus-visible:ring-brand-strong/50 focus-visible:outline-none sm:flex-row sm:items-center"
                                     >
                                         {[
                                             'In progress',
@@ -476,7 +476,7 @@ export function ManagerOverview({
                                         )}
                                         <div className="flex min-w-0 flex-1 items-center gap-4 sm:gap-6">
                                             <div className="w-24 shrink-0 text-left sm:text-right">
-                                                <p className="text-sm font-semibold text-ink transition-colors group-hover:text-brand">
+                                                <p className="text-sm font-semibold text-ink transition-colors group-hover:text-brand-strong">
                                                     {job.reference}
                                                 </p>
                                                 <p className="mt-1 text-xs text-muted">

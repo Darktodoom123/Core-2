@@ -170,7 +170,7 @@ export function DispatchResources({
                                 setDate(event.target.value);
                             }
                         }}
-                        className="mt-1 block min-h-11 rounded-lg border border-line bg-surface px-3 text-sm text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                        className="mt-1 block min-h-11 rounded-lg border border-line bg-surface px-3 text-sm text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                     />
                 </label>
             </div>
@@ -187,7 +187,7 @@ export function DispatchResources({
                         </div>
                         <Link
                             href={`/operations/dispatch-jobs/${selectedJob.id}?${new URLSearchParams({ return_to: returnTo })}#assignment-summary`}
-                            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-brand-contrast shadow-xs transition-colors hover:bg-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-brand-contrast shadow-xs transition-colors hover:bg-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                         >
                             <Users className="h-3.5 w-3.5" aria-hidden="true" />
                             Assign resources to this job →
@@ -217,7 +217,7 @@ export function DispatchResources({
                                     onSelectJob(id);
                                 }
                             }}
-                            className="min-h-9 rounded-lg border border-line bg-surface px-2.5 text-xs font-medium text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                            className="min-h-9 rounded-lg border border-line bg-surface px-2.5 text-xs font-medium text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                         >
                             <option value="" disabled>
                                 Choose a draft dispatch…
@@ -249,7 +249,7 @@ export function DispatchResources({
                                 aria-pressed={kind === value}
                                 onClick={() => setKind(value)}
                                 className={cn(
-                                    'inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-sm focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
+                                    'inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-sm focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
                                     kind === value
                                         ? 'bg-brand-soft font-semibold text-ink'
                                         : 'text-ink-soft hover:bg-surface-subtle',
@@ -272,7 +272,7 @@ export function DispatchResources({
                         value={query}
                         onChange={(event) => setQuery(event.target.value)}
                         placeholder="Search name, role, or asset"
-                        className="min-h-11 w-full rounded-lg border border-line bg-surface pr-3 pl-9 text-sm text-ink placeholder:text-ink-soft focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                        className="min-h-11 w-full rounded-lg border border-line bg-surface pr-3 pl-9 text-sm text-ink placeholder:text-ink-soft focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                     />
                 </label>
                 <p className="text-xs text-ink-soft" role="status">
@@ -295,7 +295,7 @@ export function DispatchResources({
                 tabIndex={0}
                 role="region"
                 aria-label="Resource results"
-                className="mt-3 max-h-96 overflow-y-auto rounded-lg border border-line focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                className="mt-3 max-h-96 overflow-y-auto rounded-lg border border-line focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
             >
                 {rows.length === 0 ? (
                     <p className="p-5 text-sm text-ink-soft">

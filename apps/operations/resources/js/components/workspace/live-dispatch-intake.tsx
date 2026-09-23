@@ -180,7 +180,7 @@ export function LiveDispatchIntake({
                                     type="button"
                                     className="flex items-center gap-1.5 rounded-md bg-surface px-3 py-1.5 text-xs font-semibold text-ink shadow-xs"
                                 >
-                                    <Truck className="h-3.5 w-3.5 text-brand" />
+                                    <Truck className="h-3.5 w-3.5 text-brand-strong" />
                                     Direct Dispatch
                                 </button>
                                 <button
@@ -413,7 +413,7 @@ export function LiveDispatchIntake({
                                 setMode('reconciliation');
                             }}
                             className={cn(
-                                'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3.5 py-2 text-left text-xs font-semibold transition-all focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none',
+                                'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3.5 py-2 text-left text-xs font-semibold transition-all focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:ring-offset-2 focus-visible:outline-none',
                                 mode === 'reconciliation'
                                     ? 'border-info-strong bg-info-soft text-info-strong shadow-xs'
                                     : 'border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
@@ -488,7 +488,7 @@ function IncomingWorkRow({
                 aria-label={`Review ${item.sourceLabel}: ${item.reference}`}
                 onClick={onClick}
                 className={cn(
-                    'flex min-h-14 w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none',
+                    'flex min-h-14 w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:ring-offset-2 focus-visible:outline-none',
                     selected
                         ? 'bg-brand-soft/60'
                         : 'bg-surface hover:bg-surface-subtle',
@@ -1819,7 +1819,7 @@ function IntakeInput({
                 aria-invalid={error ? 'true' : undefined}
                 aria-describedby={error ? errorId : undefined}
                 className={cn(
-                    'mt-1 h-11 w-full rounded-lg border bg-surface px-3 text-sm transition-colors focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-none',
+                    'mt-1 h-11 w-full rounded-lg border bg-surface px-3 text-sm transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong/30 focus-visible:outline-none',
                     error
                         ? 'border-danger'
                         : 'border-line-strong hover:border-ink-soft',
@@ -1864,7 +1864,7 @@ function SelectField({
                 aria-invalid={error ? 'true' : undefined}
                 aria-describedby={error ? errorId : undefined}
                 className={cn(
-                    'mt-1 h-11 w-full rounded-lg border bg-surface px-3 text-sm transition-colors focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-none',
+                    'mt-1 h-11 w-full rounded-lg border bg-surface px-3 text-sm transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong/30 focus-visible:outline-none',
                     error
                         ? 'border-danger'
                         : 'border-line-strong hover:border-ink-soft',
@@ -1921,7 +1921,7 @@ function TextAreaField({
                         .join(' ') || undefined
                 }
                 className={cn(
-                    'mt-1 w-full resize-y rounded-lg border bg-surface px-3 py-2 text-sm transition-colors focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-none',
+                    'mt-1 w-full resize-y rounded-lg border bg-surface px-3 py-2 text-sm transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong/30 focus-visible:outline-none',
                     error
                         ? 'border-danger'
                         : 'border-line-strong hover:border-ink-soft',

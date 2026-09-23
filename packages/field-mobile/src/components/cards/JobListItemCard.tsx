@@ -73,9 +73,9 @@ export const JobListItemCard: React.FC<JobListItemCardProps> = ({
     ): { bg: string; text: string; dot: string } => {
         if (isPending) {
             return {
-                bg: isDarkHud ? 'rgba(245, 158, 11, 0.18)' : '#FEF3C7',
-                text: isDarkHud ? '#FCD34D' : '#B45309',
-                dot: '#F59E0B',
+                bg: isDarkHud ? 'rgba(255, 191, 0, 0.18)' : '#FFF3C4',
+                text: isDarkHud ? '#FFBF00' : '#806000',
+                dot: '#FFBF00',
             };
         }
 
@@ -107,9 +107,9 @@ export const JobListItemCard: React.FC<JobListItemCardProps> = ({
                 };
             case 'working':
                 return {
-                    bg: isDarkHud ? 'rgba(217, 119, 6, 0.18)' : '#FFEDD5',
-                    text: isDarkHud ? '#FDBA74' : '#C2410C',
-                    dot: '#EA580C',
+                    bg: isDarkHud ? 'rgba(255, 191, 0, 0.18)' : '#FFF3C4',
+                    text: isDarkHud ? '#FFBF00' : '#806000',
+                    dot: '#FFBF00',
                 };
             case 'completed':
                 return {
@@ -307,7 +307,7 @@ export const JobListItemCard: React.FC<JobListItemCardProps> = ({
                 <View style={styles.detailRow}>
                     <View style={styles.iconCol}>
                         <Icon
-                            color={isDarkHud ? '#F59E0B' : '#D97706'}
+                            color={isDarkHud ? '#FFBF00' : '#806000'}
                             name="crane"
                             size={16}
                         />
@@ -421,7 +421,7 @@ export const JobListItemCard: React.FC<JobListItemCardProps> = ({
                             ]}
                         >
                             <Icon
-                                color={isDarkHud ? '#F59E0B' : '#D97706'}
+                                color={isDarkHud ? '#FFBF00' : '#806000'}
                                 name="alert-circle"
                                 size={15}
                             />
@@ -559,7 +559,7 @@ export const JobListItemCard: React.FC<JobListItemCardProps> = ({
                             testID={`delay-status-banner-${job.id}`}
                         >
                             <View style={styles.reportedDelayHeader}>
-                                <Icon color="#F59E0B" name="alert" size={14} />
+                                <Icon color="#FFBF00" name="alert" size={14} />
                                 <Text
                                     style={[
                                         styles.reportedDelayTitle,
@@ -607,7 +607,7 @@ export const JobListItemCard: React.FC<JobListItemCardProps> = ({
                             testID={`report-delay-btn-${job.id}`}
                         >
                             <Icon
-                                color={isDarkHud ? '#FBBF24' : '#D97706'}
+                                color={isDarkHud ? '#FFBF00' : '#806000'}
                                 name="alert"
                                 size={15}
                             />
@@ -687,7 +687,7 @@ const styles = StyleSheet.create({
         paddingVertical: 3,
     },
     priorityHigh: {
-        backgroundColor: '#FEF3C7',
+        backgroundColor: '#FFF3C4',
     },
     priorityEmergency: {
         backgroundColor: '#FEE2E2',
@@ -806,7 +806,7 @@ const styles = StyleSheet.create({
     },
     pendingBanner: {
         alignItems: 'center',
-        backgroundColor: '#FEF3C7',
+        backgroundColor: '#FFF3C4',
         borderRadius: 8,
         flexDirection: 'row',
         gap: 6,
@@ -814,15 +814,15 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
     },
     darkPendingBanner: {
-        backgroundColor: 'rgba(245, 158, 11, 0.15)',
+        backgroundColor: 'rgba(255, 191, 0, 0.15)',
     },
     pendingBannerText: {
-        color: '#92400E',
+        color: '#806000',
         fontSize: 11,
         fontWeight: '600',
     },
     darkPendingBannerText: {
-        color: '#FCD34D',
+        color: '#FFBF00',
     },
     twoButtonRow: {
         flexDirection: 'row',
@@ -878,15 +878,15 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     reportedDelayBanner: {
-        backgroundColor: '#FFFBEB',
-        borderColor: '#FDE68A',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFF3C4',
         borderRadius: 8,
         borderWidth: 1,
         padding: 10,
     },
     darkReportedDelayBanner: {
-        backgroundColor: 'rgba(245, 158, 11, 0.12)',
-        borderColor: 'rgba(245, 158, 11, 0.3)',
+        backgroundColor: 'rgba(255, 191, 0, 0.12)',
+        borderColor: 'rgba(255, 191, 0, 0.3)',
     },
     reportedDelayHeader: {
         alignItems: 'center',
@@ -894,27 +894,27 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     reportedDelayTitle: {
-        color: '#B45309',
+        color: '#806000',
         fontSize: 12,
         fontWeight: '700',
         flexShrink: 1,
         flexWrap: 'wrap',
     },
     darkReportedDelayTitle: {
-        color: '#FCD34D',
+        color: '#FFBF00',
     },
     reportedDelayNotes: {
-        color: '#78350F',
+        color: '#806000',
         fontSize: 11,
         marginTop: 4,
     },
     darkReportedDelayNotes: {
-        color: '#FDE68A',
+        color: '#FFBF00',
     },
     btnReportDelay: {
         alignItems: 'center',
-        backgroundColor: '#FFFBEB',
-        borderColor: '#F59E0B',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFBF00',
         borderRadius: 10,
         borderWidth: 1,
         flexDirection: 'row',
@@ -925,15 +925,15 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
     },
     darkBtnReportDelay: {
-        backgroundColor: 'rgba(245, 158, 11, 0.1)',
-        borderColor: '#D97706',
+        backgroundColor: 'rgba(255, 191, 0, 0.1)',
+        borderColor: '#FFBF00',
     },
     btnReportDelayText: {
-        color: '#B45309',
+        color: '#806000',
         fontSize: 13,
         fontWeight: '700',
     },
     darkBtnReportDelayText: {
-        color: '#FCD34D',
+        color: '#FFBF00',
     },
 });

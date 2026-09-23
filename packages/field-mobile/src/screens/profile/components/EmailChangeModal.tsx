@@ -181,7 +181,7 @@ export const EmailChangeModal: React.FC<EmailChangeModalProps> = ({
                             ]}
                         >
                             <Icon
-                                color={isDarkHud ? '#F59E0B' : '#D97706'}
+                                color={isDarkHud ? '#FFBF00' : '#806000'}
                                 name="mail"
                                 size={22}
                             />
@@ -537,10 +537,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     lightIconWrap: {
-        backgroundColor: '#FEF3C7',
+        backgroundColor: '#FFF3C4',
     },
     darkIconWrap: {
-        backgroundColor: '#78350F',
+        backgroundColor: '#332800',
     },
     headerTitles: {
         flex: 1,
@@ -639,7 +639,7 @@ const styles = StyleSheet.create({
     },
     boldEmail: {
         fontWeight: '700',
-        color: '#D97706',
+        color: '#FFBF00',
     },
     resendRow: {
         alignItems: 'flex-start',
@@ -652,10 +652,10 @@ const styles = StyleSheet.create({
     resendBtnText: {
         fontSize: 13,
         fontWeight: '600',
-        color: '#D97706',
+        color: '#FFBF00',
     },
     darkResendBtnText: {
-        color: '#F59E0B',
+        color: '#FFBF00',
     },
     resendBtnDisabledText: {
         color: '#94A3B8',
@@ -693,10 +693,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     lightPrimaryBtn: {
-        backgroundColor: '#D97706',
+        backgroundColor: '#FFBF00',
     },
     darkPrimaryBtn: {
-        backgroundColor: '#F59E0B',
+        backgroundColor: '#FFBF00',
     },
     disabledBtn: {
         opacity: 0.5,

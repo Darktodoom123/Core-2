@@ -48,8 +48,8 @@ export const lightThemeColors: ThemeColors = {
     textMuted: '#64748B',
     textOnDark: '#FFFFFF',
     textInverse: '#FFFFFF',
-    brandAmber: '#D97706',
-    brandAmberLight: '#FEF3C7',
+    brandAmber: '#FFBF00',
+    brandAmberLight: '#FFF3C4',
     actionCobalt: '#2563EB',
     actionCobaltLight: '#EFF6FF',
     successEmerald: '#059669',
@@ -57,7 +57,7 @@ export const lightThemeColors: ThemeColors = {
     hazardRed: '#DC2626',
     hazardRedLight: '#FEF2F2',
     hudBezel: '#1E293B',
-    hudGlowAmber: '#F59E0B',
+    hudGlowAmber: '#FFBF00',
     hudGlowEmerald: '#10B981',
 };
 
@@ -76,8 +76,8 @@ export const darkHudThemeColors: ThemeColors = {
     textMuted: '#94A3B8',
     textOnDark: '#FFFFFF',
     textInverse: '#0F172A',
-    brandAmber: '#F59E0B',
-    brandAmberLight: '#78350F',
+    brandAmber: '#FFBF00',
+    brandAmberLight: '#332800',
     actionCobalt: '#3B82F6',
     actionCobaltLight: '#1E3A8A',
     successEmerald: '#10B981',
@@ -85,6 +85,6 @@ export const darkHudThemeColors: ThemeColors = {
     hazardRed: '#EF4444',
     hazardRedLight: '#7F1D1D',
     hudBezel: '#1E293B',
-    hudGlowAmber: '#F59E0B',
+    hudGlowAmber: '#FFBF00',
     hudGlowEmerald: '#34D399',
 };

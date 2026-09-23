@@ -27,7 +27,7 @@ const DUTY_CONFIG: Record<
     driving: {
         label: 'Driving',
         icon: Truck,
-        badgeClass: 'bg-brand-soft text-brand-strong border-brand/30',
+        badgeClass: 'bg-brand-soft text-brand-strong border-brand-strong/30',
     },
     standby: {
         label: 'Standby',

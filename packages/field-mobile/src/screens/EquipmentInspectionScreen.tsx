@@ -720,8 +720,8 @@ const styles = StyleSheet.create({
         borderColor: colors.hudBorder,
     },
     tabPillActive: {
-        backgroundColor: colors.amber,
-        borderColor: colors.amber,
+        backgroundColor: colors.primary,
+        borderColor: colors.primaryBorder,
     },
     darkTabPillActive: {
         backgroundColor: colors.hudAmber,
@@ -844,7 +844,7 @@ const styles = StyleSheet.create({
         borderColor: colors.hudAmber,
     },
     assetPillCode: {
-        color: colors.primary,
+        color: colors.amber,
         fontSize: 13,
         fontWeight: '800',
     },
@@ -873,8 +873,8 @@ const styles = StyleSheet.create({
         color: colors.surfaceDark,
     },
     noAssetBanner: {
-        backgroundColor: '#FEF3C7',
-        borderColor: '#F59E0B',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFBF00',
         borderRadius: 8,
         borderWidth: 1,
         marginHorizontal: 16,
@@ -882,16 +882,16 @@ const styles = StyleSheet.create({
         padding: 12,
     },
     darkNoAssetBanner: {
-        backgroundColor: '#78350F',
-        borderColor: '#D97706',
+        backgroundColor: '#332800',
+        borderColor: '#FFBF00',
     },
     noAssetBannerText: {
-        color: '#92400E',
+        color: '#806000',
         fontSize: 13,
         fontWeight: '600',
         textAlign: 'center',
     },
     darkNoAssetBannerText: {
-        color: '#FEF3C7',
+        color: '#FFBF00',
     },
 });

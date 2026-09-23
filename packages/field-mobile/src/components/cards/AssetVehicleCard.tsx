@@ -130,7 +130,7 @@ export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
                         testID="vehicle-card-dvir-status"
                     >
                         <Icon
-                            color={isDarkHud ? '#FBBF24' : colors.amberDark}
+                            color={isDarkHud ? '#FFBF00' : colors.amberDark}
                             name="alert"
                             size={12}
                         />
@@ -528,7 +528,7 @@ export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
                     testID="asset-card-delay-banner"
                 >
                     <View style={styles.reportedDelayHeader}>
-                        <Icon color="#F59E0B" name="alert" size={14} />
+                        <Icon color="#FFBF00" name="alert" size={14} />
                         <Text
                             style={[
                                 styles.reportedDelayTitle,
@@ -665,7 +665,7 @@ const styles = StyleSheet.create({
         width: 38,
     },
     darkMachineIconBox: {
-        backgroundColor: 'rgba(245, 158, 11, 0.16)',
+        backgroundColor: 'rgba(255, 191, 0, 0.16)',
     },
     titleWrap: {
         flex: 1,
@@ -742,13 +742,13 @@ const styles = StyleSheet.create({
         backgroundColor: colors.amberLight,
     },
     darkDvirBadgePending: {
-        backgroundColor: 'rgba(245, 158, 11, 0.15)',
+        backgroundColor: 'rgba(255, 191, 0, 0.15)',
     },
     dvirBadgeTextPending: {
         color: colors.amberDark,
     },
     darkDvirBadgeTextPending: {
-        color: '#FBBF24',
+        color: '#FFBF00',
     },
     dvirBadgeDefect: {
         backgroundColor: colors.redLight,
@@ -826,7 +826,7 @@ const styles = StyleSheet.create({
         paddingVertical: 1,
     },
     darkDispatchBadge: {
-        backgroundColor: 'rgba(245, 158, 11, 0.2)',
+        backgroundColor: 'rgba(255, 191, 0, 0.2)',
     },
     dispatchBadgeText: {
         color: colors.amberDark,
@@ -1016,16 +1016,16 @@ const styles = StyleSheet.create({
         color: colors.muted,
     },
     reportedDelayBanner: {
-        backgroundColor: '#FFFBEB',
-        borderColor: '#FDE68A',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFF3C4',
         borderRadius: 8,
         borderWidth: 1,
         padding: 10,
         marginBottom: 8,
     },
     darkReportedDelayBanner: {
-        backgroundColor: 'rgba(245, 158, 11, 0.12)',
-        borderColor: 'rgba(245, 158, 11, 0.3)',
+        backgroundColor: 'rgba(255, 191, 0, 0.12)',
+        borderColor: 'rgba(255, 191, 0, 0.3)',
     },
     reportedDelayHeader: {
         alignItems: 'center',
@@ -1033,21 +1033,21 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     reportedDelayTitle: {
-        color: '#B45309',
+        color: '#806000',
         fontSize: 12,
         fontWeight: '700',
         flexShrink: 1,
         flexWrap: 'wrap',
     },
     darkReportedDelayTitle: {
-        color: '#FCD34D',
+        color: '#FFBF00',
     },
     reportedDelayNotes: {
-        color: '#78350F',
+        color: '#806000',
         fontSize: 11,
         marginTop: 4,
     },
     darkReportedDelayNotes: {
-        color: '#FDE68A',
+        color: '#FFBF00',
     },
 });

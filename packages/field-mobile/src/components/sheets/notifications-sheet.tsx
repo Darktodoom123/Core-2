@@ -1006,8 +1006,8 @@ const styles = StyleSheet.create({
         paddingVertical: 2,
     },
     darkBadge: {
-        backgroundColor: 'rgba(245, 158, 11, 0.16)',
-        borderColor: 'rgba(245, 158, 11, 0.4)',
+        backgroundColor: 'rgba(255, 191, 0, 0.16)',
+        borderColor: 'rgba(255, 191, 0, 0.4)',
     },
     badgeText: {
         color: colors.warningDark,
@@ -1015,7 +1015,7 @@ const styles = StyleSheet.create({
         fontWeight: '800',
     },
     darkBadgeText: {
-        color: '#FBBF24',
+        color: '#FFBF00',
     },
     closeButton: {
         alignItems: 'center',
@@ -1057,7 +1057,7 @@ const styles = StyleSheet.create({
         ...shadows.sm,
     },
     darkTabPillActive: {
-        backgroundColor: '#F59E0B',
+        backgroundColor: '#FFBF00',
         ...shadows.sm,
     },
     tabText: {
@@ -1163,7 +1163,7 @@ const styles = StyleSheet.create({
         color: '#CBD5E1',
     },
     syncNowBtn: {
-        backgroundColor: colors.amber,
+        backgroundColor: colors.primary,
         borderRadius: 8,
         minHeight: 48,
         justifyContent: 'center',
@@ -1346,7 +1346,7 @@ const styles = StyleSheet.create({
     },
     retryBtn: {
         alignItems: 'center',
-        backgroundColor: colors.amber,
+        backgroundColor: colors.primary,
         borderRadius: 8,
         flex: 1,
         justifyContent: 'center',

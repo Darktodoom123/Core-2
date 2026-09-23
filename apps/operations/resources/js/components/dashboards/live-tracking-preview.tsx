@@ -447,7 +447,7 @@ function UnitViewButton({
             className={cn(
                 'inline-flex min-h-11 flex-1 items-center justify-center gap-2 border-b-2 px-1 pb-2 text-xs font-medium focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand',
                 active
-                    ? 'border-brand text-ink'
+                    ? 'border-brand-strong text-ink'
                     : 'border-transparent text-ink-soft hover:border-line-strong hover:text-ink',
             )}
         >

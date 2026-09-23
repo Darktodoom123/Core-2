@@ -171,7 +171,7 @@ describe('SalesDeliveryScreen', () => {
         const categoryText = lightView.getByText('Equipment Sales');
         expect(categoryText.props.style).toEqual(
             expect.arrayContaining([
-                expect.objectContaining({ color: '#B45309' }),
+                expect.objectContaining({ color: '#806000' }),
             ]),
         );
 
@@ -180,7 +180,7 @@ describe('SalesDeliveryScreen', () => {
         );
         expect(confirmBtn.props.style).toEqual(
             expect.arrayContaining([
-                expect.objectContaining({ backgroundColor: '#D97706' }),
+                expect.objectContaining({ backgroundColor: '#FFBF00' }),
             ]),
         );
 
@@ -193,7 +193,7 @@ describe('SalesDeliveryScreen', () => {
         const darkCategoryText = darkView.getByText('Equipment Sales');
         expect(darkCategoryText.props.style).toEqual(
             expect.arrayContaining([
-                expect.objectContaining({ color: '#F59E0B' }),
+                expect.objectContaining({ color: '#FFBF00' }),
             ]),
         );
     });

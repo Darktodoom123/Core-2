@@ -167,7 +167,7 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({
                                 ]}
                             >
                                 <Icon
-                                    color={isDarkHud ? '#F59E0B' : '#D97706'}
+                                    color={isDarkHud ? '#FFBF00' : '#806000'}
                                     name="profile"
                                     size={12}
                                 />
@@ -231,7 +231,7 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({
                             ]}
                         >
                             <Icon
-                                color={isDarkHud ? '#F59E0B' : '#D97706'}
+                                color={isDarkHud ? '#FFBF00' : '#806000'}
                                 name="crane"
                                 size={18}
                             />
@@ -622,24 +622,24 @@ const styles = StyleSheet.create({
         width: 64,
         height: 64,
         borderRadius: 20,
-        backgroundColor: '#FEF3C7',
+        backgroundColor: '#FFF3C4',
         borderWidth: 2.5,
-        borderColor: '#F59E0B',
+        borderColor: '#FFBF00',
         justifyContent: 'center',
         alignItems: 'center',
         position: 'relative',
     },
     darkAvatarSquircle: {
-        backgroundColor: '#78350F',
-        borderColor: '#F59E0B',
+        backgroundColor: '#332800',
+        borderColor: '#FFBF00',
     },
     avatarInitials: {
         fontSize: 22,
         fontWeight: '800',
-        color: '#92400E',
+        color: '#806000',
     },
     darkAvatarInitials: {
-        color: '#FDE68A',
+        color: '#FFBF00',
     },
     beaconPulseRing: {
         position: 'absolute',
@@ -702,19 +702,19 @@ const styles = StyleSheet.create({
         paddingHorizontal: 8,
         paddingVertical: 3,
         borderRadius: 6,
-        backgroundColor: '#FEF3C7',
+        backgroundColor: '#FFF3C4',
     },
     darkRoleBadge: {
-        backgroundColor: '#78350F',
+        backgroundColor: '#332800',
     },
     roleBadgeText: {
         fontSize: 11,
         fontWeight: '700',
-        color: '#B45309',
+        color: '#806000',
         textTransform: 'capitalize',
     },
     darkRoleBadgeText: {
-        color: '#FDE68A',
+        color: '#FFBF00',
     },
     statusBadge: {
         paddingHorizontal: 8,
@@ -773,12 +773,12 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 10,
-        backgroundColor: '#FEF3C7',
+        backgroundColor: '#FFF3C4',
         justifyContent: 'center',
         alignItems: 'center',
     },
     darkStationIconWrap: {
-        backgroundColor: '#78350F',
+        backgroundColor: '#332800',
     },
     stationCopy: {
         flex: 1,
@@ -983,10 +983,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     lightPhoneSaveBtn: {
-        backgroundColor: '#D97706',
+        backgroundColor: '#FFBF00',
     },
     darkPhoneSaveBtn: {
-        backgroundColor: '#F59E0B',
+        backgroundColor: '#FFBF00',
     },
     phoneSaveBtnText: {
         fontSize: 13,

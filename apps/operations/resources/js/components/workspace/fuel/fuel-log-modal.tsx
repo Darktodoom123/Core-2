@@ -200,7 +200,7 @@ function FuelLogModalContent({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                         aria-label="Close dialog"
                     >
                         <X className="h-4 w-4" />
@@ -237,7 +237,7 @@ function FuelLogModalContent({
                             <>
                                 <span className="text-ink-soft">·</span>
                                 <div className="flex items-center gap-1">
-                                    <Gauge className="h-3 w-3 text-brand" />
+                                    <Gauge className="h-3 w-3 text-brand-strong" />
                                     <span className="text-ink-soft">
                                         Current Meter:{' '}
                                     </span>
@@ -283,7 +283,7 @@ function FuelLogModalContent({
                                     handleVolumeChange(e.target.value)
                                 }
                                 placeholder="e.g. 150.00"
-                                className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm font-semibold text-ink tabular-nums transition-colors placeholder:text-ink-soft focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-hidden"
+                                className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm font-semibold text-ink tabular-nums transition-colors placeholder:text-ink-soft focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong/30 focus-visible:outline-hidden"
                             />
                             {form.errors.quantity_litres && (
                                 <p className="mt-1 text-xs text-danger">
@@ -330,7 +330,7 @@ function FuelLogModalContent({
                                     'mt-1.5 h-10 w-full rounded-lg border bg-surface px-3 font-mono text-sm text-ink tabular-nums transition-colors placeholder:text-ink-soft focus-visible:ring-2 focus-visible:outline-hidden',
                                     isMonotonicViolation
                                         ? 'border-danger focus-visible:border-danger focus-visible:ring-danger/30'
-                                        : 'border-line-strong focus-visible:border-brand focus-visible:ring-brand/30',
+                                        : 'border-line-strong focus-visible:border-brand-strong focus-visible:ring-brand-strong/30',
                                 )}
                             />
                             {isMonotonicViolation ? (
@@ -377,7 +377,7 @@ function FuelLogModalContent({
                                     handlePriceChange(e.target.value)
                                 }
                                 placeholder="e.g. 58.50"
-                                className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink tabular-nums transition-colors placeholder:text-ink-soft focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-hidden"
+                                className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink tabular-nums transition-colors placeholder:text-ink-soft focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong/30 focus-visible:outline-hidden"
                             />
                             {form.errors.price_per_litre && (
                                 <p className="mt-1 text-xs text-danger">
@@ -400,7 +400,7 @@ function FuelLogModalContent({
                                     handleTotalCostChange(e.target.value)
                                 }
                                 placeholder="e.g. 8775.00"
-                                className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm font-semibold text-ink tabular-nums transition-colors placeholder:text-ink-soft focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-hidden"
+                                className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm font-semibold text-ink tabular-nums transition-colors placeholder:text-ink-soft focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong/30 focus-visible:outline-hidden"
                             />
                             {form.errors.total_cost && (
                                 <p className="mt-1 text-xs text-danger">
@@ -421,7 +421,7 @@ function FuelLogModalContent({
                                     form.setData('fuel_station', e.target.value)
                                 }
                                 placeholder="e.g. Petron Depot / Shell"
-                                className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink transition-colors placeholder:text-ink-soft focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-hidden"
+                                className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink transition-colors placeholder:text-ink-soft focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong/30 focus-visible:outline-hidden"
                             />
                             {form.errors.fuel_station && (
                                 <p className="mt-1 text-xs text-danger">
@@ -442,7 +442,7 @@ function FuelLogModalContent({
                         </p>
 
                         {!form.data.receipt ? (
-                            <label className="mt-2 flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-line bg-surface-subtle p-5 text-center transition-colors focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/30 hover:border-brand hover:bg-brand-soft/20">
+                            <label className="mt-2 flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-line bg-surface-subtle p-5 text-center transition-colors focus-within:border-brand-strong focus-within:ring-2 focus-within:ring-brand-strong/30 hover:border-brand-strong hover:bg-brand-soft/20">
                                 <UploadCloud className="h-7 w-7 text-ink-soft" />
                                 <span className="mt-2 text-xs font-semibold text-ink">
                                     Click or drag receipt photo to upload
@@ -488,7 +488,7 @@ function FuelLogModalContent({
                                 <button
                                     type="button"
                                     onClick={removeReceipt}
-                                    className="flex h-8 w-8 items-center justify-center rounded-lg text-danger hover:bg-danger-soft/40 focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                    className="flex h-8 w-8 items-center justify-center rounded-lg text-danger hover:bg-danger-soft/40 focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                                     title="Remove receipt"
                                 >
                                     <Trash2 className="h-4 w-4" />
@@ -514,7 +514,7 @@ function FuelLogModalContent({
                                 form.setData('remarks', e.target.value)
                             }
                             placeholder="Dispensing technician notes, tank level before refuel, unusual conditions..."
-                            className="mt-1.5 w-full rounded-lg border border-line-strong bg-surface p-3 text-sm text-ink transition-colors placeholder:text-ink-soft focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-hidden"
+                            className="mt-1.5 w-full rounded-lg border border-line-strong bg-surface p-3 text-sm text-ink transition-colors placeholder:text-ink-soft focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong/30 focus-visible:outline-hidden"
                         />
                         {form.errors.remarks && (
                             <p className="mt-1 text-xs text-danger">

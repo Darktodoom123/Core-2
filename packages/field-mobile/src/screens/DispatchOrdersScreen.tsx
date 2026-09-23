@@ -92,7 +92,7 @@ export const DispatchOrdersScreen: React.FC<DispatchOrdersScreenProps> = ({
                                 {
                                     backgroundColor:
                                         pendingJobs.length > 0
-                                            ? '#F59E0B'
+                                            ? '#FFBF00'
                                             : '#10B981',
                                 },
                             ]}

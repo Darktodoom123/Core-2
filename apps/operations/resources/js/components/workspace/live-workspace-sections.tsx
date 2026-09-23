@@ -236,7 +236,7 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
             act.includes('ai') ||
             act.includes('circuit')
         ) {
-            return 'bg-brand-soft text-brand-strong border border-brand/30';
+            return 'bg-brand-soft text-brand-strong border border-brand-strong/30';
         }
 
         if (
@@ -731,7 +731,7 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                         className={cn(
                             'rounded-xl border p-3.5 text-left shadow-sm transition-all',
                             actionFilter === 'all'
-                                ? 'border-brand bg-brand-soft/30 ring-2 ring-brand'
+                                ? 'border-brand-strong bg-brand-soft/30 ring-2 ring-brand-strong'
                                 : 'border-line bg-surface hover:bg-surface-subtle',
                         )}
                     >
@@ -779,7 +779,7 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                         className={cn(
                             'rounded-xl border p-3.5 text-left shadow-sm transition-all',
                             actionFilter === 'transitions'
-                                ? 'border-brand bg-brand-soft/30 ring-2 ring-brand'
+                                ? 'border-brand-strong bg-brand-soft/30 ring-2 ring-brand-strong'
                                 : 'border-line bg-surface hover:bg-surface-subtle',
                         )}
                     >
@@ -801,8 +801,8 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                         className={cn(
                             'rounded-xl border p-3.5 text-left shadow-sm transition-all',
                             actionFilter === 'gpt'
-                                ? 'border-brand-strong bg-brand-soft/70 ring-2 ring-brand'
-                                : 'border-brand/30 bg-brand-soft/30 hover:bg-brand-soft/50',
+                                ? 'border-brand-strong bg-brand-soft/70 ring-2 ring-brand-strong'
+                                : 'border-brand-strong/30 bg-brand-soft/30 hover:bg-brand-soft/50',
                         )}
                     >
                         <span className="text-xs font-medium text-brand-strong">
@@ -823,7 +823,7 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                         className={cn(
                             'rounded-xl border p-3.5 text-left shadow-sm transition-all',
                             actionFilter === 'access'
-                                ? 'border-brand bg-brand-soft/30 ring-2 ring-brand'
+                                ? 'border-brand-strong bg-brand-soft/30 ring-2 ring-brand-strong'
                                 : 'border-line bg-surface hover:bg-surface-subtle',
                         )}
                     >
@@ -876,7 +876,7 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                                 className={cn(
                                     'rounded-lg px-2.5 py-1 text-xs font-medium transition-colors',
                                     actionFilter === cat.id
-                                        ? 'bg-brand-strong text-white shadow-xs'
+                                        ? 'bg-brand-strong text-white dark:text-brand-contrast shadow-xs'
                                         : 'bg-surface-subtle text-ink-soft hover:bg-surface-subtle/80 hover:text-ink',
                                 )}
                             >
@@ -891,7 +891,7 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Search action, actor, reason, correlation ID…"
-                            className="h-9 w-full rounded-lg border border-line bg-surface px-3 text-xs text-ink placeholder:text-ink-soft focus:border-brand focus:outline-none"
+                            className="h-9 w-full rounded-lg border border-line bg-surface px-3 text-xs text-ink placeholder:text-ink-soft focus:border-brand-strong focus:outline-none"
                         />
                     </div>
                 </div>
@@ -943,7 +943,7 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                                 className={cn(
                                     'rounded-md border px-2 py-0.5 text-[11px] font-medium transition-colors',
                                     startDate !== '' && startDate === endDate
-                                        ? 'border-brand bg-brand-soft font-semibold text-brand-strong'
+                                        ? 'border-brand-strong bg-brand-soft font-semibold text-brand-strong'
                                         : 'border-line bg-surface-subtle text-ink-soft hover:text-ink',
                                 )}
                             >
@@ -987,7 +987,7 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                         <select
                             value={actorFilter}
                             onChange={(e) => setActorFilter(e.target.value)}
-                            className="h-8 rounded-lg border border-line bg-surface px-2 text-xs text-ink focus:border-brand focus:outline-none"
+                            className="h-8 rounded-lg border border-line bg-surface px-2 text-xs text-ink focus:border-brand-strong focus:outline-none"
                             aria-label="Filter by actor"
                         >
                             <option value="all">
@@ -1394,7 +1394,7 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                         {/* Dual Export Methods */}
                         <div className="mt-5 space-y-4">
                             {/* Method 1: Instant Direct CSV Download */}
-                            <div className="rounded-xl border border-line bg-surface p-4 transition-all hover:border-brand/40">
+                            <div className="rounded-xl border border-line bg-surface p-4 transition-all hover:border-brand-strong/40">
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-1.5 font-semibold text-ink">
                                         <FileSpreadsheet className="h-4 w-4 text-success-strong" />
@@ -1443,7 +1443,7 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                             {/* Method 2: Queue Server Export */}
                             <form
                                 onSubmit={handleQueueServerExport}
-                                className="rounded-xl border border-line bg-surface p-4 transition-all hover:border-brand/40"
+                                className="rounded-xl border border-line bg-surface p-4 transition-all hover:border-brand-strong/40"
                             >
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-1.5 font-semibold text-ink">
@@ -1492,7 +1492,7 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                                         className={cn(
                                             'flex cursor-pointer items-center gap-2 rounded-lg border p-2.5 text-xs transition-all',
                                             exportFormat === 'csv'
-                                                ? 'border-brand bg-brand-soft/40 font-semibold text-brand-strong ring-1 ring-brand'
+                                                ? 'border-brand-strong bg-brand-soft/40 font-semibold text-brand-strong ring-1 ring-brand-strong'
                                                 : 'border-line bg-surface text-ink hover:bg-surface-subtle',
                                         )}
                                     >
@@ -1504,7 +1504,7 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                                             onChange={() =>
                                                 setExportFormat('csv')
                                             }
-                                            className="text-brand focus:ring-brand"
+                                            className="text-brand-strong focus:ring-brand-strong"
                                         />
                                         <span>CSV Dataset</span>
                                     </label>
@@ -1512,7 +1512,7 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                                         className={cn(
                                             'flex cursor-pointer items-center gap-2 rounded-lg border p-2.5 text-xs transition-all',
                                             exportFormat === 'pdf'
-                                                ? 'border-brand bg-brand-soft/40 font-semibold text-brand-strong ring-1 ring-brand'
+                                                ? 'border-brand-strong bg-brand-soft/40 font-semibold text-brand-strong ring-1 ring-brand-strong'
                                                 : 'border-line bg-surface text-ink hover:bg-surface-subtle',
                                         )}
                                     >
@@ -1524,7 +1524,7 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                                             onChange={() =>
                                                 setExportFormat('pdf')
                                             }
-                                            className="text-brand focus:ring-brand"
+                                            className="text-brand-strong focus:ring-brand-strong"
                                         />
                                         <span>Printable PDF</span>
                                     </label>
@@ -1563,7 +1563,7 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                                 Server exports are archived under the{' '}
                                 <a
                                     href="/operations?section=reports"
-                                    className="font-medium text-brand-strong underline hover:text-brand"
+                                    className="font-medium text-brand-strong underline hover:text-brand-strong"
                                 >
                                     Exports Archive
                                 </a>{' '}

@@ -100,8 +100,8 @@ export const SafeReleaseTab: React.FC<SafeReleaseTabProps> = ({
                                     ? '#34D399'
                                     : colors.greenDark
                                 : isDarkHud
-                                  ? '#FBBF24'
-                                  : colors.amberDark
+                                  ? '#FDBA74'
+                                  : colors.warningDark
                         }
                         name={certified ? 'shield-check' : 'alert-circle'}
                         size={16}
@@ -333,10 +333,10 @@ const styles = StyleSheet.create({
         paddingVertical: 5,
     },
     certStatusBannerPending: {
-        backgroundColor: colors.amberLight,
+        backgroundColor: colors.warningLight,
     },
     darkCertStatusBannerPending: {
-        backgroundColor: 'rgba(245, 158, 11, 0.18)',
+        backgroundColor: 'rgba(234, 88, 12, 0.18)',
     },
     certStatusBannerPassed: {
         backgroundColor: colors.greenSoft,
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(5, 150, 105, 0.22)',
     },
     certBadge: {
-        color: colors.amberDark,
+        color: colors.warningDark,
         fontSize: 11,
         fontWeight: '800',
         letterSpacing: 0.5,
@@ -354,7 +354,7 @@ const styles = StyleSheet.create({
         color: colors.greenDark,
     },
     darkCertBadgePending: {
-        color: '#FBBF24',
+        color: '#FDBA74',
     },
     darkCertBadgePassed: {
         color: '#34D399',
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
     },
     certifyButton: {
         alignItems: 'center',
-        backgroundColor: colors.amber,
+        backgroundColor: colors.primary,
         borderRadius: 10,
         justifyContent: 'center',
         minHeight: 48,

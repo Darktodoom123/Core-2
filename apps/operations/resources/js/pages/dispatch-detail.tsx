@@ -236,7 +236,7 @@ export default function DispatchDetail({
             <div className="min-h-screen bg-canvas">
                 <a
                     href="#dispatch-detail-main"
-                    className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-ink focus:ring-2 focus:ring-brand"
+                    className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-ink focus:ring-2 focus:ring-brand-strong"
                 >
                     Skip to main content
                 </a>
@@ -281,7 +281,7 @@ export default function DispatchDetail({
                             </div>
                             <Link
                                 href={coverageReturnTo}
-                                className="inline-flex min-h-9 items-center rounded-md bg-brand px-3 text-xs font-semibold text-brand-contrast transition-colors hover:bg-brand/90 focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                className="inline-flex min-h-9 items-center rounded-md bg-brand px-3 text-xs font-semibold text-brand-contrast transition-colors hover:bg-brand/90 focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                             >
                                 Return to resource coverage
                             </Link>
@@ -383,7 +383,7 @@ export default function DispatchDetail({
                                                 <Link
                                                     href={backToOrigin}
                                                     onClick={confirmLeave}
-                                                    className="inline-flex min-h-9 items-center gap-2 rounded-md px-3 text-xs font-semibold text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                                    className="inline-flex min-h-9 items-center gap-2 rounded-md px-3 text-xs font-semibold text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                                                 >
                                                     <ArrowLeft className="h-3.5 w-3.5" />
                                                     Back to dispatch workspace
@@ -392,7 +392,7 @@ export default function DispatchDetail({
                                                     <Link
                                                         href={coverageReturnTo}
                                                         onClick={confirmLeave}
-                                                        className="inline-flex min-h-9 items-center gap-2 rounded-md bg-brand px-3 text-xs font-semibold text-brand-contrast transition-colors hover:bg-brand/90 focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                                        className="inline-flex min-h-9 items-center gap-2 rounded-md bg-brand px-3 text-xs font-semibold text-brand-contrast transition-colors hover:bg-brand/90 focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                                                     >
                                                         Return to resource
                                                         coverage
@@ -511,7 +511,7 @@ export default function DispatchDetail({
                                                             </div>
                                                             <a
                                                                 href="#assignment-summary"
-                                                                className="inline-flex min-h-9 items-center gap-1.5 self-start rounded-md px-2.5 text-xs font-semibold text-brand-strong transition-colors hover:bg-brand-soft focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden sm:self-auto"
+                                                                className="inline-flex min-h-9 items-center gap-1.5 self-start rounded-md px-2.5 text-xs font-semibold text-brand-strong transition-colors hover:bg-brand-soft focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden sm:self-auto"
                                                             >
                                                                 Review selection
                                                                 <ArrowRight

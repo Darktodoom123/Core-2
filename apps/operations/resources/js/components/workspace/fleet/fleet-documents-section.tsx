@@ -403,7 +403,7 @@ export function FleetDocumentsSection({
                                     onChange={(e) =>
                                         form.setData('category', e.target.value)
                                     }
-                                    className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                    className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                                 >
                                     {CATEGORIES.map((c) => (
                                         <option key={c.value} value={c.value}>
@@ -503,7 +503,7 @@ export function FleetDocumentsSection({
                                             e.target.value,
                                         )
                                     }
-                                    className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                    className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                                 />
                                 {form.errors.issued_at && (
                                     <p className="mt-1 text-xs text-danger">
@@ -530,7 +530,7 @@ export function FleetDocumentsSection({
                                             e.target.value,
                                         )
                                     }
-                                    className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden disabled:cursor-not-allowed disabled:bg-surface-subtle disabled:text-ink-soft"
+                                    className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden disabled:cursor-not-allowed disabled:bg-surface-subtle disabled:text-ink-soft"
                                 />
                                 {form.errors.expires_at && (
                                     <p className="mt-1 text-xs text-danger">
@@ -554,7 +554,7 @@ export function FleetDocumentsSection({
                                                 );
                                             }
                                         }}
-                                        className="h-4 w-4 rounded border-line-strong text-brand focus:ring-brand"
+                                        className="h-4 w-4 rounded border-line-strong text-brand-strong focus:ring-brand-strong"
                                     />
                                     No expiration date
                                 </label>
@@ -586,7 +586,7 @@ export function FleetDocumentsSection({
                                 form.setData('notes', e.target.value)
                             }
                             placeholder="e.g. Permits off-peak transit along C-5 and EDSA (10 PM to 4 AM)."
-                            className="w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                            className="w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                         />
                         {form.errors.notes && (
                             <p className="text-xs text-danger">
@@ -627,7 +627,7 @@ export function FleetDocumentsSection({
                                     e.target.files?.[0] ?? null,
                                 )
                             }
-                            className="block min-h-11 w-full cursor-pointer rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink file:mr-3 file:rounded-md file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-brand-strong"
+                            className="block min-h-11 w-full cursor-pointer rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink file:mr-3 file:rounded-md file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-brand-contrast hover:file:bg-brand-strong hover:file:text-white dark:hover:file:text-brand-contrast"
                         />
                         {form.data.file && (
                             <p className="text-xs text-ink-soft">
@@ -683,7 +683,7 @@ export function FleetDocumentsSection({
                                             <button
                                                 type="button"
                                                 onClick={() => openReplace(doc)}
-                                                className="min-h-9 min-w-9 rounded-md p-2 text-ink-soft transition-colors hover:bg-surface-subtle hover:text-brand"
+                                                className="min-h-9 min-w-9 rounded-md p-2 text-ink-soft transition-colors hover:bg-surface-subtle hover:text-brand-strong"
                                                 title="Replace Document File"
                                                 aria-label={`Replace file for ${doc.title}`}
                                             >
@@ -799,7 +799,7 @@ export function FleetDocumentsSection({
                                                     doc.attachment
                                                         .original_filename
                                                 }
-                                                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-brand hover:bg-brand-soft hover:text-brand-strong"
+                                                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-brand-strong hover:bg-brand-soft hover:text-brand-strong"
                                             >
                                                 <Download className="h-3.5 w-3.5" />{' '}
                                                 Download
@@ -891,7 +891,7 @@ export function FleetDocumentsSection({
                                     download={
                                         previewDoc.attachment.original_filename
                                     }
-                                    className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-brand-strong"
+                                    className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-brand-contrast shadow-xs hover:bg-brand-strong hover:text-white dark:hover:text-brand-contrast"
                                 >
                                     <Download className="h-3.5 w-3.5" />{' '}
                                     Download File
@@ -950,7 +950,7 @@ export function FleetDocumentsSection({
                                                 e.target.value,
                                             )
                                         }
-                                        className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                        className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                                     >
                                         {CATEGORIES.map((c) => (
                                             <option
@@ -1036,7 +1036,7 @@ export function FleetDocumentsSection({
                                                 e.target.value,
                                             )
                                         }
-                                        className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                        className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                                     />
                                     {editForm.errors.issued_at && (
                                         <p className="mt-1 text-xs text-danger">
@@ -1063,7 +1063,7 @@ export function FleetDocumentsSection({
                                                 e.target.value,
                                             )
                                         }
-                                        className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden disabled:cursor-not-allowed disabled:bg-surface-subtle disabled:text-ink-soft"
+                                        className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden disabled:cursor-not-allowed disabled:bg-surface-subtle disabled:text-ink-soft"
                                     />
                                     <label className="mt-2 flex items-center gap-2 text-xs text-ink-soft">
                                         <input
@@ -1085,7 +1085,7 @@ export function FleetDocumentsSection({
                                                     );
                                                 }
                                             }}
-                                            className="h-4 w-4 rounded border-line-strong text-brand focus:ring-brand"
+                                            className="h-4 w-4 rounded border-line-strong text-brand-strong focus:ring-brand-strong"
                                         />
                                         No expiration date
                                     </label>
@@ -1109,7 +1109,7 @@ export function FleetDocumentsSection({
                                             e.target.value,
                                         )
                                     }
-                                    className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                    className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                                 >
                                     <option value="active">Active</option>
                                     <option value="revoked">Revoked</option>
@@ -1138,7 +1138,7 @@ export function FleetDocumentsSection({
                                         )
                                     }
                                     placeholder="Operating conditions or restrictions..."
-                                    className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                    className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                                 />
                                 {editForm.errors.notes && (
                                     <p className="mt-1 text-xs text-danger">
@@ -1237,7 +1237,7 @@ export function FleetDocumentsSection({
                                             e.target.files?.[0] ?? null,
                                         )
                                     }
-                                    className="mt-1 block w-full cursor-pointer text-xs text-ink file:mr-3 file:rounded-md file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-brand-strong"
+                                    className="mt-1 block w-full cursor-pointer text-xs text-ink file:mr-3 file:rounded-md file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-brand-contrast hover:file:bg-brand-strong hover:file:text-white dark:hover:file:text-brand-contrast"
                                 />
                                 {replaceForm.errors.file && (
                                     <p className="mt-1 text-xs text-danger">
@@ -1264,7 +1264,7 @@ export function FleetDocumentsSection({
                                             e.target.value,
                                         )
                                     }
-                                    className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden disabled:cursor-not-allowed disabled:bg-surface-subtle disabled:text-ink-soft"
+                                    className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden disabled:cursor-not-allowed disabled:bg-surface-subtle disabled:text-ink-soft"
                                 />
                                 <label className="mt-2 flex items-center gap-2 text-xs text-ink-soft">
                                     <input
@@ -1286,7 +1286,7 @@ export function FleetDocumentsSection({
                                                 );
                                             }
                                         }}
-                                        className="h-4 w-4 rounded border-line-strong text-brand focus:ring-brand"
+                                        className="h-4 w-4 rounded border-line-strong text-brand-strong focus:ring-brand-strong"
                                     />
                                     No expiration date
                                 </label>
@@ -1311,7 +1311,7 @@ export function FleetDocumentsSection({
                                         )
                                     }
                                     placeholder="e.g. Renewed for FY 2026-2027 by LTO central office."
-                                    className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                    className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                                 />
                                 {replaceForm.errors.notes && (
                                     <p className="mt-1 text-xs text-danger">

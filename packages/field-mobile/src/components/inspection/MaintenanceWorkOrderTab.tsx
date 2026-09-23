@@ -270,7 +270,7 @@ export const MaintenanceWorkOrderTab: React.FC<
                                                         ? isCritical
                                                             ? '#F87171'
                                                             : isMajor
-                                                              ? '#FBBF24'
+                                                              ? '#FFBF00'
                                                               : '#38BDF8'
                                                         : isCritical
                                                           ? colors.redDark
@@ -922,7 +922,7 @@ const styles = StyleSheet.create({
     },
     majorSelected: {
         backgroundColor: colors.amberLight,
-        borderColor: colors.amber,
+        borderColor: colors.primaryBorder,
         borderWidth: 1.5,
     },
     criticalSelected: {
@@ -936,8 +936,8 @@ const styles = StyleSheet.create({
         borderWidth: 1.5,
     },
     darkMajorSelected: {
-        backgroundColor: 'rgba(245, 158, 11, 0.2)',
-        borderColor: '#F59E0B',
+        backgroundColor: 'rgba(255, 191, 0, 0.2)',
+        borderColor: '#FFBF00',
         borderWidth: 1.5,
     },
     darkCriticalSelected: {
@@ -984,7 +984,7 @@ const styles = StyleSheet.create({
         fontWeight: '800',
     },
     darkMajorText: {
-        color: '#FBBF24',
+        color: '#FFBF00',
         fontWeight: '800',
     },
     darkCriticalText: {
@@ -993,7 +993,7 @@ const styles = StyleSheet.create({
     },
     actionButton: {
         alignItems: 'center',
-        backgroundColor: colors.amber,
+        backgroundColor: colors.primary,
         borderRadius: 10,
         justifyContent: 'center',
         minHeight: 48,
@@ -1091,8 +1091,8 @@ const styles = StyleSheet.create({
         borderColor: colors.amberBorder,
     },
     darkStatusOpenPill: {
-        backgroundColor: 'rgba(245, 158, 11, 0.2)',
-        borderColor: 'rgba(245, 158, 11, 0.4)',
+        backgroundColor: 'rgba(255, 191, 0, 0.2)',
+        borderColor: 'rgba(255, 191, 0, 0.4)',
     },
     statusProgressPill: {
         backgroundColor: colors.blueLight,
@@ -1118,7 +1118,7 @@ const styles = StyleSheet.create({
         color: colors.amberDark,
     },
     darkStatusOpenPillText: {
-        color: '#FBBF24',
+        color: '#FFBF00',
     },
     statusProgressPillText: {
         color: colors.blueDark,
@@ -1164,14 +1164,14 @@ const styles = StyleSheet.create({
         borderColor: colors.amberBorder,
     },
     darkWoMajor: {
-        backgroundColor: 'rgba(245, 158, 11, 0.2)',
-        borderColor: 'rgba(245, 158, 11, 0.4)',
+        backgroundColor: 'rgba(255, 191, 0, 0.2)',
+        borderColor: 'rgba(255, 191, 0, 0.4)',
     },
     woMajorText: {
         color: colors.amberDark,
     },
     darkWoMajorText: {
-        color: '#FBBF24',
+        color: '#FFBF00',
     },
     woCritical: {
         backgroundColor: colors.redLight,
@@ -1357,8 +1357,8 @@ const styles = StyleSheet.create({
         paddingVertical: 4,
     },
     darkPostRepairPendingBadge: {
-        backgroundColor: 'rgba(245, 158, 11, 0.2)',
-        borderColor: 'rgba(245, 158, 11, 0.4)',
+        backgroundColor: 'rgba(255, 191, 0, 0.2)',
+        borderColor: 'rgba(255, 191, 0, 0.4)',
     },
     postRepairPendingText: {
         color: colors.amberDark,
@@ -1366,7 +1366,7 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     darkPostRepairPendingText: {
-        color: '#FBBF24',
+        color: '#FFBF00',
     },
     postRepairBtn: {
         alignItems: 'center',

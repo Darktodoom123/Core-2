@@ -46,7 +46,7 @@ test('Dual-mode theme tokens satisfy contrast and color assignments', () => {
     assert.equal(lightThemeColors.textPrimary, '#0F172A');
     assert.equal(lightThemeColors.textSecondary, '#64748B');
     assert.equal(lightThemeColors.border, '#E2E8F0');
-    assert.equal(lightThemeColors.brandAmber, '#D97706');
+    assert.equal(lightThemeColors.brandAmber, '#FFBF00');
 
     // Dark Mode
     assert.equal(darkHudThemeColors.mode, 'dark_hud');
@@ -55,6 +55,6 @@ test('Dual-mode theme tokens satisfy contrast and color assignments', () => {
     assert.equal(darkHudThemeColors.textPrimary, '#F8FAFC');
     assert.equal(darkHudThemeColors.textSecondary, '#94A3B8');
     assert.equal(darkHudThemeColors.border, '#334155');
-    assert.equal(darkHudThemeColors.hudGlowAmber, '#F59E0B');
-    assert.equal(darkHudThemeColors.brandAmber, '#F59E0B');
+    assert.equal(darkHudThemeColors.hudGlowAmber, '#FFBF00');
+    assert.equal(darkHudThemeColors.brandAmber, '#FFBF00');
 });

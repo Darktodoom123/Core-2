@@ -251,8 +251,8 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
                                         <Icon
                                             color={
                                                 isDarkHud
-                                                    ? '#F59E0B'
-                                                    : '#D97706'
+                                                    ? '#FFBF00'
+                                                    : '#806000'
                                             }
                                             name="profile"
                                             size={12}
@@ -290,8 +290,8 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
                                         <Icon
                                             color={
                                                 isDarkHud
-                                                    ? '#F59E0B'
-                                                    : '#D97706'
+                                                    ? '#FFBF00'
+                                                    : '#806000'
                                             }
                                             name="crane"
                                             size={15}
@@ -463,7 +463,7 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
                                     <Icon
                                         color={
                                             !isDarkHud
-                                                ? '#D97706'
+                                                ? '#FFBF00'
                                                 : isDarkHud
                                                   ? '#94A3B8'
                                                   : colors.secondary
@@ -519,7 +519,7 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
                                     <Icon
                                         color={
                                             isDarkHud
-                                                ? '#F59E0B'
+                                                ? '#FFBF00'
                                                 : colors.secondary
                                         }
                                         name="moon"
@@ -1057,7 +1057,7 @@ const styles = StyleSheet.create({
     },
     darkAvatarCircle: {
         backgroundColor: '#1E293B',
-        borderColor: 'rgba(245, 158, 11, 0.4)',
+        borderColor: 'rgba(255, 191, 0, 0.4)',
     },
     avatarInitials: {
         color: '#1D4ED8',
@@ -1065,7 +1065,7 @@ const styles = StyleSheet.create({
         fontWeight: '900',
     },
     darkAvatarInitials: {
-        color: '#F59E0B',
+        color: '#FFBF00',
     },
     avatarStatusDot: {
         borderColor: '#FFFFFF',
@@ -1084,7 +1084,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#10B981',
     },
     avatarOfflineDot: {
-        backgroundColor: '#EA580C',
+        backgroundColor: '#FFBF00',
     },
     identityCopy: {
         flex: 1,
@@ -1106,13 +1106,13 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     roleText: {
-        color: '#D97706',
+        color: '#FFBF00',
         fontSize: 12,
         fontWeight: '700',
         textTransform: 'capitalize',
     },
     darkRoleText: {
-        color: '#F59E0B',
+        color: '#FFBF00',
     },
     innerDivider: {
         backgroundColor: colors.border,
@@ -1190,12 +1190,12 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(16, 185, 129, 0.35)',
     },
     stationBadgeStandby: {
-        backgroundColor: '#FFFBEB',
-        borderColor: '#FDE68A',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFF3C4',
     },
     darkStationBadgeStandby: {
-        backgroundColor: 'rgba(245, 158, 11, 0.12)',
-        borderColor: 'rgba(245, 158, 11, 0.3)',
+        backgroundColor: 'rgba(255, 191, 0, 0.12)',
+        borderColor: 'rgba(255, 191, 0, 0.3)',
     },
     stationBadgeText: {
         fontSize: 10,
@@ -1210,10 +1210,10 @@ const styles = StyleSheet.create({
         color: '#34D399',
     },
     stationBadgeTextStandby: {
-        color: '#D97706',
+        color: '#FFBF00',
     },
     darkStationBadgeTextStandby: {
-        color: '#FBBF24',
+        color: '#FFBF00',
     },
     divider: {
         backgroundColor: colors.border,
@@ -1282,7 +1282,7 @@ const styles = StyleSheet.create({
     },
     quickSyncButton: {
         alignItems: 'center',
-        backgroundColor: colors.amber,
+        backgroundColor: colors.primary,
         borderRadius: 8,
         justifyContent: 'center',
         marginTop: 4,
@@ -1478,11 +1478,11 @@ const styles = StyleSheet.create({
         color: '#94A3B8',
     },
     darkWarningCallout: {
-        backgroundColor: 'rgba(245, 158, 11, 0.12)',
-        borderColor: 'rgba(245, 158, 11, 0.35)',
+        backgroundColor: 'rgba(255, 191, 0, 0.12)',
+        borderColor: 'rgba(255, 191, 0, 0.35)',
     },
     darkWarningCalloutText: {
-        color: '#FDE68A',
+        color: '#FFBF00',
     },
     darkActionButton: {
         backgroundColor: '#1E293B',
@@ -1502,13 +1502,13 @@ const styles = StyleSheet.create({
         color: '#94A3B8',
     },
     darkHealthValueWarning: {
-        color: '#FBBF24',
+        color: '#FFBF00',
     },
     darkQuickSyncButton: {
-        backgroundColor: '#D97706',
+        backgroundColor: '#FFBF00',
     },
     darkQuickSyncButtonText: {
-        color: '#FFFFFF',
+        color: '#0F172A',
     },
     themeSelectorCard: {
         backgroundColor: colors.surfaceMuted,
@@ -1533,12 +1533,12 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
     },
     themeOptionActive: {
-        backgroundColor: '#FEF3C7',
-        borderColor: '#D97706',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFBF00',
     },
     themeOptionActiveDark: {
-        backgroundColor: 'rgba(245, 158, 11, 0.16)',
-        borderColor: '#F59E0B',
+        backgroundColor: 'rgba(255, 191, 0, 0.16)',
+        borderColor: '#FFBF00',
     },
     themeOptionCopy: {
         flex: 1,
@@ -1550,14 +1550,14 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     themeOptionTitleActive: {
-        color: '#D97706',
+        color: '#FFBF00',
         fontWeight: '800',
     },
     darkThemeOptionTitle: {
         color: '#F8FAFC',
     },
     themeOptionTitleActiveDark: {
-        color: '#F59E0B',
+        color: '#FFBF00',
         fontWeight: '800',
     },
     themeOptionSublabel: {
@@ -1565,21 +1565,21 @@ const styles = StyleSheet.create({
         fontSize: 11,
     },
     themeOptionSublabelActive: {
-        color: '#92400E',
+        color: '#806000',
     },
     darkThemeOptionSublabel: {
         color: '#94A3B8',
     },
     themeOptionSublabelActiveDark: {
-        color: '#FDE68A',
+        color: '#FFBF00',
     },
     themeCheckmark: {
-        color: '#D97706',
+        color: '#FFBF00',
         fontSize: 14,
         fontWeight: '900',
     },
     themeCheckmarkDark: {
-        color: '#F59E0B',
+        color: '#FFBF00',
         fontSize: 14,
         fontWeight: '900',
     },

@@ -155,7 +155,7 @@ export const PreTripDefectFallbackModal: React.FC<
                         >
                             <View style={styles.actionButtonContent}>
                                 <Icon
-                                    color={isDarkHud ? '#F59E0B' : '#D97706'}
+                                    color={isDarkHud ? '#FFBF00' : '#806000'}
                                     name="clock"
                                     size={18}
                                 />
@@ -353,32 +353,32 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
     standbyButton: {
-        backgroundColor: '#FEF3C7',
-        borderColor: '#F59E0B',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFBF00',
         borderWidth: 1.5,
         borderRadius: 14,
         paddingVertical: 14,
         paddingHorizontal: 16,
     },
     darkStandbyButton: {
-        backgroundColor: '#78350F25',
-        borderColor: '#D97706',
+        backgroundColor: '#33280025',
+        borderColor: '#FFBF00',
     },
     standbyButtonText: {
-        color: '#B45309',
+        color: '#806000',
         fontSize: 15,
         fontWeight: '700',
     },
     darkStandbyButtonText: {
-        color: '#FBBF24',
+        color: '#FFBF00',
     },
     standbyButtonSubtext: {
-        color: '#92400E',
+        color: '#806000',
         fontSize: 11,
         marginTop: 2,
     },
     darkStandbyButtonSubtext: {
-        color: '#FDE68A',
+        color: '#FFBF00',
     },
     closeRow: {
         marginTop: 14,

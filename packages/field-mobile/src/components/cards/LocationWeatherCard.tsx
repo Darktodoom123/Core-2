@@ -163,7 +163,7 @@ export const LocationWeatherCard: React.FC<LocationWeatherCardProps> = ({
                 <View style={styles.headerRow}>
                     <View style={styles.locationGroup}>
                         <Icon
-                            color={isDarkHud ? '#F59E0B' : '#D97706'}
+                            color={isDarkHud ? '#FFBF00' : '#806000'}
                             name={friendly.icon}
                             size={13}
                         />
@@ -194,7 +194,7 @@ export const LocationWeatherCard: React.FC<LocationWeatherCardProps> = ({
                         >
                             {isLoading ? (
                                 <ActivityIndicator
-                                    color={isDarkHud ? '#F59E0B' : '#D97706'}
+                                    color={isDarkHud ? '#FFBF00' : '#806000'}
                                     size="small"
                                     testID="weather-refresh-spinner"
                                 />
@@ -202,7 +202,7 @@ export const LocationWeatherCard: React.FC<LocationWeatherCardProps> = ({
                                 <View style={styles.retryInner}>
                                     <Icon
                                         color={
-                                            isDarkHud ? '#FCD34D' : '#B45309'
+                                            isDarkHud ? '#FFBF00' : '#806000'
                                         }
                                         name="route"
                                         size={11}
@@ -256,9 +256,9 @@ export const LocationWeatherCard: React.FC<LocationWeatherCardProps> = ({
                 };
             case 'warning_caution':
                 return {
-                    pillBg: isDarkHud ? 'rgba(245, 158, 11, 0.2)' : '#FEF3C7',
-                    pillText: isDarkHud ? '#FCD34D' : '#B45309',
-                    dotColor: '#F59E0B',
+                    pillBg: isDarkHud ? 'rgba(255, 191, 0, 0.2)' : '#FFF3C4',
+                    pillText: isDarkHud ? '#FFBF00' : '#806000',
+                    dotColor: '#806000',
                     label: 'CAUTION (36-44 KM/H)',
                 };
             case 'safe_normal':
@@ -382,7 +382,7 @@ export const LocationWeatherCard: React.FC<LocationWeatherCardProps> = ({
                 {/* Wind / Anemometer */}
                 <View style={styles.metricItem}>
                     <Icon
-                        color={isDarkHud ? '#F59E0B' : '#D97706'}
+                        color={isDarkHud ? '#FFBF00' : '#806000'}
                         name="speed"
                         size={13}
                     />
@@ -451,34 +451,34 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255, 255, 255, 0.08)',
     },
     errorCardRoot: {
-        backgroundColor: '#FFFBEB',
-        borderColor: '#FCD34D',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFBF00',
     },
     darkErrorCardRoot: {
-        backgroundColor: '#1C1917',
-        borderColor: 'rgba(245, 158, 11, 0.35)',
+        backgroundColor: '#1E293B',
+        borderColor: 'rgba(255, 191, 0, 0.35)',
     },
     errorTitle: {
-        color: '#B45309',
+        color: '#806000',
         fontSize: 12,
         fontWeight: '700',
         letterSpacing: 0.1,
     },
     darkErrorTitle: {
-        color: '#FCD34D',
+        color: '#FFBF00',
     },
     errorMessageText: {
-        color: '#92400E',
+        color: '#806000',
         fontSize: 11,
         fontWeight: '500',
     },
     darkErrorMessageText: {
-        color: '#FDE68A',
+        color: '#FFBF00',
     },
     retryButton: {
         alignItems: 'center',
-        backgroundColor: '#FEF3C7',
-        borderColor: '#FDE68A',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFF3C4',
         borderRadius: 6,
         borderWidth: 1,
         justifyContent: 'center',
@@ -486,8 +486,8 @@ const styles = StyleSheet.create({
         paddingVertical: 3,
     },
     darkRetryButton: {
-        backgroundColor: 'rgba(245, 158, 11, 0.15)',
-        borderColor: 'rgba(245, 158, 11, 0.3)',
+        backgroundColor: 'rgba(255, 191, 0, 0.15)',
+        borderColor: 'rgba(255, 191, 0, 0.3)',
     },
     retryInner: {
         alignItems: 'center',
@@ -495,12 +495,12 @@ const styles = StyleSheet.create({
         gap: 4,
     },
     retryText: {
-        color: '#B45309',
+        color: '#806000',
         fontSize: 11,
         fontWeight: '700',
     },
     darkRetryText: {
-        color: '#FCD34D',
+        color: '#FFBF00',
     },
     headerRow: {
         alignItems: 'center',

@@ -49,11 +49,11 @@ const DUTY_OPTIONS: DutyOption[] = [
         title: 'On Duty — Crane / Machine Operating',
         subtitle: 'Active site lifting, rigging, crane operations, excavation',
         iconName: 'crane',
-        badgeColor: '#D97706',
-        badgeTextColor: '#FFFFFF',
-        borderColor: '#F59E0B',
-        bgColor: '#FFFBEB',
-        darkBgColor: 'rgba(245, 158, 11, 0.16)',
+        badgeColor: '#FFBF00',
+        badgeTextColor: '#0F172A',
+        borderColor: '#FFBF00',
+        bgColor: '#FFF3C4',
+        darkBgColor: 'rgba(255, 191, 0, 0.16)',
     },
     {
         status: 'driving',
@@ -73,11 +73,11 @@ const DUTY_OPTIONS: DutyOption[] = [
         title: 'On Duty — Standby / Delay (Demurrage)',
         subtitle: 'Waiting on client, concrete trucks, permits, or weather',
         iconName: 'clock',
-        badgeColor: '#EA580C',
-        badgeTextColor: '#FFFFFF',
-        borderColor: '#F97316',
-        bgColor: '#FFF7ED',
-        darkBgColor: 'rgba(249, 115, 22, 0.16)',
+        badgeColor: '#FFBF00',
+        badgeTextColor: '#0F172A',
+        borderColor: '#FFBF00',
+        bgColor: '#FFF3C4',
+        darkBgColor: 'rgba(255, 191, 0, 0.16)',
     },
     {
         status: 'on_break',
@@ -301,7 +301,7 @@ export const DutyStatusSelectorModal: React.FC<
                                                 : colors.redDark
                                             : isShiftNearLimit
                                               ? isDarkHud
-                                                  ? '#FBBF24'
+                                                  ? '#FFBF00'
                                                   : colors.warningDark
                                               : isDarkHud
                                                 ? '#34D399'
@@ -584,7 +584,7 @@ export const DutyStatusSelectorModal: React.FC<
                                                     color={
                                                         isReasonActive
                                                             ? isDarkHud
-                                                                ? '#FBBF24'
+                                                                ? '#FFBF00'
                                                                 : colors.amberDark
                                                             : isDarkHud
                                                               ? '#64748B'
@@ -759,8 +759,8 @@ const styles = StyleSheet.create({
         borderColor: '#A7F3D0',
     },
     gaugeWarning: {
-        backgroundColor: '#FFFBEB',
-        borderColor: '#FDE68A',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFF3C4',
     },
     gaugeExceeded: {
         backgroundColor: '#FEF2F2',
@@ -771,8 +771,8 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(16, 185, 129, 0.35)',
     },
     darkGaugeWarning: {
-        backgroundColor: 'rgba(245, 158, 11, 0.14)',
-        borderColor: 'rgba(245, 158, 11, 0.4)',
+        backgroundColor: 'rgba(255, 191, 0, 0.14)',
+        borderColor: 'rgba(255, 191, 0, 0.4)',
     },
     darkGaugeExceeded: {
         backgroundColor: 'rgba(239, 68, 68, 0.16)',
@@ -815,7 +815,7 @@ const styles = StyleSheet.create({
         color: '#34D399',
     },
     darkGaugeStatusWarning: {
-        color: '#FBBF24',
+        color: '#FFBF00',
     },
     darkGaugeStatusExceeded: {
         color: '#F87171',
@@ -838,7 +838,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.green,
     },
     progressFillAmber: {
-        backgroundColor: colors.amber,
+        backgroundColor: colors.primary,
     },
     progressFillRed: {
         backgroundColor: colors.red,
@@ -943,16 +943,16 @@ const styles = StyleSheet.create({
         width: 12,
     },
     standbySection: {
-        backgroundColor: '#FFFBEB',
-        borderColor: '#FDE68A',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFF3C4',
         borderRadius: 12,
         borderWidth: 1,
         marginBottom: 14,
         padding: 12,
     },
     darkStandbySection: {
-        backgroundColor: 'rgba(245, 158, 11, 0.08)',
-        borderColor: 'rgba(245, 158, 11, 0.3)',
+        backgroundColor: 'rgba(255, 191, 0, 0.08)',
+        borderColor: 'rgba(255, 191, 0, 0.3)',
     },
     standbyHeader: {
         alignItems: 'center',
@@ -967,7 +967,7 @@ const styles = StyleSheet.create({
         letterSpacing: 0.4,
     },
     darkStandbySectionTitle: {
-        color: '#FDE68A',
+        color: '#FFBF00',
     },
     demurrageBadge: {
         backgroundColor: colors.amberDark,
@@ -1010,12 +1010,12 @@ const styles = StyleSheet.create({
         borderColor: '#334155',
     },
     reasonItemActive: {
-        backgroundColor: '#FEF3C7',
-        borderColor: '#F59E0B',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFBF00',
     },
     darkReasonItemActive: {
-        backgroundColor: 'rgba(245, 158, 11, 0.2)',
-        borderColor: '#F59E0B',
+        backgroundColor: 'rgba(255, 191, 0, 0.2)',
+        borderColor: '#FFBF00',
     },
     reasonText: {
         color: colors.text,
@@ -1030,7 +1030,7 @@ const styles = StyleSheet.create({
         fontWeight: '800',
     },
     darkReasonTextActive: {
-        color: '#FDE68A',
+        color: '#FFBF00',
         fontWeight: '800',
     },
     remarksGroup: {
@@ -1065,7 +1065,7 @@ const styles = StyleSheet.create({
         borderRadius: 12,
     },
     darkConfirmButton: {
-        backgroundColor: '#F59E0B',
+        backgroundColor: '#FFBF00',
     },
     darkConfirmButtonText: {
         color: '#0F172A',

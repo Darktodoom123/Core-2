@@ -302,7 +302,7 @@ export function TrackingSurface({
                                     className={cn(
                                         'inline-flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-medium capitalize transition-all duration-150',
                                         isSelected
-                                            ? 'bg-brand-strong font-semibold text-white shadow-xs'
+                                            ? 'bg-brand-strong font-semibold text-white dark:text-brand-contrast shadow-xs'
                                             : 'bg-surface-subtle text-ink-soft hover:bg-surface-subtle/80 hover:text-ink',
                                     )}
                                     aria-pressed={isSelected}
@@ -425,10 +425,10 @@ function SynchronizedLocationList({
                                             loc.job?.latest_delay && (
                                                 <span
                                                     title={`Operational delay: ${loc.job.latest_delay.reason_label}${loc.job.latest_delay.estimated_minutes ? ` (+${loc.job.latest_delay.estimated_minutes}m)` : ''} (Distinct from GPS telemetry)`}
-                                                    className="ml-2 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-900 dark:border-amber-700 dark:bg-amber-900/60 dark:text-amber-200"
+                                                    className="ml-2 inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning-soft px-1.5 py-0.5 text-[10px] font-semibold text-warning-strong dark:border-warning/30 dark:bg-warning/15 dark:text-warning-on-dark"
                                                 >
                                                     <AlertTriangle
-                                                        className="size-2.5 text-amber-700 dark:text-amber-400"
+                                                        className="size-2.5 text-warning-strong dark:text-warning-on-dark"
                                                         aria-hidden="true"
                                                     />
                                                     <span>

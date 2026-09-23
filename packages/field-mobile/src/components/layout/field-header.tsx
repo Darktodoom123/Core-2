@@ -83,7 +83,7 @@ export const SyncStatusPill: React.FC<SyncStatusPillProps> = ({
                     isDarkHud
                         ? '#64748B'
                         : tone === 'attention'
-                          ? colors.amberDark
+                          ? colors.warningDark
                           : colors.muted
                 }
                 name="chevron-right"
@@ -295,7 +295,7 @@ export const ProfileSummary: React.FC<ProfileSummaryProps> = ({
                     testID="theme-mode-toggle"
                 >
                     <Icon
-                        color={isDarkHud ? '#F59E0B' : '#D97706'}
+                        color={isDarkHud ? '#FFBF00' : '#806000'}
                         name={isDarkHud ? 'sun' : 'moon'}
                         size={20}
                     />
@@ -327,7 +327,7 @@ export const ProfileSummary: React.FC<ProfileSummaryProps> = ({
                         color={
                             (notificationCount ?? 0) > 0
                                 ? isDarkHud
-                                    ? '#F59E0B'
+                                    ? '#FFBF00'
                                     : colors.amberDark
                                 : isDarkHud
                                   ? '#94A3B8'
@@ -467,8 +467,8 @@ const styles = StyleSheet.create({
         borderColor: colors.warningBorder,
     },
     darkSyncPillOffline: {
-        backgroundColor: 'rgba(245, 158, 11, 0.12)',
-        borderColor: 'rgba(245, 158, 11, 0.3)',
+        backgroundColor: 'rgba(255, 191, 0, 0.12)',
+        borderColor: 'rgba(255, 191, 0, 0.3)',
     },
     syncPillAttention: {
         backgroundColor: colors.warningSoft,
@@ -626,12 +626,12 @@ const styles = StyleSheet.create({
         position: 'relative',
     },
     notificationActive: {
-        backgroundColor: '#FEF3C7',
-        borderColor: '#FDE68A',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFF3C4',
     },
     darkNotificationActive: {
         backgroundColor: '#1E293B',
-        borderColor: '#F59E0B',
+        borderColor: '#FFBF00',
     },
     darkHeader: {
         gap: 8,
@@ -685,12 +685,12 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(16, 185, 129, 0.35)',
     },
     attentionPill: {
-        backgroundColor: '#FEF3C7',
-        borderColor: '#FCD34D',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFBF00',
     },
     darkAttentionPill: {
-        backgroundColor: 'rgba(245, 158, 11, 0.16)',
-        borderColor: 'rgba(245, 158, 11, 0.4)',
+        backgroundColor: 'rgba(255, 191, 0, 0.16)',
+        borderColor: 'rgba(255, 191, 0, 0.4)',
     },
     offlinePill: {
         backgroundColor: '#F1F5F9',
@@ -710,7 +710,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#34D399',
     },
     onlineSyncedDotAttention: {
-        backgroundColor: '#F59E0B',
+        backgroundColor: '#FFBF00',
     },
     onlineSyncedDotOffline: {
         backgroundColor: '#94A3B8',
@@ -724,10 +724,10 @@ const styles = StyleSheet.create({
         color: '#34D399',
     },
     attentionText: {
-        color: '#B45309',
+        color: '#806000',
     },
     darkAttentionText: {
-        color: '#FBBF24',
+        color: '#FFBF00',
     },
     offlineText: {
         color: '#64748B',

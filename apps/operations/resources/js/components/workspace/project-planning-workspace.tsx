@@ -89,7 +89,7 @@ export function DispatchWorkspace({
                             className={cn(
                                 'min-h-11 border-b-2 px-4 text-sm font-medium',
                                 active === tab
-                                    ? 'border-brand text-ink'
+                                    ? 'border-brand-strong text-ink'
                                     : 'border-transparent text-ink-soft hover:text-ink',
                             )}
                             onClick={() => selectTab(tab)}
@@ -678,7 +678,7 @@ function ProjectPlans({
                 <footer className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-ink-soft">
                     <div className="flex gap-4">
                         <span className="inline-flex items-center gap-1">
-                            <Square className="size-3 fill-brand text-brand" />
+                            <Square className="size-3 fill-brand text-brand-strong" />
                             Phase
                         </span>
                         <span className="text-success-strong">

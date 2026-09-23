@@ -195,7 +195,7 @@ export function FieldProgressionPanel({
                                     step.state === 'complete' &&
                                         'border-success bg-success-soft text-success-strong',
                                     step.state === 'current' &&
-                                        'border-brand bg-brand text-brand-contrast',
+                                        'border-brand-strong bg-brand text-brand-contrast',
                                     step.state === 'upcoming' &&
                                         'border-line-strong bg-surface text-ink-soft',
                                 )}
@@ -311,7 +311,7 @@ export function FieldProgressionPanel({
                         </div>
 
                         {isCompleted && (
-                            <div className="flex flex-col items-start justify-between gap-3 rounded-lg border border-brand/20 bg-brand-soft/40 p-4 sm:flex-row sm:items-center">
+                            <div className="flex flex-col items-start justify-between gap-3 rounded-lg border border-brand-strong/20 bg-brand-soft/40 p-4 sm:flex-row sm:items-center">
                                 <div>
                                     <p className="text-xs font-semibold text-ink">
                                         Field Completion Report & Evidence
@@ -323,7 +323,7 @@ export function FieldProgressionPanel({
                                 </div>
                                 <a
                                     href={`/?view=reports&job_id=${job.id}`}
-                                    className="inline-flex items-center gap-1.5 rounded-lg bg-brand-strong px-3.5 py-2 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-brand"
+                                    className="inline-flex items-center gap-1.5 rounded-lg bg-brand-strong px-3.5 py-2 text-xs font-semibold text-white dark:text-brand-contrast shadow-xs transition-colors hover:bg-brand"
                                 >
                                     <FileText className="h-4 w-4" />
                                     Submit Job Report

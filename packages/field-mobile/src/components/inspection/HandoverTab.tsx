@@ -103,8 +103,8 @@ export const HandoverTab: React.FC<HandoverTabProps> = ({
                                     ? '#34D399'
                                     : colors.greenDark
                                 : isDarkHud
-                                  ? '#FBBF24'
-                                  : colors.amberDark
+                                  ? '#FDBA74'
+                                  : colors.warningDark
                         }
                         name={complete ? 'check-circle' : 'alert-circle'}
                         size={16}
@@ -432,23 +432,23 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
     },
     statusBannerPending: {
-        backgroundColor: colors.amberLight,
-        borderColor: colors.amberBorder,
+        backgroundColor: colors.warningLight,
+        borderColor: colors.warningBorder,
     },
     statusBannerPassed: {
         backgroundColor: colors.greenLight,
         borderColor: colors.greenBorder,
     },
     darkStatusBannerPending: {
-        backgroundColor: 'rgba(245, 158, 11, 0.15)',
-        borderColor: '#F59E0B',
+        backgroundColor: 'rgba(234, 88, 12, 0.18)',
+        borderColor: '#FDBA74',
     },
     darkStatusBannerPassed: {
         backgroundColor: 'rgba(5, 150, 105, 0.15)',
         borderColor: '#059669',
     },
     statusBannerText: {
-        color: colors.amberDark,
+        color: colors.warningDark,
         fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.3,
@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
         color: colors.greenDark,
     },
     darkStatusBannerTextPending: {
-        color: '#FBBF24',
+        color: '#FDBA74',
     },
     darkStatusBannerTextPassed: {
         color: '#34D399',
@@ -546,8 +546,8 @@ const styles = StyleSheet.create({
         borderColor: colors.hudBorder,
     },
     severityOptionSelected: {
-        backgroundColor: colors.amberLight,
-        borderColor: colors.amberBorder,
+        backgroundColor: colors.warningLight,
+        borderColor: colors.warningBorder,
     },
     excellentSelected: {
         backgroundColor: colors.greenLight,
@@ -558,8 +558,8 @@ const styles = StyleSheet.create({
         borderColor: '#0284C7',
     },
     fairSelected: {
-        backgroundColor: colors.amberLight,
-        borderColor: colors.amberBorder,
+        backgroundColor: colors.warningLight,
+        borderColor: colors.warningBorder,
     },
     oosSelected: {
         backgroundColor: 'rgba(239, 68, 68, 0.15)',
@@ -574,8 +574,8 @@ const styles = StyleSheet.create({
         borderColor: '#38BDF8',
     },
     darkFairSelected: {
-        backgroundColor: 'rgba(245, 158, 11, 0.2)',
-        borderColor: '#F59E0B',
+        backgroundColor: 'rgba(234, 88, 12, 0.2)',
+        borderColor: '#FDBA74',
     },
     darkOosSelected: {
         backgroundColor: 'rgba(239, 68, 68, 0.2)',
@@ -599,7 +599,7 @@ const styles = StyleSheet.create({
         color: '#0369A1',
     },
     fairText: {
-        color: colors.amberDark,
+        color: colors.warningDark,
     },
     oosText: {
         color: '#B91C1C',
@@ -611,14 +611,14 @@ const styles = StyleSheet.create({
         color: '#38BDF8',
     },
     darkFairText: {
-        color: '#FBBF24',
+        color: '#FDBA74',
     },
     darkOosText: {
         color: '#F87171',
     },
     actionButton: {
         alignItems: 'center',
-        backgroundColor: colors.amber,
+        backgroundColor: colors.primary,
         borderRadius: 10,
         flexDirection: 'row',
         gap: 8,

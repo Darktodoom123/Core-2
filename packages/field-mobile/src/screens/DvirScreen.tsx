@@ -745,7 +745,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                 mode === 'history'
                                     ? '#FFFFFF'
                                     : isDarkHud
-                                      ? '#F59E0B'
+                                      ? '#FFBF00'
                                       : colors.amber
                             }
                             name="file-text"
@@ -937,7 +937,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                             <Text
                                 style={[
                                     styles.historyMeta,
-                                    { color: '#F59E0B' },
+                                    { color: '#FFBF00' },
                                 ]}
                                 testID="dvir-sync-warning"
                             >
@@ -1847,7 +1847,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                                 testID="dvir-lockout-standby-btn"
                                             >
                                                 <Icon
-                                                    color="#B45309"
+                                                    color="#806000"
                                                     name="clock"
                                                     size={12}
                                                 />
@@ -2232,12 +2232,12 @@ const styles = StyleSheet.create({
         borderColor: '#334155',
     },
     historyToggleBadgeActive: {
-        backgroundColor: colors.amber,
-        borderColor: colors.amber,
+        backgroundColor: colors.primary,
+        borderColor: colors.primaryBorder,
     },
     darkHistoryToggleBadgeActive: {
-        backgroundColor: '#B45309',
-        borderColor: '#F59E0B',
+        backgroundColor: '#332800',
+        borderColor: '#FFBF00',
     },
     historyToggleText: {
         color: colors.amberDark,
@@ -2245,7 +2245,7 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     darkHistoryToggleText: {
-        color: '#F59E0B',
+        color: '#FFBF00',
     },
     historyToggleTextActive: {
         color: '#FFFFFF',
@@ -2310,12 +2310,12 @@ const styles = StyleSheet.create({
     },
     toggleCardActive: {
         backgroundColor: colors.amberLight,
-        borderColor: colors.amber,
+        borderColor: colors.primaryBorder,
         borderWidth: 2,
     },
     darkToggleCardActive: {
-        backgroundColor: '#451A03',
-        borderColor: '#F59E0B',
+        backgroundColor: '#332800',
+        borderColor: '#FFBF00',
         borderWidth: 2,
     },
     toggleCardUnsafeActive: {
@@ -2341,7 +2341,7 @@ const styles = StyleSheet.create({
         fontWeight: '800',
     },
     darkToggleCardTextActive: {
-        color: '#FDE68A',
+        color: '#FFBF00',
         fontWeight: '800',
     },
     toggleCardUnsafeTextActive: {
@@ -2355,7 +2355,7 @@ const styles = StyleSheet.create({
     addDefectsBtn: {
         alignItems: 'center',
         backgroundColor: colors.surface,
-        borderColor: colors.amber,
+        borderColor: colors.primaryBorder,
         borderRadius: 8,
         borderWidth: 1.5,
         justifyContent: 'center',
@@ -2365,15 +2365,15 @@ const styles = StyleSheet.create({
     },
     darkAddDefectsBtn: {
         backgroundColor: 'transparent',
-        borderColor: '#F59E0B',
+        borderColor: '#FFBF00',
     },
     addDefectsBtnActive: {
         backgroundColor: colors.amberLight,
-        borderColor: colors.amber,
+        borderColor: colors.primaryBorder,
     },
     darkAddDefectsBtnActive: {
-        backgroundColor: '#451A03',
-        borderColor: '#F59E0B',
+        backgroundColor: '#332800',
+        borderColor: '#FFBF00',
     },
     addDefectsBtnText: {
         color: colors.amber,
@@ -2381,13 +2381,13 @@ const styles = StyleSheet.create({
         fontWeight: '800',
     },
     darkAddDefectsBtnText: {
-        color: '#F59E0B',
+        color: '#FFBF00',
     },
     addDefectsBtnTextActive: {
         color: colors.amberDark,
     },
     darkAddDefectsBtnTextActive: {
-        color: '#FDE68A',
+        color: '#FFBF00',
     },
     defectChipsContainer: {
         flexDirection: 'row',
@@ -2409,8 +2409,8 @@ const styles = StyleSheet.create({
         borderWidth: 1,
     },
     darkDefectChipNormal: {
-        backgroundColor: '#2A1805',
-        borderColor: '#78350F',
+        backgroundColor: '#332800',
+        borderColor: '#332800',
         borderWidth: 1,
     },
     defectChipCritical: {
@@ -2492,15 +2492,15 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
-        backgroundColor: '#FEF3C7',
-        borderColor: '#F59E0B',
+        backgroundColor: colors.warningSoft,
+        borderColor: colors.warningBorder,
         borderWidth: 1,
         paddingVertical: 8,
         paddingHorizontal: 12,
         borderRadius: 8,
     },
     bannerStandbyBtnText: {
-        color: '#B45309',
+        color: colors.warningDark,
         fontSize: 11,
         fontWeight: '700',
     },
@@ -2720,7 +2720,7 @@ const styles = StyleSheet.create({
         letterSpacing: 0.2,
     },
     darkArchiveToggleText: {
-        color: '#F59E0B',
+        color: '#FFBF00',
     },
     sectionHeading: {
         color: colors.textSecondary,
@@ -2854,17 +2854,17 @@ const styles = StyleSheet.create({
     },
     nextButton: {
         alignItems: 'center',
-        backgroundColor: colors.amber,
+        backgroundColor: colors.primary,
         borderRadius: 10,
         justifyContent: 'center',
         minHeight: 52,
         width: '100%',
     },
     darkNextButton: {
-        backgroundColor: '#F59E0B',
+        backgroundColor: '#FFBF00',
     },
     nextButtonText: {
-        color: '#FFFFFF',
+        color: '#0F172A',
         fontSize: 16,
         fontWeight: '800',
     },
@@ -2938,7 +2938,7 @@ const styles = StyleSheet.create({
         borderColor: colors.hudAmber,
     },
     assetPillCode: {
-        color: colors.primary,
+        color: colors.amber,
         fontSize: 13,
         fontWeight: '800',
     },
@@ -2967,8 +2967,8 @@ const styles = StyleSheet.create({
         color: colors.surfaceDark,
     },
     noAssetBanner: {
-        backgroundColor: '#FEF3C7',
-        borderColor: '#F59E0B',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFBF00',
         borderRadius: 8,
         borderWidth: 1,
         marginHorizontal: 16,
@@ -2976,17 +2976,17 @@ const styles = StyleSheet.create({
         padding: 12,
     },
     darkNoAssetBanner: {
-        backgroundColor: '#78350F',
-        borderColor: '#D97706',
+        backgroundColor: '#332800',
+        borderColor: '#FFBF00',
     },
     noAssetBannerText: {
-        color: '#92400E',
+        color: '#806000',
         fontSize: 13,
         fontWeight: '600',
         textAlign: 'center',
     },
     darkNoAssetBannerText: {
-        color: '#FEF3C7',
+        color: '#FFBF00',
     },
     nextButtonDisabled: {
         opacity: 0.45,

@@ -61,7 +61,7 @@ export default function TwoFactorChallenge({
     return (
         <AuthShell>
             <Head title="Two-factor verification" />
-            <div className="flex items-center gap-2 text-brand">
+            <div className="flex items-center gap-2 text-brand-strong">
                 <ShieldCheck
                     className="h-6 w-6 text-brand-strong"
                     aria-hidden="true"
@@ -142,7 +142,7 @@ export default function TwoFactorChallenge({
                         onChange={(e) =>
                             form.setData('trust_device', e.target.checked)
                         }
-                        className="mt-0.5 h-4 w-4 rounded border-line text-brand focus-visible:outline-2 focus-visible:outline-brand"
+                        className="mt-0.5 h-4 w-4 rounded border-line text-brand-strong focus-visible:outline-2 focus-visible:outline-brand"
                     />
                     <label
                         htmlFor="trust_device"

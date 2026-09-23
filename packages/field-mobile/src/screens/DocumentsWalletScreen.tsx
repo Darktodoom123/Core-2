@@ -249,11 +249,11 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                 return {
                     label: 'Expiring Soon',
                     icon: 'alert' as const,
-                    color: isDarkHud ? '#FCD34D' : colors.amberDark,
+                    color: isDarkHud ? '#FFBF00' : colors.amberDark,
                     bg: isDarkHud
-                        ? 'rgba(217, 119, 6, 0.2)'
+                        ? 'rgba(255, 191, 0, 0.2)'
                         : colors.amberLight,
-                    border: isDarkHud ? '#D97706' : colors.amberBorder,
+                    border: isDarkHud ? '#FFBF00' : colors.amberBorder,
                 };
             case 'expired':
                 return {
@@ -1139,7 +1139,7 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                                 <Icon
                                                     name="alert"
                                                     size={16}
-                                                    color="#92400E"
+                                                    color="#806000"
                                                 />
                                                 <Text
                                                     style={
@@ -1200,7 +1200,7 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                                         }
                                                     >
                                                         <Icon
-                                                            color="#B45309"
+                                                            color="#806000"
                                                             name="shield-check"
                                                             size={20}
                                                         />
@@ -1953,10 +1953,10 @@ const styles = StyleSheet.create({
         backgroundColor: colors.amberLight,
     },
     categoryChipAllDark: {
-        backgroundColor: 'rgba(120, 53, 15, 0.25)',
+        backgroundColor: 'rgba(51, 40, 0, 0.25)',
     },
     categoryChipActive: {
-        backgroundColor: colors.amber,
+        backgroundColor: colors.primary,
     },
     categoryChipActiveDark: {
         backgroundColor: colors.hudAmber,
@@ -1995,10 +1995,10 @@ const styles = StyleSheet.create({
         backgroundColor: colors.surfaceDark,
     },
     countTagAll: {
-        backgroundColor: 'rgba(217, 119, 6, 0.18)',
+        backgroundColor: 'rgba(255, 191, 0, 0.18)',
     },
     countTagAllDark: {
-        backgroundColor: 'rgba(245, 158, 11, 0.22)',
+        backgroundColor: 'rgba(255, 191, 0, 0.22)',
     },
     countTagActive: {
         backgroundColor: 'rgba(255, 255, 255, 0.28)',
@@ -2160,22 +2160,22 @@ const styles = StyleSheet.create({
         color: colors.hudText,
     },
     conditionStrip: {
-        backgroundColor: '#FFFBEB',
+        backgroundColor: '#FFF3C4',
         borderRadius: 6,
         marginTop: 10,
         paddingHorizontal: 10,
         paddingVertical: 8,
     },
     conditionStripDark: {
-        backgroundColor: 'rgba(120, 53, 15, 0.25)',
+        backgroundColor: 'rgba(51, 40, 0, 0.25)',
     },
     conditionText: {
-        color: '#92400E',
+        color: '#806000',
         fontSize: 11,
         lineHeight: 15,
     },
     conditionTextDark: {
-        color: '#FDE68A',
+        color: '#FFBF00',
     },
     cardFooter: {
         alignItems: 'center',
@@ -2331,7 +2331,7 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
     },
     viewModeTabActive: {
-        backgroundColor: colors.amber,
+        backgroundColor: colors.primary,
     },
     viewModeTabActiveDark: {
         backgroundColor: colors.hudAmber,
@@ -2384,7 +2384,7 @@ const styles = StyleSheet.create({
     },
     pdfEmblemCircle: {
         alignItems: 'center',
-        backgroundColor: '#FEF3C7',
+        backgroundColor: '#FFF3C4',
         borderRadius: 16,
         height: 32,
         justifyContent: 'center',
@@ -2502,22 +2502,22 @@ const styles = StyleSheet.create({
         fontWeight: '800',
     },
     pdfConditionsBox: {
-        backgroundColor: '#FEF9C3',
-        borderColor: '#FACC15',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFBF00',
         borderRadius: 4,
         borderWidth: 0.5,
         marginBottom: 10,
         padding: 8,
     },
     pdfConditionsHeader: {
-        color: '#854D0E',
+        color: '#806000',
         fontSize: 8.5,
         fontWeight: '800',
         letterSpacing: 0.4,
         marginBottom: 2,
     },
     pdfConditionsBody: {
-        color: '#713F12',
+        color: '#806000',
         fontSize: 9.5,
         lineHeight: 13,
     },
@@ -2600,7 +2600,7 @@ const styles = StyleSheet.create({
         marginTop: 1,
     },
     pdfRevocationNotice: {
-        color: '#92400E',
+        color: '#806000',
         fontSize: 7.5,
         fontStyle: 'italic',
         marginTop: 2,
@@ -2609,8 +2609,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
-        backgroundColor: '#FEF3C7',
-        borderColor: '#FDE68A',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFF3C4',
         borderWidth: 1,
         borderRadius: 8,
         padding: 10,
@@ -2619,7 +2619,7 @@ const styles = StyleSheet.create({
     offlineNoticeText: {
         flex: 1,
         fontSize: 11,
-        color: '#92400E',
+        color: '#806000',
         fontWeight: '600',
     },
     offlineDocImage: {
@@ -2776,16 +2776,16 @@ const styles = StyleSheet.create({
         color: colors.hudText,
     },
     notesBox: {
-        backgroundColor: '#FFFBEB',
+        backgroundColor: '#FFF3C4',
         borderRadius: 10,
         marginBottom: 14,
         padding: 14,
     },
     notesBoxDark: {
-        backgroundColor: 'rgba(120, 53, 15, 0.22)',
+        backgroundColor: 'rgba(51, 40, 0, 0.22)',
     },
     notesBoxTitle: {
-        color: '#92400E',
+        color: '#806000',
         fontSize: 10,
         fontWeight: '800',
         letterSpacing: 0.5,
@@ -2795,12 +2795,12 @@ const styles = StyleSheet.create({
         color: colors.hudAmber,
     },
     notesBoxBody: {
-        color: '#78350F',
+        color: '#806000',
         fontSize: 12,
         lineHeight: 17,
     },
     notesBoxBodyDark: {
-        color: '#FDE68A',
+        color: '#FFBF00',
     },
     verificationPillCard: {
         alignItems: 'center',
@@ -2835,7 +2835,7 @@ const styles = StyleSheet.create({
     },
     doneBtn: {
         alignItems: 'center',
-        backgroundColor: colors.amber,
+        backgroundColor: colors.primary,
         borderRadius: 12,
         justifyContent: 'center',
         minHeight: 48,
@@ -2844,7 +2844,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.hudAmber,
     },
     doneBtnText: {
-        color: '#FFFFFF',
+        color: '#0F172A',
         fontSize: 15,
         fontWeight: '800',
     },

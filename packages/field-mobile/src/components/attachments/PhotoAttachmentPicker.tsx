@@ -207,7 +207,7 @@ export const PhotoAttachmentPicker: React.FC<PhotoAttachmentPickerProps> = ({
                     >
                         {isLoading ? (
                             <ActivityIndicator
-                                color={isDarkHud ? '#F59E0B' : colors.amberDark}
+                                color={isDarkHud ? '#FFBF00' : colors.amberDark}
                                 size="small"
                             />
                         ) : (
@@ -400,8 +400,8 @@ const styles = StyleSheet.create({
         borderColor: colors.hudBorder,
     },
     darkActionButton: {
-        backgroundColor: 'rgba(245, 158, 11, 0.2)',
-        borderColor: 'rgba(245, 158, 11, 0.45)',
+        backgroundColor: 'rgba(255, 191, 0, 0.2)',
+        borderColor: 'rgba(255, 191, 0, 0.45)',
     },
     darkGalleryButton: {
         backgroundColor: colors.surfaceDark,

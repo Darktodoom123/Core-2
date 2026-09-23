@@ -36,7 +36,7 @@ export const EndShiftSafeguardModal: React.FC<EndShiftSafeguardModalProps> = ({
                         ]}
                     >
                         <Icon
-                            color={isDarkHud ? '#F59E0B' : '#D97706'}
+                            color={isDarkHud ? '#FFBF00' : '#806000'}
                             name="alert-circle"
                             size={32}
                         />
@@ -176,16 +176,16 @@ const styles = StyleSheet.create({
         width: 64,
         height: 64,
         borderRadius: 32,
-        backgroundColor: '#FEF3C7',
-        borderColor: 'rgba(217, 119, 6, 0.25)',
+        backgroundColor: '#FFF3C4',
+        borderColor: 'rgba(255, 191, 0, 0.25)',
         borderWidth: 1.5,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 18,
     },
     darkIconBadge: {
-        backgroundColor: 'rgba(245, 158, 11, 0.15)',
-        borderColor: 'rgba(245, 158, 11, 0.35)',
+        backgroundColor: 'rgba(255, 191, 0, 0.15)',
+        borderColor: 'rgba(255, 191, 0, 0.35)',
     },
     title: {
         fontSize: 20,
@@ -211,10 +211,10 @@ const styles = StyleSheet.create({
     },
     assetHighlight: {
         fontWeight: '800',
-        color: '#D97706',
+        color: '#FFBF00',
     },
     darkAssetHighlight: {
-        color: '#FBBF24',
+        color: '#FFBF00',
     },
     guardrailContainer: {
         flexDirection: 'row',
@@ -275,23 +275,23 @@ const styles = StyleSheet.create({
         flex: 1.4,
         height: 48,
         borderRadius: 14,
-        backgroundColor: '#D97706',
+        backgroundColor: '#FFBF00',
         alignItems: 'center',
         justifyContent: 'center',
         elevation: 2,
-        shadowColor: '#D97706',
+        shadowColor: '#FFBF00',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.25,
         shadowRadius: 4,
     },
     darkConfirmButton: {
-        backgroundColor: '#F59E0B',
-        shadowColor: '#F59E0B',
+        backgroundColor: '#FFBF00',
+        shadowColor: '#FFBF00',
     },
     confirmButtonText: {
         fontSize: 15,
         fontWeight: '800',
-        color: '#FFFFFF',
+        color: '#0F172A',
     },
     darkConfirmButtonText: {
         color: '#090D16',

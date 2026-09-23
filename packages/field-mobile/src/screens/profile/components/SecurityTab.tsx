@@ -132,7 +132,7 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
         if (complexityScore <= 4) {
             return {
                 label: 'Fair',
-                color: '#F59E0B',
+                color: '#FFBF00',
                 percent: (complexityScore / 6) * 100,
             };
         }
@@ -320,8 +320,8 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
                                             ? '#34D399'
                                             : '#059669'
                                         : isDarkHud
-                                          ? '#F59E0B'
-                                          : '#D97706'
+                                          ? '#FFBF00'
+                                          : '#FFBF00'
                                 }
                                 name={
                                     security.email_otp_enabled
@@ -1186,10 +1186,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     lightIconWrap: {
-        backgroundColor: '#FEF3C7',
+        backgroundColor: '#FFF3C4',
     },
     darkIconWrap: {
-        backgroundColor: '#78350F',
+        backgroundColor: '#332800',
     },
     lightIconWrapSuccess: {
         backgroundColor: '#ECFDF5',
@@ -1264,10 +1264,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     lightOtpEnableBtn: {
-        backgroundColor: '#D97706',
+        backgroundColor: '#FFBF00',
     },
     darkOtpEnableBtn: {
-        backgroundColor: '#F59E0B',
+        backgroundColor: '#FFBF00',
     },
     otpDisableBtn: {
         backgroundColor: '#FEE2E2',
@@ -1439,10 +1439,10 @@ const styles = StyleSheet.create({
         marginTop: 6,
     },
     lightSavePasswordBtn: {
-        backgroundColor: '#D97706',
+        backgroundColor: '#FFBF00',
     },
     darkSavePasswordBtn: {
-        backgroundColor: '#F59E0B',
+        backgroundColor: '#FFBF00',
     },
     savePasswordBtnText: {
         fontSize: 14,

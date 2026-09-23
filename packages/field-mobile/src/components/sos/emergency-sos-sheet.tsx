@@ -1143,8 +1143,8 @@ const styles = StyleSheet.create({
     },
     preparingBanner: {
         alignItems: 'center',
-        backgroundColor: '#FFFBEB',
-        borderColor: '#F59E0B',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFBF00',
         borderRadius: 12,
         borderWidth: 1,
         flexDirection: 'row',
@@ -1153,11 +1153,11 @@ const styles = StyleSheet.create({
     },
     darkPreparingBanner: {
         backgroundColor: '#1E293B',
-        borderColor: '#D97706',
+        borderColor: '#FFBF00',
     },
     preparingMark: {
         alignItems: 'center',
-        backgroundColor: '#FEF3C7',
+        backgroundColor: '#FFF3C4',
         borderRadius: 14,
         height: 28,
         justifyContent: 'center',
@@ -1168,15 +1168,15 @@ const styles = StyleSheet.create({
         gap: 2,
     },
     preparingTitle: {
-        color: '#92400E',
+        color: '#806000',
         fontSize: 14,
         fontWeight: '800',
     },
     darkPreparingTitle: {
-        color: '#FBBF24',
+        color: '#FFBF00',
     },
     preparingDetail: {
-        color: '#78350F',
+        color: '#806000',
         fontSize: 12,
         lineHeight: 16,
     },
@@ -1184,16 +1184,16 @@ const styles = StyleSheet.create({
         color: '#94A3B8',
     },
     beaconBannerSending: {
-        backgroundColor: '#B45309',
+        backgroundColor: '#806000',
     },
     beaconBannerRetrying: {
-        backgroundColor: '#9A3412',
+        backgroundColor: '#806000',
     },
     beaconBannerOffline: {
         backgroundColor: '#991B1B',
     },
     pulseDotAmber: {
-        backgroundColor: '#FDE047',
+        backgroundColor: '#FFBF00',
     },
     confirmModalOverlay: {
         alignItems: 'center',

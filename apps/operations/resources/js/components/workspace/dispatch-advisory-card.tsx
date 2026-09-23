@@ -237,7 +237,7 @@ export function DispatchAdvisoryCard({
         <Check className="h-3 w-3" aria-hidden="true" />
     ) : expired || stale ? (
         <span
-            className="h-1.5 w-1.5 rounded-full bg-amber-500"
+            className="h-1.5 w-1.5 rounded-full bg-warning-strong"
             aria-hidden="true"
         />
     ) : rec?.status === 'failed' ? (
@@ -258,7 +258,7 @@ export function DispatchAdvisoryCard({
                         className="flex items-center gap-1.5 text-sm font-semibold text-ink"
                     >
                         <Sparkles
-                            className="h-4 w-4 shrink-0 text-brand"
+                            className="h-4 w-4 shrink-0 text-brand-strong"
                             aria-hidden="true"
                         />
                         <span>AI assistance</span>
@@ -312,7 +312,7 @@ export function DispatchAdvisoryCard({
                     <div className="flex items-start gap-2.5">
                         {(expired || stale) && (
                             <span
-                                className="mt-1 h-2 w-2 shrink-0 rounded-full bg-amber-500 ring-2 ring-amber-500/20"
+                                className="mt-1 h-2 w-2 shrink-0 rounded-full bg-warning-strong ring-2 ring-warning-strong/20"
                                 aria-hidden="true"
                             />
                         )}
@@ -457,7 +457,7 @@ export function DispatchAdvisoryCard({
                                                         )
                                                     }
                                                     aria-label={`Select ${displayName}`}
-                                                    className="h-3.5 w-3.5 cursor-pointer rounded border-line-strong text-brand accent-brand transition-shadow focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:outline-hidden"
+                                                    className="h-3.5 w-3.5 cursor-pointer rounded border-line-strong text-brand-strong accent-brand transition-shadow focus-visible:ring-2 focus-visible:ring-brand-strong/40 focus-visible:outline-hidden"
                                                     disabled={busy}
                                                 />
                                             </label>
@@ -589,7 +589,7 @@ export function DispatchAdvisoryCard({
                                                             )
                                                         }
                                                         aria-label={`Select ${assetLabel}`}
-                                                        className="h-3.5 w-3.5 cursor-pointer rounded border-line-strong text-brand accent-brand transition-shadow focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:outline-hidden"
+                                                        className="h-3.5 w-3.5 cursor-pointer rounded border-line-strong text-brand-strong accent-brand transition-shadow focus-visible:ring-2 focus-visible:ring-brand-strong/40 focus-visible:outline-hidden"
                                                         disabled={busy}
                                                     />
                                                 </label>
@@ -716,7 +716,7 @@ export function DispatchAdvisoryCard({
                             <div className="mt-2">
                                 <Link
                                     href={manualUrl}
-                                    className="inline-flex items-center gap-1 font-medium text-brand hover:underline"
+                                    className="inline-flex items-center gap-1 font-medium text-brand-strong hover:underline"
                                 >
                                     Assign resources manually
                                     <ArrowUpRight
@@ -775,7 +775,7 @@ export function DispatchAdvisoryCard({
                         {assignmentUrl ? (
                             <Link
                                 href={assignmentUrl}
-                                className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand px-3 py-2 text-center text-sm font-semibold text-ink shadow-xs transition-all duration-150 hover:bg-brand-strong hover:text-white active:scale-[0.98]"
+                                className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand px-3 py-2 text-center text-sm font-semibold text-ink shadow-xs transition-all duration-150 hover:bg-brand-strong hover:text-white dark:hover:text-brand-contrast dark:text-brand-contrast active:scale-[0.98]"
                             >
                                 Review in assignment workspace{' '}
                                 <ArrowUpRight
@@ -918,7 +918,7 @@ export function DispatchAdvisoryCard({
                         <div>
                             <Link
                                 href={manualUrl}
-                                className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline"
+                                className="inline-flex items-center gap-1 text-xs font-medium text-brand-strong hover:underline"
                             >
                                 Assign resources manually
                                 <ArrowUpRight

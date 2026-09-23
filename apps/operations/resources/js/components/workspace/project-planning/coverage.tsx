@@ -148,7 +148,7 @@ export function CoverageForm({
                         className={cn(
                             'rounded-lg border p-3 text-left focus-visible:outline-2 focus-visible:outline-brand',
                             role === r
-                                ? 'border-brand bg-brand-soft'
+                                ? 'border-brand-strong bg-brand-soft'
                                 : 'border-line',
                         )}
                         onClick={() => {

@@ -124,7 +124,7 @@ export function LifecycleControlsPanel({
                 refreshing
             }
         >
-            <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden sm:px-5">
+            <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden sm:px-5">
                 <span>
                     <span className="block font-semibold text-ink">
                         Administrative actions
@@ -274,7 +274,7 @@ export function LifecycleControlsPanel({
                             <textarea
                                 id="reopen-reason"
                                 rows={2}
-                                className="mt-1 block w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-soft/70 focus-visible:border-brand focus-visible:ring-1 focus-visible:ring-brand focus-visible:outline-hidden"
+                                className="mt-1 block w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-soft/70 focus-visible:border-brand-strong focus-visible:ring-1 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                                 value={reopenForm.data.reason}
                                 onChange={(e) =>
                                     reopenForm.setData('reason', e.target.value)
@@ -432,7 +432,7 @@ export function LifecycleControlsPanel({
                             <textarea
                                 id="restore-reason"
                                 rows={2}
-                                className="mt-1 block w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-soft/70 focus-visible:border-brand focus-visible:ring-1 focus-visible:ring-brand focus-visible:outline-hidden"
+                                className="mt-1 block w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-soft/70 focus-visible:border-brand-strong focus-visible:ring-1 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                                 value={restoreForm.data.reason}
                                 onChange={(e) =>
                                     restoreForm.setData(

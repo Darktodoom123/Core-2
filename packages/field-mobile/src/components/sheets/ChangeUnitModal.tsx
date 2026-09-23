@@ -321,12 +321,12 @@ const styles = StyleSheet.create({
         borderColor: '#334155',
     },
     selectedOption: {
-        borderColor: '#D97706',
-        backgroundColor: '#FEF3C7',
+        borderColor: '#FFBF00',
+        backgroundColor: '#FFF3C4',
     },
     darkSelectedOption: {
-        borderColor: '#F59E0B',
-        backgroundColor: 'rgba(245, 158, 11, 0.16)',
+        borderColor: '#FFBF00',
+        backgroundColor: 'rgba(255, 191, 0, 0.16)',
     },
     optionHeader: {
         flexDirection: 'row',
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
         color: '#0F172A',
     },
     selectedCode: {
-        color: '#D97706',
+        color: '#FFBF00',
     },
     unitCapacity: {
         fontSize: 12,
@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
         flex: 1.4,
         paddingVertical: 12,
         borderRadius: 10,
-        backgroundColor: '#D97706',
+        backgroundColor: '#FFBF00',
         alignItems: 'center',
     },
     disabledBtn: {

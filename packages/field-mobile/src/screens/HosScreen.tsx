@@ -65,7 +65,7 @@ const DUTY_STATUS_OPTIONS: DutyStatusOptionConfig[] = [
         title: 'On Duty — Crane / Machine Operating',
         subtitle: 'Active site lifting, rigging, crane operations, excavation',
         iconName: 'crane',
-        accentColor: '#F59E0B',
+        accentColor: '#FFBF00',
     },
     {
         status: 'driving',
@@ -81,7 +81,7 @@ const DUTY_STATUS_OPTIONS: DutyStatusOptionConfig[] = [
         title: 'On Duty — Standby / Delay (Demurrage)',
         subtitle: 'Waiting on client, concrete trucks, permits, or weather',
         iconName: 'clock',
-        accentColor: '#F97316',
+        accentColor: '#FFBF00',
     },
     {
         status: 'on_break',
@@ -1125,8 +1125,8 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                                     isDoleCapExceeded
                                         ? '#EF4444'
                                         : isDarkHud
-                                          ? '#F59E0B'
-                                          : '#D97706'
+                                          ? '#FFBF00'
+                                          : '#806000'
                                 }
                                 name="alert"
                                 size={18}
@@ -1867,7 +1867,7 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                             ]}
                         >
                             <Icon
-                                color={isDarkHud ? '#F59E0B' : '#D97706'}
+                                color={isDarkHud ? '#FFBF00' : '#806000'}
                                 name="crane"
                                 size={14}
                             />
@@ -2222,8 +2222,8 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                                         styles.legendDot,
                                         {
                                             backgroundColor: isDarkHud
-                                                ? '#F59E0B'
-                                                : '#D97706',
+                                                ? '#FFBF00'
+                                                : '#FFBF00',
                                         },
                                     ]}
                                 />
@@ -2384,8 +2384,8 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                                         styles.graphRowDot,
                                         {
                                             backgroundColor: isDarkHud
-                                                ? '#F59E0B'
-                                                : '#D97706',
+                                                ? '#FFBF00'
+                                                : '#FFBF00',
                                         },
                                     ]}
                                 />
@@ -2413,8 +2413,8 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                                                 left: seg.left,
                                                 width: seg.width,
                                                 backgroundColor: isDarkHud
-                                                    ? '#F59E0B'
-                                                    : '#D97706',
+                                                    ? '#FFBF00'
+                                                    : '#FFBF00',
                                             },
                                         ]}
                                     />
@@ -2519,7 +2519,7 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                                 <View
                                     style={[
                                         styles.metricIndicatorDot,
-                                        { backgroundColor: '#D97706' },
+                                        { backgroundColor: '#FFBF00' },
                                     ]}
                                 />
                                 <Text
@@ -2672,8 +2672,8 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                                         selectedDay.certificationStatus ===
                                         'active'
                                             ? isDarkHud
-                                                ? '#FBBF24'
-                                                : '#D97706'
+                                                ? '#FFBF00'
+                                                : '#806000'
                                             : selectedDay.certificationStatus ===
                                                 'certified'
                                               ? isDarkHud
@@ -3164,12 +3164,12 @@ const styles = StyleSheet.create({
         color: '#60A5FA',
     },
     clockCellValueAmber: {
-        color: '#D97706',
+        color: '#FFBF00',
         fontSize: 18,
         fontWeight: '900',
     },
     darkClockCellValueAmber: {
-        color: '#FBBF24',
+        color: '#FFBF00',
     },
     clockCellValuePurple: {
         color: '#7C3AED',
@@ -3230,7 +3230,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#10B981',
     },
     gaugeFillAmber: {
-        backgroundColor: '#F59E0B',
+        backgroundColor: '#FFBF00',
     },
     gaugeFillRed: {
         backgroundColor: '#EF4444',
@@ -3300,13 +3300,13 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.2,
     },
     dutyOptionCardSelected: {
-        backgroundColor: '#FFFBEB',
-        borderColor: '#D97706',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFBF00',
         borderWidth: 2,
     },
     darkDutyOptionCardSelected: {
-        backgroundColor: 'rgba(245, 158, 11, 0.12)',
-        borderColor: '#F59E0B',
+        backgroundColor: 'rgba(255, 191, 0, 0.12)',
+        borderColor: '#FFBF00',
         borderWidth: 2,
     },
     dutyOptionCardPressed: {
@@ -3354,10 +3354,10 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
     },
     optionTitleSelected: {
-        color: '#B45309',
+        color: '#806000',
     },
     darkOptionTitleSelected: {
-        color: '#FBBF24',
+        color: '#FFBF00',
     },
     optionSubtitle: {
         color: '#64748B',
@@ -3380,19 +3380,19 @@ const styles = StyleSheet.create({
         borderColor: '#475569',
     },
     radioButtonSelected: {
-        borderColor: '#D97706',
+        borderColor: '#FFBF00',
     },
     darkRadioButtonSelected: {
-        borderColor: '#F59E0B',
+        borderColor: '#FFBF00',
     },
     radioButtonInner: {
-        backgroundColor: '#D97706',
+        backgroundColor: '#FFBF00',
         borderRadius: 5.5,
         height: 11,
         width: 11,
     },
     darkRadioButtonInner: {
-        backgroundColor: '#F59E0B',
+        backgroundColor: '#FFBF00',
     },
     standbyChipsGrid: {
         gap: 8,
@@ -3414,13 +3414,13 @@ const styles = StyleSheet.create({
         borderColor: '#334155',
     },
     standbyChipSelected: {
-        backgroundColor: '#FFFBEB',
-        borderColor: '#D97706',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFBF00',
         borderWidth: 1.5,
     },
     darkStandbyChipSelected: {
-        backgroundColor: 'rgba(245, 158, 11, 0.15)',
-        borderColor: '#F59E0B',
+        backgroundColor: 'rgba(255, 191, 0, 0.15)',
+        borderColor: '#FFBF00',
         borderWidth: 1.5,
     },
     standbyChipText: {
@@ -3433,21 +3433,21 @@ const styles = StyleSheet.create({
         color: '#94A3B8',
     },
     standbyChipTextSelected: {
-        color: '#B45309',
+        color: '#806000',
         fontWeight: '800',
     },
     darkStandbyChipTextSelected: {
-        color: '#FBBF24',
+        color: '#FFBF00',
         fontWeight: '800',
     },
     standbyCheckGlyph: {
-        color: '#B45309',
+        color: '#806000',
         fontSize: 14,
         fontWeight: '900',
         marginLeft: 8,
     },
     darkStandbyCheckGlyph: {
-        color: '#FBBF24',
+        color: '#FFBF00',
     },
     inputLabel: {
         color: '#334155',
@@ -3542,24 +3542,24 @@ const styles = StyleSheet.create({
         opacity: 0.35,
     },
     stepperNavBtnIcon: {
-        color: '#D97706',
+        color: '#FFBF00',
         fontSize: 16,
         fontWeight: '800',
         lineHeight: 18,
     },
     darkStepperNavBtnIcon: {
-        color: '#F59E0B',
+        color: '#FFBF00',
     },
     stepperNavBtnIconDisabled: {
         color: '#94A3B8',
     },
     stepperNavBtnText: {
-        color: '#D97706',
+        color: '#FFBF00',
         fontSize: 11.5,
         fontWeight: '700',
     },
     darkStepperNavBtnText: {
-        color: '#F59E0B',
+        color: '#FFBF00',
     },
     stepperNavBtnTextDisabled: {
         color: '#94A3B8',
@@ -3617,8 +3617,8 @@ const styles = StyleSheet.create({
         borderColor: '#0F172A',
     },
     darkDayPillSelected: {
-        backgroundColor: '#F59E0B',
-        borderColor: '#F59E0B',
+        backgroundColor: '#FFBF00',
+        borderColor: '#FFBF00',
     },
     dayPillText: {
         color: '#64748B',
@@ -3687,7 +3687,7 @@ const styles = StyleSheet.create({
         color: '#2563EB',
     },
     metricValAmber: {
-        color: '#D97706',
+        color: '#FFBF00',
     },
     metricValSlate: {
         color: '#475569',
@@ -3710,12 +3710,12 @@ const styles = StyleSheet.create({
         borderColor: '#334155',
     },
     certAuditActive: {
-        backgroundColor: '#FFFBEB',
-        borderColor: '#FDE68A',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFF3C4',
     },
     darkCertAuditActive: {
-        backgroundColor: 'rgba(245, 158, 11, 0.08)',
-        borderColor: 'rgba(245, 158, 11, 0.28)',
+        backgroundColor: 'rgba(255, 191, 0, 0.08)',
+        borderColor: 'rgba(255, 191, 0, 0.28)',
     },
     certAuditCertified: {
         backgroundColor: '#ECFDF5',
@@ -3747,12 +3747,12 @@ const styles = StyleSheet.create({
         width: 32,
     },
     certAuditIconCircleActive: {
-        backgroundColor: '#FEF3C7',
-        borderColor: 'rgba(245, 158, 11, 0.3)',
+        backgroundColor: '#FFF3C4',
+        borderColor: 'rgba(255, 191, 0, 0.3)',
     },
     darkCertAuditIconCircleActive: {
-        backgroundColor: 'rgba(245, 158, 11, 0.18)',
-        borderColor: 'rgba(245, 158, 11, 0.35)',
+        backgroundColor: 'rgba(255, 191, 0, 0.18)',
+        borderColor: 'rgba(255, 191, 0, 0.35)',
     },
     certAuditIconCircleCertified: {
         backgroundColor: '#D1FAE5',
@@ -3786,10 +3786,10 @@ const styles = StyleSheet.create({
         marginRight: 8,
     },
     certAuditActiveTitle: {
-        color: '#92400E',
+        color: '#806000',
     },
     darkCertAuditActiveTitle: {
-        color: '#FBBF24',
+        color: '#FFBF00',
     },
     certAuditCertifiedTitle: {
         color: '#065F46',
@@ -3810,12 +3810,12 @@ const styles = StyleSheet.create({
         paddingVertical: 1.5,
     },
     certStatusPillActive: {
-        backgroundColor: '#FEF3C7',
-        borderColor: '#F59E0B',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFBF00',
     },
     darkCertStatusPillActive: {
-        backgroundColor: 'rgba(245, 158, 11, 0.2)',
-        borderColor: '#F59E0B',
+        backgroundColor: 'rgba(255, 191, 0, 0.2)',
+        borderColor: '#FFBF00',
     },
     certStatusPillCertified: {
         backgroundColor: '#D1FAE5',
@@ -3839,10 +3839,10 @@ const styles = StyleSheet.create({
         letterSpacing: 0.5,
     },
     certStatusPillActiveText: {
-        color: '#B45309',
+        color: '#806000',
     },
     darkCertStatusPillActiveText: {
-        color: '#FBBF24',
+        color: '#FFBF00',
     },
     certStatusPillCertifiedText: {
         color: '#047857',
@@ -3862,10 +3862,10 @@ const styles = StyleSheet.create({
         lineHeight: 16,
     },
     certAuditActiveSub: {
-        color: '#78350F',
+        color: '#806000',
     },
     darkCertAuditActiveSub: {
-        color: '#FDE68A',
+        color: '#FFBF00',
     },
     certAuditCertifiedSub: {
         color: '#047857',
@@ -4064,10 +4064,10 @@ const styles = StyleSheet.create({
         paddingVertical: 2,
     },
     logStatusOperating: {
-        backgroundColor: '#FEF3C7',
+        backgroundColor: '#FFF3C4',
     },
     darkLogStatusOperating: {
-        backgroundColor: '#451A03',
+        backgroundColor: '#332800',
     },
     logStatusDriving: {
         backgroundColor: '#EFF6FF',
@@ -4149,12 +4149,12 @@ const styles = StyleSheet.create({
         borderColor: '#475569',
     },
     certBoxChecked: {
-        backgroundColor: '#D97706',
-        borderColor: '#D97706',
+        backgroundColor: '#FFBF00',
+        borderColor: '#FFBF00',
     },
     darkCertBoxChecked: {
-        backgroundColor: '#F59E0B',
-        borderColor: '#F59E0B',
+        backgroundColor: '#FFBF00',
+        borderColor: '#FFBF00',
     },
     certCheckMark: {
         color: '#FFFFFF',
@@ -4175,20 +4175,20 @@ const styles = StyleSheet.create({
     },
     actionButton: {
         alignItems: 'center',
-        backgroundColor: '#D97706',
+        backgroundColor: '#FFBF00',
         borderRadius: 12,
         elevation: 3,
         justifyContent: 'center',
         minHeight: 52,
-        shadowColor: '#D97706',
+        shadowColor: '#FFBF00',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.25,
         shadowRadius: 4,
         width: '100%',
     },
     darkActionButton: {
-        backgroundColor: '#F59E0B',
-        shadowColor: '#F59E0B',
+        backgroundColor: '#FFBF00',
+        shadowColor: '#FFBF00',
     },
     actionButtonPressed: {
         opacity: 0.88,
@@ -4286,8 +4286,8 @@ const styles = StyleSheet.create({
     },
     doleWarningBanner: {
         alignItems: 'center',
-        backgroundColor: '#FEF3C7',
-        borderColor: '#F59E0B',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFBF00',
         borderRadius: 12,
         borderWidth: 1.5,
         flexDirection: 'row',
@@ -4303,7 +4303,7 @@ const styles = StyleSheet.create({
     },
     darkDoleWarningBanner: {
         backgroundColor: '#1E293B',
-        borderColor: '#D97706',
+        borderColor: '#FFBF00',
     },
     darkDoleCapBanner: {
         backgroundColor: '#1E293B',
@@ -4316,14 +4316,14 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     doleWarningText: {
-        color: '#92400E',
+        color: '#806000',
         flex: 1,
         fontSize: 12,
         fontWeight: '700',
         lineHeight: 16,
     },
     darkDoleWarningText: {
-        color: '#FBBF24',
+        color: '#FFBF00',
     },
     doleCapText: {
         color: '#991B1B',
@@ -4332,16 +4332,16 @@ const styles = StyleSheet.create({
         color: '#F87171',
     },
     doleHandoverBtn: {
-        backgroundColor: '#D97706',
+        backgroundColor: '#FFBF00',
         borderRadius: 8,
         paddingHorizontal: 10,
         paddingVertical: 6,
     },
     darkDoleHandoverBtn: {
-        backgroundColor: '#F59E0B',
+        backgroundColor: '#FFBF00',
     },
     doleHandoverBtnText: {
-        color: '#FFFFFF',
+        color: '#0F172A',
         fontSize: 11,
         fontWeight: '800',
     },
@@ -4380,8 +4380,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 6,
         alignSelf: 'flex-start',
-        backgroundColor: '#FEF3C7',
-        borderColor: '#FDE68A',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFF3C4',
         borderWidth: 1,
         borderRadius: 9999,
         paddingHorizontal: 10,
@@ -4389,16 +4389,16 @@ const styles = StyleSheet.create({
         marginBottom: 14,
     },
     darkLinkedAssetPill: {
-        backgroundColor: 'rgba(245, 158, 11, 0.15)',
-        borderColor: 'rgba(245, 158, 11, 0.3)',
+        backgroundColor: 'rgba(255, 191, 0, 0.15)',
+        borderColor: 'rgba(255, 191, 0, 0.3)',
     },
     linkedAssetPillText: {
-        color: '#92400E',
+        color: '#806000',
         fontSize: 12,
         fontWeight: '700',
     },
     darkLinkedAssetPillText: {
-        color: '#FCD34D',
+        color: '#FFBF00',
     },
     endShiftBtn: {
         flexDirection: 'row',

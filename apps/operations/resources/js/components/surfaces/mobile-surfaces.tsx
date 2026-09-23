@@ -152,7 +152,7 @@ function MobileFrame({
                                     className={cn(
                                         'flex min-h-14 flex-col items-center justify-center gap-1 rounded-lg text-[0.6875rem] font-medium',
                                         active
-                                            ? 'text-brand'
+                                            ? 'text-brand-strong'
                                             : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
                                     )}
                                     aria-current={active ? 'page' : undefined}
@@ -180,7 +180,7 @@ function MobileFrame({
                             connectivity === 'offline' ? 'online' : 'offline',
                         )
                     }
-                    className="min-h-9 rounded-lg px-3 font-semibold text-brand hover:bg-brand-soft"
+                    className="min-h-9 rounded-lg px-3 font-semibold text-brand-strong hover:bg-brand-soft"
                 >
                     {connectivity === 'offline'
                         ? 'Restore connection'
@@ -297,7 +297,7 @@ function DriverSurface({
                 <Panel className="mt-4 p-4">
                     <div className="flex items-start gap-3">
                         <Navigation
-                            className="mt-0.5 h-5 w-5 shrink-0 text-brand"
+                            className="mt-0.5 h-5 w-5 shrink-0 text-brand-strong"
                             aria-hidden="true"
                         />
                         <div>
@@ -390,7 +390,7 @@ function DriverSurface({
                         </div>
                         <div className="mt-4 flex items-start gap-3 rounded-lg bg-surface-subtle p-3">
                             <MapPin
-                                className="mt-0.5 h-5 w-5 shrink-0 text-brand"
+                                className="mt-0.5 h-5 w-5 shrink-0 text-brand-strong"
                                 aria-hidden="true"
                             />
                             <div>
@@ -430,7 +430,7 @@ function DriverSurface({
                             </p>
                         </div>
                         <Clock3
-                            className="h-5 w-5 text-brand"
+                            className="h-5 w-5 text-brand-strong"
                             aria-hidden="true"
                         />
                     </div>
@@ -653,7 +653,7 @@ function OperatorSurface({
                     <div className="mt-4 rounded-lg bg-surface-subtle p-3">
                         <div className="flex items-start gap-3">
                             <MapPin
-                                className="mt-0.5 h-5 w-5 shrink-0 text-brand"
+                                className="mt-0.5 h-5 w-5 shrink-0 text-brand-strong"
                                 aria-hidden="true"
                             />
                             <div>
@@ -678,7 +678,7 @@ function OperatorSurface({
                     className="flex min-h-20 w-full items-center gap-3 rounded-xl border border-line bg-surface p-4 text-left hover:bg-surface-subtle"
                 >
                     <ShieldCheck
-                        className="h-6 w-6 text-brand"
+                        className="h-6 w-6 text-brand-strong"
                         aria-hidden="true"
                     />
                     <div className="min-w-0 flex-1">

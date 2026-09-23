@@ -1678,7 +1678,7 @@ export function LiveDispatchWorkspace({
                                                 className={cn(
                                                     'inline-flex min-h-8 items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
                                                     statusFilter === 'scheduled'
-                                                        ? 'border border-brand/40 bg-brand-soft font-semibold text-brand-strong'
+                                                        ? 'border border-brand-strong/40 bg-brand-soft font-semibold text-brand-strong'
                                                         : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
                                                 )}
                                             >
@@ -1750,9 +1750,9 @@ export function LiveDispatchWorkspace({
                                 {!fieldMode &&
                                     incomingWorkCount > 0 &&
                                     jobs.length > 0 && (
-                                        <div className="flex items-center justify-between border-b border-brand/20 bg-brand-soft/40 px-4 py-2.5 text-xs text-brand-strong">
+                                        <div className="flex items-center justify-between border-b border-brand-strong/20 bg-brand-soft/40 px-4 py-2.5 text-xs text-brand-strong">
                                             <div className="flex items-center gap-2">
-                                                <Package className="h-3.5 w-3.5 shrink-0 text-brand" />
+                                                <Package className="h-3.5 w-3.5 shrink-0 text-brand-strong" />
                                                 <span className="font-semibold">
                                                     {incomingWorkCount} incoming
                                                     order
@@ -1767,7 +1767,7 @@ export function LiveDispatchWorkspace({
                                                 onClick={() =>
                                                     setShowIntake(true)
                                                 }
-                                                className="font-bold text-brand hover:underline"
+                                                className="font-bold text-brand-strong hover:underline"
                                             >
                                                 Stage drafts →
                                             </button>
@@ -1927,7 +1927,7 @@ export function LiveDispatchWorkspace({
                                                                 'flex min-h-[72px] w-full items-start gap-2.5 px-3.5 py-2.5 text-left transition-colors hover:bg-surface-subtle',
                                                                 job.id ===
                                                                     selectedJob?.id &&
-                                                                    'bg-brand-soft/60 ring-1 ring-brand/30',
+                                                                    'bg-brand-soft/60 ring-1 ring-brand-strong/30',
                                                             )}
                                                             aria-current={
                                                                 job.id ===
@@ -2338,7 +2338,7 @@ export function ScheduleBoardTable({
                                                 row.statusTone === 'success' &&
                                                     'border border-success/25 bg-success-soft text-success-strong',
                                                 row.statusTone === 'brand' &&
-                                                    'border border-brand/25 bg-brand-soft text-brand-strong',
+                                                    'border border-brand-strong/25 bg-brand-soft text-brand-strong',
                                                 row.statusTone === 'info' &&
                                                     'border border-info/25 bg-info-soft text-info-strong',
                                                 row.statusTone === 'warning' &&
@@ -3412,7 +3412,7 @@ function DispatchLifecycleStepper({
                                 className={cn(
                                     'relative flex flex-col justify-between rounded-xl border p-3.5 transition-all duration-150',
                                     step.isCurrent
-                                        ? 'border-brand/40 bg-brand-soft/30 shadow-xs ring-2 ring-brand/20'
+                                        ? 'border-brand-strong/40 bg-brand-soft/30 shadow-xs ring-2 ring-brand-strong/20'
                                         : step.isDone
                                           ? 'border-line bg-surface-subtle/50 text-ink'
                                           : 'border-line/70 bg-surface/50 text-ink-soft',
@@ -3825,7 +3825,7 @@ function DispatchDetails({
 
             {/* Actionable Setup Guidance (Prerequisite on Drafts) */}
             {unassignedPrereq && blockingConflicts.length === 0 && (
-                <div className="flex flex-col gap-3 rounded-lg border border-brand/25 bg-brand-soft/30 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col gap-3 rounded-lg border border-brand-strong/25 bg-brand-soft/30 p-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-start gap-3">
                         <ClipboardList
                             className="mt-0.5 h-5 w-5 shrink-0 text-brand-strong"
@@ -3844,7 +3844,7 @@ function DispatchDetails({
                     </div>
                     <Link
                         href={assignmentWorkspaceUrl(job.id, returnTo)}
-                        className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-ink shadow-xs hover:bg-brand-strong hover:text-white"
+                        className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-ink shadow-xs hover:bg-brand-strong hover:text-white dark:hover:text-brand-contrast"
                     >
                         Assign resources
                         <ChevronRight
@@ -4128,7 +4128,7 @@ function DispatchSourceBadge({
         ? 'border-warning/30 bg-warning-soft text-warning-strong'
         : isSale
           ? 'border-success/30 bg-success-soft text-success-strong'
-          : 'border-brand/30 bg-brand-soft text-brand-strong';
+          : 'border-brand-strong/30 bg-brand-soft text-brand-strong';
 
     const label = isRental ? 'Rental' : isSale ? 'Sale' : 'Service';
 

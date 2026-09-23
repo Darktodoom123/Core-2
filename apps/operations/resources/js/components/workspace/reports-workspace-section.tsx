@@ -352,7 +352,7 @@ export function ReportsSurface({
                                 className={cn(
                                     'inline-flex min-h-11 min-w-11 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
                                     statusFilter === tab.id
-                                        ? 'bg-brand-strong text-white shadow-sm'
+                                        ? 'bg-brand-strong text-white dark:text-brand-contrast shadow-sm'
                                         : 'bg-surface-subtle text-ink-soft hover:bg-surface-subtle/80 hover:text-ink',
                                 )}
                             >
@@ -378,7 +378,7 @@ export function ReportsSurface({
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Search by job reference, title, author, or report text…"
-                            className="h-11 w-full rounded-lg border border-line bg-surface pr-14 pl-8 text-xs text-ink placeholder:text-ink-soft focus:border-brand focus:outline-none"
+                            className="h-11 w-full rounded-lg border border-line bg-surface pr-14 pl-8 text-xs text-ink placeholder:text-ink-soft focus:border-brand-strong focus:outline-none"
                         />
                         {searchQuery && (
                             <button
@@ -612,7 +612,7 @@ export function ReportsSurface({
                             <button
                                 type="button"
                                 onClick={() => setShowExportModal(false)}
-                                className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-soft hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                                className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-soft hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none"
                                 aria-label="Close export dialog"
                             >
                                 <X className="h-4 w-4" />
@@ -876,7 +876,7 @@ function SubmitJobReportForm({
                                         e.target.value,
                                     )
                                 }
-                                className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
+                                className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand-strong focus:outline-none"
                                 required
                             >
                                 <option value="">
@@ -901,7 +901,7 @@ function SubmitJobReportForm({
                                         e.target.value,
                                     )
                                 }
-                                className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
+                                className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand-strong focus:outline-none"
                                 placeholder="e.g. 101"
                                 required
                             />
@@ -923,7 +923,7 @@ function SubmitJobReportForm({
                             onChange={(e) =>
                                 form.setData('work_summary', e.target.value)
                             }
-                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
+                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand-strong focus:outline-none"
                             placeholder="Brief description of work executed"
                             required
                         />
@@ -968,7 +968,7 @@ function SubmitJobReportForm({
                                 )
                             }
                             placeholder="e.g. 50120.5"
-                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
+                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand-strong focus:outline-none"
                         />
                     </div>
                     <div>
@@ -980,7 +980,7 @@ function SubmitJobReportForm({
                             onChange={(e) =>
                                 form.setData('meter_type', e.target.value)
                             }
-                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
+                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand-strong focus:outline-none"
                         >
                             <option value="odometer_km">Odometer (km)</option>
                             <option value="engine_hours">
@@ -1026,7 +1026,7 @@ function SubmitJobReportForm({
                         onChange={(e) =>
                             form.setData('remarks', e.target.value)
                         }
-                        className="mt-1 h-20 w-full rounded-lg border border-line-strong bg-surface p-3 text-sm focus:border-brand focus:outline-none"
+                        className="mt-1 h-20 w-full rounded-lg border border-line-strong bg-surface p-3 text-sm focus:border-brand-strong focus:outline-none"
                         placeholder="Additional operational observations, delays, equipment condition, or site notes"
                     />
                 </div>
@@ -1325,7 +1325,7 @@ function ResubmitJobReportModal({
                         onChange={(e) =>
                             form.setData('work_summary', e.target.value)
                         }
-                        className="mt-1 h-28 w-full rounded-lg border border-line-strong bg-surface p-3 text-sm focus:border-brand focus:outline-none"
+                        className="mt-1 h-28 w-full rounded-lg border border-line-strong bg-surface p-3 text-sm focus:border-brand-strong focus:outline-none"
                         required
                     />
                     {form.errors.work_summary && (
@@ -1346,7 +1346,7 @@ function ResubmitJobReportModal({
                             onChange={(e) =>
                                 form.setData('started_at', e.target.value)
                             }
-                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
+                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand-strong focus:outline-none"
                         />
                     </div>
                     <div>
@@ -1359,7 +1359,7 @@ function ResubmitJobReportModal({
                             onChange={(e) =>
                                 form.setData('ended_at', e.target.value)
                             }
-                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
+                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand-strong focus:outline-none"
                         />
                     </div>
                     <div>
@@ -1376,7 +1376,7 @@ function ResubmitJobReportModal({
                                     e.target.value,
                                 )
                             }
-                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
+                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand-strong focus:outline-none"
                         />
                     </div>
                     <div>
@@ -1388,7 +1388,7 @@ function ResubmitJobReportModal({
                             onChange={(e) =>
                                 form.setData('meter_type', e.target.value)
                             }
-                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
+                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand-strong focus:outline-none"
                         >
                             <option value="odometer_km">Odometer (km)</option>
                             <option value="engine_hours">
@@ -1409,7 +1409,7 @@ function ResubmitJobReportModal({
                             form.setData('remarks', e.target.value)
                         }
                         placeholder="Explain adjustments made to address reviewer notes"
-                        className="mt-1 h-20 w-full rounded-lg border border-line-strong bg-surface p-3 text-sm focus:border-brand focus:outline-none"
+                        className="mt-1 h-20 w-full rounded-lg border border-line-strong bg-surface p-3 text-sm focus:border-brand-strong focus:outline-none"
                     />
                 </div>
 
@@ -1936,7 +1936,7 @@ function ReportDetailPane({
                                         'h-11 w-full rounded-lg border bg-surface px-3 text-sm focus:outline-none',
                                         reviewForm.errors.reason
                                             ? 'border-danger focus:border-danger'
-                                            : 'border-line-strong focus:border-brand',
+                                            : 'border-line-strong focus:border-brand-strong',
                                     )}
                                 />
                                 {reviewForm.errors.reason && (

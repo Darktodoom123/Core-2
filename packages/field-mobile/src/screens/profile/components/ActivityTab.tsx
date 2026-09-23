@@ -608,7 +608,7 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
                     >
                         {isLoadingMoreActivity ? (
                             <ActivityIndicator
-                                color={isDarkHud ? '#F59E0B' : '#D97706'}
+                                color={isDarkHud ? '#FFBF00' : '#806000'}
                                 size="small"
                             />
                         ) : (

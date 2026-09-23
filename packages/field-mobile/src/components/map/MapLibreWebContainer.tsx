@@ -145,7 +145,7 @@ export const MapLibreWebContainer: React.FC<MapLibreWebContainerProps> = ({
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
     <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0b1120; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0B1120; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
         #map { width: 100%; height: 100%; }
         ${
             !resolvedKey && styleVariant === 'dark'
@@ -153,17 +153,17 @@ export const MapLibreWebContainer: React.FC<MapLibreWebContainerProps> = ({
                 : ''
         }
         .marker { cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .marker-origin { width: 24px; height: 24px; background: #10b981; border: 2.5px solid #ffffff; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.6); font-size: 11px; color: #fff; }
-        .marker-dest { width: 28px; height: 28px; background: #2563eb; border: 2.5px solid #ffffff; border-radius: 50%; font-size: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.6); }
-        .marker-wp { width: 18px; height: 18px; background: #38bdf8; border: 2px solid #ffffff; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.4); }
-        .marker-hazard { width: 24px; height: 24px; background: #dc2626; border: 2px solid #ffffff; border-radius: 50%; font-size: 13px; font-weight: 900; color: #fff; box-shadow: 0 2px 8px rgba(220,38,38,0.7); }
+        .marker-origin { width: 24px; height: 24px; background: #10B981; border: 2.5px solid #FFFFFF; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.6); font-size: 11px; color: #fff; }
+        .marker-dest { width: 28px; height: 28px; background: #2563EB; border: 2.5px solid #FFFFFF; border-radius: 50%; font-size: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.6); }
+        .marker-wp { width: 18px; height: 18px; background: #38BDF8; border: 2px solid #FFFFFF; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.4); }
+        .marker-hazard { width: 24px; height: 24px; background: #DC2626; border: 2px solid #FFFFFF; border-radius: 50%; font-size: 13px; font-weight: 900; color: #fff; box-shadow: 0 2px 8px rgba(220,38,38,0.7); }
         .marker-vehicle { width: 64px; height: 64px; position: relative; display: flex; align-items: center; justify-content: center; z-index: 999; }
         .vehicle-pulse { position: absolute; width: 60px; height: 60px; border-radius: 50%; background: rgba(37, 99, 235, 0.25); animation: pulse 2s infinite ease-out; }
-        .vehicle-puck { width: 36px; height: 36px; border-radius: 50%; background: #1a73e8; border: 3.5px solid #ffffff; box-shadow: 0 4px 14px rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-        .vehicle-arrow { color: #ffffff; font-size: 20px; font-weight: 900; line-height: 20px; display: block; text-shadow: 0 1px 2px rgba(0,0,0,0.4); transform-origin: center center; }
+        .vehicle-puck { width: 36px; height: 36px; border-radius: 50%; background: #1A73E8; border: 3.5px solid #FFFFFF; box-shadow: 0 4px 14px rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .vehicle-arrow { color: #FFFFFF; font-size: 20px; font-weight: 900; line-height: 20px; display: block; text-shadow: 0 1px 2px rgba(0,0,0,0.4); transform-origin: center center; }
         @keyframes pulse { 0% { transform: scale(0.6); opacity: 0.9; } 100% { transform: scale(1.8); opacity: 0; } }
-        .maplibregl-popup-content { background: #1e293b; color: #ffffff; padding: 8px 12px; border-radius: 8px; font-size: 12px; border: 1px solid #334155; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
-        .maplibregl-popup-anchor-bottom .maplibregl-popup-tip { border-top-color: #1e293b; }
+        .maplibregl-popup-content { background: #1E293B; color: #FFFFFF; padding: 8px 12px; border-radius: 8px; font-size: 12px; border: 1px solid #334155; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+        .maplibregl-popup-anchor-bottom .maplibregl-popup-tip { border-top-color: #1E293B; }
         .maplibregl-ctrl-attrib { display: none; }
     </style>
 </head>
@@ -280,7 +280,7 @@ export const MapLibreWebContainer: React.FC<MapLibreWebContainerProps> = ({
                     if (wp.hazardNote) el.innerHTML = '!';
 
                     const popupHtml = '<strong>' + wp.label + '</strong>' + 
-                        (wp.hazardNote ? '<div style="color:#f87171;margin-top:4px;">' + wp.hazardNote + '</div>' : '');
+                        (wp.hazardNote ? '<div style="color:#F87171;margin-top:4px;">' + wp.hazardNote + '</div>' : '');
 
                     new maplibregl.Marker({ element: el })
                         .setLngLat([wp.longitude, wp.latitude])
@@ -448,13 +448,13 @@ const styles = StyleSheet.create({
     container: {
         width: '100%',
         minHeight: 260,
-        backgroundColor: '#0f172a',
+        backgroundColor: '#0F172A',
         borderRadius: 12,
         overflow: 'hidden',
     },
     webView: {
         flex: 1,
-        backgroundColor: '#0f172a',
+        backgroundColor: '#0F172A',
     },
     iframe: {
         width: '100%',
@@ -467,7 +467,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 12,
         paddingVertical: 8,
-        backgroundColor: '#1e293b',
+        backgroundColor: '#1E293B',
         borderBottomWidth: 1,
         borderBottomColor: '#334155',
     },
@@ -483,13 +483,13 @@ const styles = StyleSheet.create({
         backgroundColor: colors.green,
     },
     liveBadgeText: {
-        color: '#93c5fd',
+        color: '#93C5FD',
         fontSize: 10,
         fontWeight: '800',
         letterSpacing: 0.5,
     },
     coordText: {
-        color: '#94a3b8',
+        color: '#94A3B8',
         fontSize: 11,
         fontWeight: '600',
     },
@@ -521,7 +521,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 2,
-        borderColor: '#ffffff',
+        borderColor: '#FFFFFF',
     },
     originDot: {
         backgroundColor: colors.green,
@@ -530,7 +530,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.primary,
     },
     waypointDot: {
-        backgroundColor: '#3b82f6',
+        backgroundColor: '#3B82F6',
     },
     hazardDot: {
         backgroundColor: colors.red,
@@ -542,7 +542,7 @@ const styles = StyleSheet.create({
         fontSize: 12,
     },
     nodeLabel: {
-        color: '#ffffff',
+        color: '#FFFFFF',
         fontSize: 10,
         fontWeight: '700',
         marginTop: 4,
@@ -555,14 +555,14 @@ const styles = StyleSheet.create({
         marginHorizontal: -4,
     },
     selectedBanner: {
-        backgroundColor: '#1e293b',
+        backgroundColor: '#1E293B',
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderTopWidth: 1,
         borderTopColor: '#334155',
     },
     selectedBannerText: {
-        color: '#ffffff',
+        color: '#FFFFFF',
         fontSize: 11,
         fontWeight: '600',
     },

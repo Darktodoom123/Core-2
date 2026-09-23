@@ -219,7 +219,7 @@ export const DvirWalkaroundPhotos: React.FC<DvirWalkaroundPhotosProps> = ({
                                     <ActivityIndicator
                                         color={
                                             isDarkHud
-                                                ? '#F59E0B'
+                                                ? '#FFBF00'
                                                 : colors.primary
                                         }
                                         size="small"
@@ -261,7 +261,7 @@ export const DvirWalkaroundPhotos: React.FC<DvirWalkaroundPhotosProps> = ({
                                         <Icon
                                             color={
                                                 isDarkHud
-                                                    ? '#F59E0B'
+                                                    ? '#FFBF00'
                                                     : colors.primary
                                             }
                                             name="camera"

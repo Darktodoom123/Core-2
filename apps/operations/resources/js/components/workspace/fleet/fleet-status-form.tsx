@@ -130,7 +130,7 @@ export function FleetStatusForm({ asset, canUpdate }: FleetStatusFormProps) {
                                     ? `asset-status-error-${asset.id}`
                                     : undefined
                             }
-                            className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                            className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                         >
                             <option value="available">Available</option>
                             <option value="ready_for_service">

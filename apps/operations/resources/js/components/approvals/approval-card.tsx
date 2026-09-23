@@ -49,7 +49,7 @@ export function ApprovalKindBadge({ kind }: { kind: string }) {
         case 'plan_approval':
             return (
                 <span
-                    className="inline-flex items-center gap-1 rounded-full border border-brand/40 bg-brand-soft px-2.5 py-0.5 text-xs font-semibold text-brand-strong"
+                    className="inline-flex items-center gap-1 rounded-full border border-brand-strong/40 bg-brand-soft px-2.5 py-0.5 text-xs font-semibold text-brand-strong"
                     title="Initial dispatch plan sign-off"
                 >
                     <FileCheck
@@ -213,7 +213,7 @@ export function ApprovalCard({ approval, canDecide }: ApprovalCardProps) {
 
                     <a
                         href={`/operations/dispatch-jobs/${approval.subject.id}`}
-                        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-ink shadow-2xs transition-colors hover:border-brand hover:bg-brand-soft hover:text-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-ink shadow-2xs transition-colors hover:border-brand-strong hover:bg-brand-soft hover:text-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none"
                         aria-label={`Open dispatch ${approval.subject.reference}`}
                     >
                         Open dispatch
@@ -227,7 +227,7 @@ export function ApprovalCard({ approval, canDecide }: ApprovalCardProps) {
 
             <div className="flex-1 space-y-4 px-5 py-4">
                 {/* Executive Approval Summary */}
-                <div className="flex items-start gap-2.5 rounded-xl border border-brand/20 bg-brand-soft/25 p-3.5 text-xs">
+                <div className="flex items-start gap-2.5 rounded-xl border border-brand-strong/20 bg-brand-soft/25 p-3.5 text-xs">
                     <ShieldCheck
                         className="mt-0.5 h-4 w-4 shrink-0 text-brand-strong"
                         aria-hidden="true"
@@ -326,7 +326,7 @@ export function ApprovalCard({ approval, canDecide }: ApprovalCardProps) {
                                     onClick={() =>
                                         form.setData('reason', preset)
                                     }
-                                    className="rounded-md border border-line bg-surface-subtle px-2 py-0.5 text-[10px] font-medium text-ink transition-colors hover:border-brand hover:bg-brand-soft hover:text-brand-strong"
+                                    className="rounded-md border border-line bg-surface-subtle px-2 py-0.5 text-[10px] font-medium text-ink transition-colors hover:border-brand-strong hover:bg-brand-soft hover:text-brand-strong"
                                 >
                                     + {preset.slice(0, 32)}…
                                 </button>
@@ -350,7 +350,7 @@ export function ApprovalCard({ approval, canDecide }: ApprovalCardProps) {
                                 form.errors.reason ? errorId : undefined
                             }
                             className={cn(
-                                'mt-2 w-full resize-y rounded-lg border bg-surface p-2.5 text-xs text-ink placeholder:text-ink-soft focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none',
+                                'mt-2 w-full resize-y rounded-lg border bg-surface p-2.5 text-xs text-ink placeholder:text-ink-soft focus:border-brand-strong focus:ring-1 focus:ring-brand-strong focus:outline-none',
                                 form.errors.reason
                                     ? 'border-danger ring-1 ring-danger'
                                     : 'border-line-strong',

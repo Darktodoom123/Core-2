@@ -786,7 +786,7 @@ export default function AccountSettings({
                     >
                         {resolvedTheme === 'dark' ? (
                             <Sun
-                                className="h-4 w-4 text-brand"
+                                className="h-4 w-4 text-brand-strong"
                                 aria-hidden="true"
                             />
                         ) : (

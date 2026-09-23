@@ -965,7 +965,7 @@ export const DvirDefectsModal: React.FC<DvirDefectsModalProps> = ({
                             testID="designated-asset-banner"
                         >
                             <Icon
-                                color={isDarkHud ? '#F59E0B' : '#D97706'}
+                                color={isDarkHud ? '#FFBF00' : '#806000'}
                                 name={presentation.icon as IconName}
                                 size={20}
                             />
@@ -1382,7 +1382,7 @@ const styles = StyleSheet.create({
         fontWeight: '800',
     },
     darkDoneBtnText: {
-        color: '#F59E0B',
+        color: '#FFBF00',
     },
     searchBarWrapper: {
         alignItems: 'center',
@@ -1433,12 +1433,12 @@ const styles = StyleSheet.create({
         borderColor: '#1E293B',
     },
     filterPillActive: {
-        backgroundColor: colors.amber,
-        borderColor: colors.amber,
+        backgroundColor: colors.primary,
+        borderColor: colors.primaryBorder,
     },
     darkFilterPillActive: {
-        backgroundColor: '#B45309',
-        borderColor: '#F59E0B',
+        backgroundColor: '#332800',
+        borderColor: '#FFBF00',
     },
     filterPillText: {
         color: colors.secondary,
@@ -1530,7 +1530,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.amberLight,
     },
     darkItemRowSelected: {
-        backgroundColor: '#351F05',
+        backgroundColor: '#332800',
     },
     checkbox: {
         alignItems: 'center',
@@ -1547,8 +1547,8 @@ const styles = StyleSheet.create({
         borderColor: '#475569',
     },
     checkboxSelected: {
-        backgroundColor: colors.amber,
-        borderColor: colors.amber,
+        backgroundColor: colors.primary,
+        borderColor: colors.primaryBorder,
     },
     itemLabel: {
         color: colors.text,
@@ -1588,14 +1588,14 @@ const styles = StyleSheet.create({
     },
     applyButton: {
         alignItems: 'center',
-        backgroundColor: colors.amber,
+        backgroundColor: colors.primary,
         borderRadius: 10,
         justifyContent: 'center',
         minHeight: 48,
         width: '100%',
     },
     applyButtonText: {
-        color: '#FFFFFF',
+        color: '#0F172A',
         fontSize: 15,
         fontWeight: '800',
     },
@@ -1644,16 +1644,16 @@ const styles = StyleSheet.create({
         color: '#94A3B8',
     },
     designatedBadge: {
-        backgroundColor: 'rgba(217, 119, 6, 0.12)',
-        borderColor: 'rgba(217, 119, 6, 0.3)',
+        backgroundColor: 'rgba(255, 191, 0, 0.12)',
+        borderColor: 'rgba(255, 191, 0, 0.3)',
         borderRadius: 4,
         borderWidth: 1,
         paddingHorizontal: 6,
         paddingVertical: 2,
     },
     darkDesignatedBadge: {
-        backgroundColor: 'rgba(251, 191, 36, 0.15)',
-        borderColor: 'rgba(251, 191, 36, 0.35)',
+        backgroundColor: 'rgba(255, 191, 0, 0.15)',
+        borderColor: 'rgba(255, 191, 0, 0.35)',
     },
     designatedBadgeText: {
         color: colors.amberDark,
@@ -1662,6 +1662,6 @@ const styles = StyleSheet.create({
         letterSpacing: 0.3,
     },
     darkDesignatedBadgeText: {
-        color: '#FBBF24',
+        color: '#FFBF00',
     },
 });

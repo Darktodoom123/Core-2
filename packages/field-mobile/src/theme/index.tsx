@@ -108,10 +108,10 @@ export const createMachinedStyles = (theme: ThemeColors) =>
             paddingHorizontal: 18,
             borderWidth: 1,
             borderColor:
-                theme.mode === 'dark_hud' ? theme.hudGlowAmber : '#B45309',
+                theme.mode === 'dark_hud' ? theme.hudGlowAmber : '#806000',
         },
         actionPedalPrimaryText: {
-            color: '#FFFFFF',
+            color: '#0F172A',
             fontSize: 15,
             fontWeight: '800',
             letterSpacing: 0.3,

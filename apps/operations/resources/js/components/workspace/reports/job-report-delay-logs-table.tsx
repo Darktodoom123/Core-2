@@ -70,7 +70,7 @@ export function JobReportDelayLogsTable({
                         Total Delay: {totalHours} hrs ({totalMinutes} mins)
                     </span>
                     {billableCount > 0 && (
-                        <span className="inline-flex items-center gap-1 rounded border border-brand/30 bg-brand-soft px-2 py-0.5 font-semibold text-brand-strong">
+                        <span className="inline-flex items-center gap-1 rounded border border-brand-strong/30 bg-brand-soft px-2 py-0.5 font-semibold text-brand-strong">
                             <DollarSign className="h-3 w-3" />
                             {billableCount} Billable Demurrage
                         </span>
@@ -105,7 +105,7 @@ export function JobReportDelayLogsTable({
                                 </td>
                                 <td className="px-3 py-2.5">
                                     {log.is_demurrage_billable ? (
-                                        <span className="inline-flex items-center gap-1 rounded-full border border-brand/40 bg-brand-soft px-2 py-0.5 text-[10px] font-semibold text-brand-strong">
+                                        <span className="inline-flex items-center gap-1 rounded-full border border-brand-strong/40 bg-brand-soft px-2 py-0.5 text-[10px] font-semibold text-brand-strong">
                                             <DollarSign className="h-2.5 w-2.5" />
                                             Billable Demurrage
                                         </span>

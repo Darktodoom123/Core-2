@@ -183,14 +183,14 @@ describe('RentalHandoverScreen', () => {
         const categoryText = lightView.getByText('Rental Handover');
         expect(categoryText.props.style).toEqual(
             expect.arrayContaining([
-                expect.objectContaining({ color: '#B45309' }),
+                expect.objectContaining({ color: '#806000' }),
             ]),
         );
 
         const confirmBtn = lightView.getByTestId('confirm-handover-button');
         expect(confirmBtn.props.style).toEqual(
             expect.arrayContaining([
-                expect.objectContaining({ backgroundColor: '#D97706' }),
+                expect.objectContaining({ backgroundColor: '#FFBF00' }),
             ]),
         );
 
@@ -209,7 +209,7 @@ describe('RentalHandoverScreen', () => {
         const darkCategoryText = darkView.getByText('Rental Handover');
         expect(darkCategoryText.props.style).toEqual(
             expect.arrayContaining([
-                expect.objectContaining({ color: '#F59E0B' }),
+                expect.objectContaining({ color: '#FFBF00' }),
             ]),
         );
     });

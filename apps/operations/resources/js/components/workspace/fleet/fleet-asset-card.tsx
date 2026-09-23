@@ -42,8 +42,8 @@ export function FleetAssetCard({
     const dispatchabilityState = getFleetDispatchabilityState(asset);
 
     const cardClasses = cn(
-        'min-h-[72px] w-full px-3.5 py-2.5 text-left transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
-        isSelected && 'bg-brand-soft/50 ring-1 ring-brand/40 ring-inset',
+        'min-h-[72px] w-full px-3.5 py-2.5 text-left transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
+        isSelected && 'bg-brand-soft/50 ring-1 ring-brand-strong/40 ring-inset',
         className,
     );
 

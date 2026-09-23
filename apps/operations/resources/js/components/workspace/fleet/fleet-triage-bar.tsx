@@ -116,9 +116,9 @@ export function FleetTriageBar({
                 aria-controls={menuId}
                 onClick={() => setIsOpen((value) => !value)}
                 className={cn(
-                    'inline-flex min-h-8 items-center gap-1.5 rounded-lg border px-2.5 py-1 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
+                    'inline-flex min-h-8 items-center gap-1.5 rounded-lg border px-2.5 py-1 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
                     activeFilter
-                        ? 'border-brand/40 bg-brand-soft font-semibold text-brand-strong'
+                        ? 'border-brand-strong/40 bg-brand-soft font-semibold text-brand-strong'
                         : counts.needs_attention > 0
                           ? 'border-warning/40 bg-warning-soft text-warning-strong hover:bg-warning-soft/70'
                           : 'border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
@@ -163,7 +163,7 @@ export function FleetTriageBar({
                                     triggerRef.current?.focus();
                                 }}
                                 className={cn(
-                                    'flex min-h-9 w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
+                                    'flex min-h-9 w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
                                     activeFilter === key
                                         ? 'bg-brand-soft font-semibold text-brand-strong'
                                         : 'text-ink hover:bg-surface-subtle',
@@ -199,7 +199,7 @@ export function FleetTriageBar({
                                     setIsOpen(false);
                                     triggerRef.current?.focus();
                                 }}
-                                className="flex min-h-9 w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                className="flex min-h-9 w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                             >
                                 <X className="h-3.5 w-3.5" aria-hidden="true" />
                                 Clear exception filter

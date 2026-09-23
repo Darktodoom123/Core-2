@@ -240,11 +240,11 @@ export const OperatorDashboardScreen: React.FC<
     const getDutyColor = (duty: DutyStatus): string => {
         switch (duty) {
             case 'operating':
-                return '#D97706';
+                return '#FFBF00';
             case 'driving':
                 return '#2563EB';
             case 'standby':
-                return '#EA580C';
+                return '#FFBF00';
             case 'on_break':
                 return '#059669';
             case 'off_duty':
@@ -266,13 +266,13 @@ export const OperatorDashboardScreen: React.FC<
                 title: 'Hours of\nService',
                 sublabel: 'Shift & Hours',
                 iconName: 'clock',
-                bgColor: '#D97706',
-                lightHaloBg: 'rgba(217, 119, 6, 0.12)',
-                lightIconColor: '#D97706',
+                bgColor: colors.amberDark,
+                lightHaloBg: 'rgba(255, 191, 0, 0.12)',
+                lightIconColor: '#806000',
                 darkBgColor: '#1E293B',
-                darkBorderColor: 'rgba(245, 158, 11, 0.45)',
-                darkIconColor: '#F59E0B',
-                darkHaloBg: 'rgba(245, 158, 11, 0.15)',
+                darkBorderColor: 'rgba(255, 191, 0, 0.45)',
+                darkIconColor: '#FFBF00',
+                darkHaloBg: 'rgba(255, 191, 0, 0.15)',
             },
             {
                 id: 'dvir',
@@ -513,7 +513,7 @@ export const OperatorDashboardScreen: React.FC<
                                 color={
                                     syncAttentionCount > 0
                                         ? isDarkHud
-                                            ? '#F59E0B'
+                                            ? '#FFBF00'
                                             : colors.amberDark
                                         : isDarkHud
                                           ? '#94A3B8'
@@ -579,7 +579,14 @@ export const OperatorDashboardScreen: React.FC<
                                 { backgroundColor: dutyColor },
                             ]}
                         >
-                            <Text style={styles.dutyBadgeText}>
+                            <Text
+                                style={[
+                                    styles.dutyBadgeText,
+                                    dutyColor === '#FFBF00' && {
+                                        color: '#0F172A',
+                                    },
+                                ]}
+                            >
                                 {dutyBadgeText}
                             </Text>
                         </View>
@@ -962,12 +969,12 @@ const styles = StyleSheet.create({
         borderColor: '#334155',
     },
     notificationActive: {
-        backgroundColor: '#FEF3C7',
-        borderColor: '#FDE68A',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFF3C4',
     },
     darkNotificationActive: {
         backgroundColor: '#1E293B',
-        borderColor: '#F59E0B',
+        borderColor: '#FFBF00',
     },
     notificationBadge: {
         alignItems: 'center',
@@ -1126,7 +1133,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.green,
     },
     syncDotAttention: {
-        backgroundColor: colors.amber,
+        backgroundColor: colors.primary,
     },
     syncDotOffline: {
         backgroundColor: colors.red,
@@ -1273,7 +1280,7 @@ const styles = StyleSheet.create({
         zIndex: 2,
     },
     darkTileBadgePill: {
-        backgroundColor: '#F59E0B',
+        backgroundColor: '#FFBF00',
     },
     tileBadgePillText: {
         color: '#0F172A',

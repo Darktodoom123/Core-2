@@ -410,7 +410,7 @@ export function FuelManagement({
                                 </p>
                             </div>
                             <Fuel
-                                className="h-5 w-5 text-brand"
+                                className="h-5 w-5 text-brand-strong"
                                 aria-hidden="true"
                             />
                         </div>

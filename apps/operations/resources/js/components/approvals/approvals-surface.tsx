@@ -107,7 +107,7 @@ export function ApprovalsSurface({
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder="Search by ID, requester, title, personnel, asset..."
-                                className="w-full rounded-lg border border-line-strong bg-surface py-1.5 pr-8 pl-9 text-xs text-ink placeholder:text-ink-soft focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none"
+                                className="w-full rounded-lg border border-line-strong bg-surface py-1.5 pr-8 pl-9 text-xs text-ink placeholder:text-ink-soft focus:border-brand-strong focus:ring-1 focus:ring-brand-strong focus:outline-none"
                             />
                             {searchQuery && (
                                 <button

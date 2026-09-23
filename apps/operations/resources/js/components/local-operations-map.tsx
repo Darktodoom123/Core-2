@@ -243,7 +243,7 @@ function OperationsMapContent({
             type: 'line',
             source: 'operations-route',
             paint: {
-                'line-color': '#b45309',
+                'line-color': '#806000',
                 'line-dasharray': [3, 2],
                 'line-width': 4,
             },

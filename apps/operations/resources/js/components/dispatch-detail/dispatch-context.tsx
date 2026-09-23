@@ -144,7 +144,7 @@ export function DispatchContext({
                     value={
                         <span className="inline-flex items-start gap-2">
                             <CalendarDays
-                                className="mt-0.5 h-4 w-4 shrink-0 text-brand"
+                                className="mt-0.5 h-4 w-4 shrink-0 text-brand-strong"
                                 aria-hidden="true"
                             />
                             <span className="font-medium text-ink">
@@ -161,7 +161,7 @@ export function DispatchContext({
                             <div className="flex items-center justify-between gap-2">
                                 <span className="inline-flex items-start gap-2">
                                     <MapPin
-                                        className="mt-0.5 h-4 w-4 shrink-0 text-brand"
+                                        className="mt-0.5 h-4 w-4 shrink-0 text-brand-strong"
                                         aria-hidden="true"
                                     />
                                     <span className="font-medium text-ink">

@@ -173,7 +173,7 @@ export function FleetMapFailureFallback({
                             }
                             placeholder="Search asset or operator…"
                             aria-label="Search mapped locations"
-                            className="min-h-10 w-full rounded-lg border border-line bg-surface-subtle px-3 text-sm text-ink placeholder:text-ink-soft focus:border-brand-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
+                            className="min-h-10 w-full rounded-lg border border-line bg-surface-subtle px-3 text-sm text-ink placeholder:text-ink-soft focus:border-brand-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-strong/30"
                         />
                     </label>
                 </div>

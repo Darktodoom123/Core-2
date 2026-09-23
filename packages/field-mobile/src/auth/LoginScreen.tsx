@@ -850,7 +850,7 @@ const styles = StyleSheet.create({
     retryButton: {
         minHeight: 48,
         borderRadius: 8,
-        backgroundColor: colors.amber,
+        backgroundColor: colors.primary,
         alignItems: 'center',
         justifyContent: 'center',
         marginTop: 12,
@@ -871,7 +871,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
     },
     inputFocused: {
-        borderColor: colors.amber,
+        borderColor: colors.primaryBorder,
         borderWidth: 2,
     },
     inputShell: {
@@ -907,7 +907,7 @@ const styles = StyleSheet.create({
     submitButton: {
         minHeight: 48,
         borderRadius: 8,
-        backgroundColor: colors.amber,
+        backgroundColor: colors.primary,
         alignItems: 'center',
         justifyContent: 'center',
         marginTop: 4,
@@ -1029,8 +1029,8 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
     checkboxChecked: {
-        backgroundColor: colors.amber,
-        borderColor: colors.amber,
+        backgroundColor: colors.primary,
+        borderColor: colors.primaryBorder,
     },
     checkmark: {
         color: colors.text,

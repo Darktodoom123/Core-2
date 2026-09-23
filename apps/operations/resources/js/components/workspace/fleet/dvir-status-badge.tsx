@@ -94,7 +94,7 @@ export function DvirStatusBadge({
                     e.stopPropagation();
                     onViewInspection(dvir.id);
                 }}
-                className="inline-flex rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-hidden"
+                className="inline-flex rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:ring-offset-2 focus-visible:outline-hidden"
                 title="Click to view DVIR walkaround photos and inspection checklist"
             >
                 {content}

@@ -136,7 +136,7 @@ export function DirectDispatchView({
                         id="direct-dispatch-title"
                         ref={headingRef}
                         tabIndex={-1}
-                        className="mt-1 text-xl font-semibold tracking-tight text-ink outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-4"
+                        className="mt-1 text-xl font-semibold tracking-tight text-ink outline-none focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:ring-offset-4"
                     >
                         Direct dispatch
                     </h1>
@@ -189,9 +189,9 @@ export function DirectDispatchView({
                                             setWorkStream(workType.id)
                                         }
                                         className={cn(
-                                            'flex min-h-11 min-w-0 flex-col items-start justify-center rounded-xl border px-3.5 py-2.5 text-left transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-hidden',
+                                            'flex min-h-11 min-w-0 flex-col items-start justify-center rounded-xl border px-3.5 py-2.5 text-left transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:ring-offset-2 focus-visible:outline-hidden',
                                             active
-                                                ? 'border-brand bg-brand-soft text-ink ring-1 ring-brand/30'
+                                                ? 'border-brand-strong bg-brand-soft text-ink ring-1 ring-brand-strong/30'
                                                 : 'border-line bg-surface text-ink-soft hover:border-line-strong hover:bg-surface-subtle',
                                         )}
                                     >
@@ -228,9 +228,9 @@ export function DirectDispatchView({
                                                     )
                                                 }
                                                 className={cn(
-                                                    'inline-flex min-h-11 max-w-full items-center rounded-lg border px-3 py-2 text-left text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-hidden',
+                                                    'inline-flex min-h-11 max-w-full items-center rounded-lg border px-3 py-2 text-left text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:ring-offset-2 focus-visible:outline-hidden',
                                                     active
-                                                        ? 'border-brand bg-brand text-brand-contrast'
+                                                        ? 'border-brand-strong bg-brand text-brand-contrast'
                                                         : 'border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
                                                 )}
                                             >
@@ -267,7 +267,7 @@ export function DirectDispatchView({
                                             <button
                                                 type="button"
                                                 onClick={onAddClient}
-                                                className="inline-flex min-h-11 items-center rounded-lg px-2 text-xs font-semibold text-brand-strong underline decoration-brand/40 underline-offset-2 transition-colors hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-hidden"
+                                                className="inline-flex min-h-11 items-center rounded-lg px-2 text-xs font-semibold text-brand-strong underline decoration-brand/40 underline-offset-2 transition-colors hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:ring-offset-2 focus-visible:outline-hidden"
                                             >
                                                 Client not found? Add client
                                             </button>
@@ -294,7 +294,7 @@ export function DirectDispatchView({
                                             : undefined
                                     }
                                     className={cn(
-                                        'mt-1 h-11 w-full rounded-lg border bg-surface px-3 text-sm transition-colors focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-hidden',
+                                        'mt-1 h-11 w-full rounded-lg border bg-surface px-3 text-sm transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong/30 focus-visible:outline-hidden',
                                         form.errors.client
                                             ? 'border-danger'
                                             : 'border-line-strong hover:border-ink-soft',
@@ -392,7 +392,7 @@ export function DirectDispatchView({
                             <button
                                 type="button"
                                 onClick={toggleAllRecommended}
-                                className="inline-flex min-h-11 shrink-0 items-center rounded-lg px-2 text-xs font-semibold text-brand-strong underline decoration-brand/40 underline-offset-2 transition-colors hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-hidden"
+                                className="inline-flex min-h-11 shrink-0 items-center rounded-lg px-2 text-xs font-semibold text-brand-strong underline decoration-brand/40 underline-offset-2 transition-colors hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:ring-offset-2 focus-visible:outline-hidden"
                             >
                                 {intakeData.recommendedRequirements.every(
                                     (requirement) =>
@@ -491,7 +491,7 @@ export function DirectDispatchView({
                                                             requirement,
                                                         )
                                                     }
-                                                    className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg text-ink-soft transition-colors hover:bg-danger-soft hover:text-danger-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none"
+                                                    className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg text-ink-soft transition-colors hover:bg-danger-soft hover:text-danger-strong focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:ring-offset-2 focus-visible:outline-none"
                                                     aria-label={`Remove custom requirement: ${requirement}`}
                                                 >
                                                     <X
@@ -532,7 +532,7 @@ export function DirectDispatchView({
                                         }
                                     }}
                                     placeholder="Add a requirement for the future job brief"
-                                    className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm transition-colors placeholder:text-ink-soft focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-none"
+                                    className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm transition-colors placeholder:text-ink-soft focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong/30 focus-visible:outline-none"
                                 />
                             </label>
                             <Button
@@ -563,7 +563,7 @@ export function DirectDispatchView({
                         <button
                             type="button"
                             onClick={() => requestExit('back')}
-                            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none"
+                            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:ring-offset-2 focus-visible:outline-none"
                         >
                             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
                             Back to intake
@@ -640,7 +640,7 @@ function InputField({
                 aria-invalid={error ? 'true' : undefined}
                 aria-describedby={error ? errorId : undefined}
                 className={cn(
-                    'mt-1 h-11 w-full rounded-lg border bg-surface px-3 text-sm transition-colors focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-none',
+                    'mt-1 h-11 w-full rounded-lg border bg-surface px-3 text-sm transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong/30 focus-visible:outline-none',
                     error
                         ? 'border-danger'
                         : 'border-line-strong hover:border-ink-soft',
@@ -687,7 +687,7 @@ function SelectField({
                 aria-invalid={error ? 'true' : undefined}
                 aria-describedby={error ? errorId : undefined}
                 className={cn(
-                    'mt-1 h-11 w-full rounded-lg border bg-surface px-3 text-sm transition-colors focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-none',
+                    'mt-1 h-11 w-full rounded-lg border bg-surface px-3 text-sm transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong/30 focus-visible:outline-none',
                     error
                         ? 'border-danger'
                         : 'border-line-strong hover:border-ink-soft',
@@ -747,7 +747,7 @@ function TextAreaField({
                         .join(' ') || undefined
                 }
                 className={cn(
-                    'mt-1 w-full resize-y rounded-lg border bg-surface px-3 py-2 text-sm transition-colors focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-none',
+                    'mt-1 w-full resize-y rounded-lg border bg-surface px-3 py-2 text-sm transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong/30 focus-visible:outline-none',
                     error
                         ? 'border-danger'
                         : 'border-line-strong hover:border-ink-soft',
@@ -775,7 +775,7 @@ function RequirementCheckbox({
     return (
         <label
             className={cn(
-                'group flex min-h-[52px] min-w-0 cursor-pointer items-center gap-3 rounded-xl border p-3 text-left text-xs transition-colors focus-within:border-brand-strong focus-within:ring-2 focus-within:ring-brand focus-within:ring-offset-2',
+                'group flex min-h-[52px] min-w-0 cursor-pointer items-center gap-3 rounded-xl border p-3 text-left text-xs transition-colors focus-within:border-brand-strong focus-within:ring-2 focus-within:ring-brand-strong focus-within:ring-offset-2',
                 checked
                     ? 'border-brand-strong bg-brand-soft/80 text-ink shadow-xs'
                     : 'border-line bg-surface text-ink-soft hover:border-line-strong hover:bg-surface-subtle',
@@ -795,8 +795,8 @@ function RequirementCheckbox({
                 className={cn(
                     'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors',
                     checked
-                        ? 'border-brand-strong bg-brand-strong text-white'
-                        : 'border-line-strong bg-surface group-hover:border-brand/60',
+                        ? 'border-brand-strong bg-brand-strong text-white dark:text-brand-contrast'
+                        : 'border-line-strong bg-surface group-hover:border-brand-strong/60',
                 )}
                 aria-hidden="true"
             >

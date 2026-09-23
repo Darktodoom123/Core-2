@@ -317,8 +317,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                             color={
                                 activeTab === 'profile'
                                     ? isDarkHud
-                                        ? '#F59E0B'
-                                        : '#D97706'
+                                        ? '#FFBF00'
+                                        : '#806000'
                                     : isDarkHud
                                       ? '#94A3B8'
                                       : '#64748B'
@@ -362,8 +362,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                             color={
                                 activeTab === 'security'
                                     ? isDarkHud
-                                        ? '#F59E0B'
-                                        : '#D97706'
+                                        ? '#FFBF00'
+                                        : '#806000'
                                     : isDarkHud
                                       ? '#94A3B8'
                                       : '#64748B'
@@ -407,8 +407,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                             color={
                                 activeTab === 'activity'
                                     ? isDarkHud
-                                        ? '#F59E0B'
-                                        : '#D97706'
+                                        ? '#FFBF00'
+                                        : '#806000'
                                     : isDarkHud
                                       ? '#94A3B8'
                                       : '#64748B'
@@ -452,8 +452,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                             color={
                                 activeTab === 'settings'
                                     ? isDarkHud
-                                        ? '#F59E0B'
-                                        : '#D97706'
+                                        ? '#FFBF00'
+                                        : '#806000'
                                     : isDarkHud
                                       ? '#94A3B8'
                                       : '#64748B'
@@ -503,7 +503,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             {isLoading && !refreshing && !accountData ? (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator
-                        color={isDarkHud ? '#F59E0B' : '#D97706'}
+                        color={isDarkHud ? '#FFBF00' : '#806000'}
                         size="large"
                     />
                     <Text
@@ -520,10 +520,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     contentContainerStyle={styles.scrollContent}
                     refreshControl={
                         <RefreshControl
-                            colors={['#D97706']}
+                            colors={['#FFBF00']}
                             onRefresh={handleRefresh}
                             refreshing={refreshing}
-                            tintColor={isDarkHud ? '#F59E0B' : '#D97706'}
+                            tintColor={isDarkHud ? '#FFBF00' : '#806000'}
                         />
                     }
                     showsVerticalScrollIndicator={false}
@@ -805,8 +805,8 @@ const styles = StyleSheet.create({
     darkTabPillActive: {
         backgroundColor: '#27354A',
         borderWidth: 1,
-        borderColor: 'rgba(245, 158, 11, 0.35)',
-        shadowColor: '#F59E0B',
+        borderColor: 'rgba(255, 191, 0, 0.35)',
+        shadowColor: '#FFBF00',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.15,
         shadowRadius: 3,
@@ -824,11 +824,11 @@ const styles = StyleSheet.create({
         color: '#94A3B8',
     },
     tabBtnTextActive: {
-        color: '#B45309',
+        color: '#806000',
         fontWeight: '700',
     },
     darkTabBtnTextActive: {
-        color: '#FDE68A',
+        color: '#FFBF00',
         fontWeight: '700',
     },
     toastBanner: {

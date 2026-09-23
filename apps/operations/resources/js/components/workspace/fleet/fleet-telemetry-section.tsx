@@ -172,7 +172,7 @@ export function FleetTelemetrySection({
                         {location.job ? (
                             <a
                                 href={`/operations/dispatch-jobs/${location.job.id}`}
-                                className="inline-flex items-center gap-1 rounded text-brand-strong hover:underline focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                className="inline-flex items-center gap-1 rounded text-brand-strong hover:underline focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                             >
                                 <span>{location.job.reference}</span>
                                 <span className="max-w-[120px] truncate text-xs font-normal text-ink-soft">

@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
     },
     beaconDot: {
-        backgroundColor: '#fbbf24',
+        backgroundColor: '#FFBF00',
         borderRadius: 4,
         height: 8,
         width: 8,
@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
     },
     freshnessBanner: {
         alignItems: 'center',
-        backgroundColor: '#064e3b',
+        backgroundColor: '#064E3B',
         borderRadius: 8,
         flexDirection: 'row',
         gap: 8,
@@ -416,16 +416,16 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
     },
     freshnessBannerStale: {
-        backgroundColor: '#78350f',
+        backgroundColor: '#332800',
     },
     freshnessDot: {
-        backgroundColor: '#34d399',
+        backgroundColor: '#34D399',
         borderRadius: 4,
         height: 8,
         width: 8,
     },
     freshnessDotStale: {
-        backgroundColor: '#fbbf24',
+        backgroundColor: '#FFBF00',
     },
     freshnessText: {
         color: colors.textOnDark,
@@ -459,7 +459,7 @@ const styles = StyleSheet.create({
         letterSpacing: 0.8,
     },
     metricValueLarge: {
-        color: '#fbbf24',
+        color: '#FFBF00',
         fontSize: 32,
         fontWeight: '900',
         fontVariant: ['tabular-nums'],
@@ -485,7 +485,7 @@ const styles = StyleSheet.create({
         marginTop: 4,
     },
     destAsset: {
-        color: '#fbbf24',
+        color: '#FFBF00',
         fontSize: 14,
         fontWeight: '700',
         marginTop: 2,
@@ -529,8 +529,8 @@ const styles = StyleSheet.create({
         padding: 16,
     },
     stepCardHazard: {
-        backgroundColor: '#451a03',
-        borderColor: '#b45309',
+        backgroundColor: '#332800',
+        borderColor: '#332800',
     },
     stepHeader: {
         alignItems: 'center',
@@ -566,17 +566,17 @@ const styles = StyleSheet.create({
         lineHeight: 24,
     },
     cautionBox: {
-        backgroundColor: '#1e293b',
+        backgroundColor: '#1E293B',
         borderRadius: 8,
         gap: 4,
         marginTop: 10,
         padding: 10,
     },
     hazardCautionBox: {
-        backgroundColor: '#7f1d1d',
+        backgroundColor: '#7F1D1D',
     },
     cautionIcon: {
-        color: '#f87171',
+        color: '#F87171',
         fontSize: 11,
         fontWeight: '900',
         letterSpacing: 0.5,
@@ -598,7 +598,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
     },
     reportDelayTriggerText: {
-        color: '#fbbf24',
+        color: '#FFBF00',
         fontSize: 15,
         fontWeight: '800',
     },
@@ -641,14 +641,14 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     reportedDelayCard: {
-        backgroundColor: '#064e3b',
+        backgroundColor: '#064E3B',
         borderRadius: 10,
         gap: 2,
         marginBottom: 12,
         padding: 12,
     },
     reportedDelayTitle: {
-        color: '#34d399',
+        color: '#34D399',
         fontSize: 12,
         fontWeight: '800',
     },
@@ -669,7 +669,7 @@ const styles = StyleSheet.create({
     },
     arrivedButton: {
         alignItems: 'center',
-        backgroundColor: '#16a34a',
+        backgroundColor: '#16A34A',
         borderRadius: 12,
         justifyContent: 'center',
         minHeight: 64,
@@ -683,7 +683,7 @@ const styles = StyleSheet.create({
         letterSpacing: 0.5,
     },
     arrivedButtonSubtext: {
-        color: '#dcfce7',
+        color: '#DCFCE7',
         fontSize: 11,
         fontWeight: '600',
         marginTop: 2,

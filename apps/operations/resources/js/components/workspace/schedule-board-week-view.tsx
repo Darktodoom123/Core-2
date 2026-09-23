@@ -502,7 +502,7 @@ export function ScheduleBoardWeekView({
                             onClick={() =>
                                 onSelectDate(shiftLocalDate(weekStart, -7))
                             }
-                            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3 text-xs font-semibold text-ink hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3 text-xs font-semibold text-ink hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none"
                             aria-label="Show previous week"
                         >
                             <ChevronLeft
@@ -515,7 +515,7 @@ export function ScheduleBoardWeekView({
                             type="button"
                             onClick={() => onSelectDate(todayKey)}
                             className={cn(
-                                'inline-flex min-h-11 items-center rounded-lg px-3 text-xs font-semibold focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none',
+                                'inline-flex min-h-11 items-center rounded-lg px-3 text-xs font-semibold focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none',
                                 weekStart === currentWeekStart
                                     ? 'bg-brand-soft text-brand-strong'
                                     : 'border border-line-strong bg-surface text-ink hover:bg-surface-subtle',
@@ -530,7 +530,7 @@ export function ScheduleBoardWeekView({
                             onClick={() =>
                                 onSelectDate(shiftLocalDate(weekStart, 7))
                             }
-                            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3 text-xs font-semibold text-ink hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3 text-xs font-semibold text-ink hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none"
                             aria-label="Show next week"
                         >
                             Next week
@@ -606,7 +606,7 @@ export function ScheduleBoardWeekView({
                                                     onSelectDate(date)
                                                 }
                                                 className={cn(
-                                                    'flex min-h-11 w-full flex-col items-center justify-center rounded-md px-1 text-center focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none',
+                                                    'flex min-h-11 w-full flex-col items-center justify-center rounded-md px-1 text-center focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none',
                                                     isSelected
                                                         ? 'bg-brand text-ink'
                                                         : 'hover:bg-surface',
@@ -673,7 +673,7 @@ export function ScheduleBoardWeekView({
                                                         'border border-success/25 bg-success-soft text-success-strong',
                                                     row.statusTone ===
                                                         'brand' &&
-                                                        'border border-brand/25 bg-brand-soft text-brand-strong',
+                                                        'border border-brand-strong/25 bg-brand-soft text-brand-strong',
                                                     row.statusTone === 'info' &&
                                                         'border border-info/25 bg-info-soft text-info-strong',
                                                     row.statusTone ===
@@ -711,7 +711,7 @@ export function ScheduleBoardWeekView({
                                                         isToday &&
                                                             'bg-brand-soft/20',
                                                         isSelected &&
-                                                            'ring-1 ring-brand/30 ring-inset',
+                                                            'ring-1 ring-brand-strong/30 ring-inset',
                                                     )}
                                                     role="gridcell"
                                                     aria-label={`${row.name}, ${formatDateLabel(date, { weekday: 'long', month: 'long', day: 'numeric' })}`}
@@ -734,7 +734,7 @@ export function ScheduleBoardWeekView({
                                                                         )
                                                                     }
                                                                     className={cn(
-                                                                        'flex min-h-16 w-full flex-col justify-between rounded-lg border px-2 py-1.5 text-left shadow-xs transition-colors hover:brightness-[0.98] focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none',
+                                                                        'flex min-h-16 w-full flex-col justify-between rounded-lg border px-2 py-1.5 text-left shadow-xs transition-colors hover:brightness-[0.98] focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none',
                                                                         jobTone(
                                                                             job,
                                                                             hasConflict,

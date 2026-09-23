@@ -425,7 +425,7 @@ export function CurrentAssignments({
                                                         );
                                                         setReasonError(null);
                                                     }}
-                                                    className="placeholder:text-ink-subtle mt-2 block w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink focus-visible:border-brand focus-visible:ring-1 focus-visible:ring-brand focus-visible:outline-hidden"
+                                                    className="placeholder:text-ink-subtle mt-2 block w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink focus-visible:border-brand-strong focus-visible:ring-1 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                                                     placeholder="Provide reason for rejection..."
                                                     aria-describedby={`rejection-reason-${assignment.id}-description${reasonError || errors.reason ? ` rejection-reason-${assignment.id}-error` : ''}${responseError ? ` assignment-response-${assignment.id}-error` : ''}`}
                                                     aria-invalid={

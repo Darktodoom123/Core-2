@@ -119,7 +119,7 @@ export function AssetTypeMultiSelect({
                     appearance === 'neutral'
                         ? 'rounded-lg border border-line bg-surface text-ink hover:border-line-strong hover:bg-surface-subtle'
                         : allTypesSelected
-                          ? 'bg-brand-strong font-semibold text-white shadow-xs'
+                          ? 'bg-brand-strong font-semibold text-white dark:text-brand-contrast shadow-xs'
                           : 'bg-brand-soft font-semibold text-brand-strong ring-1 ring-brand-strong/20',
                 )}
                 aria-label={`Asset type filter: ${selectedLabel}`}
@@ -156,7 +156,7 @@ export function AssetTypeMultiSelect({
                         role="menuitemcheckbox"
                         aria-checked={allTypesSelected}
                         onClick={() => onChange(new Set())}
-                        className="flex min-h-11 w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-medium text-ink transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:outline-none"
+                        className="flex min-h-11 w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-medium text-ink transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand-strong/40 focus-visible:outline-none"
                     >
                         <FilterCheck checked={allTypesSelected} />
                         <span className="min-w-0 flex-1">All Types</span>
@@ -186,7 +186,7 @@ export function AssetTypeMultiSelect({
                                 role="menuitemcheckbox"
                                 aria-checked={isSelected}
                                 onClick={() => toggleType(item.id)}
-                                className="flex min-h-11 w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-ink transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:outline-none"
+                                className="flex min-h-11 w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-ink transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand-strong/40 focus-visible:outline-none"
                             >
                                 <FilterCheck checked={isSelected} />
                                 <AssetTypeIcon type={item.id} />
@@ -225,7 +225,7 @@ function FilterCheck({ checked }: { checked: boolean }) {
             className={cn(
                 'flex h-4 w-4 shrink-0 items-center justify-center rounded border',
                 checked
-                    ? 'border-brand-strong bg-brand-strong text-white'
+                    ? 'border-brand-strong bg-brand-strong text-white dark:text-brand-contrast'
                     : 'border-line-strong bg-surface',
             )}
             aria-hidden="true"

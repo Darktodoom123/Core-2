@@ -18,7 +18,7 @@ export const statVariants = cva('overflow-hidden transition-all', {
         },
         tone: {
             default: 'border-line bg-surface',
-            brand: 'border-brand/40 bg-brand-soft/20',
+            brand: 'border-brand-strong/40 bg-brand-soft/20',
             warning: 'border-warning/30 bg-warning-soft/20',
             success: 'border-success/30 bg-success-soft/20',
             danger: 'border-danger/30 bg-danger-soft/20',
@@ -33,7 +33,7 @@ export const statVariants = cva('overflow-hidden transition-all', {
 
 const toneSelectedClasses: Record<string, string> = {
     default: 'border-line-strong bg-surface-subtle ring-2 ring-line-strong/30',
-    brand: 'border-brand bg-brand-soft/40 ring-2 ring-brand/30',
+    brand: 'border-brand-strong bg-brand-soft/40 ring-2 ring-brand-strong/30',
     warning: 'border-warning bg-warning-soft/40 ring-2 ring-warning/30',
     success: 'border-success bg-success-soft/40 ring-2 ring-success/30',
     danger: 'border-danger bg-danger-soft/40 ring-2 ring-danger/30',
@@ -132,7 +132,7 @@ export const Stat = forwardRef<HTMLDivElement, StatProps>(
                 className={cn(
                     statVariants({ size: resolvedSize, tone: resolvedTone }),
                     isInteractive &&
-                        'cursor-pointer transition-all hover:bg-surface-subtle active:scale-[0.99] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-brand/50',
+                        'cursor-pointer transition-all hover:bg-surface-subtle active:scale-[0.99] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-strong/50',
                     selected && toneSelectedClasses[resolvedTone],
                     className,
                 )}

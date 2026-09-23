@@ -605,8 +605,8 @@ const styles = StyleSheet.create({
         borderColor: colors.hudBorder,
     },
     categoryPillActive: {
-        backgroundColor: colors.amber,
-        borderColor: colors.amber,
+        backgroundColor: colors.primary,
+        borderColor: colors.primaryBorder,
     },
     darkCategoryPillActive: {
         backgroundColor: colors.hudAmber,
@@ -683,7 +683,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.amberLight,
     },
     darkCheckRowAttention: {
-        backgroundColor: 'rgba(245, 158, 11, 0.12)',
+        backgroundColor: 'rgba(255, 191, 0, 0.12)',
     },
     checkRowCritical: {
         backgroundColor: colors.redLight,
@@ -729,7 +729,7 @@ const styles = StyleSheet.create({
         color: colors.amberDark,
     },
     darkStatusAttention: {
-        color: '#FBBF24',
+        color: '#FFBF00',
     },
     statusCritical: {
         color: colors.redDark,
@@ -761,10 +761,10 @@ const styles = StyleSheet.create({
         backgroundColor: '#10B981',
     },
     rockerSegmentAttention: {
-        backgroundColor: colors.amber,
+        backgroundColor: colors.primary,
     },
     darkRockerSegmentAttention: {
-        backgroundColor: '#F59E0B',
+        backgroundColor: '#FFBF00',
     },
     rockerSegmentCritical: {
         backgroundColor: colors.red,
@@ -797,7 +797,7 @@ const styles = StyleSheet.create({
     },
     saveButton: {
         alignItems: 'center',
-        backgroundColor: colors.amber,
+        backgroundColor: colors.primary,
         borderRadius: 10,
         justifyContent: 'center',
         minHeight: 50,
@@ -807,7 +807,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.hudAmber,
     },
     saveButtonText: {
-        color: '#FFFFFF',
+        color: '#0F172A',
         fontSize: 14,
         fontWeight: '800',
         letterSpacing: 0.3,
@@ -856,7 +856,7 @@ const styles = StyleSheet.create({
     },
     openDvirBtn: {
         alignItems: 'center',
-        backgroundColor: colors.amber,
+        backgroundColor: colors.primary,
         borderRadius: 8,
         justifyContent: 'center',
         paddingHorizontal: 12,
@@ -866,7 +866,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.hudAmber,
     },
     openDvirBtnText: {
-        color: '#FFFFFF',
+        color: '#0F172A',
         fontSize: 12,
         fontWeight: '700',
     },
@@ -942,8 +942,8 @@ const styles = StyleSheet.create({
     },
     noWoBanner: {
         alignItems: 'center',
-        backgroundColor: '#FEF3C7',
-        borderColor: '#F59E0B',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFBF00',
         borderRadius: 10,
         borderWidth: 1,
         flexDirection: 'row',
@@ -953,22 +953,22 @@ const styles = StyleSheet.create({
         padding: 12,
     },
     darkNoWoBanner: {
-        backgroundColor: 'rgba(245, 158, 11, 0.15)',
-        borderColor: 'rgba(245, 158, 11, 0.4)',
+        backgroundColor: 'rgba(255, 191, 0, 0.15)',
+        borderColor: 'rgba(255, 191, 0, 0.4)',
     },
     noWoTextWrap: {
         flex: 1,
     },
     noWoTitle: {
-        color: '#92400E',
+        color: '#806000',
         fontSize: 13,
         fontWeight: '700',
     },
     darkNoWoTitle: {
-        color: '#FBBF24',
+        color: '#FFBF00',
     },
     noWoSubtitle: {
-        color: '#B45309',
+        color: '#806000',
         fontSize: 11,
         marginTop: 2,
     },
@@ -976,16 +976,16 @@ const styles = StyleSheet.create({
         color: colors.hudTextDim,
     },
     goToWoBtn: {
-        backgroundColor: '#D97706',
+        backgroundColor: '#FFBF00',
         borderRadius: 6,
         paddingHorizontal: 10,
         paddingVertical: 6,
     },
     darkGoToWoBtn: {
-        backgroundColor: '#B45309',
+        backgroundColor: '#332800',
     },
     goToWoBtnText: {
-        color: '#FFFFFF',
+        color: '#0F172A',
         fontSize: 11,
         fontWeight: '700',
     },

@@ -59,8 +59,8 @@ export const FieldBottomNav: React.FC<FieldBottomNavProps> = ({
                             color={
                                 activeItem === 'today'
                                     ? isDarkHud
-                                        ? '#F59E0B'
-                                        : '#D97706'
+                                        ? '#FFBF00'
+                                        : '#806000'
                                     : isDarkHud
                                       ? '#94A3B8'
                                       : '#64748B'
@@ -114,8 +114,8 @@ export const FieldBottomNav: React.FC<FieldBottomNavProps> = ({
                             color={
                                 activeItem === 'profile'
                                     ? isDarkHud
-                                        ? '#F59E0B'
-                                        : '#D97706'
+                                        ? '#FFBF00'
+                                        : '#806000'
                                     : isDarkHud
                                       ? '#94A3B8'
                                       : '#64748B'
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
         overflow: 'visible',
         paddingHorizontal: 10,
         paddingVertical: 6,
-        shadowColor: '#0f172a',
+        shadowColor: '#0F172A',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
         shadowRadius: 10,
@@ -216,14 +216,14 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     labelSelected: {
-        color: '#D97706',
+        color: '#FFBF00',
         fontWeight: '700',
     },
     darkLabel: {
         color: '#94A3B8',
     },
     darkLabelSelected: {
-        color: '#F59E0B',
+        color: '#FFBF00',
     },
     pressed: {
         opacity: 0.75,

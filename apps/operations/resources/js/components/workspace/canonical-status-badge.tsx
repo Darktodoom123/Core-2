@@ -99,7 +99,7 @@ export const statusIcons: Partial<Record<CanonicalStatusValue, LucideIcon>> = {
 
 export const toneClasses: Record<StatusTone, string> = {
     neutral: 'border border-line-strong bg-surface-subtle text-ink-soft',
-    brand: 'border border-brand/25 bg-brand-soft text-brand-strong',
+    brand: 'border border-brand-strong/25 bg-brand-soft text-brand-strong',
     info: 'border border-info/25 bg-info-soft text-info-strong',
     success: 'border border-success/25 bg-success-soft text-success-strong',
     warning:

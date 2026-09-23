@@ -45,7 +45,7 @@ export function AssignmentNextAction({
                 {canActivate ? (
                     <a
                         href="#dispatch-activation"
-                        className="inline-flex min-h-8 shrink-0 items-center gap-1 rounded-md border border-line bg-surface px-2.5 text-xs font-semibold text-ink transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                        className="inline-flex min-h-8 shrink-0 items-center gap-1 rounded-md border border-line bg-surface px-2.5 text-xs font-semibold text-ink transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                     >
                         Open
                         <ArrowRight
@@ -88,7 +88,7 @@ export function AssignmentStageSummaries({
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                     }
                 }}
-                className="flex min-h-16 items-center justify-between gap-4 border-b border-line px-4 py-3 transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden sm:px-5"
+                className="flex min-h-16 items-center justify-between gap-4 border-b border-line px-4 py-3 transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden sm:px-5"
             >
                 <span className="flex min-w-0 items-center gap-3">
                     <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-success-soft text-success-strong">
@@ -125,7 +125,7 @@ export function AssignmentStageSummaries({
                             });
                         }
                     }}
-                    className="flex min-h-16 items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden sm:px-5"
+                    className="flex min-h-16 items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden sm:px-5"
                 >
                     <span className="flex min-w-0 items-center gap-3">
                         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-line bg-surface-subtle text-xs font-semibold text-ink-soft">

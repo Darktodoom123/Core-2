@@ -360,7 +360,7 @@ function RequestExportForm({ onDone }: { onDone: () => void }) {
                             onChange={(e) =>
                                 form.setData('export_type', e.target.value)
                             }
-                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
+                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand-strong focus:outline-none"
                             required
                         >
                             <option value="job_reports">Job Reports</option>
@@ -395,7 +395,7 @@ function RequestExportForm({ onDone }: { onDone: () => void }) {
                             onChange={(e) =>
                                 form.setData('format', e.target.value)
                             }
-                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
+                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand-strong focus:outline-none"
                             required
                         >
                             <option value="csv">

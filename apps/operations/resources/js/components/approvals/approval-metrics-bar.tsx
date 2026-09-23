@@ -37,7 +37,7 @@ export function ApprovalMetricsBar({
             description: 'Total queue',
             colorClass: 'text-brand-strong',
             bgClass: 'bg-brand-soft/40',
-            activeClass: 'ring-2 ring-brand border-brand bg-brand-soft/60',
+            activeClass: 'ring-2 ring-brand-strong border-brand-strong bg-brand-soft/60',
         },
         {
             id: 'actionable' as ApprovalFilterType,
@@ -103,7 +103,7 @@ export function ApprovalMetricsBar({
                         aria-selected={isActive}
                         onClick={() => onFilterChange(metric.id)}
                         className={cn(
-                            'group relative flex flex-col justify-between rounded-xl border border-line bg-surface p-3.5 text-left transition-all duration-150 ease-out hover:border-line-strong hover:shadow-xs focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none',
+                            'group relative flex flex-col justify-between rounded-xl border border-line bg-surface p-3.5 text-left transition-all duration-150 ease-out hover:border-line-strong hover:shadow-xs focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none',
                             isActive
                                 ? metric.activeClass
                                 : 'hover:bg-surface-subtle/30',

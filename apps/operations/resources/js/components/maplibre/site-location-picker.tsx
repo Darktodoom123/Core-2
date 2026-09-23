@@ -969,7 +969,7 @@ export function SiteLocationPicker({
             {/* Header */}
             <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2.5">
-                    <div className="bg-brand-subtle flex size-8 items-center justify-center rounded-lg text-brand">
+                    <div className="bg-brand-subtle flex size-8 items-center justify-center rounded-lg text-brand-strong">
                         <Crosshair className="size-4" />
                     </div>
                     <div>
@@ -989,7 +989,7 @@ export function SiteLocationPicker({
                         onClick={() => setShowJibRadius((prev) => !prev)}
                         className="text-content inline-flex items-center gap-1 rounded-md border border-line bg-surface px-2 py-1 text-xs font-medium hover:bg-surface-subtle"
                     >
-                        <Radio className="size-3 text-brand" />
+                        <Radio className="size-3 text-brand-strong" />
                         {showJibRadius
                             ? 'Hide Jib Radiuses'
                             : 'Show Jib Radiuses'}
@@ -1004,7 +1004,7 @@ export function SiteLocationPicker({
                     ) : (
                         <span
                             data-testid="pending-badge"
-                            className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-950/50 dark:text-amber-300"
+                            className="inline-flex items-center gap-1 rounded-full bg-warning-soft px-2.5 py-1 text-xs font-semibold text-warning-strong dark:bg-warning/15 dark:text-warning-on-dark"
                         >
                             Pending Site Pin
                         </span>
@@ -1048,7 +1048,7 @@ export function SiteLocationPicker({
                                 {isSlotPinned ? (
                                     <span className="size-1.5 rounded-full bg-emerald-400" />
                                 ) : (
-                                    <span className="size-1.5 rounded-full bg-amber-400" />
+                                    <span className="size-1.5 rounded-full bg-warning" />
                                 )}
                             </button>
                             {slotsState.length > 1 && (
@@ -1071,7 +1071,7 @@ export function SiteLocationPicker({
                     type="button"
                     data-testid="add-crane-slot-button"
                     onClick={handleAddSlot}
-                    className="bg-brand-subtle inline-flex items-center gap-1 rounded-md border border-dashed border-brand/50 px-2 py-1 text-xs font-medium text-brand hover:bg-brand/20"
+                    className="bg-brand-subtle inline-flex items-center gap-1 rounded-md border border-dashed border-brand-strong/50 px-2 py-1 text-xs font-medium text-brand-strong hover:bg-brand/20"
                 >
                     <Plus className="size-3" /> Add Crane Position
                 </button>
@@ -1081,9 +1081,9 @@ export function SiteLocationPicker({
             {collisionOverlap && (
                 <div
                     data-testid="anti-collision-warning"
-                    className="flex items-center gap-2 rounded-lg border border-amber-300/80 bg-amber-50/80 p-2.5 text-xs text-amber-900 dark:border-amber-700/50 dark:bg-amber-950/40 dark:text-amber-200"
+                    className="flex items-center gap-2 rounded-lg border border-warning/40 bg-warning-soft/80 p-2.5 text-xs text-warning-strong dark:border-warning/30 dark:bg-warning/10 dark:text-warning-on-dark"
                 >
-                    <AlertTriangle className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <AlertTriangle className="size-4 shrink-0 text-warning-strong dark:text-warning-on-dark" />
                     <span>
                         <strong>Anti-Collision Zone Detected:</strong>{' '}
                         {collisionOverlap.slot1} and {collisionOverlap.slot2}{' '}
@@ -1111,7 +1111,7 @@ export function SiteLocationPicker({
                                     }
                                 }}
                                 placeholder="Search project site, client lot, or address…"
-                                className="text-content placeholder:text-content-muted w-full rounded-md border border-line bg-surface py-1.5 pr-3 pl-8 text-xs focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none"
+                                className="text-content placeholder:text-content-muted w-full rounded-md border border-line bg-surface py-1.5 pr-3 pl-8 text-xs focus:border-brand-strong focus:ring-1 focus:ring-brand-strong focus:outline-none"
                             />
                             <Search className="text-content-muted pointer-events-none absolute top-2 left-2.5 size-3.5" />
                         </div>
@@ -1146,7 +1146,7 @@ export function SiteLocationPicker({
                             onClick={() => void handleCenterOnSite(siteName)}
                             className="shrink-0 text-xs"
                         >
-                            <Navigation className="mr-1 size-3 text-brand" />
+                            <Navigation className="mr-1 size-3 text-brand-strong" />
                             Fly to Job Site ({siteName})
                         </Button>
                     )}
@@ -1180,7 +1180,7 @@ export function SiteLocationPicker({
 
                 {/* Floating Helper Overlay */}
                 <div className="text-content pointer-events-none absolute top-3 left-3 z-[2] flex items-center gap-1.5 rounded-md border border-line/80 bg-surface/90 px-2.5 py-1.5 text-[11px] font-medium shadow-sm backdrop-blur-xs">
-                    <MapPin className="size-3.5 text-brand" />
+                    <MapPin className="size-3.5 text-brand-strong" />
                     <span>
                         Click lot to position{' '}
                         <strong>{activeSlot?.slotKey}</strong> base anchor (
@@ -1210,7 +1210,7 @@ export function SiteLocationPicker({
                         {slotNameInput || 'Crane Position'})
                     </span>
                     {siteName && (
-                        <span className="text-xs font-medium text-brand">
+                        <span className="text-xs font-medium text-brand-strong">
                             {siteName}
                         </span>
                     )}
@@ -1233,7 +1233,7 @@ export function SiteLocationPicker({
                                 updateSlotField('name', e.target.value)
                             }
                             placeholder="e.g. North Core Tower Crane"
-                            className="text-content mt-1 w-full rounded-md border border-line bg-surface px-2.5 py-1.5 text-xs focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none"
+                            className="text-content mt-1 w-full rounded-md border border-line bg-surface px-2.5 py-1.5 text-xs focus:border-brand-strong focus:ring-1 focus:ring-brand-strong focus:outline-none"
                         />
                     </div>
                     <div>
@@ -1252,7 +1252,7 @@ export function SiteLocationPicker({
                                 updateSlotField('lat', e.target.value)
                             }
                             placeholder="e.g. 14.5547"
-                            className="text-content mt-1 w-full rounded-md border border-line bg-surface px-2.5 py-1.5 font-mono text-xs focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none"
+                            className="text-content mt-1 w-full rounded-md border border-line bg-surface px-2.5 py-1.5 font-mono text-xs focus:border-brand-strong focus:ring-1 focus:ring-brand-strong focus:outline-none"
                         />
                     </div>
                     <div>
@@ -1271,7 +1271,7 @@ export function SiteLocationPicker({
                                 updateSlotField('lon', e.target.value)
                             }
                             placeholder="e.g. 121.0509"
-                            className="text-content mt-1 w-full rounded-md border border-line bg-surface px-2.5 py-1.5 font-mono text-xs focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none"
+                            className="text-content mt-1 w-full rounded-md border border-line bg-surface px-2.5 py-1.5 font-mono text-xs focus:border-brand-strong focus:ring-1 focus:ring-brand-strong focus:outline-none"
                         />
                     </div>
                     <div>
@@ -1294,7 +1294,7 @@ export function SiteLocationPicker({
                                     parseInt(e.target.value, 10) || 60,
                                 )
                             }
-                            className="text-content mt-1 w-full rounded-md border border-line bg-surface px-2.5 py-1.5 font-mono text-xs focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none"
+                            className="text-content mt-1 w-full rounded-md border border-line bg-surface px-2.5 py-1.5 font-mono text-xs focus:border-brand-strong focus:ring-1 focus:ring-brand-strong focus:outline-none"
                         />
                     </div>
                 </div>

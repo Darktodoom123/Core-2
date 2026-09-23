@@ -235,7 +235,7 @@ export const ReportDelayModal: React.FC<ReportDelayModalProps> = ({
                                     isDarkHud && styles.darkHeaderIconWrap,
                                 ]}
                             >
-                                <Icon color="#F59E0B" name="alert" size={20} />
+                                <Icon color="#FFBF00" name="alert" size={20} />
                             </View>
                             <View style={styles.headerTitleCopy}>
                                 <Text
@@ -534,7 +534,7 @@ export const ReportDelayModal: React.FC<ReportDelayModalProps> = ({
                                             <Icon
                                                 color={
                                                     isSelected
-                                                        ? '#F59E0B'
+                                                        ? '#FFBF00'
                                                         : isDarkHud
                                                           ? '#94A3B8'
                                                           : '#64748B'
@@ -602,7 +602,7 @@ export const ReportDelayModal: React.FC<ReportDelayModalProps> = ({
                             >
                                 <View style={styles.dvirNoticeHeader}>
                                     <Icon
-                                        color="#F59E0B"
+                                        color="#FFBF00"
                                         name="alert-circle"
                                         size={16}
                                     />
@@ -840,14 +840,14 @@ const styles = StyleSheet.create({
     },
     headerIconWrap: {
         alignItems: 'center',
-        backgroundColor: '#FEF3C7',
+        backgroundColor: '#FFF3C4',
         borderRadius: 12,
         height: 38,
         justifyContent: 'center',
         width: 38,
     },
     darkHeaderIconWrap: {
-        backgroundColor: 'rgba(245, 158, 11, 0.2)',
+        backgroundColor: 'rgba(255, 191, 0, 0.2)',
     },
     sheetTitle: {
         color: '#0F172A',
@@ -983,16 +983,16 @@ const styles = StyleSheet.create({
         padding: 12,
     },
     reasonCardSelected: {
-        backgroundColor: '#FEF3C7',
-        borderColor: '#F59E0B',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFBF00',
     },
     darkReasonCard: {
         backgroundColor: '#1E293B',
         borderColor: '#334155',
     },
     darkReasonCardSelected: {
-        backgroundColor: 'rgba(245, 158, 11, 0.15)',
-        borderColor: '#F59E0B',
+        backgroundColor: 'rgba(255, 191, 0, 0.15)',
+        borderColor: '#FFBF00',
     },
     reasonCardHeader: {
         alignItems: 'center',
@@ -1006,13 +1006,13 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     reasonLabelSelected: {
-        color: '#92400E',
+        color: '#806000',
     },
     darkReasonLabel: {
         color: '#F1F5F9',
     },
     darkReasonLabelSelected: {
-        color: '#FCD34D',
+        color: '#FFBF00',
     },
     radioCircle: {
         alignItems: 'center',
@@ -1024,16 +1024,16 @@ const styles = StyleSheet.create({
         width: 18,
     },
     radioCircleSelected: {
-        borderColor: '#F59E0B',
+        borderColor: '#FFBF00',
     },
     darkRadioCircle: {
         borderColor: '#64748B',
     },
     darkRadioCircleSelected: {
-        borderColor: '#F59E0B',
+        borderColor: '#FFBF00',
     },
     radioInner: {
-        backgroundColor: '#F59E0B',
+        backgroundColor: '#FFBF00',
         borderRadius: 5,
         height: 10,
         width: 10,
@@ -1048,16 +1048,16 @@ const styles = StyleSheet.create({
         color: '#94A3B8',
     },
     dvirNoticeBox: {
-        backgroundColor: '#FFFBEB',
-        borderColor: '#FDE68A',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFF3C4',
         borderRadius: 10,
         borderWidth: 1,
         marginTop: 12,
         padding: 12,
     },
     darkDvirNoticeBox: {
-        backgroundColor: 'rgba(245, 158, 11, 0.12)',
-        borderColor: '#78350F',
+        backgroundColor: 'rgba(255, 191, 0, 0.12)',
+        borderColor: '#332800',
     },
     dvirNoticeHeader: {
         alignItems: 'center',
@@ -1066,12 +1066,12 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     dvirNoticeTitle: {
-        color: '#B45309',
+        color: '#806000',
         fontSize: 12,
         fontWeight: '700',
     },
     dvirNoticeBody: {
-        color: '#92400E',
+        color: '#806000',
         fontSize: 11,
         lineHeight: 16,
     },
@@ -1108,16 +1108,16 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
     },
     minuteChipSelected: {
-        backgroundColor: '#FEF3C7',
-        borderColor: '#F59E0B',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFBF00',
     },
     darkMinuteChip: {
         backgroundColor: '#1E293B',
         borderColor: '#334155',
     },
     darkMinuteChipSelected: {
-        backgroundColor: 'rgba(245, 158, 11, 0.2)',
-        borderColor: '#F59E0B',
+        backgroundColor: 'rgba(255, 191, 0, 0.2)',
+        borderColor: '#FFBF00',
     },
     minuteChipText: {
         color: '#334155',
@@ -1125,13 +1125,13 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     minuteChipTextSelected: {
-        color: '#92400E',
+        color: '#806000',
     },
     darkMinuteChipText: {
         color: '#94A3B8',
     },
     darkMinuteChipTextActive: {
-        color: '#FCD34D',
+        color: '#FFBF00',
     },
     notesInput: {
         backgroundColor: '#F8FAFC',
@@ -1192,7 +1192,7 @@ const styles = StyleSheet.create({
     },
     submitBtn: {
         alignItems: 'center',
-        backgroundColor: '#D97706',
+        backgroundColor: '#FFBF00',
         borderRadius: 10,
         flex: 2,
         flexDirection: 'row',
@@ -1205,7 +1205,7 @@ const styles = StyleSheet.create({
         opacity: 0.6,
     },
     submitBtnText: {
-        color: '#FFFFFF',
+        color: '#0F172A',
         fontSize: 14,
         fontWeight: '700',
     },

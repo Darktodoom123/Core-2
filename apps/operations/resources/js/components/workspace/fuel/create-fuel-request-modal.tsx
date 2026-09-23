@@ -119,7 +119,7 @@ function CreateFuelRequestModalContent({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                         aria-label="Close dialog"
                     >
                         <X className="h-4 w-4" />
@@ -140,7 +140,7 @@ function CreateFuelRequestModalContent({
                                     e.target.value,
                                 )
                             }
-                            className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink transition-colors focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-hidden"
+                            className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong/30 focus-visible:outline-hidden"
                         >
                             <option value="">
                                 -- Select Equipment / Vehicle (Optional) --
@@ -167,7 +167,7 @@ function CreateFuelRequestModalContent({
                     {selectedAsset && (
                         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-line bg-surface-subtle p-3 text-xs">
                             <div className="flex items-center gap-1.5 font-semibold text-ink">
-                                <Truck className="h-4 w-4 text-brand" />
+                                <Truck className="h-4 w-4 text-brand-strong" />
                                 <span>{selectedAsset.name}</span>
                             </div>
                             <span className="text-ink-soft">·</span>
@@ -232,7 +232,7 @@ function CreateFuelRequestModalContent({
                                 onChange={(e) =>
                                     form.setData('fuel_type', e.target.value)
                                 }
-                                className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink transition-colors focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-hidden"
+                                className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong/30 focus-visible:outline-hidden"
                             >
                                 <option value="diesel">Diesel</option>
                                 <option value="gasoline">Gasoline</option>
@@ -256,7 +256,7 @@ function CreateFuelRequestModalContent({
                                     )
                                 }
                                 placeholder="e.g. 200.00"
-                                className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm font-semibold text-ink tabular-nums transition-colors placeholder:text-ink-soft focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-hidden"
+                                className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm font-semibold text-ink tabular-nums transition-colors placeholder:text-ink-soft focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong/30 focus-visible:outline-hidden"
                             />
                             {form.errors.quantity_litres && (
                                 <p className="mt-1 text-xs text-danger">
@@ -277,7 +277,7 @@ function CreateFuelRequestModalContent({
                                 form.setData('purpose', e.target.value)
                             }
                             placeholder="e.g. Concrete pour lift, night shift mobilization"
-                            className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink transition-colors placeholder:text-ink-soft focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-hidden"
+                            className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink transition-colors placeholder:text-ink-soft focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong/30 focus-visible:outline-hidden"
                         />
                         {form.errors.purpose && (
                             <p className="mt-1 text-xs text-danger">

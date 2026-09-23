@@ -98,10 +98,10 @@ function FleetCategoryFilterMenu({
                 aria-controls={menuId}
                 onClick={() => setIsOpen((value) => !value)}
                 className={cn(
-                    'inline-flex min-h-9 items-center gap-1.5 rounded-md border px-2.5 py-1 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
+                    'inline-flex min-h-9 items-center gap-1.5 rounded-md border px-2.5 py-1 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
                     categoryFilter === 'all'
                         ? 'border-line-strong bg-surface-subtle text-ink hover:bg-surface'
-                        : 'border-brand/40 bg-brand-soft font-semibold text-brand-strong hover:bg-brand-soft/70',
+                        : 'border-brand-strong/40 bg-brand-soft font-semibold text-brand-strong hover:bg-brand-soft/70',
                 )}
             >
                 <ListFilter
@@ -142,7 +142,7 @@ function FleetCategoryFilterMenu({
                                 triggerRef.current?.focus();
                             }}
                             className={cn(
-                                'flex min-h-9 w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
+                                'flex min-h-9 w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
                                 categoryFilter === key
                                     ? 'bg-brand-soft font-semibold text-brand-strong'
                                     : 'text-ink hover:bg-surface-subtle',
@@ -225,7 +225,7 @@ export function FleetQueue({
                         value={searchQuery}
                         onChange={(e) => onSearchChange(e.target.value)}
                         placeholder="Search code, name, model, plate, category…"
-                        className="h-10 w-full rounded-lg border border-line-strong bg-surface-subtle pr-3 pl-9 text-sm text-ink placeholder:text-ink-soft focus:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                        className="h-10 w-full rounded-lg border border-line-strong bg-surface-subtle pr-3 pl-9 text-sm text-ink placeholder:text-ink-soft focus:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                     />
                 </label>
 

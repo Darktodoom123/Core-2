@@ -225,10 +225,10 @@ export const OutboxStatusSheet: React.FC<OutboxStatusSheetProps> = ({
                                     <Icon
                                         color={
                                             projection.counts.attention > 0
-                                                ? '#F59E0B'
+                                                ? '#FFBF00'
                                                 : isDarkHud
-                                                  ? '#FDE047'
-                                                  : '#D97706'
+                                                  ? '#FFBF00'
+                                                  : '#806000'
                                         }
                                         name="sync"
                                         size={20}
@@ -321,7 +321,7 @@ export const OutboxStatusSheet: React.FC<OutboxStatusSheetProps> = ({
                                 <View style={styles.syncingBadge}>
                                     <ActivityIndicator
                                         color={
-                                            isDarkHud ? '#F59E0B' : '#D97706'
+                                            isDarkHud ? '#FFBF00' : '#806000'
                                         }
                                         size="small"
                                     />
@@ -1013,7 +1013,7 @@ const OutboxItemCard: React.FC<OutboxItemCardProps> = ({
                 >
                     {isSyncing ? (
                         <ActivityIndicator
-                            color={isDarkHud ? '#F59E0B' : '#D97706'}
+                            color={isDarkHud ? '#FFBF00' : '#806000'}
                             size="small"
                         />
                     ) : null}
@@ -1121,7 +1121,7 @@ const OutboxItemCard: React.FC<OutboxItemCardProps> = ({
                     testID={`uncertain-outcome-banner-${item.id}`}
                 >
                     <Icon
-                        color={isDarkHud ? '#FBBF24' : '#D97706'}
+                        color={isDarkHud ? '#FFBF00' : '#806000'}
                         name="alert"
                         size={14}
                     />
@@ -1415,7 +1415,7 @@ const styles = StyleSheet.create({
     },
     headerIconContainer: {
         alignItems: 'center',
-        backgroundColor: 'rgba(217, 119, 6, 0.1)',
+        backgroundColor: 'rgba(255, 191, 0, 0.1)',
         borderRadius: 12,
         height: 38,
         justifyContent: 'center',
@@ -1465,12 +1465,12 @@ const styles = StyleSheet.create({
         borderColor: '#334155',
     },
     overviewCardAttention: {
-        backgroundColor: 'rgba(245, 158, 11, 0.06)',
-        borderColor: 'rgba(245, 158, 11, 0.3)',
+        backgroundColor: 'rgba(255, 191, 0, 0.06)',
+        borderColor: 'rgba(255, 191, 0, 0.3)',
     },
     darkOverviewCardAttention: {
-        backgroundColor: 'rgba(245, 158, 11, 0.1)',
-        borderColor: 'rgba(245, 158, 11, 0.4)',
+        backgroundColor: 'rgba(255, 191, 0, 0.1)',
+        borderColor: 'rgba(255, 191, 0, 0.4)',
     },
     overviewHeaderRow: {
         alignItems: 'center',
@@ -1492,7 +1492,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#10B981',
     },
     dotOffline: {
-        backgroundColor: '#F59E0B',
+        backgroundColor: '#FFBF00',
     },
     dotChecking: {
         backgroundColor: '#60A5FA',
@@ -1516,7 +1516,7 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     darkSyncingBadgeText: {
-        color: '#FBBF24',
+        color: '#FFBF00',
     },
     guidanceText: {
         color: colors.secondary,
@@ -1586,13 +1586,13 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
     },
     darkSyncNowBtn: {
-        backgroundColor: '#F59E0B',
+        backgroundColor: '#FFBF00',
     },
     syncNowBtnDisabled: {
         opacity: 0.5,
     },
     syncNowBtnText: {
-        color: '#FFFFFF',
+        color: '#0F172A',
         fontSize: 14,
         fontWeight: '700',
     },
@@ -1622,7 +1622,7 @@ const styles = StyleSheet.create({
     },
     darkFilterTabActive: {
         backgroundColor: '#334155',
-        borderColor: '#F59E0B',
+        borderColor: '#FFBF00',
         borderWidth: 1,
     },
     filterTabText: {
@@ -1634,7 +1634,7 @@ const styles = StyleSheet.create({
         color: '#94A3B8',
     },
     filterTabTextActive: {
-        color: colors.primary,
+        color: colors.amber,
         fontWeight: '700',
     },
     darkFilterTabTextActive: {
@@ -1663,7 +1663,7 @@ const styles = StyleSheet.create({
         color: '#94A3B8',
     },
     sectionHeaderAttention: {
-        color: '#D97706',
+        color: '#FFBF00',
     },
     itemCard: {
         backgroundColor: colors.surface,
@@ -1730,13 +1730,13 @@ const styles = StyleSheet.create({
         paddingVertical: 3,
     },
     badgeSyncing: {
-        backgroundColor: 'rgba(217, 119, 6, 0.12)',
+        backgroundColor: 'rgba(255, 191, 0, 0.12)',
     },
     badgeFailed: {
         backgroundColor: 'rgba(239, 68, 68, 0.12)',
     },
     badgeConflict: {
-        backgroundColor: 'rgba(245, 158, 11, 0.12)',
+        backgroundColor: 'rgba(255, 191, 0, 0.12)',
     },
     badgeCompleted: {
         backgroundColor: 'rgba(16, 185, 129, 0.12)',
@@ -1753,7 +1753,7 @@ const styles = StyleSheet.create({
         color: '#DC2626',
     },
     badgeTextConflict: {
-        color: '#D97706',
+        color: '#FFBF00',
     },
     badgeTextCompleted: {
         color: '#059669',
@@ -1775,7 +1775,7 @@ const styles = StyleSheet.create({
     },
     stageProgressBar: {
         alignItems: 'center',
-        backgroundColor: 'rgba(217, 119, 6, 0.08)',
+        backgroundColor: 'rgba(255, 191, 0, 0.08)',
         borderRadius: 6,
         flexDirection: 'row',
         gap: 8,
@@ -1784,10 +1784,10 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
     },
     darkStageProgressBar: {
-        backgroundColor: 'rgba(245, 158, 11, 0.15)',
+        backgroundColor: 'rgba(255, 191, 0, 0.15)',
     },
     stageDotActive: {
-        backgroundColor: '#D97706',
+        backgroundColor: '#FFBF00',
         borderRadius: 4,
         height: 6,
         width: 6,
@@ -1798,7 +1798,7 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     darkStageText: {
-        color: '#FBBF24',
+        color: '#FFBF00',
     },
     itemMetaRow: {
         alignItems: 'center',
@@ -1858,7 +1858,7 @@ const styles = StyleSheet.create({
         borderColor: '#F87171',
     },
     recaptureActionBtn: {
-        backgroundColor: '#D97706',
+        backgroundColor: '#FFBF00',
         flex: 1,
     },
     serverStateNotice: {
@@ -2105,8 +2105,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
-        backgroundColor: '#FEF3C7',
-        borderColor: '#FDE68A',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFF3C4',
         borderWidth: 1,
         borderRadius: 6,
         paddingHorizontal: 8,
@@ -2114,17 +2114,17 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     darkUncertainBanner: {
-        backgroundColor: 'rgba(245, 158, 11, 0.15)',
-        borderColor: 'rgba(245, 158, 11, 0.3)',
+        backgroundColor: 'rgba(255, 191, 0, 0.15)',
+        borderColor: 'rgba(255, 191, 0, 0.3)',
     },
     uncertainBannerText: {
-        color: '#B45309',
+        color: '#806000',
         fontSize: 12,
         fontWeight: '600',
         flex: 1,
     },
     darkUncertainBannerText: {
-        color: '#FDE047',
+        color: '#FFBF00',
     },
     discardBlockNotice: {
         flexDirection: 'row',

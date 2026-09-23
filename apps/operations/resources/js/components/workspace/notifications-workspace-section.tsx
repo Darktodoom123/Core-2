@@ -238,7 +238,7 @@ export function NotificationsSurface({
                                         className={cn(
                                             'inline-flex min-h-11 min-w-11 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
                                             categoryFilter === cat.id
-                                                ? 'bg-brand-strong text-white shadow-sm'
+                                                ? 'bg-brand-strong text-white dark:text-brand-contrast shadow-sm'
                                                 : 'bg-surface-subtle text-ink-soft hover:bg-surface-subtle/80 hover:text-ink',
                                         )}
                                     >
@@ -310,7 +310,7 @@ export function NotificationsSurface({
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder="Search notifications by keyword or reference…"
-                                className="h-11 w-full rounded-lg border border-line bg-surface pr-14 pl-8 text-xs text-ink placeholder:text-ink-soft focus:border-brand focus:outline-none"
+                                className="h-11 w-full rounded-lg border border-line bg-surface pr-14 pl-8 text-xs text-ink placeholder:text-ink-soft focus:border-brand-strong focus:outline-none"
                             />
                             {searchQuery !== '' && (
                                 <button
@@ -395,7 +395,7 @@ export function NotificationsSurface({
                                                                 );
                                                             }
                                                         }}
-                                                        className="cursor-pointer rounded focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                                                        className="cursor-pointer rounded focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none"
                                                     >
                                                         <div className="flex flex-wrap items-center gap-2">
                                                             <span className="font-semibold text-ink group-hover:text-brand-strong">

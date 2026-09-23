@@ -496,7 +496,7 @@ export function FleetInspectionsSection({
                                     );
                                 }}
                                 aria-invalid={Boolean(form.errors.type)}
-                                className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                             >
                                 <option value="">Select inspection type</option>
                                 <option value="post_repair">
@@ -528,7 +528,7 @@ export function FleetInspectionsSection({
                                     );
                                 }}
                                 aria-invalid={Boolean(form.errors.result)}
-                                className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                             >
                                 <option value="">Select result</option>
                                 <option value="passed">Passed</option>
@@ -634,7 +634,7 @@ export function FleetInspectionsSection({
                                     })
                                 }
                                 className={cn(
-                                    'min-h-11 rounded-lg border px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-hidden',
+                                    'min-h-11 rounded-lg border px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:ring-offset-2 focus-visible:outline-hidden',
                                     selectedSource === source
                                         ? 'border-brand-strong bg-brand-soft text-brand-strong'
                                         : 'border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
@@ -703,7 +703,7 @@ export function FleetInspectionsSection({
                                             });
                                         }}
                                         className={cn(
-                                            'min-h-11 rounded-lg border px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-hidden',
+                                            'min-h-11 rounded-lg border px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:ring-offset-2 focus-visible:outline-hidden',
                                             dvirFilter === value
                                                 ? 'border-brand-strong bg-brand-soft text-brand-strong'
                                                 : 'border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
@@ -851,7 +851,7 @@ export function FleetInspectionsSection({
                                             >
                                                 <button
                                                     type="button"
-                                                    className="flex min-h-16 w-full items-center justify-between gap-4 px-4 py-3 text-left transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden focus-visible:ring-inset"
+                                                    className="flex min-h-16 w-full items-center justify-between gap-4 px-4 py-3 text-left transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden focus-visible:ring-inset"
                                                     aria-expanded={expanded}
                                                     aria-controls={detailId}
                                                     onClick={() =>

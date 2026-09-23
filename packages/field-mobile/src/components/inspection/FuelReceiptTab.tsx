@@ -543,7 +543,7 @@ const styles = StyleSheet.create({
     },
     actionButton: {
         alignItems: 'center',
-        backgroundColor: colors.amber,
+        backgroundColor: colors.primary,
         borderRadius: 10,
         flexDirection: 'row',
         gap: 8,
@@ -660,8 +660,8 @@ const styles = StyleSheet.create({
         paddingVertical: 3,
     },
     darkCostBadge: {
-        backgroundColor: 'rgba(245, 158, 11, 0.15)',
-        borderColor: '#F59E0B',
+        backgroundColor: 'rgba(255, 191, 0, 0.15)',
+        borderColor: '#FFBF00',
     },
     logCost: {
         color: colors.amberDark,

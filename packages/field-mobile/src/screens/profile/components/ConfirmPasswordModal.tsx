@@ -93,8 +93,8 @@ export const ConfirmPasswordModal: React.FC<ConfirmPasswordModalProps> = ({
                                     isDestructive
                                         ? '#EF4444'
                                         : isDarkHud
-                                          ? '#F59E0B'
-                                          : '#D97706'
+                                          ? '#FFBF00'
+                                          : '#806000'
                                 }
                                 name="lock"
                                 size={22}
@@ -284,10 +284,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     lightIconWrap: {
-        backgroundColor: '#FEF3C7',
+        backgroundColor: '#FFF3C4',
     },
     darkIconWrap: {
-        backgroundColor: '#78350F',
+        backgroundColor: '#332800',
     },
     iconWrapDanger: {
         backgroundColor: '#FEE2E2',
@@ -392,10 +392,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     lightSubmitBtn: {
-        backgroundColor: '#D97706',
+        backgroundColor: '#FFBF00',
     },
     darkSubmitBtn: {
-        backgroundColor: '#F59E0B',
+        backgroundColor: '#FFBF00',
     },
     destructiveBtn: {
         backgroundColor: '#DC2626',

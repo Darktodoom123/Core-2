@@ -266,7 +266,7 @@ export function FuelSurface({
                                     aria-pressed={filterStatus === 'all'}
                                     onClick={() => setFilterStatus('all')}
                                     className={cn(
-                                        'inline-flex min-h-8 items-center rounded-lg px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
+                                        'inline-flex min-h-8 items-center rounded-lg px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
                                         filterStatus === 'all'
                                             ? 'bg-ink font-semibold text-canvas'
                                             : 'border border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
@@ -282,7 +282,7 @@ export function FuelSurface({
                                     aria-pressed={filterStatus === 'pending'}
                                     onClick={() => setFilterStatus('pending')}
                                     className={cn(
-                                        'inline-flex min-h-8 items-center rounded-lg px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
+                                        'inline-flex min-h-8 items-center rounded-lg px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
                                         filterStatus === 'pending'
                                             ? 'border border-warning/50 bg-warning-soft font-semibold text-warning-strong'
                                             : 'border border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
@@ -298,9 +298,9 @@ export function FuelSurface({
                                     aria-pressed={filterStatus === 'approved'}
                                     onClick={() => setFilterStatus('approved')}
                                     className={cn(
-                                        'inline-flex min-h-8 items-center rounded-lg px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
+                                        'inline-flex min-h-8 items-center rounded-lg px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
                                         filterStatus === 'approved'
-                                            ? 'border border-brand/50 bg-brand-soft font-semibold text-brand-strong'
+                                            ? 'border border-brand-strong/50 bg-brand-soft font-semibold text-brand-strong'
                                             : 'border border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
                                     )}
                                 >
@@ -314,9 +314,9 @@ export function FuelSurface({
                                     aria-pressed={filterStatus === 'verified'}
                                     onClick={() => setFilterStatus('verified')}
                                     className={cn(
-                                        'inline-flex min-h-8 items-center rounded-lg px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
+                                        'inline-flex min-h-8 items-center rounded-lg px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
                                         filterStatus === 'verified'
-                                            ? 'border border-brand/50 bg-brand-soft font-semibold text-brand-strong'
+                                            ? 'border border-brand-strong/50 bg-brand-soft font-semibold text-brand-strong'
                                             : 'border border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
                                     )}
                                 >
@@ -330,7 +330,7 @@ export function FuelSurface({
                                     aria-pressed={filterStatus === 'logged'}
                                     onClick={() => setFilterStatus('logged')}
                                     className={cn(
-                                        'inline-flex min-h-8 items-center rounded-lg px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
+                                        'inline-flex min-h-8 items-center rounded-lg px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
                                         filterStatus === 'logged'
                                             ? 'border border-success/50 bg-success-soft font-semibold text-success-strong'
                                             : 'border border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
@@ -346,7 +346,7 @@ export function FuelSurface({
                                     aria-pressed={filterStatus === 'anomalies'}
                                     onClick={() => setFilterStatus('anomalies')}
                                     className={cn(
-                                        'inline-flex min-h-8 items-center rounded-lg px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
+                                        'inline-flex min-h-8 items-center rounded-lg px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
                                         filterStatus === 'anomalies'
                                             ? 'border border-danger/50 bg-danger-soft font-semibold text-danger-strong'
                                             : kpis.anomalies > 0
@@ -375,7 +375,7 @@ export function FuelSurface({
                                         setSearchQuery(e.target.value)
                                     }
                                     placeholder="Search reference, asset, requester, purpose…"
-                                    className="h-9 w-full rounded-lg border border-line bg-surface pr-3 pl-9 text-xs text-ink transition-colors placeholder:text-ink-soft focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-hidden"
+                                    className="h-9 w-full rounded-lg border border-line bg-surface pr-3 pl-9 text-xs text-ink transition-colors placeholder:text-ink-soft focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong/30 focus-visible:outline-hidden"
                                 />
                             </label>
                         </div>
@@ -384,7 +384,7 @@ export function FuelSurface({
                         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-surface-subtle px-4 py-2.5 text-xs">
                             <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
                                 <div className="flex items-center gap-1.5">
-                                    <Droplets className="h-3.5 w-3.5 text-brand" />
+                                    <Droplets className="h-3.5 w-3.5 text-brand-strong" />
                                     <span className="text-ink-soft">
                                         <span>Requested Litres</span>:
                                     </span>
@@ -505,7 +505,7 @@ export function FuelSurface({
                                             )
                                         </span>
                                         {filterStatus !== 'all' && (
-                                            <span className="text-xs font-medium text-brand capitalize">
+                                            <span className="text-xs font-medium text-brand-strong capitalize">
                                                 {filterStatus}
                                             </span>
                                         )}
@@ -537,7 +537,7 @@ export function FuelSurface({
                                                             )
                                                         }
                                                         className={cn(
-                                                            'w-full rounded-lg border p-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden focus-visible:ring-inset',
+                                                            'w-full rounded-lg border p-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden focus-visible:ring-inset',
                                                             isSelected
                                                                 ? 'border-brand-strong bg-brand-soft/25 ring-1 ring-brand-strong'
                                                                 : hasAnomaly
@@ -579,7 +579,7 @@ export function FuelSurface({
                                                         {/* Middle: Asset & Requester */}
                                                         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
                                                             <div className="flex items-center gap-1 font-medium text-ink">
-                                                                <Truck className="h-3 w-3 text-brand" />
+                                                                <Truck className="h-3 w-3 text-brand-strong" />
                                                                 <span>
                                                                     {req.asset
                                                                         ? req

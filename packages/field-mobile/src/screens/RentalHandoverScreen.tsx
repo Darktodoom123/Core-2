@@ -306,8 +306,8 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
                         color={
                             isCheckout
                                 ? isDarkHud
-                                    ? '#F59E0B'
-                                    : '#B45309'
+                                    ? '#FFBF00'
+                                    : '#806000'
                                 : isDarkHud
                                   ? colors.hudTextDim
                                   : colors.muted
@@ -349,8 +349,8 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
                         color={
                             !isCheckout
                                 ? isDarkHud
-                                    ? '#F59E0B'
-                                    : '#B45309'
+                                    ? '#FFBF00'
+                                    : '#806000'
                                 : isDarkHud
                                   ? colors.hudTextDim
                                   : colors.muted
@@ -857,8 +857,8 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
                                         ? '#34D399'
                                         : colors.greenDark
                                     : isDarkHud
-                                      ? '#F59E0B'
-                                      : '#B45309'
+                                      ? '#FFBF00'
+                                      : '#806000'
                             }
                             name={
                                 signatureCaptured ? 'check-circle' : 'signature'
@@ -919,7 +919,7 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
                                         : colors.blue
                                     : activeSyncStatus === 'queued'
                                       ? isDarkHud
-                                          ? '#FCD34D'
+                                          ? '#FFBF00'
                                           : colors.amberDark
                                       : activeSyncStatus === 'success'
                                         ? isDarkHud
@@ -1075,8 +1075,8 @@ const styles = StyleSheet.create({
         paddingVertical: 4,
     },
     reservationPillDark: {
-        backgroundColor: 'rgba(245, 158, 11, 0.2)',
-        borderColor: 'rgba(245, 158, 11, 0.4)',
+        backgroundColor: 'rgba(255, 191, 0, 0.2)',
+        borderColor: 'rgba(255, 191, 0, 0.4)',
     },
     reservationPillText: {
         color: colors.amberDark,
@@ -1084,7 +1084,7 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     reservationPillTextDark: {
-        color: '#FDE68A',
+        color: '#FFBF00',
     },
     modeTabs: {
         backgroundColor: colors.surface,
@@ -1115,8 +1115,8 @@ const styles = StyleSheet.create({
         backgroundColor: colors.amberLight,
     },
     modeTabActiveDark: {
-        backgroundColor: 'rgba(245, 158, 11, 0.25)',
-        borderColor: 'rgba(245, 158, 11, 0.5)',
+        backgroundColor: 'rgba(255, 191, 0, 0.25)',
+        borderColor: 'rgba(255, 191, 0, 0.5)',
         borderWidth: 1,
     },
     modeTabText: {
@@ -1132,7 +1132,7 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     modeTabTextActiveDark: {
-        color: '#FDE68A',
+        color: '#FFBF00',
         fontWeight: '700',
     },
     scrollContent: {
@@ -1198,11 +1198,11 @@ const styles = StyleSheet.create({
     },
     assetSelectorOptionSelected: {
         backgroundColor: colors.amberLight,
-        borderColor: colors.amber,
+        borderColor: colors.primaryBorder,
     },
     assetSelectorOptionSelectedDark: {
-        backgroundColor: 'rgba(245, 158, 11, 0.16)',
-        borderColor: colors.amber,
+        backgroundColor: 'rgba(255, 191, 0, 0.16)',
+        borderColor: colors.primaryBorder,
     },
     assetSelectorCopy: {
         flex: 1,
@@ -1214,7 +1214,7 @@ const styles = StyleSheet.create({
         fontWeight: '800',
     },
     assetSelectorCodeDark: {
-        color: '#FDE68A',
+        color: '#FFBF00',
     },
     assetSelectorName: {
         color: colors.text,
@@ -1235,10 +1235,10 @@ const styles = StyleSheet.create({
         width: 20,
     },
     assetSelectorRadioSelected: {
-        borderColor: colors.amber,
+        borderColor: colors.primaryBorder,
     },
     assetSelectorRadioInner: {
-        backgroundColor: colors.amber,
+        backgroundColor: colors.primary,
         borderRadius: 5,
         height: 10,
         width: 10,
@@ -1270,7 +1270,7 @@ const styles = StyleSheet.create({
         fontWeight: '800',
     },
     assetCodeDark: {
-        color: '#FDE68A',
+        color: '#FFBF00',
     },
     doleBadge: {
         alignItems: 'center',
@@ -1456,8 +1456,8 @@ const styles = StyleSheet.create({
         padding: 12,
     },
     signatureBtnDark: {
-        backgroundColor: 'rgba(245, 158, 11, 0.2)',
-        borderColor: 'rgba(245, 158, 11, 0.45)',
+        backgroundColor: 'rgba(255, 191, 0, 0.2)',
+        borderColor: 'rgba(255, 191, 0, 0.45)',
     },
     signatureBtnDone: {
         backgroundColor: colors.greenLight,
@@ -1473,7 +1473,7 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     signatureBtnTextDark: {
-        color: '#FDE68A',
+        color: '#FFBF00',
     },
     signatureBtnTextDone: {
         color: colors.greenDark,
@@ -1483,7 +1483,7 @@ const styles = StyleSheet.create({
     },
     confirmBtn: {
         alignItems: 'center',
-        backgroundColor: colors.amber,
+        backgroundColor: colors.primary,
         borderRadius: 12,
         flexDirection: 'row',
         gap: 8,
@@ -1494,14 +1494,14 @@ const styles = StyleSheet.create({
         ...shadows.md,
     },
     confirmBtnDark: {
-        backgroundColor: colors.amber,
-        borderColor: 'rgba(245, 158, 11, 0.5)',
+        backgroundColor: colors.primary,
+        borderColor: 'rgba(255, 191, 0, 0.5)',
         borderWidth: 1,
         elevation: 0,
         shadowOpacity: 0,
     },
     confirmBtnText: {
-        color: '#FFFFFF',
+        color: '#0F172A',
         fontSize: 14,
         fontWeight: '800',
         letterSpacing: 0.3,
@@ -1543,12 +1543,12 @@ const styles = StyleSheet.create({
         borderColor: '#3B82F6',
     },
     syncBannerQueued: {
-        backgroundColor: '#FFFBEB',
-        borderColor: '#FDE68A',
+        backgroundColor: '#FFF3C4',
+        borderColor: '#FFF3C4',
     },
     syncBannerQueuedDark: {
-        backgroundColor: '#451A03',
-        borderColor: '#D97706',
+        backgroundColor: '#332800',
+        borderColor: '#FFBF00',
     },
     syncBannerSuccess: {
         backgroundColor: '#ECFDF5',
@@ -1588,13 +1588,13 @@ const styles = StyleSheet.create({
     },
     syncRetryButton: {
         alignSelf: 'center',
-        backgroundColor: colors.amber,
+        backgroundColor: colors.primary,
         borderRadius: 6,
         paddingHorizontal: 12,
         paddingVertical: 6,
     },
     syncRetryButtonText: {
-        color: '#FFFFFF',
+        color: '#0F172A',
         fontSize: 12,
         fontWeight: '700',
     },

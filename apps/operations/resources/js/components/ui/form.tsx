@@ -45,7 +45,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
                 'flex min-h-11 w-full rounded-lg border bg-surface px-3.5 py-2 text-sm text-ink placeholder:text-ink-soft/70 transition-colors duration-150 file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-50',
                 error
                     ? 'border-danger focus-visible:outline-danger text-danger'
-                    : 'border-line hover:border-line-strong focus:border-brand',
+                    : 'border-line hover:border-line-strong focus:border-brand-strong',
                 className,
             )}
             aria-invalid={Boolean(error)}
@@ -68,7 +68,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
                 'flex min-h-[88px] w-full rounded-lg border bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-soft/70 transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-50',
                 error
                     ? 'border-danger focus-visible:outline-danger text-danger'
-                    : 'border-line hover:border-line-strong focus:border-brand',
+                    : 'border-line hover:border-line-strong focus:border-brand-strong',
                 className,
             )}
             aria-invalid={Boolean(error)}
@@ -90,7 +90,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
                 'flex min-h-11 w-full rounded-lg border bg-surface px-3.5 py-2 text-sm text-ink transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-50',
                 error
                     ? 'border-danger focus-visible:outline-danger text-danger'
-                    : 'border-line hover:border-line-strong focus:border-brand',
+                    : 'border-line hover:border-line-strong focus:border-brand-strong',
                 className,
             )}
             aria-invalid={Boolean(error)}

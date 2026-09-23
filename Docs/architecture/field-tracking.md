@@ -58,7 +58,7 @@ The tracking system enforces strict conceptual separation between three orthogon
 
 1. **Thresholds & Badges**:
    - **$\le$ 180 seconds (3 minutes)**: `Fresh` (green indicator).
-   - **> 180 seconds**: `Location not current` (amber badge).
+   - **> 180 seconds**: `Location not current` (gold badge).
    - **No telemetry / Cleared coordinates**: `No GPS report` (neutral zinc badge).
    - **Sharing explicitly disabled by operator**: `Sharing paused`.
 
@@ -70,7 +70,7 @@ The tracking system enforces strict conceptual separation between three orthogon
 
 3. **Non-Color Visual Cues**:
    - Outdated positions display an accessible `Clock3` icon alongside badges.
-   - Tracking previews apply dashed amber borders (`border-dashed border-amber-400/40`) to highlight stale positions without relying solely on color perception (WCAG 2.2 AA compliant).
+   - Tracking previews apply dashed orange/amber borders to highlight stale positions without relying solely on color perception (WCAG 2.2 AA compliant).
    - Always display `"Last updated [time ago]"` and the exact captured timestamp (`HH:mm:ss`) in details view.
 
 ---
