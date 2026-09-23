@@ -1,4 +1,5 @@
 import { Link } from '@inertiajs/react';
+import { useId } from 'react';
 import { humanize } from '@/lib/formatters';
 import type { AssetViewModel, DispatchJobViewModel } from '@/types/workspace';
 
@@ -11,6 +12,7 @@ export function DispatchResourceSummary({
     assets: AssetViewModel[];
     assignmentHref: string;
 }) {
+    const summaryId = useId();
     const accepted = job.personnel_assignments.filter(
         (person) => person.response_status.value === 'accepted',
     ).length;
@@ -25,12 +27,12 @@ export function DispatchResourceSummary({
     return (
         <section
             className="space-y-5 border-b border-line px-4 py-5 md:px-5"
-            aria-labelledby="dispatch-resources-heading"
+            aria-labelledby={`${summaryId}-heading`}
         >
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h3
-                        id="dispatch-resources-heading"
+                        id={`${summaryId}-heading`}
                         className="text-base font-semibold text-ink"
                     >
                         Crew &amp; equipment
@@ -66,14 +68,16 @@ export function DispatchResourceSummary({
                 {requirements.length > 0 && (
                     <ul className="mt-3 list-disc space-y-1 pl-5">
                         {requirements.map((requirement) => (
-                            <li key={requirement}>{requirement}</li>
+                            <li key={requirement} className="break-words">
+                                {requirement}
+                            </li>
                         ))}
                     </ul>
                 )}
             </div>
-            <section aria-labelledby="assigned-personnel-heading">
+            <section aria-labelledby={`${summaryId}-personnel-heading`}>
                 <h4
-                    id="assigned-personnel-heading"
+                    id={`${summaryId}-personnel-heading`}
                     className="text-sm font-semibold text-ink"
                 >
                     Assigned personnel
@@ -99,9 +103,9 @@ export function DispatchResourceSummary({
                     ))}
                 </ul>
             </section>
-            <section aria-labelledby="assigned-equipment-heading">
+            <section aria-labelledby={`${summaryId}-equipment-heading`}>
                 <h4
-                    id="assigned-equipment-heading"
+                    id={`${summaryId}-equipment-heading`}
                     className="text-sm font-semibold text-ink"
                 >
                     Assigned equipment
@@ -137,7 +141,7 @@ export function DispatchResourceSummary({
                                             assignment.type,
                                     )}
                                 </p>
-                                <p className="text-sm text-ink">
+                                <p className="text-sm break-words text-ink">
                                     <span className="text-ink-soft">
                                         Current operator:{' '}
                                     </span>

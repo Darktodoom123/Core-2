@@ -268,6 +268,12 @@ describe('dispatch resources', () => {
             screen.getByRole('heading', { name: 'People & assets' }),
         ).toBeInTheDocument();
         expect(
+            screen.getByRole('region', { name: 'Crew & equipment' }),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByRole('region', { name: 'People & assets' }),
+        ).toBeInTheDocument();
+        expect(
             screen.getByRole('heading', { name: 'Assigned personnel' }),
         ).toBeInTheDocument();
         expect(

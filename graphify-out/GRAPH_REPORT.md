@@ -1,17 +1,17 @@
 # Graph Report - Core-2  (2026-09-23)
 
 ## Corpus Check
-- 1379 files · ~1,686,857 words
+- 1379 files · ~1,686,984 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 50 file(s) not represented in the graph (top: (none) 30, .xml 4, .excalidraw 3)
 
 ## Summary
-- 8420 nodes · 25451 edges · 346 communities (215 shown, 131 thin omitted)
+- 8420 nodes · 25452 edges · 346 communities (215 shown, 131 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 687 edges (avg confidence: 0.92)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `bd4fea4a`
+- Built from commit: `ebe3b2ca`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -1198,9 +1198,9 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `Architecture` connect `Architecture` to `Illuminate\Support\Collection`, `CreateDvirInspectionAction`, `ui.tsx`, `Illuminate\Database\Eloquent\Relations\BelongsTo`, `OperatorDutyLog`, `OperationalAsset`, `User`, `cn`?**
   _High betweenness centrality (0.162) - this node is a cross-community bridge._
 - **Why does `User` connect `User` to `.carbon`, `SalesOrder`, `UserFactory`, `DispatchExecutionAttempt`, `Illuminate\Database\Eloquent\Relations\BelongsTo`, `Illuminate\Http\Request`, `Throwable`, `OperatorDutyLog`, `DispatchV2Mutation`, `DispatchJob`, `Illuminate\Foundation\Http\FormRequest`, `DispatchV2Authorization`, `operations/bootstrap/app.php`, `Controller`, `OperationalAsset`, `GenerateGptRecommendationJob`, `Illuminate\Support\Facades\DB`, `BoundedContextBuilder`, `PersonnelCredential`, `Illuminate\Bus\Queueable`, `PlanningAccess`, `Username`, `1. Authoritative repository verification & documentation discrepancy`, `ReportExport`, `Illuminate\Support\Collection`, `DispatchV2CommandException`, `DispatchAssignmentOffer`, `Core Transaction 2 — HTTP API`, `RecordRentalHandoverEvidence`, `DutyStatus`, `Illuminate\Support\Facades\Route`, `Symfony\Component\HttpFoundation\Response`, `GenerateGptRecommendation`, `PushPayload`, `TrackingClientInterface`, `SosEmergencyContact`, `DispatchHandoff`, `OpenAiClientWrapper`, `GptRecommendationTransition`, `CreateDvirInspectionAction`, `SosIncident`, `DispatchPlanVersion`, `ReportExportPolicy`, `ProjectShiftService`, `EmailOtpMail`, `HttpTrackingClient`, `GptRecommendation`, `SosIncidentController.php`, `ListDispatchCandidatesRequest`, `Source and Ownership`, `Operational resource coverage`, `ReassignDispatchResources`, `DispatchJobV2Controller`, `ProjectPlan`, `AssignDispatchResources`, `RoleName`, `Authentication, Device Trust & Disaster Recovery Architecture`, `DispatchEmergencyOverride`, `ProjectShift`, `PushDelivery`, `Illuminate\Http\JsonResponse`, `HosShiftConcurrencyTest.php`, `DispatchOutboxMessage`, `WorkspaceUpdated`, `DispatchLeadCommandService`, `RecordAuditEvent`, `StorageFallbackServiceInterface`?**
-  _High betweenness centrality (0.132) - this node is a cross-community bridge._
+  _High betweenness centrality (0.131) - this node is a cross-community bridge._
 - **Why does `FieldApiClient` connect `FieldApiClient` to `OutboxCommand`, `useTheme`, `Microservice restructuring progress`, `AppNavigator.tsx`, `ProfileScreen.tsx`, `test-integration-services.ts`, `app.component.test.tsx`, `DvirScreen.tsx`, `DocumentsWalletScreen.tsx`, `src/types/index.ts`?**
-  _High betweenness centrality (0.129) - this node is a cross-community bridge._
+  _High betweenness centrality (0.125) - this node is a cross-community bridge._
 - **Are the 2 inferred relationships involving `RecordAuditEvent` (e.g. with `Tier 1: Dual-Custody Administrator Recovery (Web UI)` and `3.2 Automated Offboarding & Emergency Kill-Switch`) actually correct?**
   _`RecordAuditEvent` has 2 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `$schema`, `project`, `version` to the rest of the system?**

@@ -54566,7 +54566,7 @@
       "file_type": "code",
       "norm_label": "dispatchresourcesummary()",
       "source_file": "apps/operations/resources/js/components/workspace/dispatch-desk/dispatch-resource-summary.tsx",
-      "source_location": "L5"
+      "source_location": "L6"
     },
     {
       "id": "apps_operations_resources_js_components_workspace_dispatch_gpt_advisory_assignmentworkspaceurl",
@@ -121159,7 +121159,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/workspace/dispatch-desk/dispatch-resource-summary.tsx",
-      "source_location": "L92",
+      "source_location": "L96",
       "weight": 1.0
     },
     {
@@ -199638,7 +199638,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/operations/resources/js/components/workspace/dispatch-desk/dispatch-resource-summary.tsx",
-      "source_location": "L2",
+      "source_location": "L3",
       "weight": 1.0
     },
     {
@@ -199650,7 +199650,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/operations/resources/js/components/workspace/dispatch-desk/dispatch-resource-summary.tsx",
-      "source_location": "L3",
+      "source_location": "L4",
       "weight": 1.0
     },
     {
@@ -199662,7 +199662,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/operations/resources/js/components/workspace/dispatch-desk/dispatch-resource-summary.tsx",
-      "source_location": "L3",
+      "source_location": "L4",
       "weight": 1.0
     },
     {
@@ -253754,7 +253754,7 @@
     },
     {
       "source": "apps_operations_resources_js_components_workspace_dispatch_desk_dispatch_resource_summary",
-      "target": "apps_operations_resources_js_lib_formatters",
+      "target": "ref_react",
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -253766,7 +253766,7 @@
     },
     {
       "source": "apps_operations_resources_js_components_workspace_dispatch_desk_dispatch_resource_summary",
-      "target": "apps_operations_resources_js_types_workspace",
+      "target": "apps_operations_resources_js_lib_formatters",
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -253774,6 +253774,18 @@
       "context": "import",
       "source_file": "apps/operations/resources/js/components/workspace/dispatch-desk/dispatch-resource-summary.tsx",
       "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_operations_resources_js_components_workspace_dispatch_desk_dispatch_resource_summary",
+      "target": "apps_operations_resources_js_types_workspace",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/operations/resources/js/components/workspace/dispatch-desk/dispatch-resource-summary.tsx",
+      "source_location": "L4",
       "type_only": true,
       "weight": 1.0
     },
@@ -326014,7 +326026,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/operations/resources/js/components/workspace/dispatch-desk/dispatch-resource-summary.tsx",
-      "source_location": "L5",
+      "source_location": "L6",
       "weight": 1.0
     },
     {
@@ -398346,5 +398358,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "bd4fea4a62e0f3900fce181306bd0d83957ec552"
+  "built_at_commit": "ebe3b2caa98afa8e143f718dd9c7d63fb7e0e953"
 }

@@ -17,6 +17,11 @@ test('office users inspect people and assets and review AI before applying', asy
     await page.goto(
         `/?view=dispatch&dispatch_date=${key}&dispatch_q=R6-BROWSER-006`,
     );
+    const summary = page.getByRole('region', { name: 'Crew & equipment' });
+    await expect(summary).toBeVisible({ timeout: 20_000 });
+    await expect(
+        summary.getByRole('link', { name: 'Review assignments' }),
+    ).toBeVisible();
     await expect(
         page.getByRole('heading', { name: 'Assigned personnel' }),
     ).toBeVisible({ timeout: 20_000 });
@@ -87,9 +92,24 @@ test('office users inspect people and assets and review AI before applying', asy
     await page
         .getByRole('button', { name: 'People & assets', exact: true })
         .click();
+    await page
+        .getByRole('complementary', { name: 'Dispatch list' })
+        .getByRole('button', { name: /R6-BROWSER-006/ })
+        .click();
+    await expect(summary).toBeVisible();
+    const summarySize = await summary.evaluate((element) => ({
+        width: element.clientWidth,
+        scroll: element.scrollWidth,
+    }));
+    expect(summarySize.scroll).toBeLessThanOrEqual(summarySize.width + 1);
+    expect(
+        await summary
+            .getByRole('link', { name: 'Review assignments' })
+            .evaluate((element) => element.getBoundingClientRect().height),
+    ).toBeGreaterThanOrEqual(44);
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page
-        .getByRole('link', { name: 'AI assistance', exact: true })
+        .getByRole('button', { name: 'AI assistance', exact: true })
         .click();
     const advisory = page.getByRole('region', {
         name: 'AI assistance',
@@ -97,18 +117,14 @@ test('office users inspect people and assets and review AI before applying', asy
     });
     await expect(advisory).toBeVisible();
     await expect(
-        advisory.getByRole('button', {
-            name: /Review (& apply suggestion|advisory)/,
-        }),
+        advisory.getByRole('button', { name: 'Review details' }),
     ).toBeVisible();
-    await advisory
-        .getByRole('button', { name: /Review (& apply suggestion|advisory)/ })
-        .click();
+    await advisory.getByRole('button', { name: 'Review details' }).click();
     await expect(
         page.getByRole('dialog', { name: 'Review crew & equipment' }),
     ).toBeVisible();
     await expect(
-        page.getByRole('button', { name: 'Confirm & Apply Resource Plan' }),
+        page.getByRole('button', { name: /Confirm & Apply/ }),
     ).toBeVisible();
     await page
         .getByRole('dialog')
