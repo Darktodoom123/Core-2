@@ -132,6 +132,8 @@ Desktop.ini
 /scratch/
 /.lighthouseci/
 /.clinic/
+__pycache__/
+*.py[cod]
 *.tmp
 *.temp
 *.bak
