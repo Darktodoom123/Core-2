@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { Search, Truck, Users } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { localDateKey } from '@/lib/date-utils';
 import { humanize, formatDateTime } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import type {
@@ -75,7 +76,19 @@ export function DispatchResources({
 }) {
     const [kind, setKind] = useState<'people' | 'assets'>('people');
     const [query, setQuery] = useState('');
-    const [date, setDate] = useState(initialDate);
+    const jobDate = selectedJob?.scheduled_start
+        ? localDateKey(new Date(selectedJob.scheduled_start))
+        : null;
+    const defaultDate = jobDate ?? initialDate;
+    const dateContext = `${selectedJob?.id ?? 'none'}:${defaultDate}`;
+    const [dateSelection, setDateSelection] = useState<{
+        context: string;
+        value: string;
+    } | null>(null);
+    const date =
+        dateSelection?.context === dateContext
+            ? dateSelection.value
+            : defaultDate;
     const rows = useMemo(() => {
         const people = users
             .filter(
@@ -167,13 +180,21 @@ export function DispatchResources({
                         value={date}
                         onChange={(event) => {
                             if (event.target.value) {
-                                setDate(event.target.value);
+                                setDateSelection({
+                                    context: dateContext,
+                                    value: event.target.value,
+                                });
                             }
                         }}
                         className="mt-1 block min-h-11 rounded-lg border border-line bg-surface px-3 text-sm text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                     />
                 </label>
             </div>
+            {jobDate && date !== jobDate && (
+                <p className="mt-2 text-xs font-medium text-warning-strong">
+                    This resource date differs from the selected dispatch date.
+                </p>
+            )}
             {selectedJob ? (
                 <div className="mt-3 rounded-lg border border-line bg-surface-subtle p-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">

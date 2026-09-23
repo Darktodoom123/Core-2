@@ -517,7 +517,7 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         const fixtures = browserFixtures();
 
         await signIn(page, fixtures.users.dispatcher, fixtures.password);
-        await page.goto('/?view=dispatch');
+        await page.goto('/?view=dispatch&dispatch_workspace=classic');
         await page.getByRole('button', { name: /R6-BROWSER-004/ }).click();
 
         await expect(
@@ -554,7 +554,7 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         const fixtures = browserFixtures();
 
         await signIn(page, fixtures.users.dispatcher, fixtures.password);
-        await page.goto('/?section=dispatch', {
+        await page.goto('/?section=dispatch&dispatch_workspace=classic', {
             waitUntil: 'domcontentloaded',
         });
         await page.getByRole('button', { name: 'Schedule board' }).click();
@@ -608,7 +608,9 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         const fixtures = browserFixtures();
 
         await signIn(page, fixtures.users.dispatcher, fixtures.password);
-        await page.goto('/?view=dispatch', { waitUntil: 'domcontentloaded' });
+        await page.goto('/?view=dispatch&dispatch_workspace=classic', {
+            waitUntil: 'domcontentloaded',
+        });
         await page.getByRole('button', { name: 'Schedule board' }).click();
 
         const board = page.getByRole('region', {
@@ -834,7 +836,7 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         const fixtures = browserFixtures();
 
         await signIn(page, fixtures.users.dispatcher, fixtures.password);
-        await page.goto('/?view=dispatch');
+        await page.goto('/?view=dispatch&dispatch_workspace=classic');
         await page.getByRole('button', { name: /R6-BROWSER-001/ }).click();
 
         const assignResources = page
@@ -845,7 +847,7 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await expect(assignResources).toBeVisible();
         await expect(assignResources).toHaveAttribute(
             'href',
-            /return_to=%2F%3Fview%3Ddispatch/,
+            /return_to=%2F%3Fdispatch_workspace%3Dclassic%26view%3Ddispatch/,
         );
         await assignResources.click();
         await expect(
@@ -857,7 +859,8 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await page
             .getByRole('link', { name: 'Back to dispatch workspace' })
             .click();
-        await expect(page).toHaveURL(/\/\?view=dispatch$/);
+        await expect(page).toHaveURL(/dispatch_workspace=classic/);
+        await expect(page).toHaveURL(/view=dispatch/);
     });
 
     test('operational attention presents a prioritized, filterable action queue', async ({
@@ -866,7 +869,7 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         const fixtures = browserFixtures();
 
         await signIn(page, fixtures.users.dispatcher, fixtures.password);
-        await page.goto('/?view=dispatch');
+        await page.goto('/?view=dispatch&dispatch_workspace=classic');
         await page
             .getByRole('button', { name: /Operational attention/ })
             .click();
@@ -980,7 +983,7 @@ test.describe('R6 deterministic authenticated acceptance', () => {
 
         for (const width of [390, 1280]) {
             await page.setViewportSize({ width, height: 844 });
-            await page.goto('/?view=dispatch');
+            await page.goto('/?view=dispatch&dispatch_workspace=classic');
             await page
                 .getByRole('button', { name: /Operational attention/ })
                 .click();

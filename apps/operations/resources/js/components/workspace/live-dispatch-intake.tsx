@@ -7,7 +7,7 @@ import {
     Truck,
     X,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent, InputHTMLAttributes, ReactNode } from 'react';
 import {
     Button,
@@ -47,9 +47,21 @@ type IncomingWorkItem = {
     client: string;
     detail: string;
     status: string;
+    sourceId: number;
     hasEvidence?: boolean;
     evidenceSignee?: string | null;
 };
+
+interface IncomingQueuePage {
+    items: IncomingWorkItem[];
+    service_requests: ServiceRequestViewModel[];
+    rental_handoffs: RentalDispatchHandoffViewModel[];
+    sales_handoffs: SalesDispatchHandoffViewModel[];
+    total: number;
+    current_page: number;
+    last_page: number;
+    per_page: number;
+}
 
 export function LiveDispatchIntake({
     clients,
@@ -61,6 +73,8 @@ export function LiveDispatchIntake({
     initialRequestId,
     initialMode = null,
     showQueueWhenEmpty = false,
+    incomingTotal,
+    onIncomingTotalChange,
     onClose,
     onDirtyChange,
 }: {
@@ -73,6 +87,8 @@ export function LiveDispatchIntake({
     initialRequestId?: number | null;
     initialMode?: IntakeMode;
     showQueueWhenEmpty?: boolean;
+    incomingTotal?: number;
+    onIncomingTotalChange?: (total: number) => void;
     onClose?: () => void;
     onDirtyChange?: (isDirty: boolean) => void;
 }) {
@@ -82,7 +98,128 @@ export function LiveDispatchIntake({
     const canReviewSale = capabilities.create_sales_dispatch;
     const canReconcile = canReviewService || canReviewRental || canReviewSale;
 
-    const incomingItems = useMemo<IncomingWorkItem[]>(() => {
+    const [queuePage, setQueuePage] = useState(1);
+    const [queueRetry, setQueueRetry] = useState(0);
+    const [queueResult, setQueueResult] = useState<IncomingQueuePage | null>(
+        null,
+    );
+    const [queuePending, setQueuePending] = useState(false);
+    const [queueError, setQueueError] = useState<string | null>(null);
+    const lastLoadedQueuePage = useRef<number | null>(null);
+
+    useEffect(() => {
+        if (!showQueueWhenEmpty) {
+            return;
+        }
+
+        const controller = new AbortController();
+        const loadIncomingPage = async () => {
+            setQueuePending(true);
+            setQueueError(null);
+
+            try {
+                const params = new URLSearchParams({
+                    page: String(queuePage),
+                });
+
+                if (initialRequestId) {
+                    params.set(
+                        'focus_service_request_id',
+                        String(initialRequestId),
+                    );
+                }
+
+                const response = await fetch(
+                    `/operations/dispatch-desk/incoming?${params}`,
+                    {
+                        credentials: 'same-origin',
+                        headers: { Accept: 'application/json' },
+                        signal: controller.signal,
+                    },
+                );
+
+                if (!response.ok) {
+                    throw new Error('Incoming queue failed');
+                }
+
+                const page: IncomingQueuePage = await response.json();
+
+                if (
+                    !Array.isArray(page.items) ||
+                    !Array.isArray(page.service_requests) ||
+                    !Array.isArray(page.rental_handoffs) ||
+                    !Array.isArray(page.sales_handoffs) ||
+                    !Number.isInteger(page.total) ||
+                    !Number.isInteger(page.current_page) ||
+                    !Number.isInteger(page.last_page) ||
+                    !Number.isInteger(page.per_page)
+                ) {
+                    throw new Error('Incoming queue response was invalid');
+                }
+
+                if (!controller.signal.aborted) {
+                    lastLoadedQueuePage.current = page.current_page;
+                    setQueueResult(page);
+                    onIncomingTotalChange?.(page.total);
+
+                    if (page.current_page !== queuePage) {
+                        setQueuePage(page.current_page);
+                    }
+                }
+            } catch {
+                if (!controller.signal.aborted) {
+                    setQueueError(
+                        lastLoadedQueuePage.current === queuePage
+                            ? 'Queue refresh failed. The last loaded page remains visible and may be stale; retry to refresh it.'
+                            : 'The requested queue page could not load. Retry it or return to the last loaded page.',
+                    );
+                }
+            } finally {
+                if (!controller.signal.aborted) {
+                    setQueuePending(false);
+                }
+            }
+        };
+
+        void loadIncomingPage();
+
+        return () => controller.abort();
+    }, [
+        incomingTotal,
+        initialRequestId,
+        onIncomingTotalChange,
+        queuePage,
+        queueRetry,
+        rentalHandoffs,
+        salesHandoffs,
+        serviceRequests,
+        showQueueWhenEmpty,
+    ]);
+
+    const currentQueuePage =
+        queueResult?.current_page === queuePage ? queueResult : null;
+    const sourceDataPending =
+        showQueueWhenEmpty && queueResult !== null && !currentQueuePage;
+    const queueLastPage =
+        queueResult?.last_page ??
+        Math.max(1, Math.ceil((incomingTotal ?? 0) / 25));
+    const visibleServiceRequests = currentQueuePage
+        ? currentQueuePage.service_requests
+        : sourceDataPending
+          ? []
+          : serviceRequests;
+    const visibleRentalHandoffs = currentQueuePage
+        ? currentQueuePage.rental_handoffs
+        : sourceDataPending
+          ? []
+          : rentalHandoffs;
+    const visibleSalesHandoffs = currentQueuePage
+        ? currentQueuePage.sales_handoffs
+        : sourceDataPending
+          ? []
+          : salesHandoffs;
+
+    const fallbackIncomingItems = useMemo<IncomingWorkItem[]>(() => {
         const services = canReviewService
             ? serviceRequests
                   .filter((request) => request.dispatch_jobs_count === 0)
@@ -98,6 +235,7 @@ export function LiveDispatchIntake({
                           request.location ||
                           'Service demand awaiting dispatch',
                       status: request.status.label,
+                      sourceId: request.id,
                   }))
             : [];
         const rentals = canReviewRental
@@ -112,6 +250,7 @@ export function LiveDispatchIntake({
                       detail:
                           handoff.location || 'Delivery location needs review',
                       status: handoff.status.label,
+                      sourceId: handoff.id,
                       hasEvidence: handoff.has_evidence,
                       evidenceSignee: handoff.evidence_signee,
                   }))
@@ -128,6 +267,7 @@ export function LiveDispatchIntake({
                       detail:
                           handoff.location || 'Delivery location needs review',
                       status: handoff.status.label,
+                      sourceId: handoff.id,
                       hasEvidence: handoff.has_evidence,
                       evidenceSignee: handoff.evidence_signee,
                   }))
@@ -142,6 +282,14 @@ export function LiveDispatchIntake({
         salesHandoffs,
         serviceRequests,
     ]);
+
+    const incomingItems = currentQueuePage
+        ? currentQueuePage.items
+        : sourceDataPending
+          ? []
+          : fallbackIncomingItems;
+    const incomingTotalCount =
+        queueResult?.total ?? incomingTotal ?? fallbackIncomingItems.length;
 
     const [mode, setMode] = useState<IntakeMode>(() => {
         if (initialRequestId) {
@@ -158,7 +306,14 @@ export function LiveDispatchIntake({
         initialRequestId ? `service-${initialRequestId}` : null,
     );
     const [showClientIntake, setShowClientIntake] = useState(false);
-    const unlinkedCount = incomingItems.length;
+    const unlinkedCount = showQueueWhenEmpty
+        ? incomingTotalCount
+        : fallbackIncomingItems.length;
+
+    const changeQueuePage = (page: number) => {
+        setSelectedItemKey(null);
+        setQueuePage(Math.max(1, Math.min(queueLastPage, page)));
+    };
 
     const closeWorkflow = () => {
         setMode(null);
@@ -173,7 +328,7 @@ export function LiveDispatchIntake({
                 aria-labelledby="direct-dispatch-title"
             >
                 <div className="workspace-width-contained mx-auto max-w-7xl">
-                    {incomingItems.length > 0 && (
+                    {incomingTotalCount > 0 && (
                         <div className="mb-4 flex items-center justify-between gap-3 border-b border-line pb-3">
                             <div className="flex items-center gap-1 rounded-lg border border-line bg-surface-subtle p-1">
                                 <button
@@ -195,7 +350,7 @@ export function LiveDispatchIntake({
                                     className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-ink-soft hover:bg-surface hover:text-ink"
                                 >
                                     <Package className="h-3.5 w-3.5" />
-                                    Incoming Orders ({incomingItems.length})
+                                    Incoming Orders ({incomingTotalCount})
                                 </button>
                             </div>
                         </div>
@@ -327,11 +482,49 @@ export function LiveDispatchIntake({
                             </p>
                         </div>
                         <span className="inline-flex w-fit items-center rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-ink">
-                            {incomingItems.length > 0
-                                ? `${incomingItems.length} needs review`
-                                : 'No handoffs waiting'}
+                            {incomingTotalCount > 0
+                                ? `${incomingTotalCount} permitted handoffs`
+                                : 'No permitted handoffs'}
                         </span>
                     </div>
+
+                    {queuePending && (
+                        <p
+                            className="mt-2 text-xs text-info-strong"
+                            role="status"
+                        >
+                            Loading the complete handoff queue…
+                        </p>
+                    )}
+                    {queueError && (
+                        <div
+                            className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-warning/40 bg-warning-soft p-3 text-sm text-ink"
+                            role="alert"
+                        >
+                            <span>{queueError}</span>
+                            <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() =>
+                                    setQueueRetry((value) => value + 1)
+                                }
+                            >
+                                Retry queue
+                            </Button>
+                            {sourceDataPending && queueResult && (
+                                <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    onClick={() =>
+                                        setQueuePage(queueResult.current_page)
+                                    }
+                                >
+                                    Return to loaded page{' '}
+                                    {queueResult.current_page}
+                                </Button>
+                            )}
+                        </div>
+                    )}
 
                     <div
                         className="mt-4 divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface"
@@ -350,19 +543,82 @@ export function LiveDispatchIntake({
                                     }}
                                 />
                             ))
-                        ) : (
+                        ) : queuePending || sourceDataPending ? (
+                            <div className="space-y-3 p-5" role="status">
+                                <div className="h-4 w-2/3 animate-pulse rounded bg-surface-subtle" />
+                                <div className="h-4 w-1/2 animate-pulse rounded bg-surface-subtle" />
+                                <p className="text-xs text-ink-soft">
+                                    Loading permitted handoffs for page{' '}
+                                    {queuePage} of {queueLastPage}.
+                                </p>
+                            </div>
+                        ) : incomingTotalCount === 0 ? (
                             <div className="p-6 text-center">
                                 <Package className="mx-auto h-8 w-8 text-ink-soft" />
                                 <h4 className="mt-2 text-sm font-semibold text-ink">
-                                    No incoming customer orders waiting
+                                    No incoming handoffs need dispatch
                                 </h4>
                                 <p className="mt-1 text-xs text-ink-soft">
-                                    Use Direct operational fallback for work
-                                    that has not arrived from upstream.
+                                    No dispatch handoffs are available in the
+                                    permitted queue. Use Direct operational
+                                    fallback for work that has not arrived from
+                                    upstream.
                                 </p>
+                            </div>
+                        ) : queueError ? (
+                            <div className="p-6 text-center text-sm text-ink-soft">
+                                No rows are available for this page until the
+                                queue can be refreshed.
+                            </div>
+                        ) : (
+                            <div className="p-6 text-center text-sm text-ink-soft">
+                                No handoffs were returned for this page. Retry
+                                the queue before proceeding.
                             </div>
                         )}
                     </div>
+                    <p className="mt-2 text-xs text-ink-soft">
+                        {currentQueuePage
+                            ? queueError
+                                ? `Showing the last loaded page (${incomingItems.length} handoffs); the queue may be stale.`
+                                : `Showing ${incomingItems.length} handoffs on page ${currentQueuePage.current_page} of ${currentQueuePage.last_page}; the total covers records you are permitted to review.`
+                            : queueResult
+                              ? `Page ${queueResult.current_page} is the last successfully loaded server page. Page ${queuePage} is not available yet; the total reflects the last successful queue response.`
+                              : queueError
+                                ? `The workspace snapshot shows ${incomingItems.length} handoffs. The server reports ${incomingTotalCount} permitted handoffs; page coverage is unavailable until the queue loads.`
+                                : `The workspace snapshot shows ${incomingItems.length} handoffs. The server reports ${incomingTotalCount} permitted handoffs; page coverage is unavailable until the queue loads.`}
+                    </p>
+                    {currentQueuePage && currentQueuePage.last_page > 1 && (
+                        <nav
+                            className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3"
+                            aria-label="Incoming handoff pages"
+                        >
+                            <Button
+                                size="sm"
+                                variant="secondary"
+                                disabled={queuePending || queuePage <= 1}
+                                onClick={() => changeQueuePage(queuePage - 1)}
+                            >
+                                Previous page
+                            </Button>
+                            <span className="text-xs text-ink-soft">
+                                Page {currentQueuePage.current_page} of{' '}
+                                {currentQueuePage.last_page} ·{' '}
+                                {currentQueuePage.total} permitted handoffs
+                            </span>
+                            <Button
+                                size="sm"
+                                variant="secondary"
+                                disabled={
+                                    queuePending ||
+                                    queuePage >= currentQueuePage.last_page
+                                }
+                                onClick={() => changeQueuePage(queuePage + 1)}
+                            >
+                                Next page
+                            </Button>
+                        </nav>
+                    )}
                 </div>
 
                 <div className="mt-4 flex flex-col gap-3 border-t border-line pt-4 sm:flex-row sm:items-center sm:justify-between">
@@ -379,9 +635,7 @@ export function LiveDispatchIntake({
                         <Button
                             id="create-direct-dispatch-trigger"
                             variant={
-                                incomingItems.length > 0
-                                    ? 'secondary'
-                                    : 'primary'
+                                incomingTotalCount > 0 ? 'secondary' : 'primary'
                             }
                             onClick={() => {
                                 setSelectedItemKey(null);
@@ -434,7 +688,7 @@ export function LiveDispatchIntake({
                 {mode === 'service' && canReviewService && (
                     <ServiceIntakeSection
                         clients={clients}
-                        serviceRequests={serviceRequests}
+                        serviceRequests={visibleServiceRequests}
                         capabilities={capabilities}
                         initialRequestId={initialRequestId}
                         onClose={closeWorkflow}
@@ -443,26 +697,42 @@ export function LiveDispatchIntake({
 
                 {mode === 'rental' && canReviewRental && (
                     <RentalIntakeSection
-                        rentalHandoffs={rentalHandoffs}
+                        rentalHandoffs={visibleRentalHandoffs}
                         capabilities={capabilities}
+                        focusedHandoffId={
+                            selectedItemKey?.startsWith('rental-')
+                                ? Number(selectedItemKey.slice(7))
+                                : null
+                        }
+                        onShowAll={() => setSelectedItemKey(null)}
                         onClose={closeWorkflow}
                     />
                 )}
 
                 {mode === 'sale' && canReviewSale && (
                     <SaleIntakeSection
-                        salesHandoffs={salesHandoffs}
+                        salesHandoffs={visibleSalesHandoffs}
                         capabilities={capabilities}
+                        focusedHandoffId={
+                            selectedItemKey?.startsWith('sale-')
+                                ? Number(selectedItemKey.slice(5))
+                                : null
+                        }
+                        onShowAll={() => setSelectedItemKey(null)}
                         onClose={closeWorkflow}
                     />
                 )}
 
                 {mode === 'reconciliation' && canReconcile && (
                     <ReconciliationQueueSection
-                        serviceRequests={serviceRequests}
-                        rentalHandoffs={rentalHandoffs}
-                        salesHandoffs={salesHandoffs}
+                        serviceRequests={visibleServiceRequests}
+                        rentalHandoffs={visibleRentalHandoffs}
+                        salesHandoffs={visibleSalesHandoffs}
                         jobs={jobs}
+                        onReviewSource={(source, id) => {
+                            setSelectedItemKey(`${source}-${id}`);
+                            setMode(source);
+                        }}
                         onClose={closeWorkflow}
                     />
                 )}
@@ -1008,12 +1278,25 @@ function DispatchConversion({
 function RentalIntakeSection({
     rentalHandoffs,
     capabilities,
+    focusedHandoffId,
+    onShowAll,
     onClose,
 }: {
     rentalHandoffs: RentalDispatchHandoffViewModel[];
     capabilities: WorkspaceCapabilities;
+    focusedHandoffId: number | null;
+    onShowAll: () => void;
     onClose: () => void;
 }) {
+    const focusedHandoff = rentalHandoffs.find(
+        (handoff) => handoff.id === focusedHandoffId,
+    );
+    const visibleHandoffs =
+        focusedHandoffId === null
+            ? rentalHandoffs
+            : focusedHandoff
+              ? [focusedHandoff]
+              : [];
     const [pendingHandoffId, setPendingHandoffId] = useState<number | null>(
         null,
     );
@@ -1059,16 +1342,37 @@ function RentalIntakeSection({
                 </Button>
             </div>
 
-            {rentalHandoffs.length === 0 ? (
+            {focusedHandoffId !== null && (
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-info-strong/30 bg-info-soft p-3 text-sm text-ink">
+                    <span>
+                        {focusedHandoff
+                            ? `Reviewing rental handoff ${focusedHandoff.reference}`
+                            : 'This rental handoff is no longer in the loaded records. Refresh before creating a dispatch.'}
+                    </span>
+                    <Button size="sm" variant="secondary" onClick={onShowAll}>
+                        Show all rental handoffs
+                    </Button>
+                </div>
+            )}
+
+            {visibleHandoffs.length === 0 ? (
                 <EmptyState
                     compact
                     icon={CalendarDays}
-                    title="No reserved rental handoffs pending"
-                    message="All current rental reservations with delivery fulfillment are already dispatched or fulfilled."
+                    title={
+                        focusedHandoffId === null
+                            ? 'No reserved rental handoffs pending'
+                            : 'Selected rental handoff is unavailable'
+                    }
+                    message={
+                        focusedHandoffId === null
+                            ? 'All current rental reservations with delivery fulfillment are already dispatched or fulfilled.'
+                            : 'Refresh the workspace or show all loaded rental handoffs before creating a dispatch.'
+                    }
                 />
             ) : (
                 <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                    {rentalHandoffs.map((handoff) => {
+                    {visibleHandoffs.map((handoff) => {
                         const isPending = pendingHandoffId === handoff.id;
 
                         return (
@@ -1176,12 +1480,25 @@ function RentalIntakeSection({
 function SaleIntakeSection({
     salesHandoffs,
     capabilities,
+    focusedHandoffId,
+    onShowAll,
     onClose,
 }: {
     salesHandoffs: SalesDispatchHandoffViewModel[];
     capabilities: WorkspaceCapabilities;
+    focusedHandoffId: number | null;
+    onShowAll: () => void;
     onClose: () => void;
 }) {
+    const focusedHandoff = salesHandoffs.find(
+        (handoff) => handoff.id === focusedHandoffId,
+    );
+    const visibleHandoffs =
+        focusedHandoffId === null
+            ? salesHandoffs
+            : focusedHandoff
+              ? [focusedHandoff]
+              : [];
     const [pendingHandoffId, setPendingHandoffId] = useState<number | null>(
         null,
     );
@@ -1236,6 +1553,19 @@ function SaleIntakeSection({
                 </Button>
             </div>
 
+            {focusedHandoffId !== null && (
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-info-strong/30 bg-info-soft p-3 text-sm text-ink">
+                    <span>
+                        {focusedHandoff
+                            ? `Reviewing sales handoff ${focusedHandoff.reference}`
+                            : 'This sales handoff is no longer in the loaded records. Refresh before creating a dispatch.'}
+                    </span>
+                    <Button size="sm" variant="secondary" onClick={onShowAll}>
+                        Show all sales handoffs
+                    </Button>
+                </div>
+            )}
+
             <div className="mt-4 rounded-lg border border-line bg-surface-subtle p-3">
                 <p className="text-xs font-semibold text-ink">
                     Global delivery schedule for incoming conversions:
@@ -1256,16 +1586,24 @@ function SaleIntakeSection({
                 </div>
             </div>
 
-            {salesHandoffs.length === 0 ? (
+            {visibleHandoffs.length === 0 ? (
                 <EmptyState
                     compact
                     icon={Package}
-                    title="No sales deliveries pending"
-                    message="All confirmed sales orders with delivery fulfillment are already dispatched or fulfilled."
+                    title={
+                        focusedHandoffId === null
+                            ? 'No sales deliveries pending'
+                            : 'Selected sales handoff is unavailable'
+                    }
+                    message={
+                        focusedHandoffId === null
+                            ? 'All confirmed sales orders with delivery fulfillment are already dispatched or fulfilled.'
+                            : 'Refresh the workspace or show all loaded sales handoffs before creating a dispatch.'
+                    }
                 />
             ) : (
                 <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                    {salesHandoffs.map((handoff) => {
+                    {visibleHandoffs.map((handoff) => {
                         const isPending = pendingHandoffId === handoff.id;
 
                         return (
@@ -1373,12 +1711,14 @@ function ReconciliationQueueSection({
     rentalHandoffs,
     salesHandoffs,
     jobs,
+    onReviewSource,
     onClose,
 }: {
     serviceRequests: ServiceRequestViewModel[];
     rentalHandoffs: RentalDispatchHandoffViewModel[];
     salesHandoffs: SalesDispatchHandoffViewModel[];
     jobs: DispatchJobViewModel[];
+    onReviewSource: (source: 'rental' | 'sale', id: number) => void;
     onClose: () => void;
 }) {
     const unlinkedItems: UnlinkedHandoffItem[] = useMemo(() => {
@@ -1413,7 +1753,7 @@ function ReconciliationQueueSection({
                     matched_draft_job_id: matchedJob?.id ?? null,
                     matched_draft_reference: matchedJob?.reference ?? null,
                     match_reason: matchedJob
-                        ? `Client name matches existing manual draft ${matchedJob.reference}`
+                        ? `Client name resembles manual draft ${matchedJob.reference}; verify the site and work before creating another dispatch.`
                         : null,
                     reconciliation_status: matchedJob
                         ? 'matching_draft_found'
@@ -1452,7 +1792,7 @@ function ReconciliationQueueSection({
                     matched_draft_job_id: matchedJob?.id ?? null,
                     matched_draft_reference: matchedJob?.reference ?? null,
                     match_reason: matchedJob
-                        ? `Client matches manual draft ${matchedJob.reference}`
+                        ? `Client name resembles manual draft ${matchedJob.reference}; verify the site and work before creating another dispatch.`
                         : null,
                     reconciliation_status: matchedJob
                         ? 'matching_draft_found'
@@ -1490,7 +1830,7 @@ function ReconciliationQueueSection({
                     matched_draft_job_id: matchedJob?.id ?? null,
                     matched_draft_reference: matchedJob?.reference ?? null,
                     match_reason: matchedJob
-                        ? `Client matches manual draft ${matchedJob.reference}`
+                        ? `Client name resembles manual draft ${matchedJob.reference}; verify the site and work before creating another dispatch.`
                         : null,
                     reconciliation_status: matchedJob
                         ? 'matching_draft_found'
@@ -1547,6 +1887,7 @@ function ReconciliationQueueSection({
                     {unlinkedItems.map((item) => (
                         <div
                             key={`${item.source_type}-${item.id}`}
+                            data-reconciliation-item="true"
                             className={cn(
                                 'rounded-lg border p-4 transition-all',
                                 item.matched_draft_job_id
@@ -1591,7 +1932,7 @@ function ReconciliationQueueSection({
                                 {item.matched_draft_job_id ? (
                                     <div className="rounded-md border border-info-strong/30 bg-surface p-2.5 text-xs sm:max-w-xs">
                                         <div className="font-semibold text-info-strong">
-                                            Matching Draft Detected
+                                            Possible matching draft
                                         </div>
                                         <p className="mt-1 text-ink-soft">
                                             Draft{' '}
@@ -1629,44 +1970,39 @@ function ReconciliationQueueSection({
                                             {item.matched_draft_reference}
                                         </Button>
                                     )}
-                                    <Button
-                                        size="sm"
-                                        variant="primary"
-                                        onClick={() => {
-                                            if (
-                                                item.source_type === 'service'
-                                            ) {
-                                                router.visit(
-                                                    `/?view=dispatch&serviceRequestId=${item.id}`,
-                                                );
-                                            } else if (
-                                                item.source_type === 'rental'
-                                            ) {
-                                                router.post(
-                                                    `/operations/rental-reservations/${item.id}/dispatch`,
-                                                );
-                                            } else if (
-                                                item.source_type === 'sale'
-                                            ) {
-                                                router.post(
-                                                    `/operations/sales/orders/${item.id}/dispatch`,
-                                                    {
-                                                        scheduled_start:
-                                                            new Date(
-                                                                Date.now() +
-                                                                    3600000,
-                                                            ).toISOString(),
-                                                        scheduled_end: new Date(
-                                                            Date.now() +
-                                                                10800000,
-                                                        ).toISOString(),
-                                                    },
-                                                );
-                                            }
-                                        }}
-                                    >
-                                        Convert to linked dispatch
-                                    </Button>
+                                    {!item.matched_draft_job_id && (
+                                        <Button
+                                            size="sm"
+                                            variant="primary"
+                                            onClick={() => {
+                                                if (
+                                                    item.source_type ===
+                                                    'service'
+                                                ) {
+                                                    router.visit(
+                                                        `/?view=dispatch&serviceRequestId=${item.id}`,
+                                                    );
+                                                } else if (
+                                                    item.source_type ===
+                                                    'rental'
+                                                ) {
+                                                    onReviewSource(
+                                                        'rental',
+                                                        item.id,
+                                                    );
+                                                } else if (
+                                                    item.source_type === 'sale'
+                                                ) {
+                                                    onReviewSource(
+                                                        'sale',
+                                                        item.id,
+                                                    );
+                                                }
+                                            }}
+                                        >
+                                            Review handoff to create dispatch
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
                         </div>

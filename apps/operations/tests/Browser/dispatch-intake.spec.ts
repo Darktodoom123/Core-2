@@ -2,7 +2,11 @@ import { existsSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import type { Dialog, Locator, Page } from '@playwright/test';
-import { browserFixtures, resolveBrowserFixturePath, signIn } from './browser-fixtures';
+import {
+    browserFixtures,
+    resolveBrowserFixturePath,
+    signIn,
+} from './browser-fixtures';
 
 const browserFixturePath = resolveBrowserFixturePath();
 
@@ -234,12 +238,12 @@ test.describe('New dispatch direct-intake contract', () => {
         const renderedIncomingRows = queue.getByRole('listitem');
         const renderedIncomingCount = await renderedIncomingRows.count();
         const queueBadge = page
-            .getByText(/\d+ needs review|No handoffs waiting/i)
+            .getByText(/\d+ loaded for review|No handoffs in loaded records/i)
             .first();
         const queueBadgeText = await queueBadge.innerText();
 
         if (renderedIncomingCount === 0) {
-            expect(queueBadgeText).toMatch(/No handoffs waiting/i);
+            expect(queueBadgeText).toMatch(/No handoffs in loaded records/i);
         } else {
             expect(countFromText(queueBadgeText)).toBe(renderedIncomingCount);
         }
@@ -251,17 +255,62 @@ test.describe('New dispatch direct-intake contract', () => {
                 name: /reconciliation queue/i,
             }),
         ).toBeVisible();
-        const renderedReconciliationRows = page.getByRole('button', {
-            name: /Convert to linked dispatch/i,
-        });
+        const renderedReconciliationRows = page.locator(
+            '[data-reconciliation-item="true"]',
+        );
         const renderedReconciliationCount =
             await renderedReconciliationRows.count();
         expect(countFromText(reconciliationButtonText)).toBe(
             renderedReconciliationCount,
         );
-        await page
-            .getByRole('button', { name: /Close reconciliation queue/i })
-            .click();
+
+        const possibleMatches = renderedReconciliationRows.filter({
+            hasText: 'Possible matching draft',
+        });
+
+        if ((await possibleMatches.count()) > 0) {
+            await expect(
+                possibleMatches.first().getByRole('button', {
+                    name: /Review draft/i,
+                }),
+            ).toBeVisible();
+            await expect(
+                possibleMatches.first().getByRole('button', {
+                    name: /Review handoff to create dispatch/i,
+                }),
+            ).toHaveCount(0);
+        }
+
+        const reviewableRental = renderedReconciliationRows
+            .filter({ hasText: 'Rental Reservation' })
+            .filter({
+                has: page.getByRole('button', {
+                    name: /Review handoff to create dispatch/i,
+                }),
+            })
+            .first();
+
+        if ((await reviewableRental.count()) > 0) {
+            await reviewableRental
+                .getByRole('button', {
+                    name: /Review handoff to create dispatch/i,
+                })
+                .click();
+            await expect(
+                page.getByText(/Reviewing rental handoff/i),
+            ).toBeVisible();
+            await expect(
+                page.getByRole('button', { name: 'Create rental dispatch' }),
+            ).toHaveCount(1);
+            await page
+                .getByRole('button', { name: /Close rental intake/i })
+                .click();
+        } else {
+            await page
+                .getByRole('button', { name: /Close reconciliation queue/i })
+                .click();
+        }
+
         await expect(queueHeading).toBeVisible();
 
         const direct = await openDirectDispatch(page);

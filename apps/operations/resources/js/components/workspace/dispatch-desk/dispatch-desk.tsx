@@ -17,7 +17,7 @@ import {
     Users,
     X,
 } from 'lucide-react';
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
     Button,
@@ -52,7 +52,6 @@ import {
     deriveDispatchDeskConflicts,
     EXECUTION_STATUSES,
     HISTORY_STATUSES,
-    incomingWorkItems,
     jobGroup,
     jobNeedsAssignment,
     jobOverlapsDate,
@@ -113,10 +112,6 @@ function displayStatusFilter(view: DispatchDeskView): string {
 
     if (view === 'in-progress') {
         return 'active';
-    }
-
-    if (view === 'history') {
-        return 'completed';
     }
 
     return 'all';
@@ -219,6 +214,7 @@ export function DispatchDesk({
     serviceRequests,
     rentalHandoffs,
     salesHandoffs,
+    incomingTotal = 0,
     assets = [],
     approvals = [],
     users = [],
@@ -234,6 +230,23 @@ export function DispatchDesk({
         typeof window !== 'undefined'
             ? `${window.location.pathname}${window.location.search}${window.location.hash}`
             : currentWorkspaceUrl || '/?view=dispatch';
+    const [incomingCountState, setIncomingCountState] = useState(() => ({
+        sourceTotal: incomingTotal,
+        count: incomingTotal,
+    }));
+
+    if (incomingCountState.sourceTotal !== incomingTotal) {
+        setIncomingCountState({
+            sourceTotal: incomingTotal,
+            count: incomingTotal,
+        });
+    }
+
+    const incomingCount = incomingCountState.count;
+    const setIncomingCount = useCallback((count: number) => {
+        setIncomingCountState((current) => ({ ...current, count }));
+    }, []);
+
     const {
         state,
         setView,
@@ -243,29 +256,26 @@ export function DispatchDesk({
         setQuery,
         setSource,
         setAttentionOnly,
+        setNeedsAssignmentOnly,
         setSelectedJobId,
         setShowIntake,
         setIntakeMode,
         setPage,
     } = useDispatchDeskState(initialServiceRequestId, currentWorkspaceUrl);
+    const needsAssignmentOnly = state.needsAssignmentOnly;
     const search = useDispatchSearch(state, initialJobs, refreshing);
     const { jobs, contextJobs } = search;
     const [directIntakeDirty, setDirectIntakeDirty] = useState(false);
-    const [needsAssignmentOnly, setNeedsAssignmentOnly] = useState(false);
     const [showResources, setShowResources] = useState(false);
     const [mobileReview, setMobileReview] = useState(
         state.selectedJobId !== null,
-    );
-    const assignmentCount = useMemo(
-        () => jobs.filter((job) => jobNeedsAssignment(job)).length,
-        [jobs],
     );
     const listPosition = useRef(0);
     const selectedRow = useRef<HTMLElement | null>(null);
     const reviewRef = useRef<HTMLDivElement>(null);
     const resourceRef = useRef<HTMLDivElement>(null);
     const resourceTrigger = useRef<HTMLButtonElement>(null);
-    const listStorageKey = `dispatch-list:${state.view}:${state.mode}:${state.period}:${state.date}:${state.query}:${state.source}:${state.attentionOnly}:${state.page}`;
+    const listStorageKey = `dispatch-list:${state.view}:${state.mode}:${state.period}:${state.date}:${state.query}:${state.source}:${state.attentionOnly}:${state.needsAssignmentOnly}:${state.page}`;
     const intakeRequestId = useMemo(() => {
         if (initialServiceRequestId) {
             return initialServiceRequestId;
@@ -291,27 +301,14 @@ export function DispatchDesk({
             }),
         [approvals, assets, gptRecommendations, contextJobs],
     );
-    const incoming = useMemo(
-        () =>
-            incomingWorkItems({
-                serviceRequests,
-                rentalHandoffs,
-                salesHandoffs,
-            }),
-        [rentalHandoffs, salesHandoffs, serviceRequests],
-    );
-    const incomingByCapability = useMemo(
-        () =>
-            incoming.filter((item) =>
-                item.mode === 'service'
-                    ? capabilities.convert_service_request
-                    : item.mode === 'rental'
-                      ? capabilities.create_rental_dispatch
-                      : capabilities.create_sales_dispatch,
-            ),
-        [capabilities, incoming],
-    );
-
+    const assignmentCount =
+        search.page?.needs_assignment_total ??
+        jobs.filter((job) => jobNeedsAssignment(job)).length;
+    const attentionCount =
+        search.page?.attention_total ??
+        jobs.filter((job) =>
+            conflicts.some((conflict) => conflict.jobId === job.id),
+        ).length;
     const filteredJobs = useMemo(() => {
         const normalizedQuery = state.query.trim().toLowerCase();
         const activeStatusFilter = displayStatusFilter(state.view);
@@ -369,13 +366,20 @@ export function DispatchDesk({
             }
 
             if (
+                !search.page &&
                 state.attentionOnly &&
+                state.view !== 'history' &&
                 !conflicts.some((conflict) => conflict.jobId === job.id)
             ) {
                 return false;
             }
 
-            if (needsAssignmentOnly && !jobNeedsAssignment(job)) {
+            if (
+                !search.page &&
+                needsAssignmentOnly &&
+                state.view === 'schedule' &&
+                !jobNeedsAssignment(job)
+            ) {
                 return false;
             }
 
@@ -391,11 +395,14 @@ export function DispatchDesk({
 
     const selectedJob = useMemo(
         () =>
-            filteredJobs.find((job) => job.id === state.selectedJobId) ??
-            filteredJobs[0] ??
-            null,
+            state.selectedJobId === null
+                ? (filteredJobs[0] ?? null)
+                : (filteredJobs.find((job) => job.id === state.selectedJobId) ??
+                  null),
         [filteredJobs, state.selectedJobId],
     );
+    const selectionUnavailable =
+        state.selectedJobId !== null && selectedJob === null;
     const selectedConflicts = useMemo(
         () =>
             selectedJob
@@ -407,7 +414,7 @@ export function DispatchDesk({
     );
     const jobCounts = useMemo(
         () => ({
-            incoming: incomingByCapability.length,
+            incoming: incomingCount,
             schedule: jobs.filter(
                 (job) =>
                     matchesStatus(job, 'schedule') &&
@@ -419,7 +426,7 @@ export function DispatchDesk({
             ).length,
             history: jobs.filter((job) => matchesStatus(job, 'history')).length,
         }),
-        [incomingByCapability.length, jobs, state.date],
+        [incomingCount, jobs, state.date],
     );
 
     const changeDesk = (patch: () => void) => {
@@ -548,45 +555,41 @@ export function DispatchDesk({
                             <Users className="h-4 w-4" aria-hidden="true" />
                             People &amp; assets
                         </Button>
-                        {(canCreate || incomingByCapability.length > 0) &&
-                            !isFieldRole && (
-                                <Button
-                                    id="new-dispatch-trigger"
-                                    variant={
-                                        state.view === 'incoming'
-                                            ? 'secondary'
-                                            : 'primary'
-                                    }
-                                    onClick={toggleIntake}
-                                    aria-expanded={state.view === 'incoming'}
-                                    aria-controls={
-                                        state.view === 'incoming'
-                                            ? 'incoming-work-panel'
-                                            : undefined
-                                    }
-                                >
-                                    {state.view === 'incoming' ? (
-                                        <X
-                                            className="h-4 w-4"
-                                            aria-hidden="true"
-                                        />
-                                    ) : (
-                                        <Plus
-                                            className="h-4 w-4"
-                                            aria-hidden="true"
-                                        />
+                        {(canCreate || incomingCount > 0) && !isFieldRole && (
+                            <Button
+                                id="new-dispatch-trigger"
+                                variant={
+                                    state.view === 'incoming'
+                                        ? 'secondary'
+                                        : 'primary'
+                                }
+                                onClick={toggleIntake}
+                                aria-expanded={state.view === 'incoming'}
+                                aria-controls={
+                                    state.view === 'incoming'
+                                        ? 'incoming-work-panel'
+                                        : undefined
+                                }
+                            >
+                                {state.view === 'incoming' ? (
+                                    <X className="h-4 w-4" aria-hidden="true" />
+                                ) : (
+                                    <Plus
+                                        className="h-4 w-4"
+                                        aria-hidden="true"
+                                    />
+                                )}
+                                {state.view === 'incoming'
+                                    ? 'Back to schedule'
+                                    : 'New dispatch'}
+                                {incomingCount > 0 &&
+                                    state.view !== 'incoming' && (
+                                        <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-ink/10 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums">
+                                            {incomingCount}
+                                        </span>
                                     )}
-                                    {state.view === 'incoming'
-                                        ? 'Back to schedule'
-                                        : 'New dispatch'}
-                                    {incomingByCapability.length > 0 &&
-                                        state.view !== 'incoming' && (
-                                            <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-ink/10 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums">
-                                                {incomingByCapability.length}
-                                            </span>
-                                        )}
-                                </Button>
-                            )}
+                            </Button>
+                        )}
                     </div>
                 }
             />
@@ -772,6 +775,8 @@ export function DispatchDesk({
                                     serviceRequests={serviceRequests}
                                     rentalHandoffs={rentalHandoffs}
                                     salesHandoffs={salesHandoffs}
+                                    incomingTotal={incomingTotal}
+                                    onIncomingTotalChange={setIncomingCount}
                                     jobs={jobs}
                                     capabilities={capabilities}
                                     initialRequestId={intakeRequestId}
@@ -803,6 +808,12 @@ export function DispatchDesk({
                                             needsAssignmentOnly
                                         }
                                         assignmentCount={assignmentCount}
+                                        attentionCount={attentionCount}
+                                        completeSearch={Boolean(search.page)}
+                                        showAttention={state.view !== 'history'}
+                                        showNeedsAssignment={
+                                            state.view === 'schedule'
+                                        }
                                         onQuery={(value) =>
                                             changeDesk(() => setQuery(value))
                                         }
@@ -815,7 +826,9 @@ export function DispatchDesk({
                                             )
                                         }
                                         onNeedsAssignment={(value) =>
-                                            setNeedsAssignmentOnly(value)
+                                            changeDesk(() => {
+                                                setNeedsAssignmentOnly(value);
+                                            })
                                         }
                                         onReset={() =>
                                             changeDesk(() => {
@@ -853,6 +866,21 @@ export function DispatchDesk({
                                             mobileReview && 'hidden lg:block',
                                         )}
                                     >
+                                        {state.mode === 'calendar' &&
+                                            search.page &&
+                                            search.page.last_page > 1 && (
+                                                <p
+                                                    className="border-b border-warning/40 bg-warning-soft px-5 py-3 text-sm text-warning-strong"
+                                                    role="status"
+                                                >
+                                                    Calendar shows page{' '}
+                                                    {search.page.current_page}{' '}
+                                                    of {search.page.last_page}{' '}
+                                                    for this period. Other
+                                                    dispatches are on later
+                                                    pages.
+                                                </p>
+                                            )}
                                         <ScheduleSurface
                                             mode={state.mode}
                                             jobs={scheduleJobs}
@@ -896,6 +924,9 @@ export function DispatchDesk({
                                             </Button>
                                             <DispatchReviewPanel
                                                 job={selectedJob}
+                                                selectionUnavailable={
+                                                    selectionUnavailable
+                                                }
                                                 assets={assets}
                                                 conflicts={selectedConflicts}
                                                 returnTo={returnTo}
@@ -949,6 +980,9 @@ export function DispatchDesk({
                                         </Button>
                                         <DispatchReviewPanel
                                             job={selectedJob}
+                                            selectionUnavailable={
+                                                selectionUnavailable
+                                            }
                                             assets={assets}
                                             conflicts={selectedConflicts}
                                             returnTo={returnTo}
@@ -1030,6 +1064,10 @@ function DeskFilters({
     attentionOnly,
     needsAssignmentOnly,
     assignmentCount,
+    attentionCount,
+    completeSearch,
+    showAttention,
+    showNeedsAssignment,
     onQuery,
     onSource,
     onAttention,
@@ -1041,6 +1079,10 @@ function DeskFilters({
     attentionOnly: boolean;
     needsAssignmentOnly: boolean;
     assignmentCount: number;
+    attentionCount: number;
+    completeSearch: boolean;
+    showAttention: boolean;
+    showNeedsAssignment: boolean;
     onQuery: (value: string) => void;
     onSource: (value: DispatchSourceFilter) => void;
     onAttention: (value: boolean) => void;
@@ -1089,17 +1131,21 @@ function DeskFilters({
                     ))}
                 </select>
             </label>
-            <Button
-                size="sm"
-                variant={attentionOnly ? 'primary' : 'secondary'}
-                aria-pressed={attentionOnly}
-                onClick={() => onAttention(!attentionOnly)}
-                className="h-9 gap-1.5 text-xs font-medium"
-            >
-                <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
-                Needs attention on this page
-            </Button>
-            {assignmentCount > 0 && (
+            {showAttention && (
+                <Button
+                    size="sm"
+                    variant={attentionOnly ? 'primary' : 'secondary'}
+                    aria-pressed={attentionOnly}
+                    onClick={() => onAttention(!attentionOnly)}
+                    className="h-9 gap-1.5 text-xs font-medium"
+                >
+                    <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+                    {completeSearch
+                        ? `Needs attention (${attentionCount})`
+                        : `Needs attention in loaded results (${attentionCount})`}
+                </Button>
+            )}
+            {showNeedsAssignment && assignmentCount > 0 && (
                 <Button
                     size="sm"
                     variant={needsAssignmentOnly ? 'primary' : 'secondary'}
@@ -1108,7 +1154,9 @@ function DeskFilters({
                     className="h-9 gap-1.5 text-xs font-medium"
                 >
                     <Users className="h-3.5 w-3.5" aria-hidden="true" />
-                    Needs assignment ({assignmentCount})
+                    {completeSearch
+                        ? `Needs assignment (${assignmentCount})`
+                        : `Needs assignment in loaded results (${assignmentCount})`}
                 </Button>
             )}
             {hasFilters && (
@@ -1430,29 +1478,6 @@ function DeskJobList({
                                             <CanonicalStatusBadge
                                                 status={job.status}
                                             />
-                                            {job.latest_delay && (
-                                                <Link
-                                                    href={`/operations/dispatch-jobs/${job.id}#reported-delays`}
-                                                    onClick={(event) =>
-                                                        event.stopPropagation()
-                                                    }
-                                                    aria-label={`View reported delay for ${job.reference}: ${job.latest_delay.reason_label}${job.latest_delay.estimated_minutes ? `, estimated impact ${job.latest_delay.estimated_minutes} minutes` : ''}`}
-                                                    title={`Reported delay: ${job.latest_delay.reason_label}${job.latest_delay.estimated_minutes ? ` (+${job.latest_delay.estimated_minutes}m)` : ''}. Click to view details.`}
-                                                    className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-warning/40 bg-warning-soft px-2 py-0.5 text-[11px] font-semibold text-warning-strong transition-colors hover:bg-warning-soft/80 focus-visible:ring-2 focus-visible:ring-warning-strong focus-visible:ring-offset-2 focus-visible:outline-none dark:border-warning/30 dark:bg-warning/15 dark:text-warning-on-dark dark:hover:bg-warning/20"
-                                                >
-                                                    <AlertTriangle
-                                                        className="size-3 text-warning-strong dark:text-warning-on-dark"
-                                                        aria-hidden="true"
-                                                    />
-                                                    <span>
-                                                        Delay:{' '}
-                                                        {
-                                                            job.latest_delay
-                                                                .reason_label
-                                                        }
-                                                    </span>
-                                                </Link>
-                                            )}
                                             {job.priority.value !==
                                                 'routine' && (
                                                 <span
@@ -1521,6 +1546,22 @@ function DeskJobList({
                                         aria-hidden="true"
                                     />
                                 </button>
+                                {job.latest_delay && (
+                                    <div className="border-t border-line px-4 py-2">
+                                        <Link
+                                            href={`/operations/dispatch-jobs/${job.id}#reported-delays`}
+                                            aria-label={`View reported delay for ${job.reference}: ${job.latest_delay.reason_label}${job.latest_delay.estimated_minutes ? `, estimated impact ${job.latest_delay.estimated_minutes} minutes` : ''}`}
+                                            className="inline-flex min-h-9 items-center gap-1 rounded-full border border-warning/40 bg-warning-soft px-2 text-[11px] font-semibold text-warning-strong hover:bg-warning-soft/80 focus-visible:ring-2 focus-visible:ring-warning-strong focus-visible:outline-none"
+                                        >
+                                            <AlertTriangle
+                                                className="size-3"
+                                                aria-hidden="true"
+                                            />
+                                            Delay:{' '}
+                                            {job.latest_delay.reason_label}
+                                        </Link>
+                                    </div>
+                                )}
                             </li>
                         );
                     })}
@@ -1532,6 +1573,7 @@ function DeskJobList({
 
 function DispatchReviewPanel({
     job,
+    selectionUnavailable,
     assets,
     conflicts,
     returnTo,
@@ -1539,6 +1581,7 @@ function DispatchReviewPanel({
     capabilities,
 }: {
     job: DispatchJobViewModel | null;
+    selectionUnavailable: boolean;
     assets: AssetViewModel[];
     conflicts: DerivedConflict[];
     returnTo: string;
@@ -1557,8 +1600,16 @@ function DispatchReviewPanel({
                 <Panel>
                     <EmptyState
                         icon={ClipboardList}
-                        title="Select a dispatch"
-                        message="Choose a dispatch to review its schedule, site, recorded resources, and next permitted action."
+                        title={
+                            selectionUnavailable
+                                ? 'Selected dispatch is outside these results'
+                                : 'Select a dispatch'
+                        }
+                        message={
+                            selectionUnavailable
+                                ? 'Clear a filter, change results page, or select a visible dispatch.'
+                                : 'Choose a dispatch to review its schedule, site, recorded resources, and next permitted action.'
+                        }
                     />
                 </Panel>
             </section>
@@ -1594,7 +1645,7 @@ function DispatchReviewPanel({
                                             href={`/operations/dispatch-jobs/${job.id}#reported-delays`}
                                             aria-label={`View reported delay for ${job.reference}: ${job.latest_delay.reason_label}${job.latest_delay.estimated_minutes ? `, estimated impact ${job.latest_delay.estimated_minutes} minutes` : ''}`}
                                             title={`Reported delay: ${job.latest_delay.reason_label}${job.latest_delay.estimated_minutes ? ` (+${job.latest_delay.estimated_minutes}m)` : ''}. Click to view details.`}
-                                                className="inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning-soft px-2 py-0.5 text-xs font-semibold text-warning-strong transition-colors hover:bg-warning-soft/80 focus-visible:ring-2 focus-visible:ring-warning-strong focus-visible:ring-offset-2 focus-visible:outline-none dark:border-warning/30 dark:bg-warning/15 dark:text-warning-on-dark dark:hover:bg-warning/20"
+                                            className="inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning-soft px-2 py-0.5 text-xs font-semibold text-warning-strong transition-colors hover:bg-warning-soft/80 focus-visible:ring-2 focus-visible:ring-warning-strong focus-visible:ring-offset-2 focus-visible:outline-none dark:border-warning/30 dark:bg-warning/15 dark:text-warning-on-dark dark:hover:bg-warning/20"
                                         >
                                             <AlertTriangle
                                                 className="size-3 text-warning-strong dark:text-warning-on-dark"

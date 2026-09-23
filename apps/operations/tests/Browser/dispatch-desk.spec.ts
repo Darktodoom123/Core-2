@@ -7,6 +7,25 @@ import { browserFixtures, signIn } from './browser-fixtures';
 const reviewDirectory = resolve('.impeccable/review');
 mkdirSync(reviewDirectory, { recursive: true });
 
+test('dispatcher opens the office desk by default and classic remains explicit', async ({
+    page,
+}) => {
+    const fixtures = browserFixtures();
+    await signIn(page, fixtures.users.dispatcher);
+    await page.goto('/?view=dispatch');
+    await expect(
+        page.getByRole('heading', { name: 'Dispatch desk', exact: true }),
+    ).toBeVisible();
+    await expect(
+        page.getByRole('navigation', { name: 'Dispatch work views' }),
+    ).toBeVisible();
+
+    await page.goto('/?view=dispatch&dispatch_workspace=classic');
+    await expect(
+        page.getByRole('navigation', { name: 'Dispatch work views' }),
+    ).toHaveCount(0);
+});
+
 test('office dispatch desk preserves schedule context and separates operational views', async ({
     page,
 }) => {

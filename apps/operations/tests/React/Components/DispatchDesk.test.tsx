@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { DispatchDesk } from '@/components/workspace/dispatch-desk';
 import {
     deriveDispatchDeskConflicts,
@@ -232,6 +232,45 @@ describe('dispatch resources', () => {
         expect(
             screen.getByText('No asset records are loaded for your access.'),
         ).toBeInTheDocument();
+    });
+
+    it('uses the selected dispatch date and identifies a manually different resource date', () => {
+        const selected = {
+            ...job(31),
+            scheduled_start: new Date(2026, 8, 7, 9).toISOString(),
+        };
+        const props = {
+            users: [],
+            assets: [],
+            jobs: [],
+            initialDate: '2026-09-05',
+            returnTo: '/?view=dispatch',
+            refreshing: false,
+        };
+        const { rerender } = render(
+            <DispatchResources {...props} selectedJob={selected} />,
+        );
+        const date = screen.getByLabelText('Resource date');
+        expect(date).toHaveValue('2026-09-07');
+
+        fireEvent.change(date, { target: { value: '2026-09-09' } });
+        expect(
+            screen.getByText(
+                'This resource date differs from the selected dispatch date.',
+            ),
+        ).toBeInTheDocument();
+
+        rerender(
+            <DispatchResources
+                {...props}
+                selectedJob={{
+                    ...selected,
+                    id: 32,
+                    scheduled_start: new Date(2026, 8, 8, 9).toISOString(),
+                }}
+            />,
+        );
+        expect(date).toHaveValue('2026-09-08');
     });
 
     it('exposes resources independently of job selection and separates assigned crew and equipment', () => {
@@ -503,6 +542,28 @@ describe('DispatchDesk', () => {
                 '/operations/dispatch-jobs/17#reported-delays',
             ),
         );
+        expect(
+            screen.getByRole('button', { name: /DSP-17/ }).querySelector('a'),
+        ).toBeNull();
+    });
+
+    it('does not silently replace a selected job outside the result page', () => {
+        window.history.replaceState({}, '', '/?view=dispatch&dispatch_job=999');
+        render(
+            <DispatchDesk
+                jobs={[job(7)]}
+                clients={[]}
+                serviceRequests={[]}
+                rentalHandoffs={[]}
+                salesHandoffs={[]}
+                capabilities={capabilities()}
+                canCreate={false}
+                refreshing={false}
+            />,
+        );
+        expect(
+            screen.getByText('Selected dispatch is outside these results'),
+        ).toBeInTheDocument();
     });
 
     it('renders the task first views and one authoritative review action', () => {

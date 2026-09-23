@@ -18,6 +18,7 @@ const DESK_KEYS = [
     'dispatch_q',
     'dispatch_source',
     'dispatch_attention',
+    'dispatch_needs_assignment',
     'dispatch_job',
     'dispatch_intake',
     'dispatch_intake_mode',
@@ -124,6 +125,7 @@ export function readDispatchDeskState(
         query: firstString(params.get('dispatch_q') ?? params.get('search')),
         source: parseSource(params.get('dispatch_source')),
         attentionOnly: params.get('dispatch_attention') === '1',
+        needsAssignmentOnly: params.get('dispatch_needs_assignment') === '1',
         selectedJobId:
             Number.isFinite(selected) && selected > 0 ? selected : null,
         showIntake: hasExplicitIntake
@@ -151,6 +153,7 @@ function writeStateToUrl(state: DispatchDeskUrlState) {
         ['dispatch_q', state.query, state.query.length > 0],
         ['dispatch_source', state.source, state.source !== 'all'],
         ['dispatch_attention', '1', state.attentionOnly],
+        ['dispatch_needs_assignment', '1', state.needsAssignmentOnly],
         [
             'dispatch_job',
             state.selectedJobId ? String(state.selectedJobId) : '',
@@ -268,6 +271,8 @@ export function useDispatchDeskState(
             'date',
             'query',
             'source',
+            'attentionOnly',
+            'needsAssignmentOnly',
         ].some((key) => key in patch);
         const next = {
             ...stateRef.current,
@@ -301,6 +306,8 @@ export function useDispatchDeskState(
             setSource: (source: DispatchSourceFilter) => update({ source }),
             setAttentionOnly: (attentionOnly: boolean) =>
                 update({ attentionOnly }),
+            setNeedsAssignmentOnly: (needsAssignmentOnly: boolean) =>
+                update({ needsAssignmentOnly }),
             setSelectedJobId: (selectedJobId: number | null) =>
                 update({ selectedJobId }),
             setShowIntake: (showIntake: boolean) => update({ showIntake }),

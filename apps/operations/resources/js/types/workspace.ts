@@ -1161,6 +1161,7 @@ export interface WorkspacePageProps {
     serviceRequests?: ServiceRequestViewModel[];
     rentalHandoffs?: RentalDispatchHandoffViewModel[];
     salesHandoffs?: SalesDispatchHandoffViewModel[];
+    incoming_total?: number;
     assets?: AssetViewModel[];
     assets_total?: number;
     assets_pagination?: PaginationMeta;

@@ -28,16 +28,20 @@ final class DispatchDeskJobsRequest extends FormRequest
             'q' => ['nullable', 'string', 'max:200'],
             'source' => ['sometimes', Rule::in(['all', 'manual', 'service_request', 'rental_reservation', 'sales_order'])],
             'page' => ['sometimes', 'integer', 'min:1', 'max:1000000'],
+            'attention' => ['sometimes', 'boolean'],
+            'needs_assignment' => ['sometimes', 'boolean'],
             'ends_after' => [...$timestamp, 'required_if:view,schedule', 'required_with:starts_before'],
             'starts_before' => [...$timestamp, 'required_if:view,schedule', 'required_with:ends_after', 'after:ends_after'],
         ];
     }
 
-    /** @return array{view: string, q?: string|null, source?: string, page?: int|string, ends_after?: string|null, starts_before?: string|null} */
+    /** @return array{view: string, q?: string|null, source?: string, page?: int|string, ends_after?: string|null, starts_before?: string|null, attention: bool, needs_assignment: bool} */
     public function filters(): array
     {
-        /** @var array{view: string, q?: string|null, source?: string, page?: int|string, ends_after?: string|null, starts_before?: string|null} $validated */
+        /** @var array{view: string, q?: string|null, source?: string, page?: int|string, ends_after?: string|null, starts_before?: string|null, attention?: bool|string|int, needs_assignment?: bool|string|int} $validated */
         $validated = $this->validated();
+        $validated['attention'] = $this->boolean('attention');
+        $validated['needs_assignment'] = $this->boolean('needs_assignment');
 
         return $validated;
     }

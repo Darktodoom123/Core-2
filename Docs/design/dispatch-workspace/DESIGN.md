@@ -34,6 +34,8 @@ spacing:
 
 Updated 2026-09-23 from the implemented office workspace. This scoped record
 extends [the shared design authority](../Design.md); it does not replace it.
+The [office decision flow](FLOW.md) records the dispatcher journey and data
+confidence requirements for subsequent design work.
 The interface is a light operations desk with a compact job list and one selected
 job panel. Gold `#FFBF00` identifies selection and primary actions; operational content
 sets the hierarchy.
@@ -80,7 +82,7 @@ statuses. Lucide icons retain the shared stroke style.
 
 - Work-view buttons retain visible selection and `aria-current` state.
 - Schedule display controls expose List, Calendar, and Resource coverage.
-- Search, source, attention and date controls keep the user's selection in the URL.
+- Search, source, attention, assignment and date controls keep the user's selection in the URL.
 - Job rows combine identity, site, recorded resources, schedule and next action.
 - People & assets uses one date, a resource-type switch, search, recorded
   availability/readiness, and loaded commitments. Warning copy names the missing
@@ -108,8 +110,9 @@ statuses. Lucide icons retain the shared stroke style.
 - Saved readiness and blockers precede preparation steps. Unsaved choices are
   labeled; remaining blockers use a counted disclosure. Empty candidate groups
   stay compact and only matching categories appear after type filtering.
-- Server result totals and pagination describe all matching permitted jobs;
-  attention checks and resource commitments retain explicit loaded-record scope.
+- Server result totals, incoming handoff totals, pagination, attention filters,
+  and assignment filters describe all matching permitted records. Resource
+  commitments retain explicit loaded-record scope.
 - Inputs and buttons retain visible keyboard focus and shared disabled states.
 
 ## Do's and Don'ts

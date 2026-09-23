@@ -1,6 +1,6 @@
 # Office dispatch workspace
 
-Implemented behavior, updated 2026-09-08.
+Implemented behavior, updated 2026-09-23.
 
 Core 1 owns project management. Core 2 schedules dispatch jobs, assigns eligible
 people and assets, coordinates operational coverage, and follows field execution.
@@ -8,20 +8,36 @@ Creating a local coverage record does not create or synchronize a Core 1 project
 
 ## Daily workflow
 
-1. **Incoming work:** review available source handoffs. Use the explicit direct
-   dispatch fallback when authorized; unsaved drafts retain exit protection.
+1. **Incoming work:** review the permission-scoped, server-paginated handoff
+   queue. Its total covers all eligible handoffs the current user may review;
+   loading and failure states identify when only the workspace snapshot is
+   visible. Use the explicit direct dispatch fallback when authorized; unsaved
+   drafts retain exit protection.
+   Reconciliation marks client-name similarity as a possible draft match and
+   sends unmatched rental and sales handoffs through their review screens before
+   conversion. The selected handoff is isolated for review, with a way to show
+   all loaded handoffs. Sales dispatch creation uses the reviewed delivery window.
 2. **Schedule:** the default view starts today. Search and filter permitted jobs,
    select a job, review its requirements and recorded resources, and follow its
    next action. List uses the selected day. Calendar supports day/week/month.
 3. **In progress:** follow active dispatches and open their execution details.
 4. **History:** search all permitted terminal dispatches and page through their recorded outcomes.
 
-Schedule, In progress and History use a server query with 25 results per page.
-Search, source, view and schedule interval apply before pagination. Total results
-and the current page are shown; calendar displays the current result page too.
-Changing a search filter resets the page. Search failures show a Retry action and
-identify the fallback as a limited snapshot. “Needs attention on this page” uses
-the page plus loaded approval/resource records; it is not a complete readiness check.
+Incoming work, Schedule, In progress and History use server pagination with 25
+records per page. Search, source, view and schedule interval apply before
+pagination. Totals and page coverage are shown; the calendar displays the current
+page and warns when the selected period has additional pages. Changing a search
+filter resets the page. Search failures show Retry and identify the fallback as
+a limited workspace snapshot.
+
+“Needs attention” and “Needs assignment” counts cover the current permitted
+search, source, view and schedule period. Attention filtering runs against the
+complete server result set and covers pending approvals, rejected assignments,
+unassigned preparation jobs, assignment overlaps, unavailable assigned assets,
+and visible dispatch advisories. It summarizes recorded issues and is not a
+readiness decision; the detail workflow and server activation check remain
+authoritative. “Needs assignment” is available in Schedule, where it includes
+drafts and preparation jobs missing either people or assets.
 
 Schedule also contains **Resource coverage** for operating phases, equipment
 reservations, crew coverage and linked shifts. Its Week/Month/Quarter timeline
@@ -31,6 +47,8 @@ The **People & assets** panel is available independently of job selection. On wi
 desktops it sits beside the work area without moving navigation down. On narrower
 screens it opens a focused resource view with job identity, schedule and an
 assignment link; closing restores focus to its trigger. It
+defaults to the selected job's scheduled date and calls out a manually selected
+date that differs from that job. It
 shows permitted personnel profiles, recorded account/availability state, fleet
 readiness, and commitments found in the currently loaded dispatches for a chosen
 date. Missing commitments are explicitly not treated as proof of availability.
@@ -94,8 +112,10 @@ and preparation controls are omitted from this active view.
 
 The initial workspace snapshot still loads at most 100 jobs, prioritizing active
 and preparation work. The paginated desk search removes that limit for finding
-and browsing jobs. People & assets commitments combine the initial snapshot and
-the current search page and do not
+and browsing jobs. Possible matching drafts in reconciliation are identified
+from the loaded job snapshot, so a match outside that snapshot may not be shown.
+People & assets commitments combine the initial snapshot and the current search
+page and do not
 include Core 1 reservations unless they exist in Core 2's records. Core 1
 synchronization is not implemented by this interface rebuild.
 

@@ -13,6 +13,7 @@ type DispatchWorkspaceEntryProps = ComponentProps<
     typeof LiveDispatchWorkspace
 > & {
     planning?: ProjectPlanningViewModel | null;
+    incomingTotal?: number;
 };
 
 export function DispatchWorkspaceEntry({
@@ -26,9 +27,7 @@ export function DispatchWorkspaceEntry({
         dispatchProps.capabilities.update_assigned_dispatch_status;
     const searchParams = new URLSearchParams(url.split('?')[1] ?? '');
     const workspaceParam = searchParams.get('dispatch_workspace');
-    const classic =
-        workspaceParam === 'classic' ||
-        (workspaceParam !== 'desk' && role === 'dispatcher');
+    const classic = workspaceParam === 'classic';
 
     if (fieldMode) {
         return <LiveDispatchWorkspace {...dispatchProps} />;

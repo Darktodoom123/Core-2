@@ -28,6 +28,7 @@ export interface DispatchDeskProps {
     serviceRequests: ServiceRequestViewModel[];
     rentalHandoffs: RentalDispatchHandoffViewModel[];
     salesHandoffs: SalesDispatchHandoffViewModel[];
+    incomingTotal?: number;
     assets?: AssetViewModel[];
     approvals?: ApprovalViewModel[];
     users?: DispatchResourceUserViewModel[];
@@ -48,6 +49,7 @@ export interface DispatchDeskUrlState {
     query: string;
     source: DispatchSourceFilter;
     attentionOnly: boolean;
+    needsAssignmentOnly: boolean;
     selectedJobId: number | null;
     showIntake: boolean;
     intakeMode: 'service' | 'rental' | 'sale' | null;

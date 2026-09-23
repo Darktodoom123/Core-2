@@ -1,6 +1,7 @@
 <?php
 
 use App\Platform\Workspace\Http\Controllers\AdminOverrideController;
+use App\Platform\Workspace\Http\Controllers\DispatchDeskIncomingController;
 use App\Platform\Workspace\Http\Controllers\DispatchDeskJobsController;
 use App\Platform\Workspace\Http\Controllers\SystemHealthController;
 use Illuminate\Support\Facades\Route;
@@ -8,6 +9,10 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['auth', 'active', 'verified', 'throttle:120,1'])
     ->get('/operations/dispatch-desk/jobs', DispatchDeskJobsController::class)
     ->name('operations.dispatch-desk.jobs');
+
+Route::middleware(['auth', 'active', 'verified', 'throttle:120,1'])
+    ->get('/operations/dispatch-desk/incoming', DispatchDeskIncomingController::class)
+    ->name('operations.dispatch-desk.incoming');
 
 Route::middleware(['auth', 'active', 'verified', 'throttle:120,1'])->prefix('operations/admin')->group(function (): void {
     Route::post('/dispatch-jobs/{dispatchJob}/emergency-abort', [AdminOverrideController::class, 'emergencyAbortDispatch']);

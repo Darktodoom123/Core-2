@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { dateFromLocalKey, startOfWeekLocalDate } from '@/lib/date-utils';
 import type { DispatchJobViewModel } from '@/types/workspace';
 import type { DispatchDeskUrlState } from './types';
@@ -9,6 +9,8 @@ interface DispatchSearchPage {
     current_page: number;
     last_page: number;
     per_page: number;
+    attention_total: number;
+    needs_assignment_total: number;
 }
 
 export function dispatchSearchParams(state: DispatchDeskUrlState): string {
@@ -18,6 +20,14 @@ export function dispatchSearchParams(state: DispatchDeskUrlState): string {
         source: state.source,
         page: String(state.page),
     });
+
+    if (state.attentionOnly && state.view !== 'history') {
+        params.set('attention', '1');
+    }
+
+    if (state.needsAssignmentOnly && state.view === 'schedule') {
+        params.set('needs_assignment', '1');
+    }
 
     if (state.view === 'schedule') {
         const period = state.mode === 'list' ? 'day' : state.period;
@@ -62,6 +72,7 @@ export function useDispatchSearch(
     );
     const [pending, setPending] = useState(false);
     const [retry, setRetry] = useState(0);
+    const lastLoadedKey = useRef<string | null>(null);
 
     useEffect(() => {
         if (!enabled || refreshing) {
@@ -91,12 +102,15 @@ export function useDispatchSearch(
 
                 if (
                     !Array.isArray(page.jobs) ||
-                    !Number.isInteger(page.total)
+                    !Number.isInteger(page.total) ||
+                    !Number.isInteger(page.attention_total) ||
+                    !Number.isInteger(page.needs_assignment_total)
                 ) {
                     throw new Error('Invalid search results');
                 }
 
                 if (!controller.signal.aborted) {
+                    lastLoadedKey.current = key;
                     setResult({ key, page });
                 }
             } catch {
@@ -104,7 +118,9 @@ export function useDispatchSearch(
                     setError({
                         key,
                         message:
-                            'Dispatch search could not load. Retry to get complete results.',
+                            lastLoadedKey.current === key
+                                ? 'Dispatch refresh failed. The last loaded page remains visible and may be stale; retry to refresh it.'
+                                : 'Dispatch search could not load. Retry to get complete results; the desk is showing its limited workspace snapshot.',
                     });
                 }
             } finally {

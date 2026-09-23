@@ -51,6 +51,7 @@ const SECTION_PROPS: Record<WorkspaceSection, string[]> = {
         'serviceRequests',
         'rentalHandoffs',
         'salesHandoffs',
+        'incoming_total',
         'assets',
         'assets_total',
         'approvals',
@@ -764,6 +765,7 @@ export default function Workspace(props: WorkspacePageProps) {
                         serviceRequests={props.serviceRequests ?? []}
                         rentalHandoffs={props.rentalHandoffs ?? []}
                         salesHandoffs={props.salesHandoffs ?? []}
+                        incomingTotal={props.incoming_total ?? 0}
                         assets={props.assets ?? []}
                         approvals={props.approvals ?? []}
                         users={props.dispatchResourceUsers ?? []}

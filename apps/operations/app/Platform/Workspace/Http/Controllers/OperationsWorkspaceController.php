@@ -25,6 +25,7 @@ use App\Platform\Reporting\Models\ReportExport;
 use App\Platform\Tracking\Contracts\TrackingClientInterface;
 use App\Platform\Tracking\Data\LatestLocationDto;
 use App\Platform\Workspace\Queries\WorkspaceAssetsQuery;
+use App\Platform\Workspace\Queries\DispatchDeskIncomingQuery;
 use App\Platform\Workspace\Queries\WorkspaceFuelRequestsQuery;
 use App\Platform\Workspace\Queries\WorkspaceJobReportsQuery;
 use App\Platform\Workspace\ViewModels\OperationsWorkspaceViewModel;
@@ -49,7 +50,7 @@ final class OperationsWorkspaceController extends Controller
     /** @var array<string, list<string>> */
     private const SECTION_PROPS = [
         'overview' => ['jobs', 'clients', 'serviceRequests', 'assets', 'assets_total', 'fuelRequests', 'locations', 'approvals', 'users', 'auditEvents', 'gptRecommendations'],
-        'dispatch' => ['jobs', 'clients', 'serviceRequests', 'rentalHandoffs', 'salesHandoffs', 'assets', 'assets_total', 'approvals', 'dispatchResourceUsers', 'gptRecommendations', 'projectPlanning'],
+        'dispatch' => ['jobs', 'clients', 'serviceRequests', 'rentalHandoffs', 'salesHandoffs', 'incoming_total', 'assets', 'assets_total', 'approvals', 'dispatchResourceUsers', 'gptRecommendations', 'projectPlanning'],
         'assets' => ['assets', 'assets_total', 'assets_pagination', 'locations'],
         'tracking' => ['assets', 'assets_total', 'locations'],
         'fuel' => ['fuelRequests', 'fuelRequests_total', 'fuelRequests_stats', 'fuelRequests_pagination', 'assets', 'assets_total'],
@@ -199,6 +200,7 @@ final class OperationsWorkspaceController extends Controller
                     'serviceRequests' => OperationsWorkspaceViewModel::serviceRequests($this->fetchServiceRequests($canCreateDispatch)),
                     'rentalHandoffs' => OperationsWorkspaceViewModel::rentalHandoffs($this->fetchRentalHandoffs($canViewRentalHandoffs)),
                     'salesHandoffs' => OperationsWorkspaceViewModel::salesHandoffs($this->fetchSalesHandoffs($canViewSalesHandoffs)),
+                    'incoming_total' => app(DispatchDeskIncomingQuery::class)->counts($user)['total'],
                     'assets' => OperationsWorkspaceViewModel::assets($defaultAssets),
                     'assets_total' => $defaultAssetsTotal,
                     'approvals' => OperationsWorkspaceViewModel::approvals($this->fetchApprovals($user), $user),
@@ -329,6 +331,7 @@ final class OperationsWorkspaceController extends Controller
             'serviceRequests' => OperationsWorkspaceViewModel::serviceRequests($this->fetchServiceRequests($canCreateDispatch)),
             'rentalHandoffs' => OperationsWorkspaceViewModel::rentalHandoffs($this->fetchRentalHandoffs($canViewRentalHandoffs)),
             'salesHandoffs' => OperationsWorkspaceViewModel::salesHandoffs($this->fetchSalesHandoffs($canViewSalesHandoffs)),
+            'incoming_total' => app(DispatchDeskIncomingQuery::class)->counts($user)['total'],
             'assets' => OperationsWorkspaceViewModel::assets($this->fetchAssets($user)),
             'assets_total' => $this->fetchAssetsTotal($user),
             'assets_pagination' => [
