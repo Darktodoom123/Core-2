@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
@@ -29,6 +30,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Browser tests serve the built bundle. A stale public/hot marker from
+        // a stopped local Vite process must not switch the test server back to
+        // an unavailable HMR origin.
+        if (app()->environment('testing')) {
+            Vite::useHotFile(storage_path('framework/testing/browser-vite.hot'));
+        }
+
         $this->configureDefaults();
         $this->configureRateLimiting();
         DB::listen(function (QueryExecuted $query): void {

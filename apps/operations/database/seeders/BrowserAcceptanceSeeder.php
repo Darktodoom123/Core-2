@@ -9,6 +9,10 @@ use App\Modules\Dispatch\Enums\DispatchPriority;
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\ApprovalRequest;
 use App\Modules\Dispatch\Models\DispatchJob;
+use App\Modules\HoursOfService\Enums\DutyStatus;
+use App\Modules\HoursOfService\Enums\ShiftStatus;
+use App\Modules\HoursOfService\Models\OperatorDutyLog;
+use App\Modules\HoursOfService\Models\OperatorShift;
 use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Gpt\Enums\GptRecommendationStatus;
 use App\Platform\Gpt\Models\GptRecommendation;
@@ -221,6 +225,88 @@ final class BrowserAcceptanceSeeder extends Seeder
             'checklist' => ['fixture_readiness' => true],
             'completed_at' => now()->subHour(),
         ]);
+
+        $hosNow = now();
+        $hosShiftStartedAt = $hosNow->copy()->subMinutes(40);
+        $hosDrivingStartedAt = $hosNow->copy()->subMinutes(30);
+        $hosStandbyStartedAt = $hosNow->copy()->subMinutes(20);
+
+        $hosShift = OperatorShift::query()->create([
+            'user_id' => $operator->id,
+            'operational_asset_id' => $crane->id,
+            'dispatch_job_id' => $assignedJob->id,
+            'status' => ShiftStatus::ACTIVE,
+            'started_at' => $hosShiftStartedAt,
+            'operating_minutes' => 10,
+            'driving_minutes' => 10,
+            'standby_minutes' => 0,
+            'break_minutes' => 0,
+            'remarks' => 'Browser fixture for location-aware duty history.',
+        ]);
+
+        OperatorDutyLog::query()->create([
+            'operator_shift_id' => $hosShift->id,
+            'user_id' => $operator->id,
+            'operational_asset_id' => $crane->id,
+            'dispatch_job_id' => $assignedJob->id,
+            'duty_status' => DutyStatus::OPERATING,
+            'previous_duty_status' => null,
+            'started_at' => $hosShiftStartedAt,
+            'ended_at' => $hosDrivingStartedAt,
+            'duration_minutes' => 10,
+            'occurred_at' => $hosShiftStartedAt,
+            'accepted_at' => $hosNow->copy()->subMinutes(39),
+            'latitude' => 14.5995,
+            'longitude' => 120.9842,
+            'accuracy_metres' => 8.0,
+            'location_observed_at' => $hosNow->copy()->subMinutes(39),
+            'location_source' => 'gps',
+            'location_freshness' => 'last_known',
+            'remarks' => 'Accepted operating interval at the port terminal.',
+        ]);
+
+        OperatorDutyLog::query()->create([
+            'operator_shift_id' => $hosShift->id,
+            'user_id' => $operator->id,
+            'operational_asset_id' => $crane->id,
+            'dispatch_job_id' => $assignedJob->id,
+            'duty_status' => DutyStatus::DRIVING,
+            'previous_duty_status' => DutyStatus::OPERATING,
+            'started_at' => $hosDrivingStartedAt,
+            'ended_at' => $hosStandbyStartedAt,
+            'duration_minutes' => 10,
+            'occurred_at' => $hosDrivingStartedAt,
+            'accepted_at' => $hosNow->copy()->subMinutes(29),
+            'latitude' => 14.6001,
+            'longitude' => 120.9851,
+            'accuracy_metres' => 12.0,
+            'location_observed_at' => $hosNow->copy()->subMinutes(29),
+            'location_source' => 'last_known',
+            'location_freshness' => 'last_known',
+            'remarks' => 'Accepted transit interval with retained last-known position.',
+        ]);
+
+        OperatorDutyLog::query()->create([
+            'operator_shift_id' => $hosShift->id,
+            'user_id' => $operator->id,
+            'operational_asset_id' => $crane->id,
+            'dispatch_job_id' => $assignedJob->id,
+            'duty_status' => DutyStatus::STANDBY,
+            'previous_duty_status' => DutyStatus::DRIVING,
+            'is_demurrage_billable' => true,
+            'started_at' => $hosStandbyStartedAt,
+            'occurred_at' => $hosStandbyStartedAt,
+            'accepted_at' => $hosNow->copy()->subMinutes(19),
+            'latitude' => 14.5998,
+            'longitude' => 120.9848,
+            'accuracy_metres' => 6.0,
+            'location_name' => 'Manila Port Terminal',
+            'location_observed_at' => $hosNow->copy()->subMinutes(2),
+            'location_source' => 'gps',
+            'location_freshness' => 'fresh',
+            'remarks' => 'Accepted standby interval with current GPS snapshot.',
+        ]);
+
         $recommendations['dispatch_desk'] = $this->recommendation(
             $assignmentReviewJob,
             $manager,
