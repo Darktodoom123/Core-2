@@ -1,0 +1,17 @@
+# Generated and local artifacts that are not useful architectural context.
+graphify-out/
+output/
+tmp/
+.agents/
+.codex/
+AGENTS.md
+
+# Never send local environment or credential material through a semantic pass.
+.env*
+*.pem
+*.key
+
+# Generated or vendored code that creates graph noise.
+apps/operations/bootstrap/ssr/
+apps/operations/public/build/
+third_party/image-size/

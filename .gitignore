@@ -118,10 +118,10 @@ Desktop.ini
 !/Docs/plans/resource-picker-refinement.md
 !/Docs/plans/field-execution-view.md
 /Docs/plans/microservices-migration.md
-# Graphify keeps the graph and report shareable; caches and machine paths stay local.
-/graphify-out/cache/
-/graphify-out/.graphify_*
-/graphify-out/cost.json
+# Keep only the shareable Graphify graph and report; rebuild and local state stay untracked.
+/graphify-out/*
+!/graphify-out/GRAPH_REPORT.md
+!/graphify-out/graph.json
 .ai-reports/
 !.ai-reports/
 .ai-reports/*
