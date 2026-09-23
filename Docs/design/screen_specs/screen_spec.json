@@ -1,0 +1,848 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "project": "Core Transaction 2 (Alibaton Operations & Native Field Mobile)",
+  "version": "2.0.0",
+  "generated_at": "2026-08-15T23:45:00Z",
+  "design_system": {
+    "aesthetic": "Tactile industrial instrument cockpit interface for heavy machinery operations",
+    "locale_context": {
+      "country": "Philippines (PH)",
+      "legal_entity": "Alibaton Heavy Industries Philippines Inc.",
+      "currency": "PHP",
+      "currency_symbol": "₱",
+      "timezone": "Asia/Manila (PHT, UTC+8)",
+      "regulatory_frameworks": [
+        "DOLE-OSHC (Department of Labor and Employment - OSH Standards)",
+        "TESDA Heavy Equipment Operator (HEO) NC II Certification",
+        "DPWH Special Heavy Corridor Clearance Permits",
+        "MMDA / LTO Heavy Transit Dispatch Regulations"
+      ],
+      "major_infrastructure_corridors": [
+        "Metro Manila Subway Project (MMSP) Contract Packages",
+        "North-South Commuter Railway (NSCR) Extension",
+        "NLEX-SLEX Connector Road Lift Bays",
+        "Batangas International Port Heavy Industrial Yard",
+        "New Manila International Airport (Bulacan Aerotropolis)"
+      ]
+    },
+    "theme": "Dual-Mode (Daylight High-Contrast Sunlight & Night Cabin Dark HUD)",
+    "typography": "Plus Jakarta Sans (UI Hierarchy) + JetBrains Mono (Telemetry/VINs/Timers)",
+    "palette": {
+      "canvas_light": "#F1F5F9",
+      "surface_light": "#FFFFFF",
+      "canvas_dark": "#090D16",
+      "surface_dark": "#0F172A",
+      "panel_dark": "#1E293B",
+      "brand_gold": "#FFBF00",
+      "action_cobalt": "#2563EB",
+      "success_emerald": "#10B981",
+      "danger_red": "#EF4444"
+    },
+    "touch_targets": {
+      "min_height_px": 48,
+      "min_width_px": 48,
+      "primary_action_pedal_px": 52
+    },
+    "accessibility": "WCAG 2.2 AAA daylight outdoor readability, 48px+ glove-friendly targets, zero glare night-vision mode"
+  },
+  "flows": [
+    {
+      "flow_id": "FLOW_01_AUTH",
+      "flow_name": "Authentication & Device Connectivity Flow",
+      "roles": ["Driver", "Operator", "Field Technician", "Safety Officer"],
+      "screens": ["M-AUTH-01", "M-AUTH-02"]
+    },
+    {
+      "flow_id": "FLOW_02_SHIFT_ASSIGNMENTS",
+      "flow_name": "Today's Work & Shift Management Flow",
+      "roles": ["Driver", "Operator", "Field Technician"],
+      "screens": ["M-SHIFT-01", "M-ASSIGN-01"]
+    },
+    {
+      "flow_id": "FLOW_03_FIELD_SERVICE",
+      "flow_name": "Field Service & Heavy Crane Operational Lifecycle",
+      "roles": ["Driver", "Operator"],
+      "screens": ["M-SRV-01", "M-SRV-02", "M-SRV-03", "M-SRV-04", "M-SRV-05"]
+    },
+    {
+      "flow_id": "FLOW_04_INSPECTION_MAINTENANCE_FUEL",
+      "flow_name": "Equipment Inspection, Maintenance & Fuel Flow",
+      "roles": ["Field Technician", "Operator", "Driver"],
+      "screens": ["M-INSP-01", "M-MAINT-01", "M-FUEL-01"]
+    },
+    {
+      "flow_id": "FLOW_05_RENTAL_OPERATIONS",
+      "flow_name": "Equipment Rental Checkout & Return Flow",
+      "roles": ["Field Technician", "Logistics Driver", "Field Inspector"],
+      "screens": ["M-RNT-01", "M-RNT-02"]
+    },
+    {
+      "flow_id": "FLOW_06_SALES_FULFILLMENT",
+      "flow_name": "Equipment Sales Delivery & Title Handover Flow",
+      "roles": ["Delivery Driver", "Handover Technician"],
+      "screens": ["M-SAL-01", "M-SAL-02"]
+    }
+  ],
+  "screens": [
+    {
+      "screen_id": "M-AUTH-01",
+      "flow_id": "FLOW_01_AUTH",
+      "name": "Mobile Field Login & Session Authentication",
+      "role": ["Driver", "Operator", "Field Technician"],
+      "viewport": "390x844 (Mobile Portrait)",
+      "description": "Secure, sunlight-readable authentication screen with role-aware profile detection, offline token caching indicators, and server connectivity validation.",
+      "ui_contract": {
+        "header": {
+          "logo": "Alibaton Industrial Operations Emblem",
+          "system_label": "Core Transaction 2 • Field Mobile",
+          "sync_badge": "Offline Ready • Local Cache Active"
+        },
+        "form_fields": [
+          {
+            "id": "username_or_email",
+            "label": "Operational Username or Email",
+            "type": "text",
+            "required": true,
+            "placeholder": "e.g. driver.tan / tech.lee@alibaton.com"
+          },
+          {
+            "id": "password",
+            "label": "Password",
+            "type": "password",
+            "required": true,
+            "placeholder": "Enter secure password"
+          },
+          {
+            "id": "remember_session",
+            "label": "Remember shift session (8 hours)",
+            "type": "checkbox",
+            "default": true
+          }
+        ],
+        "actions": [
+          {
+            "id": "btn_login",
+            "label": "Sign In to Operations",
+            "variant": "primary_brand_gold",
+            "min_height": 52
+          },
+          {
+            "id": "btn_network_config",
+            "label": "Server & Network Diagnostics",
+            "variant": "outline_slate",
+            "min_height": 48
+          }
+        ],
+        "states": {
+          "loading": "Disables input, renders high-contrast progress ring and 'Verifying Credentials...' label",
+          "error": "Displays inline alert banner with specific failure reasons (Invalid credentials, Account suspended, IP restricted)",
+          "offline": "Shows gold banner: 'Working in Offline Mode. Authenticating against local credential cache.'"
+        }
+      },
+      "stitch_prompt": "Create a high-density, professional mobile login screen (390x844) for an industrial heavy-equipment operations app named 'Alibaton Core 2'. The canvas is cool slate (#F8FAFC) with a crisp white card (#FFFFFF) having a 1px border (#E2E8F0) and 12px corner radius. At the top, show a bold industrial logo with a gold icon (#FFBF00) and title 'ALIBATON OPERATIONS' in Instrument Sans 600 graphite (#1E293B). Subtitle: 'Field Mobile Service & Heavy Crane Dispatch'. Form inputs have clear graphite labels, 48px height, subtle gray borders, and an eye toggle on the password field. The primary action button is a full-width 52px gold button (#FFBF00) with bold dark text 'Sign In to Operations'. Include an offline resilience pill at the bottom ('SQLite Sync Engine Ready • v2.0.0'). Clean, calm, zero decorative gradients."
+    },
+    {
+      "screen_id": "M-SHIFT-01",
+      "flow_id": "FLOW_02_SHIFT_ASSIGNMENTS",
+      "name": "Today's Work & Shift Operations Dashboard",
+      "role": ["Driver", "Operator", "Field Technician"],
+      "viewport": "390x844 (Mobile Portrait)",
+      "description": "Primary landing dashboard for field workers showing active shift timer, background GPS telemetry status, local outbox sync pill, and the prioritized list of assigned operational jobs.",
+      "ui_contract": {
+        "header": {
+          "operator_profile": "Marcus Tan (Lead Crane Operator)",
+          "qualification_badge": "Class 5 Heavy • 120T Certified",
+          "shift_timer_pill": "Shift: 04:18:22 Elapsed",
+          "connectivity_pill": "Online • 0 Queued Mutations"
+        },
+        "widgets": [
+          {
+            "id": "gps_telemetry_card",
+            "title": "Field Telemetry & GPS Sharing",
+            "status": "Broadcasting (Fresh • 12s ago)",
+            "toggle": "Active GPS Sharing",
+            "accuracy": "High Precision (±3m)"
+          },
+          {
+            "id": "active_job_card",
+            "title": "Current Active Dispatch",
+            "job_id": "DSP-2026-0894",
+            "source_provenance": "Service Lift • Jurong Island Berth 4",
+            "assigned_asset": "Liebherr LTM 1120-4.1 (120T Crane)",
+            "status_badge": "En Route (ETA 14:15)",
+            "action_cta": "Open Active Journey HUD"
+          }
+        ],
+        "job_list_section": {
+          "title": "Today's Assigned Operations (3 Jobs)",
+          "filters": ["All (3)", "Dispatched (1)", "Scheduled (2)"],
+          "items": [
+            {
+              "job_id": "DSP-2026-0894",
+              "type": "Heavy Lift Service",
+              "site": "Jurong Island Berth 4",
+              "time": "13:00 - 18:00",
+              "status": "En Route",
+              "asset": "120T Mobile Crane"
+            },
+            {
+              "job_id": "RNT-2026-0412",
+              "type": "Rental Pre-Checkout",
+              "site": "Alibaton Tuas Yard",
+              "time": "18:30 - 19:30",
+              "status": "Scheduled",
+              "asset": "CAT 320 GC Excavator"
+            }
+          ]
+        },
+        "actions": [
+          {
+            "id": "btn_log_fuel",
+            "label": "Request Fuel Bowser",
+            "variant": "outline_slate",
+            "min_height": 48
+          },
+          {
+            "id": "btn_sync_now",
+            "label": "Force Sync Outbox",
+            "variant": "outline_slate",
+            "min_height": 48
+          }
+        ]
+      },
+      "stitch_prompt": "Create a high-density, touch-first mobile dashboard screen (390x844) for an industrial field crane operator named 'Marcus Tan'. Background is light cool slate (#F8FAFC). Top header bar contains operator avatar, name, green status dot ('Active Shift 04:18:22'), and a synchronization chip ('Online • Synced' in emerald green #16A34A). Main hero card: Crisp white card with 1px border displaying the Active Job 'DSP-2026-0894' for 'Jurong Island Berth 4' with a vibrant gold badge 'EN ROUTE' and a large 48px Cobalt Blue button (#2563EB) 'Open Active Journey HUD'. Below, render a clean segmented list of 'Today's Assigned Operations' with job cards showing site location, asset name (Liebherr 120T Crane), schedule time window, and color-coded status chips with text + icon. Bottom navigation bar with 4 tabs: 'Today's Work' (active gold), 'Inspections', 'Fuel', 'Profile'. High contrast, 48px minimum touch targets, zero clutter."
+    },
+    {
+      "screen_id": "M-ASSIGN-01",
+      "flow_id": "FLOW_02_SHIFT_ASSIGNMENTS",
+      "name": "Assignment Offer Review & Structured Response Modal",
+      "role": ["Driver", "Operator", "Field Technician"],
+      "viewport": "390x844 (Mobile Modal Sheet)",
+      "description": "Modal bottom-sheet presented to the field worker when a new dispatch or equipment assignment is dispatched by the Operations Manager, requiring explicit one-tap acceptance or structured rejection with mandatory reason code.",
+      "ui_contract": {
+        "header": {
+          "title": "New Operational Assignment Offer",
+          "urgency_badge": "Priority Dispatch • Requires Response",
+          "countdown_timer": "Respond within 15:00 min"
+        },
+        "assignment_summary": {
+          "dispatch_id": "DSP-2026-0902",
+          "source_type": "Emergency Infrastructure Repair",
+          "site_address": "Pioneer Sector 3, Tuas Mega Yard",
+          "start_time": "Today @ 16:30 (Duration: 4.5 hrs)",
+          "assigned_asset": "Kato CR-250Rv (25T City Crane)",
+          "client_contact": "Jurong Town Corp / Site PIC: Dave Koh (+65 9123 4567)",
+          "site_hazards": "Overhead high-voltage 22kV powerlines within 20m; soft ground near canal bank"
+        },
+        "rejection_flow": {
+          "trigger_button": "Reject Assignment",
+          "mandatory_rejection_reasons": [
+            "Mandatory Rest Hours / Fatigue Limit Exceeded",
+            "Lacking Specific Machine Certification / Permit",
+            "Active Travel Conflict / Traffic Gridlock",
+            "Medical / Emergency Unavailability"
+          ],
+          "remarks_field": "Additional operational notes for Operations Manager"
+        },
+        "actions": [
+          {
+            "id": "btn_accept_assignment",
+            "label": "Accept Assignment & Mobilize",
+            "variant": "primary_action_blue",
+            "min_height": 52
+          },
+          {
+            "id": "btn_reject_assignment",
+            "label": "Decline with Reason...",
+            "variant": "danger_outline",
+            "min_height": 48
+          }
+        ]
+      },
+      "stitch_prompt": "Create a high-urgency mobile bottom-sheet modal screen (390x844) for an incoming Crane Assignment Offer. The background is partially dimmed slate. The active white modal card (#FFFFFF) has rounded top corners (16px) with a prominent top grab handle. Header features a gold priority badge 'URGENT DISPATCH OFFER' and a timer countdown '14:22 remaining'. The body shows an assignment summary table: Job ID 'DSP-2026-0902', Location 'Pioneer Sector 3, Tuas Mega Yard', Scheduled Time 'Today @ 16:30', Machine '25T City Crane Kato CR-250Rv'. A high-contrast warning callout box with semantic orange/amber border (#EA580C) and AlertTriangle icon highlights: 'Hazard Alert: 22kV Overhead Powerlines near setup point'. Bottom action stack: Large full-width 52px Cobalt Blue button (#2563EB) 'Accept Assignment & Mobilize', and a secondary red-bordered button (#DC2626) 'Decline with Reason...'. Clear, decisive, high-contrast industrial styling."
+    },
+    {
+      "screen_id": "M-SRV-01",
+      "flow_id": "FLOW_03_FIELD_SERVICE",
+      "name": "Heavy-Vehicle / Crane Route Navigation (Drive Mode HUD)",
+      "role": ["Driver", "Operator"],
+      "viewport": "390x844 (Mobile Landscape/Portrait HUD)",
+      "description": "Glanceable, voice/haptic-friendly driving HUD designed for heavy mobile cranes and transport prime movers. Displays bridge clearance corridor warnings, site entrance/gate instructions, route freshness, and zero-distraction arrival controls.",
+      "ui_contract": {
+        "hud_header": {
+          "job_id": "DSP-2026-0894",
+          "destination_name": "Jurong Port Gate 4 Heavy Staging Bay",
+          "eta": "14:15 (18 min / 12.4 km)",
+          "heavy_vehicle_clearance_status": "Approved Heavy Corridor (Max Height 4.5m, Axle Limit 30T)"
+        },
+        "navigation_display": {
+          "next_maneuver": "In 400m, Turn Left onto Jurong Port Road Gate 4",
+          "corridor_alert": "Bridge Clearance: 5.2m Safe (Crane Mast Height: 3.9m)",
+          "speed_indicator": "42 km/h (Limit: 50 km/h)",
+          "telemetry_freshness": "GPS Fresh • 2s ago"
+        },
+        "bottom_action_bar": {
+          "primary_action": {
+            "id": "btn_confirm_arrival",
+            "label": "Confirm Arrival at Site Gate",
+            "variant": "primary_brand_gold",
+            "min_height": 56,
+            "haptic_feedback": true
+          },
+          "secondary_action": {
+            "id": "btn_report_delay",
+            "label": "Report Traffic / Road Delay",
+            "variant": "outline_slate",
+            "min_height": 48
+          }
+        },
+        "safety_constraints": "Map interaction is locked while vehicle velocity > 5 km/h. No multi-touch typing required."
+      },
+      "stitch_prompt": "Create a high-contrast, glanceable mobile navigation HUD screen (390x844) for a driver maneuvering a 120-ton heavy crane. The top section is a dark graphite banner (#1E293B) with huge white typography: 'In 400m, Turn Left at Jurong Port Gate 4' accompanied by a bold white arrow icon. Next line shows ETA '14:15 (18 min remaining)'. In the center, show a stylized MapLibre navigation corridor map with a bright blue path line, highlighted site entrance gate marker, and a gold safety callout banner: 'Heavy Vehicle Corridor: Bridge Clearance 5.2m (Mast: 3.9m - PASS)'. The bottom action area features an extra-large 56px gold button (#FFBF00) with bold dark text 'Confirm Arrival at Site Gate' and a secondary button 'Report Traffic Delay'. Designed for instant glanceability under bright sunlight with maximum legibility."
+    },
+    {
+      "screen_id": "M-SRV-02",
+      "flow_id": "FLOW_03_FIELD_SERVICE",
+      "name": "Parked-and-Secured Site Arrival Safety Checklist",
+      "role": ["Driver", "Operator"],
+      "viewport": "390x844 (Mobile Portrait)",
+      "description": "Mandatory safety gate immediately upon arrival. Requires physical confirmation of parking brake, wheel chocks, amber strobes, and ground stability before unlocking crane setup controls.",
+      "ui_contract": {
+        "header": {
+          "title": "Site Arrival & Vehicle Securing Gate",
+          "subtitle": "Job DSP-2026-0894 • Jurong Port Berth 4",
+          "gate_status": "Gate 3: Pre-Setup Safety Lockout"
+        },
+        "checklist_items": [
+          {
+            "id": "chk_parking_brake",
+            "label": "Air Parking Brake Engaged & Transmission in Neutral",
+            "type": "safety_toggle",
+            "required": true,
+            "description": "Mechanical lock confirmed"
+          },
+          {
+            "id": "chk_wheel_chocks",
+            "label": "Heavy-Duty Wheel Chocks Positioned (Front & Rear Axles)",
+            "type": "safety_toggle",
+            "required": true,
+            "description": "Both drive axles secured against rollback"
+          },
+          {
+            "id": "chk_amber_strobes",
+            "label": "360° Amber Warning Strobes & Hazard Beacons Activated",
+            "type": "safety_toggle",
+            "required": true,
+            "description": "Visual site warning active"
+          },
+          {
+            "id": "chk_ground_bearing",
+            "label": "Initial Ground Bearing Inspection (Firm Concrete/Asphalt, No Subsidence)",
+            "type": "safety_toggle",
+            "required": true,
+            "description": "Verified free of underground drains or sinkholes"
+          }
+        ],
+        "actions": [
+          {
+            "id": "btn_unlock_setup",
+            "label": "Confirm Vehicle Secured & Unlock Crane Setup",
+            "variant": "primary_brand_gold",
+            "min_height": 52,
+            "disabled_until_all_checked": true
+          }
+        ]
+      },
+      "stitch_prompt": "Create an industrial mobile safety verification screen (390x844) titled 'Site Arrival & Vehicle Securing'. Canvas is cool slate (#F8FAFC). At the top, a prominent safety notice card with a semantic orange/amber warning border (#EA580C) reads: 'MANDATORY SAFETY GATE: Crane setup locked until vehicle is immobilized and secured.' Below, display 4 large interactive safety toggle cards with generous 48px touch targets: 1) 'Air Parking Brake Engaged', 2) 'Heavy-Duty Wheel Chocks Positioned', 3) '360° Amber Warning Strobes Active', 4) 'Ground Bearing Surface Checked'. Each toggle features an unmistakable checkbox/switch and descriptive helper text. Bottom button is a full-width 52px gold button (#FFBF00) 'Confirm Vehicle Secured & Unlock Crane Setup' (enabled state with green check icon). Clean, strict, and compliant with industrial safety standards."
+    },
+    {
+      "screen_id": "M-SRV-03",
+      "flow_id": "FLOW_03_FIELD_SERVICE",
+      "name": "Crane Setup & 15m Exclusion Zone Verification",
+      "role": ["Operator", "Safety Officer"],
+      "viewport": "390x844 (Mobile Portrait)",
+      "description": "Interactive crane setup workspace verifying 4-point hydraulic outrigger pad positioning, live anemometer wind speed telemetry, powerline clearance, and the 15-meter safety exclusion zone.",
+      "ui_contract": {
+        "header": {
+          "title": "Crane Outrigger & Exclusion Zone Setup",
+          "machine_name": "Liebherr LTM 1120-4.1 (120T)",
+          "wind_telemetry": "Live Wind: 14 km/h (Safe Limit: 38 km/h)"
+        },
+        "setup_components": [
+          {
+            "id": "anemometer_widget",
+            "title": "Anemometer Wind Speed Gauge",
+            "current_value": "14 km/h",
+            "max_safe_limit": "38 km/h",
+            "status": "Safe for Lifting (Green)"
+          },
+          {
+            "id": "outrigger_pad_matrix",
+            "title": "4-Point Outrigger Pad Extension & Steel Mats",
+            "points": [
+              {"name": "Front Left (FL)", "status": "100% Extended • Steel Mat Set", "verified": true},
+              {"name": "Front Right (FR)", "status": "100% Extended • Steel Mat Set", "verified": true},
+              {"name": "Rear Left (RL)", "status": "100% Extended • Steel Mat Set", "verified": true},
+              {"name": "Rear Right (RR)", "status": "100% Extended • Steel Mat Set", "verified": true}
+            ]
+          },
+          {
+            "id": "exclusion_zone_checklist",
+            "title": "15m Swing Radius Exclusion Zone",
+            "items": [
+              "15m barricade tape and safety cones deployed around counterweight swing radius",
+              "Overhead 22kV electrical clearance > 6.0m verified by Site Rigger",
+              "Rigger & Signalman certified communications check (Radio Channel 4)"
+            ]
+          }
+        ],
+        "actions": [
+          {
+            "id": "btn_authorize_lift_ops",
+            "label": "Authorize Crane Setup & Begin Lift Operations",
+            "variant": "primary_action_blue",
+            "min_height": 52
+          }
+        ]
+      },
+      "stitch_prompt": "Create an interactive crane setup safety screen (390x844) for a mobile crane operator. Clean slate canvas (#F8FAFC). At the top, show a live Anemometer Wind Speed card with an emerald green progress bar (#16A34A) reading '14 km/h (Safe Limit: 38 km/h)'. In the center, display a 2x2 grid representing the crane chassis and 4 hydraulic outrigger pads: 'Front Left', 'Front Right', 'Rear Left', 'Rear Right', each with a bright green verified checkmark and '100% Extended • Steel Mats In Place'. Below, show a high-contrast card for '15m Exclusion Zone Barricades' with checked toggles for swing radius clearance and radio communication check. Action button: Large 52px Cobalt Blue button (#2563EB) 'Authorize Crane Setup & Begin Lift Operations'. Ultra-clean, authoritative engineering feel."
+    },
+    {
+      "screen_id": "M-SRV-04",
+      "flow_id": "FLOW_03_FIELD_SERVICE",
+      "name": "Construction On-Site Operations & Time Allocation Hub",
+      "role": ["Operator", "Driver"],
+      "viewport": "390x844 (Mobile Portrait)",
+      "description": "Active construction on-site execution screen for real-time tracking of operational hours, recording billable client standby demurrage delays, monitoring environmental safety limits, and requesting field support.",
+      "ui_contract": {
+        "header": {
+          "job_reference": "DSP-2026-0894 • MRT Extension",
+          "site_name": "Jurong Port Gate 4 Heavy Bay",
+          "status_pill": "WORKING ON SITE",
+          "live_shift_timer": "05:42:18 Elapsed"
+        },
+        "telemetry_bar": {
+          "wind_speed": "16 km/h (Safe Limit: 38 km/h)",
+          "hydraulic_temp": "68°C (Normal)",
+          "fuel_level": "72% Tank"
+        },
+        "demurrage_time_allocation": {
+          "total_on_site_hours": "05h 42m",
+          "productive_operation": "04h 15m (Productive Lifting)",
+          "client_standby_hours": "01h 27m (Waiting on Riggers/Client • Billed at contract rate)",
+          "weather_hold_hours": "00h 00m (Clear Weather)",
+          "log_delay_button": {
+            "id": "btn_log_standby",
+            "label": "+ Log Standby / Client Delay",
+            "variant": "warning_orange",
+            "min_height": 48
+          }
+        },
+        "actions": [
+          {
+            "id": "btn_request_fuel",
+            "label": "Request On-Site Fuel Bowser",
+            "variant": "outline_slate",
+            "min_height": 48
+          },
+          {
+            "id": "btn_complete_shift",
+            "label": "Complete Shift & Open Sign-off Report",
+            "variant": "primary_dark_charcoal",
+            "min_height": 52
+          }
+        ]
+      },
+      "stitch_prompt": "Create a streamlined industrial mobile site operations screen (390x844) titled 'Construction On-Site Operations'. Background is cool slate (#F8FAFC). Header features Job ID 'DSP-2026-0894 - MRT Extension', active green pill 'WORKING ON SITE', and monospace timer pill '05:42:18'. Hero section is an Operational Time Allocation card with a '05h 42m Total On-Site' header and a segmented progress bar breaking down Productive Operation (04h 15m in green), Client Standby / Demurrage (01h 27m in gold), and Weather Hold (00h 00m). Features a gold outline button '+ Log Standby / Client Delay'. Card 2 is Site Environmental & Machine Telemetry with 3-column grid (Wind 16 km/h, Hydraulic Temp 68°C, Fuel 72%). Card 3 has a 48px Slate outline button 'Request On-Site Fuel Bowser'. Bottom action: Full-width 52px Dark Graphite button (#1E293B) 'Complete Shift & Open Sign-off Report'. High daylight contrast, glove-friendly touch targets, no lift counters."
+    },
+    {
+      "screen_id": "M-SRV-05",
+      "flow_id": "FLOW_03_FIELD_SERVICE",
+      "name": "Job Completion Report & Supervisor Sign-off",
+      "role": ["Operator", "Driver", "Field Technician"],
+      "viewport": "390x844 (Mobile Portrait)",
+      "description": "Final operational completion report capturing lift summary, total machine hours, site photo attachments with SHA-256 cryptographic hashes, and digital supervisor sign-off.",
+      "ui_contract": {
+        "header": {
+          "title": "Field Service Completion Report",
+          "job_reference": "DSP-2026-0894",
+          "site": "Jurong Port Berth 4"
+        },
+        "summary_metrics": {
+          "total_operating_hours": "06.5 hrs",
+          "standby_demurrage_hours": "01.5 hrs",
+          "total_lifts_logged": 10,
+          "closing_hour_meter": "1,426.8 hrs",
+          "closing_odometer": "45,892 km"
+        },
+        "photo_attachments": {
+          "label": "Site Completion & Rigging Demobilization Photos (Max 10 files)",
+          "slots": [
+            {"id": "photo_1", "label": "Site Cleared & Left Safe (Attached • 3.2MB)", "hash": "sha256:8f2a..."},
+            {"id": "photo_2", "label": "Outriggers Stowed & Boom Locked (Attached • 2.8MB)", "hash": "sha256:c41b..."},
+            {"id": "photo_add", "label": "+ Tap to Attach Photo"}
+          ]
+        },
+        "signature_block": {
+          "client_pic_name": "Dave Koh (Site Project Director)",
+          "company": "Jurong Town Corporation",
+          "signature_pad": "Digital Canvas with Clear and Save",
+          "timestamp": "Audited Timestamp: 2026-08-15 18:45:12 SGT"
+        },
+        "actions": [
+          {
+            "id": "btn_submit_job_report",
+            "label": "Submit Signed Report & Release Dispatch",
+            "variant": "primary_brand_gold",
+            "min_height": 52
+          }
+        ]
+      },
+      "stitch_prompt": "Create an industrial mobile completion report and digital sign-off screen (390x844). Slate background (#F8FAFC). Top summary card shows: Total Lifts (10/10), Total Operating Hours (6.5 hrs), Demurrage Standby (1.5 hrs), and Closing Hour Meter (1,426.8 hrs). Middle section displays a Photo Attachment Card showing 2 uploaded site photos with green verified badges and a '+ Add Photo' slot. Bottom section contains a Client Sign-off Box with name input 'Dave Koh (JTC)', a clean digital signature box showing a signed stroke, and an audit timestamp. Bottom action: 52px full-width gold button (#FFBF00) 'Submit Signed Report & Release Dispatch'. High-trust, professional, audit-ready layout."
+    },
+    {
+      "screen_id": "M-INSP-01",
+      "flow_id": "FLOW_04_INSPECTION_MAINTENANCE_FUEL",
+      "name": "5-Tab Equipment Inspection Suite & Safety Lockout",
+      "role": ["Field Technician", "Operator", "Safety Officer"],
+      "viewport": "390x844 (Mobile Portrait)",
+      "description": "Comprehensive 5-tab mobile inspection tool (Hydraulics, Structural, Engine & Fluids, Controls, Safety Devices) with 3-state cycling toggles (Pass / Attention / Critical Defect) and instant safety lockout upon critical failure.",
+      "ui_contract": {
+        "header": {
+          "asset_title": "Liebherr LTM 1120-4.1 (120T Mobile Crane)",
+          "asset_tag": "CR-120-04 • Serial #LTM-88210",
+          "inspection_type": "Pre-Mobilization & Daily Safety Inspection",
+          "active_tab": "Hydraulics"
+        },
+        "tabs": [
+          {"id": "tab_hydraulics", "label": "Hydraulics (4)", "status": "In Progress"},
+          {"id": "tab_structural", "label": "Structural (3)", "status": "Pending"},
+          {"id": "tab_engine", "label": "Engine/Fluids (5)", "status": "Pending"},
+          {"id": "tab_controls", "label": "Controls (4)", "status": "Pending"},
+          {"id": "tab_safety", "label": "Safety Systems (3)", "status": "Pending"}
+        ],
+        "checklist_items": [
+          {
+            "id": "item_hyd_hoses",
+            "name": "Main Boom Telescoping Cylinders & Hoses",
+            "description": "Check for oil seepage, bulging, or crimp wear",
+            "state": "Pass",
+            "options": ["Pass (Green)", "Attention (Gold)", "Critical Defect (Red)"]
+          },
+          {
+            "id": "item_hyd_outriggers",
+            "name": "Outrigger Jack Cylinders & Check Valves",
+            "description": "Zero drift under pressure holding test",
+            "state": "Pass",
+            "options": ["Pass", "Attention", "Critical Defect"]
+          },
+          {
+            "id": "item_hyd_pump",
+            "name": "Hydraulic Pump Noise & Pressure Relief",
+            "description": "Pressure steady at 320 bar with no cavitation",
+            "state": "Attention",
+            "notes": "Minor pressure pulsation observed at idle",
+            "photos_attached": 1
+          }
+        ],
+        "lockout_behavior": "Marking any item as Critical Defect instantly triggers a red lockout banner and routes asset to 'Maintenance Required' state.",
+        "actions": [
+          {
+            "id": "btn_next_tab",
+            "label": "Save & Proceed to Structural Tab",
+            "variant": "primary_action_blue",
+            "min_height": 48
+          },
+          {
+            "id": "btn_submit_pass",
+            "label": "Certify All Checks Passed",
+            "variant": "success_green",
+            "min_height": 52
+          }
+        ]
+      },
+      "stitch_prompt": "Create an industrial 5-tab mobile inspection checklist screen (390x844) for a heavy equipment technician. Header displays asset 'Liebherr 120T Crane (CR-120-04)' and an overall inspection status badge. Top horizontal scrollable tab bar features 5 tabs: 'Hydraulics' (active gold underline), 'Structural', 'Engine', 'Controls', 'Safety'. The body features inspection checklist cards. Each item contains an item title, description, and 3 high-contrast pill toggles: [Pass (Green)], [Attention (Gold)], [Critical Defect (Red)]. Item 3 shows 'Attention' selected with a gold notes chip and '1 photo attached'. Bottom footer has a 48px Cobalt Blue button (#2563EB) 'Save & Next Tab: Structural'. Crisp white cards with 1px gray borders on cool slate canvas (#F8FAFC)."
+    },
+    {
+      "screen_id": "M-MAINT-01",
+      "flow_id": "FLOW_04_INSPECTION_MAINTENANCE_FUEL",
+      "name": "Maintenance Defect Order & Safe-Release Certification",
+      "role": ["Field Technician", "Operations Manager"],
+      "viewport": "390x844 (Mobile Portrait)",
+      "description": "Work order screen for logging defects, replacement parts, repair notes, and executing the mandatory post-repair Safe-Release Return-to-Service digital certification.",
+      "ui_contract": {
+        "header": {
+          "work_order_id": "WO-2026-0419",
+          "asset": "Kato CR-250Rv (25T Crane)",
+          "severity_badge": "High Severity • Dispatch Blocker",
+          "status": "Under Repair"
+        },
+        "defect_details": {
+          "reported_issue": "Hydraulic main hoist relief valve seal blown during morning inspection",
+          "remedial_action_taken": "Replaced high-pressure seal kit (Part #KV-902-SEAL) and flushed circuit"
+        },
+        "parts_consumed": [
+          {"name": "Seal Kit 25T Hoist", "qty": 1, "unit_cost": "$240.00"},
+          {"name": "Hydraulic Oil ISO VG 46", "qty": "20 Liters", "unit_cost": "$160.00"}
+        ],
+        "safe_release_gate": {
+          "title": "Post-Repair Return-to-Service Certification",
+          "criteria": [
+            "Post-repair pressure test completed at 280 bar (Passed)",
+            "3-cycle full boom extension without hydraulic drop (Passed)",
+            "Technician digital safety sign-off completed"
+          ],
+          "technician_name": "Hafiz Rahman (Certified Hydraulic Specialist)",
+          "license_id": "MOM-TECH-9941"
+        },
+        "actions": [
+          {
+            "id": "btn_certify_safe_release",
+            "label": "Certify Safe-Release & Return Asset to Fleet",
+            "variant": "success_green",
+            "min_height": 52
+          }
+        ]
+      },
+      "stitch_prompt": "Create an industrial maintenance repair and safe-release certification screen (390x844). Background is cool slate (#F8FAFC). Header features Work Order 'WO-2026-0419' for 'Kato 25T Crane' with a high-contrast red badge 'DISPATCH BLOCKING DEFECT'. Body contains 3 sections: 1) Defect & Action Summary card with clear monospace part numbers; 2) Parts Consumed list with quantity counters; 3) Safe-Release Return-to-Service Card highlighted with an emerald green border (#16A34A) and 3 passing checkmark items. Bottom contains the technician signature box and a full-width 52px Emerald Green button (#16A34A) 'Certify Safe-Release & Return Asset to Fleet'. Clean, accountable, compliance-ready."
+    },
+    {
+      "screen_id": "M-FUEL-01",
+      "flow_id": "FLOW_04_INSPECTION_MAINTENANCE_FUEL",
+      "name": "On-Site Fuel Bowser Request & Receipt Logger",
+      "role": ["Driver", "Operator", "Field Technician"],
+      "viewport": "390x844 (Mobile Portrait)",
+      "description": "On-site refueling screen for requesting mobile bowser diesel delivery or logging pump meter receipts with liters, price per liter, total cost, odometer/hour meter, and photo receipt upload.",
+      "ui_contract": {
+        "header": {
+          "title": "On-Site Refueling & Fuel Receipt",
+          "asset_name": "Liebherr LTM 1120-4.1 (120T)",
+          "current_fuel_tank": "Level: 22% (Critical Low)"
+        },
+        "form_fields": [
+          {
+            "id": "fuel_type",
+            "label": "Fuel Grade",
+            "type": "select",
+            "value": "Industrial Diesel (Euro 5)"
+          },
+          {
+            "id": "liters_dispensed",
+            "label": "Volume Dispensed (Liters)",
+            "type": "number",
+            "required": true,
+            "placeholder": "e.g. 420.0"
+          },
+          {
+            "id": "cost_per_liter",
+            "label": "Unit Price ($/L)",
+            "type": "number",
+            "value": "2.45"
+          },
+          {
+            "id": "total_cost_calculated",
+            "label": "Total Amount ($)",
+            "type": "calculated",
+            "value": "$1,029.00"
+          },
+          {
+            "id": "current_hour_meter",
+            "label": "Current Machine Hour Meter (hrs)",
+            "type": "number",
+            "required": true,
+            "placeholder": "1426.8"
+          },
+          {
+            "id": "fuel_source_station",
+            "label": "Supplier / Mobile Bowser ID",
+            "type": "text",
+            "placeholder": "SPC On-Site Bowser #04"
+          }
+        ],
+        "receipt_attachment": {
+          "label": "Fuel Pump Meter / Paper Receipt Photo",
+          "status": "Photo Attached (receipt_902.jpg • 2.1 MB)"
+        },
+        "actions": [
+          {
+            "id": "btn_submit_fuel_log",
+            "label": "Log Fuel Record & Sync to Job Ledger",
+            "variant": "primary_brand_gold",
+            "min_height": 52
+          }
+        ]
+      },
+      "stitch_prompt": "Create an industrial mobile fuel logging and bowser refueling screen (390x844). Slate background (#F8FAFC). At the top, a fuel gauge card shows machine 'Liebherr 120T Crane' with a gold fuel tank indicator at '22%'. Form inputs have crisp white backgrounds, 48px height, and clear graphite labels: 'Volume Dispensed (420.0 L)', 'Unit Price ($2.45 / L)', and an auto-calculated bold total 'Total: $1,029.00'. Below, an hour meter input '1,426.8 hrs' and a receipt photo capture box showing an attached photo thumbnail with a green verified tag. Full-width 52px gold action button (#FFBF00) 'Log Fuel Record & Sync to Job Ledger'. High contrast, daylight-optimized."
+    },
+    {
+      "screen_id": "M-RNT-01",
+      "flow_id": "FLOW_05_RENTAL_OPERATIONS",
+      "name": "Equipment Rental Pre-Checkout Inspection & Handover",
+      "role": ["Field Technician", "Logistics Driver", "Field Inspector"],
+      "viewport": "390x844 (Mobile Portrait)",
+      "description": "Pre-checkout inspection and client handover screen for rental equipment mobilization. Captures initial hour meter, cosmetic photos, safe-release certification, and client digital signature.",
+      "ui_contract": {
+        "header": {
+          "rental_id": "RNT-2026-0412",
+          "client_company": "Balfour Beatty Infrastructure",
+          "equipment": "Caterpillar 320 GC Hydraulic Excavator",
+          "mode": "Gate 3: Pre-Checkout Mobilization"
+        },
+        "baseline_inspection": {
+          "starting_hour_meter": "1,420.5 hrs",
+          "fuel_level": "100% (Full Tank Certified)",
+          "hydraulic_fluids": "Checked & Pass",
+          "tracks_undercarriage": "Checked & Pass",
+          "safety_cert_active": "MOM Safety Expiry: 2026-12-31 (Valid)"
+        },
+        "cosmetic_condition_photos": {
+          "title": "Pre-Existing Condition Baseline Photos",
+          "items": [
+            {"label": "Front Bucket & Teeth", "status": "Attached"},
+            {"label": "Left Track & Undercarriage", "status": "Attached"},
+            {"label": "Cabin & Glass", "status": "Attached"}
+          ]
+        },
+        "handover_signature": {
+          "client_representative": "Keith Wong (Site Logistics Officer)",
+          "signature_pad": "Customer Digital Signature Required",
+          "terms": "Client confirms receipt of equipment in safe, operational condition."
+        },
+        "actions": [
+          {
+            "id": "btn_confirm_rental_checkout",
+            "label": "Confirm Rental Checkout & Release Asset",
+            "variant": "primary_action_blue",
+            "min_height": 52
+          }
+        ]
+      },
+      "stitch_prompt": "Create a heavy equipment rental pre-checkout inspection screen (390x844). Background is cool slate (#F8FAFC). Top header shows Rental Contract 'RNT-2026-0412' for 'Balfour Beatty' and equipment 'CAT 320 GC Excavator' with a blue badge 'PRE-CHECKOUT INSPECTION'. Body displays a baseline checklist card with green checkmarks: 'Starting Hours: 1,420.5 hrs', 'Fuel: 100% Full', 'Safety Cert Active'. Below is a 3-photo grid for pre-existing condition photos (Bucket, Tracks, Cabin). Bottom section features a Client Handover Signature pad with name 'Keith Wong' and digital signature stroke. Full-width 52px Cobalt Blue button (#2563EB) 'Confirm Rental Checkout & Release Asset'. High-density, professional, legally binding layout."
+    },
+    {
+      "screen_id": "M-RNT-02",
+      "flow_id": "FLOW_05_RENTAL_OPERATIONS",
+      "name": "Equipment Rental Return Condition Diff & Check-in",
+      "role": ["Field Technician", "Field Inspector"],
+      "viewport": "390x844 (Mobile Portrait)",
+      "description": "Equipment return check-in screen comparing post-hire condition against the pre-checkout baseline to capture excess wear, damage photos, final hour meter, and fuel reconciliation.",
+      "ui_contract": {
+        "header": {
+          "rental_id": "RNT-2026-0412",
+          "client_company": "Balfour Beatty Infrastructure",
+          "equipment": "CAT 320 GC Excavator",
+          "mode": "Gate 4: Return Condition Diff"
+        },
+        "condition_diff_matrix": [
+          {
+            "parameter": "Engine Hour Meter",
+            "checkout_baseline": "1,420.5 hrs",
+            "return_actual": "1,498.2 hrs",
+            "diff": "+77.7 Operating Hours",
+            "status": "Logged"
+          },
+          {
+            "parameter": "Fuel Level",
+            "checkout_baseline": "100% Full",
+            "return_actual": "65% Tank",
+            "diff": "-35% Refueling Charge Applicable",
+            "status": "Fuel Charge Required"
+          },
+          {
+            "parameter": "Structural / Body Condition",
+            "checkout_baseline": "Clean / Minor Wear",
+            "return_actual": "Dent on right rear counterweight panel",
+            "diff": "New Damage Detected",
+            "status": "Damage Flagged (2 Photos Attached)"
+          }
+        ],
+        "damage_photo_logger": {
+          "title": "Damage & Wear Evidence (2 Photos Attached)",
+          "damage_severity": "Moderate Cosmetic ($450 estimated repair)"
+        },
+        "actions": [
+          {
+            "id": "btn_complete_rental_return",
+            "label": "Finalize Rental Return & Trigger Closeout",
+            "variant": "primary_brand_gold",
+            "min_height": 52
+          }
+        ]
+      },
+      "stitch_prompt": "Create an industrial rental return condition diff and check-in screen (390x844). Background is cool slate (#F8FAFC). Top header shows Rental 'RNT-2026-0412' with a gold status badge 'RETURN CONDITION DIFF'. The body features a comparison card with 3 rows comparing 'Checkout Baseline' vs 'Return Actual': 1) Hours: '1,420.5 hrs' ➔ '1,498.2 hrs' (+77.7 hrs, neutral slate); 2) Fuel: '100%' ➔ '65%' (Gold badge: 'Refueling Charge Due'); 3) Body: 'Clean' ➔ 'Dent on right panel' (Red badge: 'Damage Flagged' with 2 photo thumbnails). Action footer: 52px full-width gold button (#FFBF00) 'Finalize Rental Return & Trigger Closeout'. Clear, transparent, dispute-preventing design."
+    },
+    {
+      "screen_id": "M-SAL-01",
+      "flow_id": "FLOW_06_SALES_FULFILLMENT",
+      "name": "Equipment Sales Delivery & VIN / Serial Verification",
+      "role": ["Delivery Driver", "Handover Technician"],
+      "viewport": "390x844 (Mobile Portrait)",
+      "description": "Equipment sales fulfillment and physical delivery screen featuring camera-based VIN/Serial barcode scanning, included accessories checklist, and physical asset verification.",
+      "ui_contract": {
+        "header": {
+          "sales_order_id": "SO-2026-0091",
+          "buyer_name": "Penta-Ocean Construction Pte Ltd",
+          "equipment_model": "Caterpillar 320 GC Excavator",
+          "stage": "Physical Delivery & Serial Verification"
+        },
+        "vin_verification_section": {
+          "expected_vin": "CAT0320GCLTK88912",
+          "scan_status": "Verified via Optical Barcode Scan (Green)",
+          "engine_serial": "C4.4-ENG-90182 (Verified)"
+        },
+        "included_accessories_checklist": [
+          {"name": "Standard Excavator Bucket (1.0m³)", "verified": true},
+          {"name": "Hydraulic Quick Coupler & Pins", "verified": true},
+          {"name": "Master Ignition Keys (2 sets)", "verified": true},
+          {"name": "OEM Operator & Maintenance Manuals", "verified": true},
+          {"name": "Factory CE / EPA Emission Certification", "verified": true}
+        ],
+        "actions": [
+          {
+            "id": "btn_proceed_to_transfer",
+            "label": "All Items Verified • Proceed to Title Transfer",
+            "variant": "primary_action_blue",
+            "min_height": 52
+          }
+        ]
+      },
+      "stitch_prompt": "Create an industrial sales equipment delivery and VIN verification screen (390x844). Cool slate canvas (#F8FAFC). Header shows Sales Order 'SO-2026-0091' for buyer 'Penta-Ocean Construction' and machine 'CAT 320 GC Excavator'. The primary section is a VIN/Serial Verification Card featuring a camera barcode icon, expected VIN 'CAT0320GCLTK88912', and a large green verified chip 'BARCODE MATCHED'. Below is an 'Included Accessories & Rigging' checklist with 5 checked items (Bucket, Quick Coupler, 2x Keys, Manuals, Factory Cert). Full-width 52px Cobalt Blue button (#2563EB) 'All Items Verified • Proceed to Title Transfer'. Clean, crisp, and high precision."
+    },
+    {
+      "screen_id": "M-SAL-02",
+      "flow_id": "FLOW_06_SALES_FULFILLMENT",
+      "name": "Title Handover & Fleet Decommissioning Sign-off",
+      "role": ["Delivery Driver", "Handover Technician"],
+      "viewport": "390x844 (Mobile Portrait)",
+      "description": "Terminal legal title transfer and ownership sign-off screen. Captures buyer signature, applies cryptographic audit record, and triggers automatic fleet de-registration and asset decommissioning.",
+      "ui_contract": {
+        "header": {
+          "sales_order_id": "SO-2026-0091",
+          "buyer_name": "Penta-Ocean Construction Pte Ltd",
+          "title": "Title Transfer & Asset Decommissioning",
+          "legal_warning": "TERMINAL ACTION: Transferring title permanently removes asset from Alibaton operational fleet."
+        },
+        "buyer_verification": {
+          "authorized_signatory": "Engr. Jonathan Lim",
+          "designation": "Director of Plant & Equipment",
+          "nric_last4": "S****891A",
+          "digital_signature_pad": "Digital signature captured"
+        },
+        "audit_metadata": {
+          "timestamp": "2026-08-15 17:30:45 SGT",
+          "geo_coordinates": "1.3048° N, 103.6821° E (Tuas Mega Yard)",
+          "idempotency_hash": "sha256:7e91a0...92b"
+        },
+        "actions": [
+          {
+            "id": "btn_transfer_title_decommission",
+            "label": "Confirm Handover & Decommission from Fleet",
+            "variant": "primary_dark_charcoal",
+            "min_height": 56
+          }
+        ]
+      },
+      "stitch_prompt": "Create an authoritative legal handover and fleet decommissioning screen (390x844). Background is cool slate (#F8FAFC). Top section contains a Gold/Charcoal legal advisory card: 'TERMINAL TRANSACTION: Transferring title permanently transfers ownership and decommissions asset from Alibaton operational fleet.' Body features Buyer Signatory Details (Engr. Jonathan Lim - Director of Plant) and a clean, high-contrast digital signature pad with a bold signature stroke. At the bottom, a metadata chip displays GPS coordinates and timestamp. Action button is a massive 56px Dark Charcoal button (#1E293B) with white text 'Confirm Handover & Decommission from Fleet'. Authoritative, clean, and legally conclusive."
+    }
+  ]
+}

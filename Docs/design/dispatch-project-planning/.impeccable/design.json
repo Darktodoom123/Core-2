@@ -1,0 +1,231 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-04T00:00:00Z",
+  "title": "Design System: Dispatch Project Planning",
+  "extensions": {
+    "colorMeta": {
+      "brand": {
+        "role": "primary",
+        "displayName": "Dispatch gold",
+        "tonalRamp": [
+          "#2B2100",
+          "#3D2E00",
+          "#564000",
+          "#6B5000",
+          "#806000",
+          "#8A6700",
+          "#B38A00",
+          "#FFBF00"
+        ]
+      },
+      "brand-contrast": {
+        "role": "neutral",
+        "displayName": "Brand contrast",
+        "tonalRamp": [
+          "oklch(0.15 0 0)",
+          "oklch(0.26 0 0)",
+          "oklch(0.38 0 0)",
+          "oklch(0.49 0 0)",
+          "oklch(0.61 0 0)",
+          "oklch(0.72 0 0)",
+          "oklch(0.84 0 0)",
+          "oklch(0.95 0 0)"
+        ]
+      },
+      "brand-soft": {
+        "role": "primary",
+        "displayName": "Soft brand",
+        "tonalRamp": [
+          "#2B2100",
+          "#3D2E00",
+          "#564000",
+          "#6B5000",
+          "#806000",
+          "#8A6700",
+          "#FFF3C4",
+          "#FFBF00"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface",
+        "tonalRamp": [
+          "oklch(0.15 0 0)",
+          "oklch(0.26 0 0)",
+          "oklch(0.38 0 0)",
+          "oklch(0.49 0 0)",
+          "oklch(0.61 0 0)",
+          "oklch(0.72 0 0)",
+          "oklch(0.84 0 0)",
+          "oklch(0.95 0 0)"
+        ]
+      },
+      "surface-subtle": {
+        "role": "neutral",
+        "displayName": "Subtle surface",
+        "tonalRamp": [
+          "oklch(0.15 0.009 255)",
+          "oklch(0.26 0.009 255)",
+          "oklch(0.38 0.009 255)",
+          "oklch(0.49 0.009 255)",
+          "oklch(0.61 0.009 255)",
+          "oklch(0.72 0.009 255)",
+          "oklch(0.84 0.009 255)",
+          "oklch(0.95 0.009 255)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "tonalRamp": [
+          "oklch(0.15 0.04 265)",
+          "oklch(0.26 0.04 265)",
+          "oklch(0.38 0.04 265)",
+          "oklch(0.49 0.04 265)",
+          "oklch(0.61 0.04 265)",
+          "oklch(0.72 0.04 265)",
+          "oklch(0.84 0.04 265)",
+          "oklch(0.95 0.04 265)"
+        ]
+      },
+      "ink-soft": {
+        "role": "neutral",
+        "displayName": "Soft ink",
+        "tonalRamp": [
+          "oklch(0.15 0.03 255)",
+          "oklch(0.26 0.03 255)",
+          "oklch(0.38 0.03 255)",
+          "oklch(0.49 0.03 255)",
+          "oklch(0.61 0.03 255)",
+          "oklch(0.72 0.03 255)",
+          "oklch(0.84 0.03 255)",
+          "oklch(0.95 0.03 255)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Line",
+        "tonalRamp": [
+          "oklch(0.15 0.01 255)",
+          "oklch(0.26 0.01 255)",
+          "oklch(0.38 0.01 255)",
+          "oklch(0.49 0.01 255)",
+          "oklch(0.61 0.01 255)",
+          "oklch(0.72 0.01 255)",
+          "oklch(0.84 0.01 255)",
+          "oklch(0.95 0.01 255)"
+        ]
+      }
+    },
+    "shadows": [
+      {
+        "name": "panel",
+        "value": "0 1px rgb(0 0 0 / .05)",
+        "purpose": "Shared panel's restrained depth."
+      },
+      {
+        "name": "modal",
+        "value": "0 20px 25px -5px rgb(0 0 0 / .1), 0 8px 10px -6px rgb(0 0 0 / .1)",
+        "purpose": "Shared modal elevation."
+      }
+    ],
+    "motion": [
+      {
+        "name": "control-color",
+        "value": "150ms cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "Inherited control color transitions; reduced-motion stylesheet shortens duration."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Creation and confirmation.",
+      "html": "<button class=\"ds-button ds-primary ds-control\">Confirm change</button>",
+      "css": ".ds-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:8px;font-family:var(--font-sans);font-size:14px;line-height:20px;font-weight:500;cursor:pointer}.ds-button:disabled{pointer-events:none;opacity:.5}.ds-primary{border:0;background:var(--color-brand);color:var(--color-brand-contrast);font-weight:600;box-shadow:0 1px 2px rgb(0 0 0 / .05)}.ds-primary:hover,.ds-primary:active{background:var(--color-brand-strong)}.ds-control:focus-visible{outline:2px solid var(--color-brand);outline-offset:2px}.ds-control{transition:color 150ms cubic-bezier(.4,0,.2,1),background-color 150ms cubic-bezier(.4,0,.2,1),border-color 150ms cubic-bezier(.4,0,.2,1)}@media(prefers-reduced-motion:reduce){.ds-control{transition-duration:.001ms}}"
+    },
+    {
+      "name": "Secondary button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Supporting actions.",
+      "html": "<button class=\"ds-button ds-secondary ds-control\">Edit phase</button>",
+      "css": ".ds-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:8px;font-family:var(--font-sans);font-size:14px;line-height:20px;font-weight:500;cursor:pointer}.ds-button:disabled{pointer-events:none;opacity:.5}.ds-secondary{border:1px solid var(--color-line-strong);background:var(--color-surface);color:var(--color-ink);box-shadow:0 1px rgb(0 0 0 / .05)}.ds-secondary:hover,.ds-secondary:active{background:var(--color-surface-subtle)}.ds-control:focus-visible{outline:2px solid var(--color-brand);outline-offset:2px}.ds-control{transition:color 150ms cubic-bezier(.4,0,.2,1),background-color 150ms cubic-bezier(.4,0,.2,1),border-color 150ms cubic-bezier(.4,0,.2,1)}@media(prefers-reduced-motion:reduce){.ds-control{transition-duration:.001ms}}"
+    },
+    {
+      "name": "Text field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Labeled planning input.",
+      "html": "<label class=\"ds-label\">Project name<input class=\"ds-input ds-control\" placeholder=\"Project name\"></label>",
+      "css": ".ds-label{display:block;font-family:var(--font-sans);font-size:14px;font-weight:500;color:var(--color-ink)}.ds-input{display:block;width:100%;min-height:44px;margin-top:8px;border:1px solid var(--color-line);border-radius:8px;background:var(--color-surface);padding:8px 14px;color:var(--color-ink);font-family:var(--font-sans);font-size:14px;line-height:20px}.ds-input:hover{border-color:var(--color-line-strong)}.ds-input:focus{border-color:var(--color-brand)}.ds-input:disabled{cursor:not-allowed;opacity:.5}.ds-control:focus-visible{outline:2px solid var(--color-brand);outline-offset:2px}.ds-control{transition:color 150ms cubic-bezier(.4,0,.2,1),background-color 150ms cubic-bezier(.4,0,.2,1),border-color 150ms cubic-bezier(.4,0,.2,1)}@media(prefers-reduced-motion:reduce){.ds-control{transition-duration:.001ms}}"
+    },
+    {
+      "name": "Workspace navigation",
+      "kind": "nav",
+      "description": "Adjacent Dispatch views.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Dispatch workspace views\"><button class=\"ds-tab ds-control\">Dispatches</button><button class=\"ds-tab ds-control\" aria-current=\"page\">Project plans</button></nav>",
+      "css": ".ds-nav{display:flex;gap:4px;border-bottom:1px solid var(--color-line);background:var(--color-surface);padding:0 20px}.ds-tab{min-height:44px;border:0;border-bottom:2px solid transparent;padding:0 16px;background:transparent;color:var(--color-ink-soft);font-family:var(--font-sans);font-size:14px;font-weight:500}.ds-tab[aria-current=page]{border-bottom-color:var(--color-brand);color:var(--color-ink)}.ds-tab:hover{color:var(--color-ink)}.ds-control:focus-visible{outline:2px solid var(--color-brand);outline-offset:2px}.ds-control{transition:color 150ms cubic-bezier(.4,0,.2,1),background-color 150ms cubic-bezier(.4,0,.2,1),border-color 150ms cubic-bezier(.4,0,.2,1)}@media(prefers-reduced-motion:reduce){.ds-control{transition-duration:.001ms}}"
+    },
+    {
+      "name": "Status badge",
+      "kind": "chip",
+      "description": "Explicit baseline state.",
+      "html": "<span class=\"ds-badge\">Approved</span>",
+      "css": ".ds-badge{display:inline-flex;min-height:24px;align-items:center;gap:6px;border-radius:9999px;padding:2px 10px;background:var(--color-success-soft);color:var(--color-success-strong);font-family:var(--font-sans);font-size:12px;line-height:16px;font-weight:500}"
+    },
+    {
+      "name": "Panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "Shared bounded surface.",
+      "html": "<section class=\"ds-panel\"><div class=\"ds-panel-content\">Weekly crew coverage</div></section>",
+      "css": ".ds-panel{border:1px solid var(--color-line);border-radius:12px;background:var(--color-surface);color:var(--color-ink);box-shadow:0 1px rgb(0 0 0 / .05);font-family:var(--font-sans);font-size:14px}.ds-panel-content{padding:20px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Dependable operations instrument",
+        "overview": "Project plans extends the incumbent Dispatch workspace with an information-rich timeline and focused review surfaces. It retains Instrument Sans, #FFBF00 gold emphasis, neutral surfaces, and the existing UI primitives. This is a scoped implementation record; the shared design authority remains authoritative and unchanged by this document.",
+    "keyCharacteristics": [
+      "Expandable project, phase, reservation, and maintenance hierarchy.",
+      "Calendar-based time alignment with contained horizontal scrolling.",
+      "Role requirements and consequences visible before confirmation.",
+      "Existing Dispatch navigation and return context preserved."
+    ],
+    "rules": [
+      {
+        "name": "The State Has Words Rule",
+        "body": "Status color accompanies readable operational state or a labeled timeline legend.",
+        "section": "colors"
+      },
+      {
+        "name": "The Decision First Rule",
+        "body": "Use size and weight to distinguish the phase, required counts, and action; supporting dates and references remain subordinate.",
+        "section": "typography"
+      }
+    ],
+    "dos": [
+      "Do retain the incumbent workspace typography, semantic colors, and shared controls.",
+      "Do align timeline labels, grid lines, and bars to the same timestamps.",
+      "Do put role requirements and change consequences before confirmation.",
+      "Do preserve modal keyboard behavior and linked-detail return context."
+    ],
+    "donts": [
+      "Don't treat this scoped record as authorization to replace the shared visual system.",
+      "Don't present candidates from an obsolete role request as current options.",
+      "Don't use color alone to explain reservations, maintenance, or approval state."
+    ]
+  }
+}

@@ -1,0 +1,892 @@
+// @nimbalyst {"viewport":{"x":339.2844402253534,"y":5.448717505237028,"zoom":0.1},"positions":{"ApprovalRequest":{"x":2530,"y":702},"Attachment":{"x":2530,"y":919},"AuditEvent":{"x":2090,"y":919},"Cache":{"x":50,"y":50},"CacheLock":{"x":470,"y":50},"Client":{"x":2540,"y":7307},"CommandLog":{"x":1840,"y":1587},"DispatchAssetAssignment":{"x":1290,"y":2822},"DispatchAssignmentOffer":{"x":80,"y":1862},"DispatchAuditLineage":{"x":890,"y":1253},"DispatchEmergencyOverride":{"x":1330,"y":1338},"DispatchExecutionAttempt":{"x":960,"y":1956},"DispatchHandoff":{"x":1400,"y":2073},"DispatchIdempotencyKey":{"x":1400,"y":1352},"DispatchJob":{"x":1730,"y":2744},"DispatchOutboxMessage":{"x":1770,"y":1438},"DispatchPersonnelAssignment":{"x":1290,"y":2453},"DispatchPlanApproval":{"x":80,"y":2578},"DispatchPlanRequirementSlot":{"x":520,"y":2947},"DispatchPlanVersion":{"x":520,"y":2172},"DispatchReconciliationFinding":{"x":3410,"y":50},"DispatchReconciliationRun":{"x":3850,"y":50},"FailedJob":{"x":1730,"y":50},"FuelLog":{"x":850,"y":3491},"FuelRequest":{"x":1310,"y":3502},"GptRecommendationMetric":{"x":2160,"y":4441},"GptRecommendation":{"x":2160,"y":4281},"Inspection":{"x":1510,"y":4914},"JobBatche":{"x":2570,"y":50},"JobReport":{"x":1310,"y":4454},"Job":{"x":2150,"y":50},"LocationUpdate":{"x":1510,"y":5251},"MaintenanceWorkOrder":{"x":1370,"y":5695},"ModelHasPermission":{"x":4390,"y":458},"ModelHasRole":{"x":4270,"y":50},"Notification":{"x":1290,"y":3186},"OperationalAsset":{"x":1950,"y":5002},"OwnershipTransfer":{"x":630,"y":5478},"PasswordResetToken":{"x":890,"y":50},"Permission":{"x":4830,"y":355},"PersonalAccessToken":{"x":2990,"y":50},"PersonnelCredential":{"x":2050,"y":5893},"PersonnelProfile":{"x":2050,"y":6353},"RentalCheckout":{"x":850,"y":6571},"RentalOperatorAssignment":{"x":410,"y":5818},"RentalReservationItem":{"x":850,"y":5730},"RentalReservation":{"x":1290,"y":6155},"RentalReturn":{"x":1170,"y":6839},"ReportExport":{"x":2050,"y":6595},"RoleHasPermission":{"x":4390,"y":286},"Role":{"x":4710,"y":55},"SalesCatalogItem":{"x":1230,"y":4090},"SalesInventoryLedger":{"x":850,"y":6239},"SalesOrderItem":{"x":1070,"y":5462},"SalesOrder":{"x":1610,"y":6711},"SalesQuoteItem":{"x":850,"y":5971},"SalesQuote":{"x":2530,"y":7178},"ServiceRequest":{"x":2050,"y":3715},"Session":{"x":1310,"y":50},"User":{"x":2530,"y":3525}},"entityViewMode":"compact"}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model ApprovalRequest {
+  id          BigInt      @id @default(autoincrement()
+  subjectType String
+  subjectId   BigInt
+  kind        String
+  status      String      @default("pending")
+  requestedBy Int
+  decidedBy   Int?
+  reason      String?
+  decidedAt   DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  user User @relation(fields: [decidedBy], references: [id])
+  dispatchPlanApproval DispatchPlanApproval
+}
+
+model Attachment {
+  id          BigInt      @id @default(autoincrement()
+  ownerType   String
+  ownerId     BigInt
+  uploadedBy  Int
+  kind        String      @default("document")
+  disk        String      @default("local")
+  path        String
+  mimeType    String
+  sizeBytes   BigInt
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  user User @relation(fields: [uploadedBy], references: [id])
+}
+
+model AuditEvent {
+  id          BigInt      @id @default(autoincrement()
+  actorId     BigInt?
+  subjectType String?
+  subjectId   BigInt?
+  action      String
+  before      Json?
+  after       Json?
+  reason      String?
+  requestId   String?
+  ipAddress   String?
+  occurredAt  DateTime
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  user User @relation(fields: [actorId], references: [id])
+  dispatchAuditLineage DispatchAuditLineage
+  dispatchOutboxMessage DispatchOutboxMessage
+}
+
+model Cache {
+  key         String      @id
+  value       String
+  expiration  Int
+}
+
+model CacheLock {
+  key         String      @id
+  owner       String
+  expiration  Int
+}
+
+model Client {
+  id          BigInt      @id @default(autoincrement()
+  code        String
+  companyName String
+  phone       String?
+  email       String?
+  address     String?
+  status      String      @default("active")
+  deletedAt   DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  rentalReservations RentalReservation[]
+  salesOrders SalesOrder[]
+  salesQuotes SalesQuote[]
+  serviceRequests ServiceRequest[]
+}
+
+model CommandLog {
+  id          BigInt      @id @default(autoincrement()
+  userId      BigInt
+  commandId   String
+  actionName  String
+  status      String      @default("completed")
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  payloadHash String?
+  user User @relation(fields: [userId], references: [id])
+  dispatchIdempotencyKey DispatchIdempotencyKey
+}
+
+model DispatchAssetAssignment {
+  id          BigInt      @id @default(autoincrement()
+  assignedBy  Int
+  approvedBy  Int?
+  activeFrom  DateTime?
+  activeUntil DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  user User @relation(fields: [approvedBy], references: [id])
+  operationalAsset OperationalAsset @relation(fields: [operationalAssetId], references: [id])
+  dispatchJob DispatchJob @relation(fields: [dispatchJobId], references: [id])
+}
+
+model DispatchAssignmentOffer {
+  id          BigInt      @id @default(autoincrement()
+  attemptId   BigInt
+  userId      BigInt
+  isMandatory Boolean     @default(false)
+  status      String      @default("proposed")
+  offeredAt   DateTime?
+  respondedAt DateTime?
+  acceptedAt  DateTime?
+  rejectedAt  DateTime?
+  withdrawnAt DateTime?
+  expiredAt   DateTime?
+  createdBy   Int?
+  approvedBy  Int?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  endedAt     DateTime?
+  endedBy     Int?
+  endedReason String?
+  user User @relation(fields: [endedBy], references: [id])
+  dispatchExecutionAttempt DispatchExecutionAttempt @relation(fields: [attemptId], references: [id])
+  dispatchPlanVersion DispatchPlanVersion @relation(fields: [planVersionId], references: [id])
+  dispatchPersonnelAssignment DispatchPersonnelAssignment @relation(fields: [legacyAssignmentId], references: [id])
+  dispatchAuditLineages DispatchAuditLineage[]
+}
+
+model DispatchAuditLineage {
+  id          BigInt      @id @default(autoincrement()
+  handoffId   BigInt?
+  attemptId   BigInt?
+  offerId     BigInt?
+  lineageType String
+  createdAt   DateTime    @default(now()
+  dispatchEmergencyOverride DispatchEmergencyOverride @relation(fields: [emergencyOverrideId], references: [id])
+  dispatchHandoff DispatchHandoff @relation(fields: [handoffId], references: [id])
+  dispatchExecutionAttempt DispatchExecutionAttempt @relation(fields: [attemptId], references: [id])
+  dispatchPlanVersion DispatchPlanVersion @relation(fields: [planVersionId], references: [id])
+  dispatchIdempotencyKey DispatchIdempotencyKey @relation(fields: [idempotencyKeyId], references: [id])
+}
+
+model DispatchEmergencyOverride {
+  id          BigInt      @id @default(autoincrement()
+  attemptId   BigInt
+  kind        String      @default("readiness_exception")
+  scope       Json
+  status      String      @default("proposed")
+  requestedBy Int
+  decidedBy   Int?
+  expiresAt   DateTime
+  decidedAt   DateTime?
+  consumedAt  DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  dispatchAuditLineages DispatchAuditLineage[]
+  dispatchIdempotencyKey DispatchIdempotencyKey @relation(fields: [idempotencyKeyId], references: [id])
+  user User @relation(fields: [decidedBy], references: [id])
+  dispatchPlanVersion DispatchPlanVersion @relation(fields: [planVersionId], references: [id])
+  dispatchExecutionAttempt DispatchExecutionAttempt @relation(fields: [attemptId], references: [id])
+}
+
+model DispatchExecutionAttempt {
+  id          BigInt      @id @default(autoincrement()
+  handoffId   BigInt
+  status      String      @default("draft")
+  version     Int         @default("1")
+  createdBy   Int?
+  activatedBy Int?
+  cancelledBy Int?
+  archivedAt  DateTime?
+  archivedBy  Int?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  dispatchAssignmentOffer DispatchAssignmentOffer
+  dispatchAuditLineages DispatchAuditLineage[]
+  dispatchEmergencyOverrides DispatchEmergencyOverride[]
+  user User @relation(fields: [leadDesignatedBy], references: [id])
+  dispatchHandoff DispatchHandoff @relation(fields: [handoffId], references: [id])
+  dispatchExecutionAttempt DispatchExecutionAttempt @relation(fields: [replacesAttemptId], references: [id])
+  dispatchJob DispatchJob @relation(fields: [legacyDispatchJobId], references: [id])
+  dispatchIdempotencyKeys DispatchIdempotencyKey[]
+  dispatchOutboxMessages DispatchOutboxMessage[]
+  dispatchPlanRequirementSlots DispatchPlanRequirementSlot[]
+  dispatchPlanVersions DispatchPlanVersion[]
+}
+
+model DispatchHandoff {
+  id          BigInt      @id @default(autoincrement()
+  sourceType  String
+  sourceId    BigInt
+  createdBy   Int?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  payloadHash String?
+  receivedAt  DateTime?
+  snapshotAt  DateTime?
+  dispatchAuditLineages DispatchAuditLineage[]
+  dispatchExecutionAttempts DispatchExecutionAttempt[]
+  dispatchIdempotencyKey DispatchIdempotencyKey @relation(fields: [inboundIdempotencyKeyId], references: [id])
+  dispatchJob DispatchJob @relation(fields: [legacyDispatchJobId], references: [id])
+  user User @relation(fields: [createdBy], references: [id])
+}
+
+model DispatchIdempotencyKey {
+  id          BigInt      @id @default(autoincrement()
+  ownerType   String
+  ownerId     BigInt
+  actionName  String
+  payloadHash String?
+  status      String      @default("claimed")
+  attemptId   BigInt?
+  claimedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  dispatchAuditLineages DispatchAuditLineage[]
+  dispatchEmergencyOverride DispatchEmergencyOverride
+  dispatchHandoffs DispatchHandoff[]
+  dispatchOutboxMessages DispatchOutboxMessage[]
+}
+
+model DispatchJob {
+  id          BigInt      @id @default(autoincrement()
+  reference   String
+  client      String
+  title       String
+  site        String
+  siteNotes   String?
+  priority    String
+  status      String
+  createdBy   Int
+  activatedBy Int?
+  cancelledBy Int?
+  version     Int         @default("1")
+  deletedAt   DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  sourceType  String?
+  sourceId    BigInt?
+  dispatchAssetAssignments DispatchAssetAssignment[]
+  dispatchExecutionAttempt DispatchExecutionAttempt
+  dispatchHandoff DispatchHandoff
+  serviceRequest ServiceRequest @relation(fields: [serviceRequestId], references: [id])
+  user User @relation(fields: [createdBy], references: [id])
+  dispatchPersonnelAssignments DispatchPersonnelAssignment[]
+  fuelRequests FuelRequest[]
+  jobReports JobReport[]
+  locationUpdates LocationUpdate[]
+  notifications Notification[]
+  rentalReservations RentalReservation[]
+  salesOrders SalesOrder[]
+}
+
+model DispatchOutboxMessage {
+  id          BigInt      @id @default(autoincrement()
+  dedupeKey   String
+  topic       String
+  aggregateId BigInt
+  attemptId   BigInt?
+  payload     Json
+  status      String      @default("pending")
+  attempts    Int         @default("0")
+  availableAt DateTime?
+  deliveredAt DateTime?
+  lastError   String?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+}
+
+model DispatchPersonnelAssignment {
+  id          BigInt      @id @default(autoincrement()
+  userId      BigInt
+  assignedBy  Int
+  approvedBy  Int?
+  activeFrom  DateTime?
+  activeUntil DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  respondedAt DateTime?
+  dispatchAssignmentOffer DispatchAssignmentOffer
+  user User @relation(fields: [approvedBy], references: [id])
+}
+
+model DispatchPlanApproval {
+  id          BigInt      @id @default(autoincrement()
+  kind        String
+  status      String      @default("pending")
+  requestedBy Int?
+  decidedBy   Int?
+  reason      String?
+  decidedAt   DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  user User @relation(fields: [decidedBy], references: [id])
+  dispatchPlanVersion DispatchPlanVersion @relation(fields: [planVersionId], references: [id])
+}
+
+model DispatchPlanRequirementSlot {
+  id          BigInt      @id @default(autoincrement()
+  attemptId   BigInt
+  kind        String
+  slotKey     String
+  isMandatory Boolean     @default(false)
+  userId      BigInt?
+  createdBy   Int?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  user User @relation(fields: [createdBy], references: [id])
+  operationalAsset OperationalAsset @relation(fields: [operationalAssetId], references: [id])
+  dispatchPlanVersion DispatchPlanVersion @relation(fields: [planVersionId], references: [id])
+}
+
+model DispatchPlanVersion {
+  id          BigInt      @id @default(autoincrement()
+  attemptId   BigInt
+  version     Int
+  status      String      @default("draft")
+  snapshot    Json
+  contentHash String
+  createdBy   Int?
+  submittedBy Int?
+  submittedAt DateTime?
+  sealedAt    DateTime?
+  createdAt   DateTime    @default(now()
+  dispatchAssignmentOffers DispatchAssignmentOffer[]
+  dispatchAuditLineages DispatchAuditLineage[]
+  dispatchEmergencyOverrides DispatchEmergencyOverride[]
+  dispatchPlanApprovals DispatchPlanApproval[]
+  dispatchPlanRequirementSlots DispatchPlanRequirementSlot[]
+  user User @relation(fields: [submittedBy], references: [id])
+}
+
+model DispatchReconciliationFinding {
+  id          BigInt      @id @default(autoincrement()
+  runId       BigInt?
+  entityType  String
+  entityId    BigInt?
+  code        String
+  severity    String      @default("blocker")
+  details     Json?
+  fingerprint String
+  resolvedAt  DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  dispatchReconciliationRun DispatchReconciliationRun @relation(fields: [runId], references: [id])
+}
+
+model DispatchReconciliationRun {
+  id          BigInt      @id @default(autoincrement()
+  name        String      @default("dispatch_v2_foundation")
+  status      String      @default("running")
+  dryRun      Boolean     @default(false)
+  batchLimit  Int         @default("100")
+  checkpoint  Json?
+  startedAt   DateTime?
+  completedAt DateTime?
+  lastError   String?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  dispatchReconciliationFindings DispatchReconciliationFinding[]
+}
+
+model FailedJob {
+  id          BigInt      @id @default(autoincrement()
+  uuid        String
+  connection  String
+  queue       String
+  payload     String
+  exception   String
+  failedAt    DateTime    @default(now()
+}
+
+model FuelLog {
+  id          BigInt      @id @default(autoincrement()
+  recordedBy  Int
+  odometerKm  Int?
+  hourMeter   Decimal?
+  receiptPath String?
+  recordedAt  DateTime
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  totalCost   Decimal?
+  fuelStation String?
+  remarks     String?
+  user User @relation(fields: [recordedBy], references: [id])
+  fuelRequest FuelRequest @relation(fields: [fuelRequestId], references: [id])
+}
+
+model FuelRequest {
+  id          BigInt      @id @default(autoincrement()
+  reference   String
+  requesterId BigInt
+  fuelType    String
+  purpose     String
+  status      String      @default("submitted")
+  reviewedBy  Int?
+  approvedBy  Int?
+  verifiedBy  Int?
+  reviewedAt  DateTime?
+  approvedAt  DateTime?
+  verifiedAt  DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  fuelLogs FuelLog[]
+  user User @relation(fields: [verifiedBy], references: [id])
+  operationalAsset OperationalAsset @relation(fields: [operationalAssetId], references: [id])
+}
+
+model GptRecommendationMetric {
+  id          BigInt      @id @default(autoincrement()
+  event       String
+  status      String?
+  latencyMs   Int?
+  totalTokens Int?
+  costUsd     Decimal?
+  occurredAt  DateTime
+  purgeAt     DateTime
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  gptRecommendation GptRecommendation @relation(fields: [recommendationId], references: [id])
+}
+
+model GptRecommendation {
+  id          BigInt      @id @default(autoincrement()
+  subjectType String?
+  subjectId   BigInt?
+  requestedBy Int
+  purpose     String
+  contextHash String
+  conflicts   Json?
+  model       String
+  status      String      @default("draft")
+  decidedBy   Int?
+  decidedAt   DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  usage       Json?
+  expiresAt   DateTime?
+  costUsd     Decimal?
+  generatedAt DateTime?
+  latencyMs   Int?
+  purgeAt     DateTime?
+  retryOfId   BigInt?
+  gptRecommendationMetrics GptRecommendationMetric[]
+  gptRecommendation GptRecommendation @relation(fields: [retryOfId], references: [id])
+  user User @relation(fields: [requestedBy], references: [id])
+}
+
+model Inspection {
+  id          BigInt      @id @default(autoincrement()
+  type        String
+  result      String
+  checklist   Json
+  findings    String?
+  completedAt DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  user User @relation(fields: [technicianId], references: [id])
+  operationalAsset OperationalAsset @relation(fields: [operationalAssetId], references: [id])
+}
+
+model JobBatche {
+  id          String      @id
+  name        String
+  totalJobs   Int
+  pendingJobs Int
+  failedJobs  Int
+  options     String?
+  cancelledAt Int?
+  createdAt   Int
+  finishedAt  Int?
+}
+
+model JobReport {
+  id          BigInt      @id @default(autoincrement()
+  authorId    BigInt
+  startedAt   DateTime?
+  endedAt     DateTime?
+  workSummary String
+  remarks     String?
+  status      String      @default("draft")
+  submittedAt DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  user User @relation(fields: [authorId], references: [id])
+}
+
+model Job {
+  id          BigInt      @id @default(autoincrement()
+  queue       String
+  payload     String
+  attempts    Int
+  reservedAt  Int?
+  availableAt Int
+  createdAt   Int
+}
+
+model LocationUpdate {
+  id          BigInt      @id @default(autoincrement()
+  userId      BigInt
+  latitude    Decimal?
+  longitude   Decimal?
+  source      String      @default("mobile")
+  capturedAt  DateTime
+  receivedAt  DateTime
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  speed       Decimal?
+  remarks     String?
+  operationalAsset OperationalAsset @relation(fields: [operationalAssetId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+}
+
+model MaintenanceWorkOrder {
+  id          BigInt      @id @default(autoincrement()
+  status      String
+  defect      String
+  parts       Json?
+  releasedAt  DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  scheduledAt DateTime?
+  nextDueAt   DateTime?
+  remarks     String?
+  user User @relation(fields: [releaseVerifiedBy], references: [id])
+  operationalAsset OperationalAsset @relation(fields: [operationalAssetId], references: [id])
+}
+
+model ModelHasPermission {
+  modelType   String
+  modelId     BigInt
+  permission Permission @relation(fields: [permissionId], references: [id])
+}
+
+model ModelHasRole {
+  roleId      BigInt
+  modelType   String
+  modelId     BigInt
+  role Role @relation(fields: [roleId], references: [id])
+}
+
+model Notification {
+  id          String      @id
+  type        String
+  status      String      @default("unread")
+  data        String
+  readAt      DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+}
+
+model OperationalAsset {
+  id          BigInt      @id @default(autoincrement()
+  code        String
+  name        String
+  kind        String
+  subtype     String?
+  status      String
+  location    String?
+  deletedAt   DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  model       String?
+  meterType   String?
+  meterValue  Decimal?
+  dispatchAssetAssignments DispatchAssetAssignment[]
+  dispatchPlanRequirementSlots DispatchPlanRequirementSlot[]
+  fuelRequests FuelRequest[]
+  inspections Inspection[]
+  locationUpdates LocationUpdate[]
+  maintenanceWorkOrders MaintenanceWorkOrder[]
+  ownershipTransfer OwnershipTransfer
+  rentalReservationItems RentalReservationItem[]
+  salesCatalogItem SalesCatalogItem
+}
+
+model OwnershipTransfer {
+  id          BigInt      @id @default(autoincrement()
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  user User @relation(fields: [transferredBy], references: [id])
+  salesCatalogItem SalesCatalogItem @relation(fields: [salesCatalogItemId], references: [id])
+  salesOrderItem SalesOrderItem @relation(fields: [salesOrderItemId], references: [id])
+  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id])
+}
+
+model PasswordResetToken {
+  email       String      @id
+  token       String
+  createdAt   DateTime?
+}
+
+model Permission {
+  id          BigInt      @id @default(autoincrement()
+  name        String
+  guardName   String
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  modelHasPermissions ModelHasPermission[]
+  roleHasPermissions RoleHasPermission[]
+}
+
+model PersonalAccessToken {
+  id          BigInt      @id @default(autoincrement()
+  tokenableId BigInt
+  name        String
+  token       String
+  abilities   String?
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+}
+
+model PersonnelCredential {
+  id          BigInt      @id @default(autoincrement()
+  userId      BigInt
+  kind        String
+  issuedAt    DateTime?
+  expiresAt   DateTime?
+  status      String      @default("active")
+  verifiedBy  Int?
+  verifiedAt  DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  user User @relation(fields: [verifiedBy], references: [id])
+}
+
+model PersonnelProfile {
+  id          BigInt      @id @default(autoincrement()
+  userId      BigInt
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  user User @relation(fields: [userId], references: [id])
+}
+
+model RentalCheckout {
+  id          BigInt      @id @default(autoincrement()
+  notes       String?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  user User @relation(fields: [checkedOutBy], references: [id])
+  rentalReservation RentalReservation @relation(fields: [rentalReservationId], references: [id])
+}
+
+model RentalOperatorAssignment {
+  id          BigInt      @id @default(autoincrement()
+  userId      BigInt
+  assignedBy  Int
+  activeFrom  DateTime
+  activeUntil DateTime
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  user User @relation(fields: [assignedBy], references: [id])
+  rentalReservationItem RentalReservationItem @relation(fields: [rentalReservationItemId], references: [id])
+  rentalReservation RentalReservation @relation(fields: [rentalReservationId], references: [id])
+}
+
+model RentalReservationItem {
+  id          BigInt      @id @default(autoincrement()
+  quantity    Int         @default("1")
+  rateCents   Int
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  rentalOperatorAssignments RentalOperatorAssignment[]
+  rentalReservation RentalReservation @relation(fields: [rentalReservationId], references: [id])
+}
+
+model RentalReservation {
+  id          BigInt      @id @default(autoincrement()
+  reference   String
+  clientId    BigInt
+  createdBy   Int
+  approvedBy  Int?
+  status      String      @default("requested")
+  startDate   DateTime
+  endDate     DateTime
+  notes       String?
+  totalCents  Int         @default("0")
+  deletedAt   DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  rentalCheckout RentalCheckout
+  rentalOperatorAssignments RentalOperatorAssignment[]
+  rentalReservationItems RentalReservationItem[]
+  user User @relation(fields: [approvedBy], references: [id])
+  rentalReturn RentalReturn
+}
+
+model RentalReturn {
+  id          BigInt      @id @default(autoincrement()
+  returnedBy  Int
+  returnedAt  DateTime
+  damageNotes String?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  user User @relation(fields: [returnedBy], references: [id])
+}
+
+model ReportExport {
+  id          String      @id
+  userId      BigInt
+  exportType  String
+  format      String
+  status      String      @default("queued")
+  filters     Json?
+  filePath    String?
+  rowCount    Int?
+  expiresAt   DateTime?
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  purgeAt     DateTime?
+  mimeType    String?
+  user User @relation(fields: [userId], references: [id])
+}
+
+model RoleHasPermission {
+  roleId      BigInt
+  role Role @relation(fields: [roleId], references: [id])
+}
+
+model Role {
+  id          BigInt      @id @default(autoincrement()
+  name        String
+  guardName   String
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  modelHasRoles ModelHasRole[]
+  roleHasPermissions RoleHasPermission[]
+}
+
+model SalesCatalogItem {
+  id          BigInt      @id @default(autoincrement()
+  sku         String
+  name        String
+  description String?
+  status      String      @default("active")
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  ownershipTransfers OwnershipTransfer[]
+  salesInventoryLedgers SalesInventoryLedger[]
+  salesOrderItems SalesOrderItem[]
+  salesQuoteItems SalesQuoteItem[]
+}
+
+model SalesInventoryLedger {
+  id          BigInt      @id @default(autoincrement()
+  createdBy   Int
+  entryType   String
+  metadata    Json?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  user User @relation(fields: [createdBy], references: [id])
+  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id])
+}
+
+model SalesOrderItem {
+  id          BigInt      @id @default(autoincrement()
+  quantity    Int
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  ownershipTransfers OwnershipTransfer[]
+  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id])
+}
+
+model SalesOrder {
+  id          BigInt      @id @default(autoincrement()
+  reference   String
+  clientId    BigInt
+  createdBy   Int
+  status      String      @default("confirmed")
+  currency    String      @default("PHP")
+  totalCents  Int         @default("0")
+  fulfilledAt DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  ownershipTransfers OwnershipTransfer[]
+  salesInventoryLedgers SalesInventoryLedger[]
+  salesOrderItems SalesOrderItem[]
+  user User @relation(fields: [createdBy], references: [id])
+  salesQuote SalesQuote @relation(fields: [salesQuoteId], references: [id])
+}
+
+model SalesQuoteItem {
+  id          BigInt      @id @default(autoincrement()
+  quantity    Int
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  salesQuote SalesQuote @relation(fields: [salesQuoteId], references: [id])
+}
+
+model SalesQuote {
+  id          BigInt      @id @default(autoincrement()
+  reference   String
+  clientId    BigInt
+  createdBy   Int
+  status      String      @default("draft")
+  currency    String      @default("PHP")
+  totalCents  Int         @default("0")
+  validUntil  DateTime?
+  notes       String?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  salesOrders SalesOrder[]
+  salesQuoteItems SalesQuoteItem[]
+  user User @relation(fields: [createdBy], references: [id])
+}
+
+model ServiceRequest {
+  id          BigInt      @id @default(autoincrement()
+  reference   String
+  clientId    BigInt
+  createdBy   Int
+  projectName String
+  serviceType String
+  location    String
+  siteNotes   String?
+  priority    String      @default("routine")
+  status      String      @default("submitted")
+  deletedAt   DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  dispatchJobs DispatchJob[]
+  user User @relation(fields: [createdBy], references: [id])
+}
+
+model Session {
+  id          String      @id
+  userId      BigInt?
+  ipAddress   String?
+  userAgent   String?
+  payload     String
+}
+
+model User {
+  id          BigInt      @id @default(autoincrement()
+  name        String
+  email       String
+  password    String
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  isActive    Boolean     @default(true)
+  suspendedAt DateTime?
+  phone       String?
+  username    String
+  approvalRequests ApprovalRequest[]
+  attachments Attachment[]
+  auditEvents AuditEvent[]
+  commandLogs CommandLog[]
+  dispatchAssetAssignments DispatchAssetAssignment[]
+  dispatchAssignmentOffers DispatchAssignmentOffer[]
+  dispatchEmergencyOverrides DispatchEmergencyOverride[]
+  dispatchExecutionAttempts DispatchExecutionAttempt[]
+  dispatchHandoffs DispatchHandoff[]
+  dispatchJobs DispatchJob[]
+  dispatchPersonnelAssignments DispatchPersonnelAssignment[]
+  dispatchPlanApprovals DispatchPlanApproval[]
+  dispatchPlanRequirementSlots DispatchPlanRequirementSlot[]
+  dispatchPlanVersions DispatchPlanVersion[]
+  fuelLogs FuelLog[]
+  fuelRequests FuelRequest[]
+  gptRecommendations GptRecommendation[]
+  inspections Inspection[]
+  jobReports JobReport[]
+  locationUpdates LocationUpdate[]
+  maintenanceWorkOrders MaintenanceWorkOrder[]
+  ownershipTransfers OwnershipTransfer[]
+  personnelCredentials PersonnelCredential[]
+  personnelProfile PersonnelProfile
+  rentalCheckouts RentalCheckout[]
+  rentalOperatorAssignments RentalOperatorAssignment[]
+  rentalReservations RentalReservation[]
+  rentalReturns RentalReturn[]
+  reportExports ReportExport[]
+  salesInventoryLedgers SalesInventoryLedger[]
+  salesOrders SalesOrder[]
+  salesQuotes SalesQuote[]
+  serviceRequests ServiceRequest[]
+}

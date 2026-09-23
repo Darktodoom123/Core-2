@@ -1,0 +1,617 @@
+{
+  "revision": "2026-09-17",
+  "scope": "Final one-page two-service ERD, selected fields and relationships",
+  "pages": [
+    {
+      "title": "Core-2 ERD",
+      "tables": [
+        {
+          "service": "operations",
+          "name": "dispatch_jobs",
+          "title": "Jobs",
+          "x": 42,
+          "y": 132,
+          "w": 230,
+          "h": 70,
+          "fields": [
+            "id",
+            "title"
+          ]
+        },
+        {
+          "service": "operations",
+          "name": "users",
+          "title": "People",
+          "x": 312,
+          "y": 132,
+          "w": 230,
+          "h": 70,
+          "fields": [
+            "id",
+            "name"
+          ]
+        },
+        {
+          "service": "operations",
+          "name": "operational_assets",
+          "title": "Equipment",
+          "x": 602,
+          "y": 132,
+          "w": 230,
+          "h": 70,
+          "fields": [
+            "id",
+            "kind"
+          ]
+        },
+        {
+          "service": "operations",
+          "name": "dispatch_personnel_assignments",
+          "title": "Operator assignments",
+          "x": 42,
+          "y": 300,
+          "w": 230,
+          "h": 84,
+          "fields": [
+            "id",
+            "dispatch_job_id",
+            "user_id"
+          ]
+        },
+        {
+          "service": "operations",
+          "name": "dispatch_asset_assignments",
+          "title": "Equipment assignments",
+          "x": 312,
+          "y": 300,
+          "w": 230,
+          "h": 84,
+          "fields": [
+            "id",
+            "dispatch_job_id",
+            "operational_asset_id"
+          ]
+        },
+        {
+          "service": "operations",
+          "name": "dvir_inspections",
+          "title": "Vehicle checks",
+          "x": 42,
+          "y": 470,
+          "w": 230,
+          "h": 84,
+          "fields": [
+            "id",
+            "operational_asset_id",
+            "has_defects"
+          ]
+        },
+        {
+          "service": "operations",
+          "name": "inspections",
+          "title": "Equipment inspections",
+          "x": 312,
+          "y": 470,
+          "w": 230,
+          "h": 84,
+          "fields": [
+            "id",
+            "operational_asset_id",
+            "result"
+          ]
+        },
+        {
+          "service": "operations",
+          "name": "fuel_requests",
+          "title": "Fuel requests",
+          "x": 602,
+          "y": 470,
+          "w": 230,
+          "h": 84,
+          "fields": [
+            "id",
+            "operational_asset_id",
+            "quantity_litres"
+          ]
+        },
+        {
+          "service": "operations",
+          "name": "fuel_logs",
+          "title": "Fuel usage",
+          "x": 602,
+          "y": 645,
+          "w": 230,
+          "h": 84,
+          "fields": [
+            "id",
+            "fuel_request_id",
+            "quantity_litres"
+          ]
+        },
+        {
+          "service": "operations",
+          "name": "gpt_recommendations",
+          "title": "AI recommendations",
+          "x": 42,
+          "y": 645,
+          "w": 230,
+          "h": 112,
+          "fields": [
+            "id",
+            "requested_by",
+            "subject_type",
+            "subject_id",
+            "status"
+          ]
+        },
+        {
+          "service": "operations",
+          "name": "gpt_recommendation_metrics",
+          "title": "AI performance records",
+          "x": 312,
+          "y": 645,
+          "w": 230,
+          "h": 84,
+          "fields": [
+            "id",
+            "recommendation_id",
+            "event"
+          ]
+        },
+        {
+          "service": "tracking",
+          "name": "location_samples",
+          "title": "GPS history",
+          "x": 922,
+          "y": 132,
+          "w": 230,
+          "h": 140,
+          "fields": [
+            "id",
+            "user_id",
+            "operational_asset_id",
+            "dispatch_job_id",
+            "latitude",
+            "longitude",
+            "captured_at"
+          ]
+        },
+        {
+          "service": "tracking",
+          "name": "latest_locations",
+          "title": "Latest position",
+          "x": 922,
+          "y": 350,
+          "w": 230,
+          "h": 126,
+          "fields": [
+            "id",
+            "user_id",
+            "operational_asset_id",
+            "dispatch_job_id",
+            "location_sample_id",
+            "captured_at"
+          ]
+        },
+        {
+          "service": "tracking",
+          "name": "tracking_command_receipts",
+          "title": "Ingestion receipts",
+          "x": 922,
+          "y": 570,
+          "w": 230,
+          "h": 112,
+          "fields": [
+            "id",
+            "command_id",
+            "user_id",
+            "location_sample_id",
+            "status_code"
+          ]
+        }
+      ],
+      "relationships": [
+        {
+          "parent": "dispatch_jobs",
+          "child": "dispatch_personnel_assignments",
+          "column": "dispatch_job_id",
+          "kind": "fk",
+          "points": [
+            [
+              260,
+              202
+            ],
+            [
+              260,
+              300
+            ]
+          ],
+          "parent_card": "one",
+          "child_card": "zero_many"
+        },
+        {
+          "parent": "dispatch_jobs",
+          "child": "dispatch_asset_assignments",
+          "column": "dispatch_job_id",
+          "kind": "fk",
+          "points": [
+            [
+              272,
+              160
+            ],
+            [
+              294,
+              160
+            ],
+            [
+              294,
+              245
+            ],
+            [
+              427,
+              245
+            ],
+            [
+              427,
+              300
+            ]
+          ],
+          "parent_card": "one",
+          "child_card": "zero_many"
+        },
+        {
+          "parent": "users",
+          "child": "dispatch_personnel_assignments",
+          "column": "user_id",
+          "kind": "fk",
+          "points": [
+            [
+              312,
+              180
+            ],
+            [
+              285,
+              180
+            ],
+            [
+              285,
+              342
+            ],
+            [
+              272,
+              342
+            ]
+          ],
+          "parent_card": "one",
+          "child_card": "zero_many"
+        },
+        {
+          "parent": "operational_assets",
+          "child": "dispatch_asset_assignments",
+          "column": "operational_asset_id",
+          "kind": "fk",
+          "points": [
+            [
+              717,
+              202
+            ],
+            [
+              717,
+              250
+            ],
+            [
+              562,
+              250
+            ],
+            [
+              562,
+              342
+            ],
+            [
+              542,
+              342
+            ]
+          ],
+          "parent_card": "one",
+          "child_card": "zero_many"
+        },
+        {
+          "parent": "operational_assets",
+          "child": "dvir_inspections",
+          "column": "operational_asset_id",
+          "kind": "fk",
+          "points": [
+            [
+              602,
+              174
+            ],
+            [
+              574,
+              174
+            ],
+            [
+              574,
+              435
+            ],
+            [
+              260,
+              435
+            ],
+            [
+              260,
+              470
+            ]
+          ],
+          "parent_card": "zero_one",
+          "child_card": "zero_many"
+        },
+        {
+          "parent": "operational_assets",
+          "child": "inspections",
+          "column": "operational_asset_id",
+          "kind": "fk",
+          "points": [
+            [
+              692,
+              202
+            ],
+            [
+              692,
+              424
+            ],
+            [
+              535,
+              424
+            ],
+            [
+              535,
+              470
+            ]
+          ],
+          "parent_card": "one",
+          "child_card": "zero_many"
+        },
+        {
+          "parent": "operational_assets",
+          "child": "fuel_requests",
+          "column": "operational_asset_id",
+          "kind": "fk",
+          "points": [
+            [
+              820,
+              202
+            ],
+            [
+              820,
+              470
+            ]
+          ],
+          "parent_card": "zero_one",
+          "child_card": "zero_many"
+        },
+        {
+          "parent": "fuel_requests",
+          "child": "fuel_logs",
+          "column": "fuel_request_id",
+          "kind": "fk",
+          "points": [
+            [
+              717,
+              554
+            ],
+            [
+              717,
+              645
+            ]
+          ],
+          "parent_card": "one",
+          "child_card": "zero_many"
+        },
+        {
+          "parent": "users",
+          "child": "gpt_recommendations",
+          "column": "requested_by",
+          "kind": "fk",
+          "points": [
+            [
+              312,
+              160
+            ],
+            [
+              280,
+              160
+            ],
+            [
+              280,
+              610
+            ],
+            [
+              260,
+              610
+            ],
+            [
+              260,
+              645
+            ]
+          ],
+          "parent_card": "one",
+          "child_card": "zero_many"
+        },
+        {
+          "parent": "dispatch_jobs",
+          "child": "gpt_recommendations",
+          "column": "subject_id",
+          "kind": "polymorphic",
+          "points": [
+            [
+              42,
+              170
+            ],
+            [
+              34,
+              170
+            ],
+            [
+              34,
+              680
+            ],
+            [
+              42,
+              680
+            ]
+          ],
+          "parent_card": "zero_one",
+          "child_card": "zero_many"
+        },
+        {
+          "parent": "gpt_recommendations",
+          "child": "gpt_recommendation_metrics",
+          "column": "recommendation_id",
+          "kind": "fk",
+          "points": [
+            [
+              272,
+              686
+            ],
+            [
+              312,
+              686
+            ]
+          ],
+          "parent_card": "one",
+          "child_card": "zero_many"
+        },
+        {
+          "parent": "users",
+          "child": "location_samples",
+          "column": "user_id",
+          "kind": "cross-service",
+          "points": [
+            [
+              530,
+              132
+            ],
+            [
+              530,
+              110
+            ],
+            [
+              888,
+              110
+            ],
+            [
+              888,
+              188
+            ],
+            [
+              922,
+              188
+            ]
+          ],
+          "parent_card": "one",
+          "child_card": "zero_many"
+        },
+        {
+          "parent": "dispatch_jobs",
+          "child": "location_samples",
+          "column": "dispatch_job_id",
+          "kind": "cross-service",
+          "points": [
+            [
+              262,
+              132
+            ],
+            [
+              262,
+              104
+            ],
+            [
+              896,
+              104
+            ],
+            [
+              896,
+              216
+            ],
+            [
+              922,
+              216
+            ]
+          ],
+          "parent_card": "zero_one",
+          "child_card": "zero_many"
+        },
+        {
+          "parent": "operational_assets",
+          "child": "location_samples",
+          "column": "operational_asset_id",
+          "kind": "cross-service",
+          "points": [
+            [
+              832,
+              160
+            ],
+            [
+              880,
+              160
+            ],
+            [
+              880,
+              202
+            ],
+            [
+              922,
+              202
+            ]
+          ],
+          "parent_card": "zero_one",
+          "child_card": "zero_many"
+        },
+        {
+          "parent": "location_samples",
+          "child": "latest_locations",
+          "column": "location_sample_id",
+          "kind": "scalar",
+          "points": [
+            [
+              1037,
+              272
+            ],
+            [
+              1037,
+              350
+            ]
+          ],
+          "parent_card": "zero_one",
+          "child_card": "zero_many"
+        },
+        {
+          "parent": "location_samples",
+          "child": "tracking_command_receipts",
+          "column": "location_sample_id",
+          "kind": "scalar",
+          "points": [
+            [
+              1152,
+              249
+            ],
+            [
+              1159,
+              249
+            ],
+            [
+              1159,
+              661
+            ],
+            [
+              1152,
+              661
+            ]
+          ],
+          "parent_card": "zero_one",
+          "child_card": "zero_many"
+        }
+      ]
+    }
+  ]
+}

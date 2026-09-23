@@ -1,0 +1,514 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1684" height="1191" viewBox="0 0 1684 1191" role="img" aria-labelledby="title desc">
+<title id="title">Core Transaction 2: Entity-Relationship Diagram</title>
+<desc id="desc">Twenty-one application tables grouped into five operational modules, with shared users and operational assets. Crow's-foot symbols indicate relationship cardinality. Primary keys, foreign keys, unique columns and nullable fields are marked.</desc>
+<rect x="0" y="0" width="1684" height="1191" fill="white" stroke="none" stroke-width="0.8"/>
+<text x="35" y="31" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="700" text-anchor="start">CORE TRANSACTION 2</text>
+<text x="35" y="64" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="700" text-anchor="start">Entity-Relationship Diagram</text>
+<text x="35" y="84" fill="#555555" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="400" text-anchor="start">Five operational modules | Selected keys and business fields</text>
+<text x="1649" y="34" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="11.5" font-weight="700" text-anchor="end">Alibaton Construction</text>
+<text x="1649" y="54" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="400" text-anchor="end">Schema revision: 17 September 2026</text>
+<text x="1649" y="74" fill="#555555" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="400" text-anchor="end">Operations database | A2 landscape</text>
+<rect x="35" y="104" width="570" height="591" fill="none" stroke="#b6b6b6" stroke-width="0.6"/>
+<text x="50" y="128" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="13.5" font-weight="700" text-anchor="start">1  Dispatch Job and Scheduling</text>
+<rect x="630" y="104" width="280" height="591" fill="none" stroke="#b6b6b6" stroke-width="0.6"/>
+<text x="645" y="128" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="13.5" font-weight="700" text-anchor="start">Shared records</text>
+<rect x="935" y="104" width="714" height="591" fill="none" stroke="#b6b6b6" stroke-width="0.6"/>
+<text x="950" y="128" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="13.5" font-weight="700" text-anchor="start">2  Assign Driver/Operator and Equipment</text>
+<rect x="35" y="730" width="530" height="387" fill="none" stroke="#b6b6b6" stroke-width="0.6"/>
+<text x="50" y="754" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="13.5" font-weight="700" text-anchor="start">3  Fleet Management</text>
+<rect x="590" y="730" width="565" height="387" fill="none" stroke="#b6b6b6" stroke-width="0.6"/>
+<text x="605" y="754" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="13.5" font-weight="700" text-anchor="start">4  Crane and Equipment Management</text>
+<rect x="1180" y="730" width="469" height="387" fill="none" stroke="#b6b6b6" stroke-width="0.6"/>
+<text x="1195" y="754" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="13.5" font-weight="700" text-anchor="start">5  Fuel Management</text>
+<polyline points="285,206 347,206" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="463,300 463,385" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="347,493 285,493" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="579,421 612,421 612,306 930,306 930,362 956,362" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="579,447 621,447 621,295 1288,295 1288,362 1318,362" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="890,199 956,199" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="890,223 918,223 918,286 1290,286 1290,223 1318,223" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="890,235 923,235 923,414 956,414" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="780,249 780,281 926,281 926,572 956,572" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="890,448 918,448 918,496 1450,496 1450,461" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="890,538 915,538 915,615 956,615" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="385,589 385,686 931,686 931,651 956,651" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="1266,587 1318,587" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="650,489 615,489 615,710 282,710 282,768" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="182,904 182,951" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="267,904 267,924 433,924 433,951" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="710,564 710,701 578,701 578,810 610,810" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="750,564 750,699 1162,699 1162,924 730,924 730,949" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="799,564 799,706 1015,706 1015,768" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="890,514 919,514 919,723 1143,723 1143,941 1015,941 1015,968" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="850,564 850,715 1398,715 1398,768" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="531,589 531,720 1170,720 1170,834 1200,834" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="1415,862 1433,862 1433,939 1540,939 1540,968" fill="none" stroke="#222222" stroke-width="0.8"/>
+<rect x="53" y="147" width="232" height="102" fill="white" stroke="#222222" stroke-width="0.8"/>
+<rect x="53" y="147" width="232" height="26" fill="#eeeeee" stroke="#222222" stroke-width="0.8"/>
+<polyline points="95,173 95,249" fill="none" stroke="#b6b6b6" stroke-width="0.45"/>
+<text x="63" y="165" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.7" font-weight="700" text-anchor="start">clients</text>
+<text x="60" y="189" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">PK</text>
+<text x="103" y="189" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">id</text>
+<text x="60" y="206" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">UK</text>
+<text x="103" y="206" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">code</text>
+<text x="60" y="223" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="103" y="223" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">company_name</text>
+<text x="60" y="240" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="103" y="240" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">status</text>
+<rect x="347" y="147" width="232" height="153" fill="white" stroke="#222222" stroke-width="0.8"/>
+<rect x="347" y="147" width="232" height="26" fill="#eeeeee" stroke="#222222" stroke-width="0.8"/>
+<polyline points="389,173 389,300" fill="none" stroke="#b6b6b6" stroke-width="0.45"/>
+<text x="357" y="165" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.7" font-weight="700" text-anchor="start">service_requests</text>
+<text x="354" y="189" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">PK</text>
+<text x="397" y="189" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">id</text>
+<text x="354" y="206" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="397" y="206" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">client_id</text>
+<text x="354" y="223" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">UK</text>
+<text x="397" y="223" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">reference</text>
+<text x="354" y="240" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="397" y="240" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">project_name</text>
+<text x="354" y="257" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="397" y="257" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">service_type</text>
+<text x="354" y="274" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="397" y="274" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">scheduled_date ?</text>
+<text x="354" y="291" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="397" y="291" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">status</text>
+<rect x="347" y="385" width="232" height="204" fill="white" stroke="#222222" stroke-width="0.8"/>
+<rect x="347" y="385" width="232" height="26" fill="#eeeeee" stroke="#222222" stroke-width="0.8"/>
+<polyline points="389,411 389,589" fill="none" stroke="#b6b6b6" stroke-width="0.45"/>
+<text x="357" y="403" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.7" font-weight="700" text-anchor="start">dispatch_jobs</text>
+<text x="354" y="427" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">PK</text>
+<text x="397" y="427" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">id</text>
+<text x="354" y="444" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="397" y="444" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">service_request_id ?</text>
+<text x="354" y="461" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">UK</text>
+<text x="397" y="461" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">reference</text>
+<text x="354" y="478" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="397" y="478" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">source_type ?</text>
+<text x="354" y="495" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="397" y="495" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">source_id ?</text>
+<text x="354" y="512" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="397" y="512" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">title</text>
+<text x="354" y="529" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="397" y="529" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">scheduled_start ?</text>
+<text x="354" y="546" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="397" y="546" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">scheduled_end ?</text>
+<text x="354" y="563" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="397" y="563" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">status</text>
+<text x="354" y="580" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="397" y="580" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">version</text>
+<rect x="53" y="430" width="232" height="119" fill="white" stroke="#222222" stroke-width="0.8"/>
+<rect x="53" y="430" width="232" height="26" fill="#eeeeee" stroke="#222222" stroke-width="0.8"/>
+<polyline points="95,456 95,549" fill="none" stroke="#b6b6b6" stroke-width="0.45"/>
+<text x="63" y="448" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.7" font-weight="700" text-anchor="start">job_reports</text>
+<text x="60" y="472" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">PK</text>
+<text x="103" y="472" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">id</text>
+<text x="60" y="489" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="103" y="489" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">dispatch_job_id</text>
+<text x="60" y="506" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="103" y="506" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">author_id</text>
+<text x="60" y="523" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="103" y="523" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">work_summary</text>
+<text x="60" y="540" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="103" y="540" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">status</text>
+<rect x="650" y="147" width="240" height="102" fill="white" stroke="#222222" stroke-width="0.8"/>
+<rect x="650" y="147" width="240" height="26" fill="#eeeeee" stroke="#222222" stroke-width="0.8"/>
+<polyline points="692,173 692,249" fill="none" stroke="#b6b6b6" stroke-width="0.45"/>
+<text x="660" y="165" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.7" font-weight="700" text-anchor="start">users</text>
+<text x="657" y="189" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">PK</text>
+<text x="700" y="189" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">id</text>
+<text x="657" y="206" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">UK</text>
+<text x="700" y="206" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">username</text>
+<text x="657" y="223" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="700" y="223" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">name</text>
+<text x="657" y="240" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="700" y="240" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">is_active</text>
+<rect x="650" y="411" width="240" height="153" fill="white" stroke="#222222" stroke-width="0.8"/>
+<rect x="650" y="411" width="240" height="26" fill="#eeeeee" stroke="#222222" stroke-width="0.8"/>
+<polyline points="692,437 692,564" fill="none" stroke="#b6b6b6" stroke-width="0.45"/>
+<text x="660" y="429" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.7" font-weight="700" text-anchor="start">operational_assets</text>
+<text x="657" y="453" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">PK</text>
+<text x="700" y="453" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">id</text>
+<text x="657" y="470" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">UK</text>
+<text x="700" y="470" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">code</text>
+<text x="657" y="487" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="700" y="487" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">name</text>
+<text x="657" y="504" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="700" y="504" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">kind</text>
+<text x="657" y="521" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="700" y="521" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">status</text>
+<text x="657" y="538" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="700" y="538" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">rated_capacity ?</text>
+<text x="657" y="555" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="700" y="555" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">meter_value ?</text>
+<rect x="956" y="147" width="310" height="102" fill="white" stroke="#222222" stroke-width="0.8"/>
+<rect x="956" y="147" width="310" height="26" fill="#eeeeee" stroke="#222222" stroke-width="0.8"/>
+<polyline points="998,173 998,249" fill="none" stroke="#b6b6b6" stroke-width="0.45"/>
+<text x="966" y="165" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.7" font-weight="700" text-anchor="start">personnel_profiles</text>
+<text x="963" y="189" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">PK</text>
+<text x="1006" y="189" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">id</text>
+<text x="963" y="206" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK/UK</text>
+<text x="1006" y="206" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">user_id</text>
+<text x="963" y="223" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">UK</text>
+<text x="1006" y="223" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">employee_number ?</text>
+<text x="963" y="240" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="1006" y="240" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">availability_status</text>
+<rect x="1318" y="147" width="310" height="136" fill="white" stroke="#222222" stroke-width="0.8"/>
+<rect x="1318" y="147" width="310" height="26" fill="#eeeeee" stroke="#222222" stroke-width="0.8"/>
+<polyline points="1360,173 1360,283" fill="none" stroke="#b6b6b6" stroke-width="0.45"/>
+<text x="1328" y="165" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.7" font-weight="700" text-anchor="start">personnel_credentials</text>
+<text x="1325" y="189" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">PK</text>
+<text x="1368" y="189" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">id</text>
+<text x="1325" y="206" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="1368" y="206" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">user_id</text>
+<text x="1325" y="223" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="1368" y="223" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">kind</text>
+<text x="1325" y="240" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="1368" y="240" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">credential_number</text>
+<text x="1325" y="257" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="1368" y="257" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">expires_at ?</text>
+<text x="1325" y="274" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="1368" y="274" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">status</text>
+<rect x="956" y="325" width="310" height="153" fill="white" stroke="#222222" stroke-width="0.8"/>
+<rect x="956" y="325" width="310" height="26" fill="#eeeeee" stroke="#222222" stroke-width="0.8"/>
+<polyline points="998,351 998,478" fill="none" stroke="#b6b6b6" stroke-width="0.45"/>
+<text x="966" y="343" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.7" font-weight="700" text-anchor="start">dispatch_personnel_assignments</text>
+<text x="963" y="367" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">PK</text>
+<text x="1006" y="367" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">id</text>
+<text x="963" y="384" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="1006" y="384" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">dispatch_job_id</text>
+<text x="963" y="401" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="1006" y="401" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">user_id</text>
+<text x="963" y="418" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="1006" y="418" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">assignment_type</text>
+<text x="963" y="435" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="1006" y="435" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">response_status</text>
+<text x="963" y="452" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="1006" y="452" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">active_from ?</text>
+<text x="963" y="469" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="1006" y="469" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">active_until ?</text>
+<rect x="1318" y="325" width="310" height="136" fill="white" stroke="#222222" stroke-width="0.8"/>
+<rect x="1318" y="325" width="310" height="26" fill="#eeeeee" stroke="#222222" stroke-width="0.8"/>
+<polyline points="1360,351 1360,461" fill="none" stroke="#b6b6b6" stroke-width="0.45"/>
+<text x="1328" y="343" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.7" font-weight="700" text-anchor="start">dispatch_asset_assignments</text>
+<text x="1325" y="367" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">PK</text>
+<text x="1368" y="367" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">id</text>
+<text x="1325" y="384" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="1368" y="384" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">dispatch_job_id</text>
+<text x="1325" y="401" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="1368" y="401" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">operational_asset_id</text>
+<text x="1325" y="418" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="1368" y="418" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">assignment_type</text>
+<text x="1325" y="435" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="1368" y="435" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">active_from ?</text>
+<text x="1325" y="452" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="1368" y="452" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">active_until ?</text>
+<rect x="956" y="525" width="310" height="153" fill="white" stroke="#222222" stroke-width="0.8"/>
+<rect x="956" y="525" width="310" height="26" fill="#eeeeee" stroke="#222222" stroke-width="0.8"/>
+<polyline points="998,551 998,678" fill="none" stroke="#b6b6b6" stroke-width="0.45"/>
+<text x="966" y="543" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.7" font-weight="700" text-anchor="start">operator_shifts</text>
+<text x="963" y="567" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">PK</text>
+<text x="1006" y="567" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">id</text>
+<text x="963" y="584" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="1006" y="584" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">user_id</text>
+<text x="963" y="601" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="1006" y="601" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">operational_asset_id ?</text>
+<text x="963" y="618" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="1006" y="618" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">dispatch_job_id ?</text>
+<text x="963" y="635" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="1006" y="635" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">started_at</text>
+<text x="963" y="652" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="1006" y="652" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">ended_at ?</text>
+<text x="963" y="669" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="1006" y="669" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">status</text>
+<rect x="1318" y="525" width="310" height="136" fill="white" stroke="#222222" stroke-width="0.8"/>
+<rect x="1318" y="525" width="310" height="26" fill="#eeeeee" stroke="#222222" stroke-width="0.8"/>
+<polyline points="1360,551 1360,661" fill="none" stroke="#b6b6b6" stroke-width="0.45"/>
+<text x="1328" y="543" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.7" font-weight="700" text-anchor="start">operator_duty_logs</text>
+<text x="1325" y="567" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">PK</text>
+<text x="1368" y="567" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">id</text>
+<text x="1325" y="584" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="1368" y="584" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">operator_shift_id</text>
+<text x="1325" y="601" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="1368" y="601" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">user_id</text>
+<text x="1325" y="618" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="1368" y="618" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">duty_status</text>
+<text x="1325" y="635" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="1368" y="635" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">started_at</text>
+<text x="1325" y="652" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="1368" y="652" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">ended_at ?</text>
+<rect x="65" y="768" width="235" height="136" fill="white" stroke="#222222" stroke-width="0.8"/>
+<rect x="65" y="768" width="235" height="26" fill="#eeeeee" stroke="#222222" stroke-width="0.8"/>
+<polyline points="107,794 107,904" fill="none" stroke="#b6b6b6" stroke-width="0.45"/>
+<text x="75" y="786" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.7" font-weight="700" text-anchor="start">dvir_inspections</text>
+<text x="72" y="810" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">PK</text>
+<text x="115" y="810" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">id</text>
+<text x="72" y="827" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="115" y="827" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">user_id</text>
+<text x="72" y="844" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="115" y="844" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">operational_asset_id ?</text>
+<text x="72" y="861" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="115" y="861" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">dispatch_job_id ?</text>
+<text x="72" y="878" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="115" y="878" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">inspection_type</text>
+<text x="72" y="895" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="115" y="895" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">has_defects</text>
+<rect x="65" y="951" width="235" height="119" fill="white" stroke="#222222" stroke-width="0.8"/>
+<rect x="65" y="951" width="235" height="26" fill="#eeeeee" stroke="#222222" stroke-width="0.8"/>
+<polyline points="107,977 107,1070" fill="none" stroke="#b6b6b6" stroke-width="0.45"/>
+<text x="75" y="969" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.7" font-weight="700" text-anchor="start">dvir_inspection_checks</text>
+<text x="72" y="993" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">PK</text>
+<text x="115" y="993" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">id</text>
+<text x="72" y="1010" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="115" y="1010" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">dvir_inspection_id</text>
+<text x="72" y="1027" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="115" y="1027" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">category</text>
+<text x="72" y="1044" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="115" y="1044" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">label</text>
+<text x="72" y="1061" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="115" y="1061" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">status</text>
+<rect x="322" y="951" width="225" height="102" fill="white" stroke="#222222" stroke-width="0.8"/>
+<rect x="322" y="951" width="225" height="26" fill="#eeeeee" stroke="#222222" stroke-width="0.8"/>
+<polyline points="364,977 364,1053" fill="none" stroke="#b6b6b6" stroke-width="0.45"/>
+<text x="332" y="969" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.7" font-weight="700" text-anchor="start">dvir_inspection_photos</text>
+<text x="329" y="993" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">PK</text>
+<text x="372" y="993" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">id</text>
+<text x="329" y="1010" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="372" y="1010" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">dvir_inspection_id</text>
+<text x="329" y="1027" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="372" y="1027" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">angle</text>
+<text x="329" y="1044" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="372" y="1044" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">file_path</text>
+<rect x="610" y="768" width="240" height="119" fill="white" stroke="#222222" stroke-width="0.8"/>
+<rect x="610" y="768" width="240" height="26" fill="#eeeeee" stroke="#222222" stroke-width="0.8"/>
+<polyline points="652,794 652,887" fill="none" stroke="#b6b6b6" stroke-width="0.45"/>
+<text x="620" y="786" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.7" font-weight="700" text-anchor="start">inspections</text>
+<text x="617" y="810" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">PK</text>
+<text x="660" y="810" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">id</text>
+<text x="617" y="827" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="660" y="827" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">operational_asset_id</text>
+<text x="617" y="844" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="660" y="844" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">technician_id</text>
+<text x="617" y="861" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="660" y="861" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">type</text>
+<text x="617" y="878" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="660" y="878" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">result</text>
+<rect x="610" y="949" width="240" height="119" fill="white" stroke="#222222" stroke-width="0.8"/>
+<rect x="610" y="949" width="240" height="26" fill="#eeeeee" stroke="#222222" stroke-width="0.8"/>
+<polyline points="652,975 652,1068" fill="none" stroke="#b6b6b6" stroke-width="0.45"/>
+<text x="620" y="967" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.7" font-weight="700" text-anchor="start">maintenance_work_orders</text>
+<text x="617" y="991" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">PK</text>
+<text x="660" y="991" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">id</text>
+<text x="617" y="1008" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="660" y="1008" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">operational_asset_id</text>
+<text x="617" y="1025" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="660" y="1025" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">technician_id ?</text>
+<text x="617" y="1042" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="660" y="1042" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">status</text>
+<text x="617" y="1059" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="660" y="1059" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">dispatch_blocking</text>
+<rect x="895" y="768" width="240" height="136" fill="white" stroke="#222222" stroke-width="0.8"/>
+<rect x="895" y="768" width="240" height="26" fill="#eeeeee" stroke="#222222" stroke-width="0.8"/>
+<polyline points="937,794 937,904" fill="none" stroke="#b6b6b6" stroke-width="0.45"/>
+<text x="905" y="786" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.7" font-weight="700" text-anchor="start">critical_lift_plans</text>
+<text x="902" y="810" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">PK</text>
+<text x="945" y="810" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">id</text>
+<text x="902" y="827" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="945" y="827" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">dispatch_job_id ?</text>
+<text x="902" y="844" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="945" y="844" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">operational_asset_id ?</text>
+<text x="902" y="861" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="945" y="861" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">crane_operator_id ?</text>
+<text x="902" y="878" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">UK</text>
+<text x="945" y="878" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">lift_reference</text>
+<text x="902" y="895" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="945" y="895" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">status</text>
+<rect x="895" y="968" width="240" height="136" fill="white" stroke="#222222" stroke-width="0.8"/>
+<rect x="895" y="968" width="240" height="26" fill="#eeeeee" stroke="#222222" stroke-width="0.8"/>
+<polyline points="937,994 937,1104" fill="none" stroke="#b6b6b6" stroke-width="0.45"/>
+<text x="905" y="986" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.7" font-weight="700" text-anchor="start">tower_crane_shift_logs</text>
+<text x="902" y="1010" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">PK</text>
+<text x="945" y="1010" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">id</text>
+<text x="902" y="1027" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="945" y="1027" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">operational_asset_id</text>
+<text x="902" y="1044" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="945" y="1044" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">operator_id</text>
+<text x="902" y="1061" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="945" y="1061" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">dispatch_job_id ?</text>
+<text x="902" y="1078" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="945" y="1078" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">shift_date</text>
+<text x="902" y="1095" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="945" y="1095" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">operating_hours</text>
+<rect x="1200" y="768" width="215" height="153" fill="white" stroke="#222222" stroke-width="0.8"/>
+<rect x="1200" y="768" width="215" height="26" fill="#eeeeee" stroke="#222222" stroke-width="0.8"/>
+<polyline points="1242,794 1242,921" fill="none" stroke="#b6b6b6" stroke-width="0.45"/>
+<text x="1210" y="786" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.7" font-weight="700" text-anchor="start">fuel_requests</text>
+<text x="1207" y="810" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">PK</text>
+<text x="1250" y="810" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">id</text>
+<text x="1207" y="827" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="1250" y="827" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">requester_id</text>
+<text x="1207" y="844" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="1250" y="844" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">dispatch_job_id ?</text>
+<text x="1207" y="861" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="1250" y="861" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">operational_asset_id ?</text>
+<text x="1207" y="878" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="1250" y="878" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">operator_shift_id ?</text>
+<text x="1207" y="895" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="1250" y="895" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">quantity_litres</text>
+<text x="1207" y="912" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="1250" y="912" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">status</text>
+<rect x="1449" y="968" width="182" height="119" fill="white" stroke="#222222" stroke-width="0.8"/>
+<rect x="1449" y="968" width="182" height="26" fill="#eeeeee" stroke="#222222" stroke-width="0.8"/>
+<polyline points="1491,994 1491,1087" fill="none" stroke="#b6b6b6" stroke-width="0.45"/>
+<text x="1459" y="986" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.7" font-weight="700" text-anchor="start">fuel_logs</text>
+<text x="1456" y="1010" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">PK</text>
+<text x="1499" y="1010" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">id</text>
+<text x="1456" y="1027" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="1499" y="1027" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">fuel_request_id</text>
+<text x="1456" y="1044" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start">FK</text>
+<text x="1499" y="1044" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">recorded_by</text>
+<text x="1456" y="1061" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="1499" y="1061" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">quantity_litres</text>
+<text x="1456" y="1078" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" text-anchor="start"></text>
+<text x="1499" y="1078" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">recorded_at</text>
+<polyline points="292.0,201.0 292.0,211.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="298.0,201.0 298.0,211.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="347.0,211.0 336.0,206.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="347.0,201.0 336.0,206.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="328.0" cy="206.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<polyline points="468.0,307.0 458.0,307.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="463.0" cy="317.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<polyline points="458.0,385.0 463.0,374.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="468.0,385.0 463.0,374.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="463.0" cy="366.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<polyline points="340.0,498.0 340.0,488.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="334.0,498.0 334.0,488.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="285.0,488.0 296.0,493.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="285.0,498.0 296.0,493.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="304.0" cy="493.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<polyline points="586.0,416.0 586.0,426.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="592.0,416.0 592.0,426.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="956.0,367.0 945.0,362.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="956.0,357.0 945.0,362.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="937.0" cy="362.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<polyline points="586.0,442.0 586.0,452.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="592.0,442.0 592.0,452.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="1318.0,367.0 1307.0,362.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="1318.0,357.0 1307.0,362.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="1299.0" cy="362.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<polyline points="897.0,194.0 897.0,204.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="903.0,194.0 903.0,204.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="949.0,204.0 949.0,194.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="939.0" cy="199.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<polyline points="897.0,218.0 897.0,228.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="903.0,218.0 903.0,228.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="1318.0,228.0 1307.0,223.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="1318.0,218.0 1307.0,223.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="1299.0" cy="223.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<polyline points="897.0,230.0 897.0,240.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="903.0,230.0 903.0,240.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="956.0,419.0 945.0,414.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="956.0,409.0 945.0,414.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="937.0" cy="414.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<polyline points="785.0,256.0 775.0,256.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="785.0,262.0 775.0,262.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="956.0,577.0 945.0,572.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="956.0,567.0 945.0,572.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="937.0" cy="572.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<polyline points="897.0,443.0 897.0,453.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="903.0,443.0 903.0,453.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="1455.0,461.0 1450.0,472.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="1445.0,461.0 1450.0,472.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="1450.0" cy="480.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<polyline points="897.0,533.0 897.0,543.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="907.0" cy="538.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<polyline points="956.0,620.0 945.0,615.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="956.0,610.0 945.0,615.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="937.0" cy="615.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<polyline points="390.0,596.0 380.0,596.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="385.0" cy="606.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<polyline points="956.0,656.0 945.0,651.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="956.0,646.0 945.0,651.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="937.0" cy="651.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<polyline points="1273.0,582.0 1273.0,592.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="1279.0,582.0 1279.0,592.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="1318.0,592.0 1307.0,587.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="1318.0,582.0 1307.0,587.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="1299.0" cy="587.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<polyline points="643.0,494.0 643.0,484.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="633.0" cy="489.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<polyline points="277.0,768.0 282.0,757.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="287.0,768.0 282.0,757.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="282.0" cy="749.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<polyline points="187.0,911.0 177.0,911.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="187.0,917.0 177.0,917.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="177.0,951.0 182.0,940.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="187.0,951.0 182.0,940.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="182.0" cy="932.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<polyline points="272.0,911.0 262.0,911.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="272.0,917.0 262.0,917.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="428.0,951.0 433.0,940.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="438.0,951.0 433.0,940.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="433.0" cy="932.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<polyline points="715.0,571.0 705.0,571.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="715.0,577.0 705.0,577.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="610.0,815.0 599.0,810.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="610.0,805.0 599.0,810.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="591.0" cy="810.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<polyline points="755.0,571.0 745.0,571.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="755.0,577.0 745.0,577.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="725.0,949.0 730.0,938.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="735.0,949.0 730.0,938.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="730.0" cy="930.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<polyline points="804.0,571.0 794.0,571.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="799.0" cy="581.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<polyline points="1010.0,768.0 1015.0,757.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="1020.0,768.0 1015.0,757.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="1015.0" cy="749.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<polyline points="897.0,509.0 897.0,519.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="903.0,509.0 903.0,519.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="1010.0,968.0 1015.0,957.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="1020.0,968.0 1015.0,957.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="1015.0" cy="949.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<polyline points="855.0,571.0 845.0,571.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="850.0" cy="581.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<polyline points="1393.0,768.0 1398.0,757.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="1403.0,768.0 1398.0,757.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="1398.0" cy="749.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<polyline points="536.0,596.0 526.0,596.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="531.0" cy="606.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<polyline points="1200.0,839.0 1189.0,834.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="1200.0,829.0 1189.0,834.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="1181.0" cy="834.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<polyline points="1422.0,857.0 1422.0,867.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="1428.0,857.0 1428.0,867.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="1535.0,968.0 1540.0,957.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="1545.0,968.0 1540.0,957.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="1540.0" cy="949.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<text x="650" y="340" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="700" text-anchor="start">Common identity and asset records</text>
+<text x="650" y="360" fill="#555555" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">used across the five modules.</text>
+<text x="650" y="391" fill="#555555" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">Vehicles, cranes and other equipment.</text>
+<text x="53" y="644" fill="#555555" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">Project planning and Dispatch V2 records</text>
+<text x="53" y="661" fill="#555555" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">are documented in the companion schema notes.</text>
+<text x="65" y="1097" fill="#555555" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">Inspection records support field safety checks.</text>
+<text x="610" y="1095" fill="#555555" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">Maintenance also covers fleet assets.</text>
+<text x="1200" y="1009" fill="#555555" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">Fuel request</text>
+<text x="1200" y="1026" fill="#555555" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">and usage history.</text>
+<polyline points="35,1138 1649,1138" fill="none" stroke="#b6b6b6" stroke-width="0.7"/>
+<text x="35" y="1159" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">PK  Primary key    FK  Foreign key    UK  Unique column    ?  Nullable field</text>
+<polyline points="656,1155 696,1155" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="663.0,1150.0 663.0,1160.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="669.0,1150.0 669.0,1160.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<text x="705" y="1159" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">Exactly one</text>
+<polyline points="810,1155 850,1155" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="817.0,1150.0 817.0,1160.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="827.0" cy="1155.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<text x="859" y="1159" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">Zero or one</text>
+<polyline points="963,1155 1003,1155" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="963.0,1150.0 974.0,1155.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<polyline points="963.0,1160.0 974.0,1155.0" fill="none" stroke="#222222" stroke-width="0.8"/>
+<circle cx="982.0" cy="1155.0" r="3.2" fill="white" stroke="#222222" stroke-width="0.8"/>
+<text x="1012" y="1159" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="start">Zero or many</text>
+<text x="1649" y="1159" fill="#222222" font-family="Arial, Helvetica, sans-serif" font-size="10.2" font-weight="400" text-anchor="end">Sheet 1 of 1</text>
+<text x="35" y="1180" fill="#555555" font-family="Arial, Helvetica, sans-serif" font-size="9.8" font-weight="400" text-anchor="start">Selected business relationships are drawn. Additional FK columns retain their schema meaning; see companion notes for all displayed FK targets and scope.</text>
+</svg>

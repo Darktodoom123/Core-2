@@ -13,10 +13,18 @@ Core-2 is organized as an isolated two-service monorepo:
 ## 🗂️ Documentation Landscape & Git Tracking Policy
 
 Per the repository's `.gitignore` policy:
-- **Tracked in Git**: `Docs/README.md`, `Docs/references/alibaton-website.md`, `Docs/microservice/**`, `Docs/architecture/docker.md`, and `Docs/architecture/deployment.md`.
-- **Workspace-Local Documentation**: `Docs/product/`, `Docs/architecture/` (remaining files), `Docs/prds/`, `Docs/design/`, `Docs/plans/`, `Docs/runbooks/`, and `Docs/archive/` exist locally in the development workspace.
+- **Tracked in Git**: `Docs/README.md`, the active documentation under `Docs/product/`, `Docs/architecture/`, `Docs/prds/`, `Docs/design/`, `Docs/microservice/`, `Docs/runbooks/`, and `Docs/references/`, plus the active plans listed below.
+- **Workspace-Local Documentation**: `Docs/archive/`, superseded plans such as `Docs/plans/microservices-migration.md`, and `Docs/AGENTS.md` remain local to the development workspace.
 
 Implementation, manifests, lockfiles, migrations, and passing tests show actual behavior; product documents show intended behavior. Surface material contradictions rather than inventing requirements.
+
+## 🧠 Graphify Knowledge Graph
+
+The repository has a generated Graphify context graph under `graphify-out/`. The shareable artifacts are `graphify-out/graph.json` and `graphify-out/GRAPH_REPORT.md`; machine-local caches, cost data, and the absolute-root marker remain ignored.
+
+Install the pinned developer tool with `uv tool install graphifyy==0.9.65`. Codex wiring is project-local; run `graphify install --project --platform codex` in each clone when the local `$graphify` skill is needed.
+
+Use `graphify update .` after code changes for an incremental AST-only refresh. For a clean code-only rebuild without LLM calls, use `graphify extract . --code-only --no-cluster` followed by `graphify cluster-only . --no-viz --no-label`. Documentation and other non-code sources require the Graphify semantic workflow and should be reviewed for privacy before processing.
 
 ---
 

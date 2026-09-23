@@ -91,16 +91,37 @@ Desktop.ini
 !/Docs/
 /Docs/*
 !/Docs/README.md
-!/Docs/references/
-/Docs/references/*
-!/Docs/references/alibaton-website.md
+
+# Current documentation used as implementation and product context.
+!/Docs/architecture/
+!/Docs/architecture/**
+!/Docs/design/
+!/Docs/design/**
 !/Docs/microservice/
 !/Docs/microservice/**
-!/Docs/architecture/
-/Docs/architecture/*
-!/Docs/architecture/docker.md
-!/Docs/architecture/deployment.md
-!/Docs/architecture/field-tracking.md
+!/Docs/prds/
+!/Docs/prds/**
+!/Docs/product/
+!/Docs/product/**
+!/Docs/references/
+!/Docs/references/**
+!/Docs/runbooks/
+!/Docs/runbooks/**
+
+# Keep historical and mixed-status planning material workspace-local.
+/Docs/archive/
+!/Docs/plans/
+/Docs/plans/*
+!/Docs/plans/Roadmap.md
+!/Docs/plans/fleet-fuel-reports-ux-plan.md
+!/Docs/plans/employee-asset-picker-design.md
+!/Docs/plans/resource-picker-refinement.md
+!/Docs/plans/field-execution-view.md
+/Docs/plans/microservices-migration.md
+# Graphify keeps the graph and report shareable; caches and machine paths stay local.
+/graphify-out/cache/
+/graphify-out/.graphify_*
+/graphify-out/cost.json
 .ai-reports/
 !.ai-reports/
 .ai-reports/*

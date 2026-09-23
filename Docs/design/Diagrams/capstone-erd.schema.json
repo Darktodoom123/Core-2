@@ -1,0 +1,1886 @@
+{
+  "revision": "2026-09-17",
+  "scope": "Five operational modules: selected application fields and business relationships; repository schema, not a live database inspection.",
+  "entities": [
+    {
+      "name": "clients",
+      "module": "1",
+      "service": "operations",
+      "fields": {
+        "id": {
+          "type": "id",
+          "nullable": false,
+          "pk": true,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033612_create_clients_requests_and_personnel_tables.php"
+        },
+        "code": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": true,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033612_create_clients_requests_and_personnel_tables.php"
+        },
+        "company_name": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033612_create_clients_requests_and_personnel_tables.php"
+        },
+        "status": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033612_create_clients_requests_and_personnel_tables.php"
+        }
+      },
+      "migration_sources": [
+        "apps/operations/database/migrations/2026_07_17_033612_create_clients_requests_and_personnel_tables.php"
+      ]
+    },
+    {
+      "name": "service_requests",
+      "module": "1",
+      "service": "operations",
+      "fields": {
+        "id": {
+          "type": "id",
+          "nullable": false,
+          "pk": true,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033612_create_clients_requests_and_personnel_tables.php"
+        },
+        "client_id": {
+          "type": "foreignId",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": "clients",
+          "source": "apps/operations/database/migrations/2026_07_17_033612_create_clients_requests_and_personnel_tables.php"
+        },
+        "reference": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": true,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033612_create_clients_requests_and_personnel_tables.php"
+        },
+        "project_name": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033612_create_clients_requests_and_personnel_tables.php"
+        },
+        "service_type": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033612_create_clients_requests_and_personnel_tables.php"
+        },
+        "scheduled_date": {
+          "type": "timestamp",
+          "nullable": true,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033612_create_clients_requests_and_personnel_tables.php"
+        },
+        "status": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033612_create_clients_requests_and_personnel_tables.php"
+        }
+      },
+      "migration_sources": [
+        "apps/operations/database/migrations/2026_07_17_033612_create_clients_requests_and_personnel_tables.php",
+        "apps/operations/database/migrations/2026_08_11_100000_create_rental_and_sales_tables.php"
+      ]
+    },
+    {
+      "name": "dispatch_jobs",
+      "module": "1",
+      "service": "operations",
+      "fields": {
+        "id": {
+          "type": "id",
+          "nullable": false,
+          "pk": true,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033609_create_dispatch_foundation_tables.php"
+        },
+        "service_request_id": {
+          "type": "foreignId",
+          "nullable": true,
+          "pk": false,
+          "uk": false,
+          "target": "service_requests",
+          "source": "apps/operations/database/migrations/2026_07_17_033613_align_dispatch_assets_and_operations_tables.php"
+        },
+        "reference": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": true,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033609_create_dispatch_foundation_tables.php"
+        },
+        "source_type": {
+          "type": "string",
+          "nullable": true,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_08_14_120000_add_source_to_dispatch_jobs.php"
+        },
+        "source_id": {
+          "type": "unsignedBigInteger",
+          "nullable": true,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_08_14_120000_add_source_to_dispatch_jobs.php"
+        },
+        "title": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033609_create_dispatch_foundation_tables.php"
+        },
+        "scheduled_start": {
+          "type": "timestamp",
+          "nullable": true,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033609_create_dispatch_foundation_tables.php"
+        },
+        "scheduled_end": {
+          "type": "timestamp",
+          "nullable": true,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033609_create_dispatch_foundation_tables.php"
+        },
+        "status": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033609_create_dispatch_foundation_tables.php"
+        },
+        "version": {
+          "type": "unsignedInteger",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033609_create_dispatch_foundation_tables.php"
+        }
+      },
+      "migration_sources": [
+        "apps/operations/database/migrations/2026_07_17_033609_create_dispatch_foundation_tables.php",
+        "apps/operations/database/migrations/2026_07_17_033613_align_dispatch_assets_and_operations_tables.php",
+        "apps/operations/database/migrations/2026_08_14_120000_add_source_to_dispatch_jobs.php",
+        "apps/operations/database/migrations/2026_08_28_140000_add_site_coordinates_to_dispatch_jobs.php",
+        "apps/operations/database/migrations/2026_08_28_160000_add_planned_crane_slots_to_dispatch_jobs.php"
+      ]
+    },
+    {
+      "name": "job_reports",
+      "module": "1",
+      "service": "operations",
+      "fields": {
+        "id": {
+          "type": "id",
+          "nullable": false,
+          "pk": true,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033614_create_reports_attachments_and_notifications_tables.php"
+        },
+        "dispatch_job_id": {
+          "type": "foreignId",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": "dispatch_jobs",
+          "source": "apps/operations/database/migrations/2026_07_17_033614_create_reports_attachments_and_notifications_tables.php"
+        },
+        "author_id": {
+          "type": "foreignId",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": "users",
+          "source": "apps/operations/database/migrations/2026_07_17_033614_create_reports_attachments_and_notifications_tables.php"
+        },
+        "work_summary": {
+          "type": "text",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033614_create_reports_attachments_and_notifications_tables.php"
+        },
+        "status": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033614_create_reports_attachments_and_notifications_tables.php"
+        }
+      },
+      "migration_sources": [
+        "apps/operations/database/migrations/2026_07_17_033614_create_reports_attachments_and_notifications_tables.php",
+        "apps/operations/database/migrations/2026_08_27_150000_add_telemetry_and_resubmission_to_job_reports.php",
+        "apps/operations/database/migrations/2026_09_06_120000_add_digital_signatures_to_job_reports_table.php"
+      ]
+    },
+    {
+      "name": "users",
+      "module": "shared",
+      "service": "operations",
+      "fields": {
+        "id": {
+          "type": "id",
+          "nullable": false,
+          "pk": true,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/0001_01_01_000000_create_users_table.php"
+        },
+        "username": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": true,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_08_09_130000_add_usernames_to_users_table.php"
+        },
+        "name": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/0001_01_01_000000_create_users_table.php"
+        },
+        "is_active": {
+          "type": "boolean",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033608_add_account_status_to_users_table.php"
+        }
+      },
+      "migration_sources": [
+        "apps/operations/database/migrations/0001_01_01_000000_create_users_table.php",
+        "apps/operations/database/migrations/2026_07_17_033608_add_account_status_to_users_table.php",
+        "apps/operations/database/migrations/2026_07_17_033612_create_clients_requests_and_personnel_tables.php",
+        "apps/operations/database/migrations/2026_08_09_130000_add_usernames_to_users_table.php",
+        "apps/operations/database/migrations/2026_09_13_120000_add_email_otp_to_users_table.php"
+      ]
+    },
+    {
+      "name": "operational_assets",
+      "module": "shared",
+      "service": "operations",
+      "fields": {
+        "id": {
+          "type": "id",
+          "nullable": false,
+          "pk": true,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033609_create_dispatch_foundation_tables.php"
+        },
+        "code": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": true,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033609_create_dispatch_foundation_tables.php"
+        },
+        "name": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033609_create_dispatch_foundation_tables.php"
+        },
+        "kind": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033609_create_dispatch_foundation_tables.php"
+        },
+        "status": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033609_create_dispatch_foundation_tables.php"
+        },
+        "rated_capacity": {
+          "type": "decimal",
+          "nullable": true,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033613_align_dispatch_assets_and_operations_tables.php"
+        },
+        "meter_value": {
+          "type": "decimal",
+          "nullable": true,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033613_align_dispatch_assets_and_operations_tables.php"
+        }
+      },
+      "migration_sources": [
+        "apps/operations/database/migrations/2026_07_17_033609_create_dispatch_foundation_tables.php",
+        "apps/operations/database/migrations/2026_07_17_033613_align_dispatch_assets_and_operations_tables.php",
+        "apps/operations/database/migrations/2026_08_27_170000_add_variance_and_anomaly_to_fuel_logs.php"
+      ]
+    },
+    {
+      "name": "personnel_profiles",
+      "module": "2",
+      "service": "operations",
+      "fields": {
+        "id": {
+          "type": "id",
+          "nullable": false,
+          "pk": true,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033612_create_clients_requests_and_personnel_tables.php"
+        },
+        "user_id": {
+          "type": "foreignId",
+          "nullable": false,
+          "pk": false,
+          "uk": true,
+          "target": "users",
+          "source": "apps/operations/database/migrations/2026_07_17_033612_create_clients_requests_and_personnel_tables.php"
+        },
+        "employee_number": {
+          "type": "string",
+          "nullable": true,
+          "pk": false,
+          "uk": true,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033612_create_clients_requests_and_personnel_tables.php"
+        },
+        "availability_status": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033612_create_clients_requests_and_personnel_tables.php"
+        }
+      },
+      "migration_sources": [
+        "apps/operations/database/migrations/2026_07_17_033612_create_clients_requests_and_personnel_tables.php"
+      ]
+    },
+    {
+      "name": "personnel_credentials",
+      "module": "2",
+      "service": "operations",
+      "fields": {
+        "id": {
+          "type": "id",
+          "nullable": false,
+          "pk": true,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033612_create_clients_requests_and_personnel_tables.php"
+        },
+        "user_id": {
+          "type": "foreignId",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": "users",
+          "source": "apps/operations/database/migrations/2026_07_17_033612_create_clients_requests_and_personnel_tables.php"
+        },
+        "kind": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033612_create_clients_requests_and_personnel_tables.php"
+        },
+        "credential_number": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033612_create_clients_requests_and_personnel_tables.php"
+        },
+        "expires_at": {
+          "type": "date",
+          "nullable": true,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033612_create_clients_requests_and_personnel_tables.php"
+        },
+        "status": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033612_create_clients_requests_and_personnel_tables.php"
+        }
+      },
+      "migration_sources": [
+        "apps/operations/database/migrations/2026_07_17_033612_create_clients_requests_and_personnel_tables.php"
+      ]
+    },
+    {
+      "name": "dispatch_personnel_assignments",
+      "module": "2",
+      "service": "operations",
+      "fields": {
+        "id": {
+          "type": "id",
+          "nullable": false,
+          "pk": true,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033609_create_dispatch_foundation_tables.php"
+        },
+        "dispatch_job_id": {
+          "type": "foreignId",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": "dispatch_jobs",
+          "source": "apps/operations/database/migrations/2026_07_17_033609_create_dispatch_foundation_tables.php"
+        },
+        "user_id": {
+          "type": "foreignId",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": "users",
+          "source": "apps/operations/database/migrations/2026_07_17_033609_create_dispatch_foundation_tables.php"
+        },
+        "assignment_type": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033609_create_dispatch_foundation_tables.php"
+        },
+        "response_status": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033609_create_dispatch_foundation_tables.php"
+        },
+        "active_from": {
+          "type": "timestamp",
+          "nullable": true,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033609_create_dispatch_foundation_tables.php"
+        },
+        "active_until": {
+          "type": "timestamp",
+          "nullable": true,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033609_create_dispatch_foundation_tables.php"
+        }
+      },
+      "migration_sources": [
+        "apps/operations/database/migrations/2026_07_17_033609_create_dispatch_foundation_tables.php",
+        "apps/operations/database/migrations/2026_07_26_000001_add_response_fields_to_dispatch_personnel_assignments_table.php",
+        "apps/operations/database/migrations/2026_08_24_120000_add_dispatch_read_model_indexes.php"
+      ]
+    },
+    {
+      "name": "dispatch_asset_assignments",
+      "module": "2",
+      "service": "operations",
+      "fields": {
+        "id": {
+          "type": "id",
+          "nullable": false,
+          "pk": true,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033609_create_dispatch_foundation_tables.php"
+        },
+        "dispatch_job_id": {
+          "type": "foreignId",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": "dispatch_jobs",
+          "source": "apps/operations/database/migrations/2026_07_17_033609_create_dispatch_foundation_tables.php"
+        },
+        "operational_asset_id": {
+          "type": "foreignId",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": "operational_assets",
+          "source": "apps/operations/database/migrations/2026_07_17_033609_create_dispatch_foundation_tables.php"
+        },
+        "assignment_type": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033609_create_dispatch_foundation_tables.php"
+        },
+        "active_from": {
+          "type": "timestamp",
+          "nullable": true,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033609_create_dispatch_foundation_tables.php"
+        },
+        "active_until": {
+          "type": "timestamp",
+          "nullable": true,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033609_create_dispatch_foundation_tables.php"
+        }
+      },
+      "migration_sources": [
+        "apps/operations/database/migrations/2026_07_17_033609_create_dispatch_foundation_tables.php",
+        "apps/operations/database/migrations/2026_08_24_120000_add_dispatch_read_model_indexes.php",
+        "apps/operations/database/migrations/2026_08_28_150000_add_site_coordinates_to_dispatch_asset_assignments.php"
+      ]
+    },
+    {
+      "name": "operator_shifts",
+      "module": "2",
+      "service": "operations",
+      "fields": {
+        "id": {
+          "type": "id",
+          "nullable": false,
+          "pk": true,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_08_31_150000_create_hours_of_service_tables.php"
+        },
+        "user_id": {
+          "type": "foreignId",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": "users",
+          "source": "apps/operations/database/migrations/2026_08_31_150000_create_hours_of_service_tables.php"
+        },
+        "operational_asset_id": {
+          "type": "foreignId",
+          "nullable": true,
+          "pk": false,
+          "uk": false,
+          "target": "operational_assets",
+          "source": "apps/operations/database/migrations/2026_08_31_150000_create_hours_of_service_tables.php"
+        },
+        "dispatch_job_id": {
+          "type": "foreignId",
+          "nullable": true,
+          "pk": false,
+          "uk": false,
+          "target": "dispatch_jobs",
+          "source": "apps/operations/database/migrations/2026_08_31_150000_create_hours_of_service_tables.php"
+        },
+        "started_at": {
+          "type": "timestamp",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_08_31_150000_create_hours_of_service_tables.php"
+        },
+        "ended_at": {
+          "type": "timestamp",
+          "nullable": true,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_08_31_150000_create_hours_of_service_tables.php"
+        },
+        "status": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_08_31_150000_create_hours_of_service_tables.php"
+        }
+      },
+      "migration_sources": [
+        "apps/operations/database/migrations/2026_08_31_150000_create_hours_of_service_tables.php"
+      ]
+    },
+    {
+      "name": "operator_duty_logs",
+      "module": "2",
+      "service": "operations",
+      "fields": {
+        "id": {
+          "type": "id",
+          "nullable": false,
+          "pk": true,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_08_31_150000_create_hours_of_service_tables.php"
+        },
+        "operator_shift_id": {
+          "type": "foreignId",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": "operator_shifts",
+          "source": "apps/operations/database/migrations/2026_08_31_150000_create_hours_of_service_tables.php"
+        },
+        "user_id": {
+          "type": "foreignId",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": "users",
+          "source": "apps/operations/database/migrations/2026_08_31_150000_create_hours_of_service_tables.php"
+        },
+        "duty_status": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_08_31_150000_create_hours_of_service_tables.php"
+        },
+        "started_at": {
+          "type": "timestamp",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_08_31_150000_create_hours_of_service_tables.php"
+        },
+        "ended_at": {
+          "type": "timestamp",
+          "nullable": true,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_08_31_150000_create_hours_of_service_tables.php"
+        }
+      },
+      "migration_sources": [
+        "apps/operations/database/migrations/2026_08_31_150000_create_hours_of_service_tables.php"
+      ]
+    },
+    {
+      "name": "dvir_inspections",
+      "module": "3",
+      "service": "operations",
+      "fields": {
+        "id": {
+          "type": "id",
+          "nullable": false,
+          "pk": true,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_08_31_160000_create_dvir_tables.php"
+        },
+        "user_id": {
+          "type": "foreignId",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": "users",
+          "source": "apps/operations/database/migrations/2026_08_31_160000_create_dvir_tables.php"
+        },
+        "operational_asset_id": {
+          "type": "foreignId",
+          "nullable": true,
+          "pk": false,
+          "uk": false,
+          "target": "operational_assets",
+          "source": "apps/operations/database/migrations/2026_08_31_160000_create_dvir_tables.php"
+        },
+        "dispatch_job_id": {
+          "type": "foreignId",
+          "nullable": true,
+          "pk": false,
+          "uk": false,
+          "target": "dispatch_jobs",
+          "source": "apps/operations/database/migrations/2026_08_31_160000_create_dvir_tables.php"
+        },
+        "inspection_type": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_08_31_160000_create_dvir_tables.php"
+        },
+        "has_defects": {
+          "type": "boolean",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_08_31_160000_create_dvir_tables.php"
+        }
+      },
+      "migration_sources": [
+        "apps/operations/database/migrations/2026_08_31_160000_create_dvir_tables.php"
+      ]
+    },
+    {
+      "name": "dvir_inspection_checks",
+      "module": "3",
+      "service": "operations",
+      "fields": {
+        "id": {
+          "type": "id",
+          "nullable": false,
+          "pk": true,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_08_31_160000_create_dvir_tables.php"
+        },
+        "dvir_inspection_id": {
+          "type": "foreignId",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": "dvir_inspections",
+          "source": "apps/operations/database/migrations/2026_08_31_160000_create_dvir_tables.php"
+        },
+        "category": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_08_31_160000_create_dvir_tables.php"
+        },
+        "label": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_08_31_160000_create_dvir_tables.php"
+        },
+        "status": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_08_31_160000_create_dvir_tables.php"
+        }
+      },
+      "migration_sources": [
+        "apps/operations/database/migrations/2026_08_31_160000_create_dvir_tables.php"
+      ]
+    },
+    {
+      "name": "dvir_inspection_photos",
+      "module": "3",
+      "service": "operations",
+      "fields": {
+        "id": {
+          "type": "id",
+          "nullable": false,
+          "pk": true,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_09_06_130000_create_dvir_inspection_photos_table.php"
+        },
+        "dvir_inspection_id": {
+          "type": "foreignId",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": "dvir_inspections",
+          "source": "apps/operations/database/migrations/2026_09_06_130000_create_dvir_inspection_photos_table.php"
+        },
+        "angle": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_09_06_130000_create_dvir_inspection_photos_table.php"
+        },
+        "file_path": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_09_06_130000_create_dvir_inspection_photos_table.php"
+        }
+      },
+      "migration_sources": [
+        "apps/operations/database/migrations/2026_09_06_130000_create_dvir_inspection_photos_table.php",
+        "apps/operations/database/migrations/2026_09_06_140000_add_storage_disk_and_checksum_to_dvir_photos.php"
+      ]
+    },
+    {
+      "name": "inspections",
+      "module": "4",
+      "service": "operations",
+      "fields": {
+        "id": {
+          "type": "id",
+          "nullable": false,
+          "pk": true,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033610_create_maintenance_and_fuel_tables.php"
+        },
+        "operational_asset_id": {
+          "type": "foreignId",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": "operational_assets",
+          "source": "apps/operations/database/migrations/2026_07_17_033610_create_maintenance_and_fuel_tables.php"
+        },
+        "technician_id": {
+          "type": "foreignId",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": "users",
+          "source": "apps/operations/database/migrations/2026_07_17_033610_create_maintenance_and_fuel_tables.php"
+        },
+        "type": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033610_create_maintenance_and_fuel_tables.php"
+        },
+        "result": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033610_create_maintenance_and_fuel_tables.php"
+        }
+      },
+      "migration_sources": [
+        "apps/operations/database/migrations/2026_07_17_033610_create_maintenance_and_fuel_tables.php",
+        "apps/operations/database/migrations/2026_08_24_120000_add_dispatch_read_model_indexes.php"
+      ]
+    },
+    {
+      "name": "maintenance_work_orders",
+      "module": "4",
+      "service": "operations",
+      "fields": {
+        "id": {
+          "type": "id",
+          "nullable": false,
+          "pk": true,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033610_create_maintenance_and_fuel_tables.php"
+        },
+        "operational_asset_id": {
+          "type": "foreignId",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": "operational_assets",
+          "source": "apps/operations/database/migrations/2026_07_17_033610_create_maintenance_and_fuel_tables.php"
+        },
+        "technician_id": {
+          "type": "foreignId",
+          "nullable": true,
+          "pk": false,
+          "uk": false,
+          "target": "users",
+          "source": "apps/operations/database/migrations/2026_07_17_033610_create_maintenance_and_fuel_tables.php"
+        },
+        "status": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033610_create_maintenance_and_fuel_tables.php"
+        },
+        "dispatch_blocking": {
+          "type": "boolean",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033610_create_maintenance_and_fuel_tables.php"
+        }
+      },
+      "migration_sources": [
+        "apps/operations/database/migrations/2026_07_17_033610_create_maintenance_and_fuel_tables.php",
+        "apps/operations/database/migrations/2026_07_17_033613_align_dispatch_assets_and_operations_tables.php",
+        "apps/operations/database/migrations/2026_08_24_120000_add_dispatch_read_model_indexes.php"
+      ]
+    },
+    {
+      "name": "critical_lift_plans",
+      "module": "4",
+      "service": "operations",
+      "fields": {
+        "id": {
+          "type": "id",
+          "nullable": false,
+          "pk": true,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_08_29_170000_create_safety_governance_tables.php"
+        },
+        "dispatch_job_id": {
+          "type": "foreignId",
+          "nullable": true,
+          "pk": false,
+          "uk": false,
+          "target": "dispatch_jobs",
+          "source": "apps/operations/database/migrations/2026_08_29_170000_create_safety_governance_tables.php"
+        },
+        "operational_asset_id": {
+          "type": "foreignId",
+          "nullable": true,
+          "pk": false,
+          "uk": false,
+          "target": "operational_assets",
+          "source": "apps/operations/database/migrations/2026_08_29_170000_create_safety_governance_tables.php"
+        },
+        "crane_operator_id": {
+          "type": "foreignId",
+          "nullable": true,
+          "pk": false,
+          "uk": false,
+          "target": "users",
+          "source": "apps/operations/database/migrations/2026_08_29_170000_create_safety_governance_tables.php"
+        },
+        "lift_reference": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": true,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_08_29_170000_create_safety_governance_tables.php"
+        },
+        "status": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_08_29_170000_create_safety_governance_tables.php"
+        }
+      },
+      "migration_sources": [
+        "apps/operations/database/migrations/2026_08_29_170000_create_safety_governance_tables.php",
+        "apps/operations/database/migrations/2026_08_30_140000_create_lifting_and_tower_crane_shift_tables.php"
+      ]
+    },
+    {
+      "name": "tower_crane_shift_logs",
+      "module": "4",
+      "service": "operations",
+      "fields": {
+        "id": {
+          "type": "id",
+          "nullable": false,
+          "pk": true,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_08_30_140000_create_lifting_and_tower_crane_shift_tables.php"
+        },
+        "operational_asset_id": {
+          "type": "foreignId",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": "operational_assets",
+          "source": "apps/operations/database/migrations/2026_08_30_140000_create_lifting_and_tower_crane_shift_tables.php"
+        },
+        "operator_id": {
+          "type": "foreignId",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": "users",
+          "source": "apps/operations/database/migrations/2026_08_30_140000_create_lifting_and_tower_crane_shift_tables.php"
+        },
+        "dispatch_job_id": {
+          "type": "foreignId",
+          "nullable": true,
+          "pk": false,
+          "uk": false,
+          "target": "dispatch_jobs",
+          "source": "apps/operations/database/migrations/2026_08_30_140000_create_lifting_and_tower_crane_shift_tables.php"
+        },
+        "shift_date": {
+          "type": "date",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_08_30_140000_create_lifting_and_tower_crane_shift_tables.php"
+        },
+        "operating_hours": {
+          "type": "decimal",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_08_30_140000_create_lifting_and_tower_crane_shift_tables.php"
+        }
+      },
+      "migration_sources": [
+        "apps/operations/database/migrations/2026_08_30_140000_create_lifting_and_tower_crane_shift_tables.php"
+      ]
+    },
+    {
+      "name": "fuel_requests",
+      "module": "5",
+      "service": "operations",
+      "fields": {
+        "id": {
+          "type": "id",
+          "nullable": false,
+          "pk": true,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033610_create_maintenance_and_fuel_tables.php"
+        },
+        "requester_id": {
+          "type": "foreignId",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": "users",
+          "source": "apps/operations/database/migrations/2026_07_17_033610_create_maintenance_and_fuel_tables.php"
+        },
+        "dispatch_job_id": {
+          "type": "foreignId",
+          "nullable": true,
+          "pk": false,
+          "uk": false,
+          "target": "dispatch_jobs",
+          "source": "apps/operations/database/migrations/2026_07_17_033610_create_maintenance_and_fuel_tables.php"
+        },
+        "operational_asset_id": {
+          "type": "foreignId",
+          "nullable": true,
+          "pk": false,
+          "uk": false,
+          "target": "operational_assets",
+          "source": "apps/operations/database/migrations/2026_07_17_033610_create_maintenance_and_fuel_tables.php"
+        },
+        "operator_shift_id": {
+          "type": "foreignId",
+          "nullable": true,
+          "pk": false,
+          "uk": false,
+          "target": "operator_shifts",
+          "source": "apps/operations/database/migrations/2026_09_07_020000_add_operator_shift_id_to_fuel_requests_table.php"
+        },
+        "quantity_litres": {
+          "type": "decimal",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033610_create_maintenance_and_fuel_tables.php"
+        },
+        "status": {
+          "type": "string",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033610_create_maintenance_and_fuel_tables.php"
+        }
+      },
+      "migration_sources": [
+        "apps/operations/database/migrations/2026_07_17_033610_create_maintenance_and_fuel_tables.php",
+        "apps/operations/database/migrations/2026_09_07_020000_add_operator_shift_id_to_fuel_requests_table.php",
+        "apps/operations/database/migrations/2026_09_07_120000_add_mobile_idempotency_to_fuel_requests.php"
+      ]
+    },
+    {
+      "name": "fuel_logs",
+      "module": "5",
+      "service": "operations",
+      "fields": {
+        "id": {
+          "type": "id",
+          "nullable": false,
+          "pk": true,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033610_create_maintenance_and_fuel_tables.php"
+        },
+        "fuel_request_id": {
+          "type": "foreignId",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": "fuel_requests",
+          "source": "apps/operations/database/migrations/2026_07_17_033610_create_maintenance_and_fuel_tables.php"
+        },
+        "recorded_by": {
+          "type": "foreignId",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": "users",
+          "source": "apps/operations/database/migrations/2026_07_17_033610_create_maintenance_and_fuel_tables.php"
+        },
+        "quantity_litres": {
+          "type": "decimal",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033610_create_maintenance_and_fuel_tables.php"
+        },
+        "recorded_at": {
+          "type": "timestamp",
+          "nullable": false,
+          "pk": false,
+          "uk": false,
+          "target": null,
+          "source": "apps/operations/database/migrations/2026_07_17_033610_create_maintenance_and_fuel_tables.php"
+        }
+      },
+      "migration_sources": [
+        "apps/operations/database/migrations/2026_07_17_033610_create_maintenance_and_fuel_tables.php",
+        "apps/operations/database/migrations/2026_07_17_033613_align_dispatch_assets_and_operations_tables.php",
+        "apps/operations/database/migrations/2026_08_27_170000_add_variance_and_anomaly_to_fuel_logs.php"
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "parent": "clients",
+      "child": "service_requests",
+      "fk": "client_id",
+      "parent_card": "one",
+      "child_card": "zero_many",
+      "points": [
+        [
+          285,
+          206
+        ],
+        [
+          347,
+          206
+        ]
+      ]
+    },
+    {
+      "parent": "service_requests",
+      "child": "dispatch_jobs",
+      "fk": "service_request_id",
+      "parent_card": "zero_one",
+      "child_card": "zero_many",
+      "points": [
+        [
+          463,
+          300
+        ],
+        [
+          463,
+          385
+        ]
+      ]
+    },
+    {
+      "parent": "dispatch_jobs",
+      "child": "job_reports",
+      "fk": "dispatch_job_id",
+      "parent_card": "one",
+      "child_card": "zero_many",
+      "points": [
+        [
+          347,
+          493
+        ],
+        [
+          285,
+          493
+        ]
+      ]
+    },
+    {
+      "parent": "dispatch_jobs",
+      "child": "dispatch_personnel_assignments",
+      "fk": "dispatch_job_id",
+      "parent_card": "one",
+      "child_card": "zero_many",
+      "points": [
+        [
+          579,
+          421
+        ],
+        [
+          612,
+          421
+        ],
+        [
+          612,
+          306
+        ],
+        [
+          930,
+          306
+        ],
+        [
+          930,
+          362
+        ],
+        [
+          956,
+          362
+        ]
+      ]
+    },
+    {
+      "parent": "dispatch_jobs",
+      "child": "dispatch_asset_assignments",
+      "fk": "dispatch_job_id",
+      "parent_card": "one",
+      "child_card": "zero_many",
+      "points": [
+        [
+          579,
+          447
+        ],
+        [
+          621,
+          447
+        ],
+        [
+          621,
+          295
+        ],
+        [
+          1288,
+          295
+        ],
+        [
+          1288,
+          362
+        ],
+        [
+          1318,
+          362
+        ]
+      ]
+    },
+    {
+      "parent": "users",
+      "child": "personnel_profiles",
+      "fk": "user_id",
+      "parent_card": "one",
+      "child_card": "zero_one",
+      "points": [
+        [
+          890,
+          199
+        ],
+        [
+          956,
+          199
+        ]
+      ]
+    },
+    {
+      "parent": "users",
+      "child": "personnel_credentials",
+      "fk": "user_id",
+      "parent_card": "one",
+      "child_card": "zero_many",
+      "points": [
+        [
+          890,
+          223
+        ],
+        [
+          918,
+          223
+        ],
+        [
+          918,
+          286
+        ],
+        [
+          1290,
+          286
+        ],
+        [
+          1290,
+          223
+        ],
+        [
+          1318,
+          223
+        ]
+      ]
+    },
+    {
+      "parent": "users",
+      "child": "dispatch_personnel_assignments",
+      "fk": "user_id",
+      "parent_card": "one",
+      "child_card": "zero_many",
+      "points": [
+        [
+          890,
+          235
+        ],
+        [
+          923,
+          235
+        ],
+        [
+          923,
+          414
+        ],
+        [
+          956,
+          414
+        ]
+      ]
+    },
+    {
+      "parent": "users",
+      "child": "operator_shifts",
+      "fk": "user_id",
+      "parent_card": "one",
+      "child_card": "zero_many",
+      "points": [
+        [
+          780,
+          249
+        ],
+        [
+          780,
+          281
+        ],
+        [
+          926,
+          281
+        ],
+        [
+          926,
+          572
+        ],
+        [
+          956,
+          572
+        ]
+      ]
+    },
+    {
+      "parent": "operational_assets",
+      "child": "dispatch_asset_assignments",
+      "fk": "operational_asset_id",
+      "parent_card": "one",
+      "child_card": "zero_many",
+      "points": [
+        [
+          890,
+          448
+        ],
+        [
+          918,
+          448
+        ],
+        [
+          918,
+          496
+        ],
+        [
+          1450,
+          496
+        ],
+        [
+          1450,
+          461
+        ]
+      ]
+    },
+    {
+      "parent": "operational_assets",
+      "child": "operator_shifts",
+      "fk": "operational_asset_id",
+      "parent_card": "zero_one",
+      "child_card": "zero_many",
+      "points": [
+        [
+          890,
+          538
+        ],
+        [
+          915,
+          538
+        ],
+        [
+          915,
+          615
+        ],
+        [
+          956,
+          615
+        ]
+      ]
+    },
+    {
+      "parent": "dispatch_jobs",
+      "child": "operator_shifts",
+      "fk": "dispatch_job_id",
+      "parent_card": "zero_one",
+      "child_card": "zero_many",
+      "points": [
+        [
+          385,
+          589
+        ],
+        [
+          385,
+          686
+        ],
+        [
+          931,
+          686
+        ],
+        [
+          931,
+          651
+        ],
+        [
+          956,
+          651
+        ]
+      ]
+    },
+    {
+      "parent": "operator_shifts",
+      "child": "operator_duty_logs",
+      "fk": "operator_shift_id",
+      "parent_card": "one",
+      "child_card": "zero_many",
+      "points": [
+        [
+          1266,
+          587
+        ],
+        [
+          1318,
+          587
+        ]
+      ]
+    },
+    {
+      "parent": "operational_assets",
+      "child": "dvir_inspections",
+      "fk": "operational_asset_id",
+      "parent_card": "zero_one",
+      "child_card": "zero_many",
+      "points": [
+        [
+          650,
+          489
+        ],
+        [
+          615,
+          489
+        ],
+        [
+          615,
+          710
+        ],
+        [
+          282,
+          710
+        ],
+        [
+          282,
+          768
+        ]
+      ]
+    },
+    {
+      "parent": "dvir_inspections",
+      "child": "dvir_inspection_checks",
+      "fk": "dvir_inspection_id",
+      "parent_card": "one",
+      "child_card": "zero_many",
+      "points": [
+        [
+          182,
+          904
+        ],
+        [
+          182,
+          951
+        ]
+      ]
+    },
+    {
+      "parent": "dvir_inspections",
+      "child": "dvir_inspection_photos",
+      "fk": "dvir_inspection_id",
+      "parent_card": "one",
+      "child_card": "zero_many",
+      "points": [
+        [
+          267,
+          904
+        ],
+        [
+          267,
+          924
+        ],
+        [
+          433,
+          924
+        ],
+        [
+          433,
+          951
+        ]
+      ]
+    },
+    {
+      "parent": "operational_assets",
+      "child": "inspections",
+      "fk": "operational_asset_id",
+      "parent_card": "one",
+      "child_card": "zero_many",
+      "points": [
+        [
+          710,
+          564
+        ],
+        [
+          710,
+          701
+        ],
+        [
+          578,
+          701
+        ],
+        [
+          578,
+          810
+        ],
+        [
+          610,
+          810
+        ]
+      ]
+    },
+    {
+      "parent": "operational_assets",
+      "child": "maintenance_work_orders",
+      "fk": "operational_asset_id",
+      "parent_card": "one",
+      "child_card": "zero_many",
+      "points": [
+        [
+          750,
+          564
+        ],
+        [
+          750,
+          699
+        ],
+        [
+          1162,
+          699
+        ],
+        [
+          1162,
+          924
+        ],
+        [
+          730,
+          924
+        ],
+        [
+          730,
+          949
+        ]
+      ]
+    },
+    {
+      "parent": "operational_assets",
+      "child": "critical_lift_plans",
+      "fk": "operational_asset_id",
+      "parent_card": "zero_one",
+      "child_card": "zero_many",
+      "points": [
+        [
+          799,
+          564
+        ],
+        [
+          799,
+          706
+        ],
+        [
+          1015,
+          706
+        ],
+        [
+          1015,
+          768
+        ]
+      ]
+    },
+    {
+      "parent": "operational_assets",
+      "child": "tower_crane_shift_logs",
+      "fk": "operational_asset_id",
+      "parent_card": "one",
+      "child_card": "zero_many",
+      "points": [
+        [
+          890,
+          514
+        ],
+        [
+          919,
+          514
+        ],
+        [
+          919,
+          723
+        ],
+        [
+          1143,
+          723
+        ],
+        [
+          1143,
+          941
+        ],
+        [
+          1015,
+          941
+        ],
+        [
+          1015,
+          968
+        ]
+      ]
+    },
+    {
+      "parent": "operational_assets",
+      "child": "fuel_requests",
+      "fk": "operational_asset_id",
+      "parent_card": "zero_one",
+      "child_card": "zero_many",
+      "points": [
+        [
+          850,
+          564
+        ],
+        [
+          850,
+          715
+        ],
+        [
+          1398,
+          715
+        ],
+        [
+          1398,
+          768
+        ]
+      ]
+    },
+    {
+      "parent": "dispatch_jobs",
+      "child": "fuel_requests",
+      "fk": "dispatch_job_id",
+      "parent_card": "zero_one",
+      "child_card": "zero_many",
+      "points": [
+        [
+          531,
+          589
+        ],
+        [
+          531,
+          720
+        ],
+        [
+          1170,
+          720
+        ],
+        [
+          1170,
+          834
+        ],
+        [
+          1200,
+          834
+        ]
+      ]
+    },
+    {
+      "parent": "fuel_requests",
+      "child": "fuel_logs",
+      "fk": "fuel_request_id",
+      "parent_card": "one",
+      "child_card": "zero_many",
+      "points": [
+        [
+          1415,
+          862
+        ],
+        [
+          1433,
+          862
+        ],
+        [
+          1433,
+          939
+        ],
+        [
+          1540,
+          939
+        ],
+        [
+          1540,
+          968
+        ]
+      ]
+    }
+  ],
+  "displayed_fk_without_line": [
+    {
+      "table": "job_reports",
+      "column": "author_id",
+      "target": "users"
+    },
+    {
+      "table": "operator_duty_logs",
+      "column": "user_id",
+      "target": "users"
+    },
+    {
+      "table": "dvir_inspections",
+      "column": "user_id",
+      "target": "users"
+    },
+    {
+      "table": "dvir_inspections",
+      "column": "dispatch_job_id",
+      "target": "dispatch_jobs"
+    },
+    {
+      "table": "inspections",
+      "column": "technician_id",
+      "target": "users"
+    },
+    {
+      "table": "maintenance_work_orders",
+      "column": "technician_id",
+      "target": "users"
+    },
+    {
+      "table": "critical_lift_plans",
+      "column": "dispatch_job_id",
+      "target": "dispatch_jobs"
+    },
+    {
+      "table": "critical_lift_plans",
+      "column": "crane_operator_id",
+      "target": "users"
+    },
+    {
+      "table": "tower_crane_shift_logs",
+      "column": "operator_id",
+      "target": "users"
+    },
+    {
+      "table": "tower_crane_shift_logs",
+      "column": "dispatch_job_id",
+      "target": "dispatch_jobs"
+    },
+    {
+      "table": "fuel_requests",
+      "column": "requester_id",
+      "target": "users"
+    },
+    {
+      "table": "fuel_requests",
+      "column": "operator_shift_id",
+      "target": "operator_shifts"
+    },
+    {
+      "table": "fuel_logs",
+      "column": "recorded_by",
+      "target": "users"
+    }
+  ]
+}
