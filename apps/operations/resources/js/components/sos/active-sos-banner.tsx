@@ -128,7 +128,7 @@ export function ActiveSosBanner({
                         variant="danger"
                         size="sm"
                         onClick={onOpenQueue}
-                        className="w-full shrink-0 sm:w-auto"
+                        className="min-h-11 w-full shrink-0 sm:w-auto"
                     >
                         <AlertTriangle className="h-4 w-4" aria-hidden="true" />
                         Open emergency queue

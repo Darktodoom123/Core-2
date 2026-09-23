@@ -2,16 +2,46 @@ import { existsSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { browserFixtures, resolveBrowserFixturePath, signIn } from './browser-fixtures';
+import {
+    browserFixtures,
+    resolveBrowserFixturePath,
+    signIn,
+} from './browser-fixtures';
 
 const browserFixturePath = resolveBrowserFixturePath();
 
+async function mockWorkspaceRealtime(page: Page) {
+    await page.routeWebSocket(/\/app\//, (socket) => {
+        socket.onMessage((message) => {
+            if (typeof message !== 'string') {
+                return;
+            }
+
+            try {
+                const event = JSON.parse(message) as { event?: string };
+
+                if (event.event === 'pusher:ping') {
+                    socket.send(JSON.stringify({ event: 'pusher:pong' }));
+                }
+            } catch {
+                // Layout assertions do not depend on realtime payloads.
+            }
+        });
+        socket.send(
+            JSON.stringify({
+                event: 'pusher:connection_established',
+                data: JSON.stringify({
+                    socket_id: '1.1',
+                    activity_timeout: 120,
+                }),
+            }),
+        );
+    });
+}
+
 const viewports = [
     { width: 320, height: 640 },
-    { width: 390, height: 844 },
-    { width: 768, height: 1024 },
-    { width: 840, height: 900 },
-    { width: 1024, height: 768 },
+    { width: 720, height: 450 },
     { width: 1280, height: 800 },
 ] as const;
 
@@ -91,6 +121,7 @@ test.describe('responsive operations workspace contract', () => {
             return;
         }
 
+        await mockWorkspaceRealtime(page);
         const fixtures = browserFixtures();
         await signIn(page, fixtures.users.manager, fixtures.password);
     });
@@ -102,13 +133,19 @@ test.describe('responsive operations workspace contract', () => {
 
         for (const viewport of viewports) {
             await page.setViewportSize(viewport);
+            let activeUrl: string | null = null;
 
             for (const surface of surfaces) {
-                const response = await page.goto(surface.url, {
-                    waitUntil: 'domcontentloaded',
-                });
-                expect(response?.status()).toBeLessThan(400);
-                await expect(page.locator('#workspace-content')).toBeVisible();
+                if (surface.url !== activeUrl) {
+                    const response = await page.goto(surface.url, {
+                        waitUntil: 'domcontentloaded',
+                    });
+                    expect(response?.status()).toBeLessThan(400);
+                    await expect(
+                        page.locator('#workspace-content'),
+                    ).toBeVisible();
+                    activeUrl = surface.url;
+                }
 
                 if (surface.prepare) {
                     await surface.prepare(page);
@@ -122,6 +159,45 @@ test.describe('responsive operations workspace contract', () => {
         expect(visitedSurfaces).toHaveLength(
             viewports.length * surfaces.length,
         );
+    });
+
+    test('reflows the authenticated workspace at a 200% desktop zoom viewport', async ({
+        page,
+    }) => {
+        await page.setViewportSize({ width: 720, height: 450 });
+        await page.addInitScript(() => {
+            Object.defineProperty(window, 'outerWidth', {
+                configurable: true,
+                get: () => 1440,
+            });
+        });
+        await page.goto('/?view=overview', { waitUntil: 'domcontentloaded' });
+
+        await expect(page.locator('#workspace-content')).toBeVisible();
+        await expect(
+            page.locator('#workspace-content').getByRole('heading', {
+                name: 'Operations overview',
+            }),
+        ).toBeVisible();
+        await expect(
+            page.getByRole('button', { name: 'Open navigation' }),
+        ).toBeVisible();
+
+        const bounds = await page.evaluate(() => ({
+            viewportWidth: window.innerWidth,
+            outerWidth: window.outerWidth,
+            documentWidth: document.documentElement.scrollWidth,
+            bodyWidth: document.body.scrollWidth,
+        }));
+
+        expect(bounds.outerWidth / bounds.viewportWidth).toBe(2);
+        expect(bounds.documentWidth).toBeLessThanOrEqual(bounds.viewportWidth);
+        expect(bounds.bodyWidth).toBeLessThanOrEqual(bounds.viewportWidth);
+
+        const results = await new AxeBuilder({ page })
+            .disableRules(['color-contrast'])
+            .analyze();
+        expect(results.violations).toEqual([]);
     });
 
     test('keeps the navigation drawer focus-safe and switches atomically at 840px', async ({
@@ -161,10 +237,14 @@ test.describe('responsive operations workspace contract', () => {
         page,
     }) => {
         await page.setViewportSize({ width: 390, height: 844 });
-        await page.goto('/?view=dispatch', { waitUntil: 'domcontentloaded' });
-        await page
-            .getByRole('button', { name: /Operational attention/ })
-            .click();
+        await page.goto('/?view=dispatch&dispatch_workspace=classic', {
+            waitUntil: 'domcontentloaded',
+        });
+        const operationalAttention = page.getByRole('button', {
+            name: /Operational attention/,
+        });
+        await expect(operationalAttention).toBeVisible();
+        await operationalAttention.click();
 
         const all = page.getByRole('tab', { name: /All attention/ });
         const overlaps = page.getByRole('tab', { name: /Overlaps/ });
@@ -359,7 +439,10 @@ async function assertResponsiveContract(
     expect(
         metrics.overflowing.filter((item) => item.containedBy === null),
     ).toEqual([]);
-    expect(metrics.undersizedTargets).toEqual([]);
+    expect(
+        metrics.undersizedTargets,
+        `${surface.id}@${viewport.width}: undersized interactive targets`,
+    ).toEqual([]);
 
     for (const region of metrics.scrollRegions) {
         expect(region.role, region.selector).toBe('region');

@@ -19,11 +19,11 @@ export const buttonVariants = cva(
                     'border border-line bg-transparent text-ink hover:bg-surface-subtle active:bg-surface-subtle',
             },
             size: {
-                sm: 'min-h-9 px-3 text-xs rounded-md',
+                sm: 'min-h-11 px-3 text-xs rounded-md lg:min-h-9',
                 md: 'min-h-11 px-4 text-sm',
                 lg: 'min-h-12 px-6 text-base rounded-xl',
                 icon: 'h-11 w-11 min-h-11 min-w-11 p-0',
-                iconSm: 'h-9 w-9 min-h-9 min-w-9 p-0 rounded-md',
+                iconSm: 'h-11 w-11 min-h-11 min-w-11 p-0 rounded-md lg:h-9 lg:w-9 lg:min-h-9 lg:min-w-9',
             },
         },
         defaultVariants: {

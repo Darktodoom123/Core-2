@@ -696,13 +696,13 @@ export function LiveWorkspaceShell({
                                 </p>
                             </div>
                         </div>
-                        <div className="ml-auto flex items-center gap-1 sm:gap-2.5">
+                        <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2.5">
                             {/* Emergency SOS Pill: only renders when an active SOS exists */}
                             {activeSosCount > 0 && (
                                 <button
                                     type="button"
                                     onClick={() => onSectionChange('sos')}
-                                    className="flex animate-pulse items-center gap-1.5 rounded-full bg-danger-soft px-2.5 py-1 text-xs font-semibold text-danger-strong ring-1 ring-danger/40 hover:bg-danger-soft/80 focus-visible:ring-2 focus-visible:ring-danger focus-visible:outline-none"
+                                    className="hidden min-h-11 shrink-0 animate-pulse items-center gap-1.5 rounded-full bg-danger-soft px-2.5 py-1 text-xs font-semibold text-danger-strong ring-1 ring-danger/40 hover:bg-danger-soft/80 focus-visible:ring-2 focus-visible:ring-danger focus-visible:outline-none min-[480px]:flex lg:min-h-8"
                                     title={`${activeSosCount} active emergency in queue · Click to open`}
                                 >
                                     <span className="h-2 w-2 rounded-full bg-danger" />
@@ -774,7 +774,7 @@ export function LiveWorkspaceShell({
                                         setUserMenuOpen((prev) => !prev)
                                     }
                                     className={cn(
-                                        'flex items-center gap-2 rounded-lg px-2 py-1 text-left text-sm transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none',
+                                        'flex min-h-11 min-w-11 shrink-0 items-center gap-2 rounded-lg px-2 py-1 text-left text-sm transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none',
                                         userMenuOpen && 'bg-surface-subtle',
                                     )}
                                     aria-expanded={userMenuOpen}

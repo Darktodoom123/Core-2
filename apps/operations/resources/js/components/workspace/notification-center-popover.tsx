@@ -400,7 +400,7 @@ export function NotificationCenterPopover({
                 ref={triggerRef}
                 type="button"
                 onClick={toggleOpen}
-                className="relative flex h-11 w-11 items-center justify-center rounded-lg text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
                 aria-label={
                     unreadCount > 0
                         ? `Notifications, ${unreadCount} unread`
