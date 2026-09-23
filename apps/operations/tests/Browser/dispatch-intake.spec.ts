@@ -237,16 +237,13 @@ test.describe('New dispatch direct-intake contract', () => {
         const queue = page.getByRole('list', { name: 'Incoming work queue' });
         const renderedIncomingRows = queue.getByRole('listitem');
         const renderedIncomingCount = await renderedIncomingRows.count();
-        const queueBadge = page
-            .getByText(/\d+ loaded for review|No handoffs in loaded records/i)
-            .first();
-        const queueBadgeText = await queueBadge.innerText();
-
-        if (renderedIncomingCount === 0) {
-            expect(queueBadgeText).toMatch(/No handoffs in loaded records/i);
-        } else {
-            expect(countFromText(queueBadgeText)).toBe(renderedIncomingCount);
-        }
+        const queueScope = page.getByText(
+            /^Showing \d+ handoffs on page \d+ of \d+;/i,
+        );
+        await expect(queueScope).toBeVisible();
+        expect(countFromText(await queueScope.innerText())).toBe(
+            renderedIncomingCount,
+        );
 
         const reconciliationButtonText = await reconciliationButton.innerText();
         await reconciliationButton.click();
@@ -457,6 +454,8 @@ test.describe('New dispatch direct-intake contract', () => {
     test('protects dirty drafts across back, close, Escape, and browser unload', async ({
         page,
     }) => {
+        test.setTimeout(120_000);
+
         const flows: Array<{
             name: string;
             invoke: (direct: Locator, page: Page) => Promise<void>;

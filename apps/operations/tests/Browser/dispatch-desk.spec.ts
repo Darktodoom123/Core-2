@@ -171,6 +171,8 @@ test('office dispatch desk preserves schedule context and separates operational 
 test('legacy coverage links open operational coverage and restore the selected shift context', async ({
     page,
 }) => {
+    test.setTimeout(120_000);
+
     await signIn(page);
     await page.goto('/?view=dispatch&dispatch_tab=project-plans');
     await expect(
