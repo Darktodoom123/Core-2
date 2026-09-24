@@ -21,6 +21,7 @@ export default function TwoFactorChallenge({
     const form = useForm({ code: '', trust_device: false });
     const [cooldown, setCooldown] = useState(45);
     const [resending, setResending] = useState(false);
+    const [hasResentCode, setHasResentCode] = useState(false);
 
     useEffect(() => {
         if (cooldown <= 0) {
@@ -50,9 +51,17 @@ export default function TwoFactorChallenge({
             '/login/challenge/resend',
             {},
             {
+                onSuccess: () => {
+                    form.reset('code');
+                    form.clearErrors('code');
+                    setHasResentCode(true);
+                    setCooldown(45);
+                },
+                onError: () => setHasResentCode(false),
+                onHttpException: () => setHasResentCode(false),
+                onNetworkError: () => setHasResentCode(false),
                 onFinish: () => {
                     setResending(false);
-                    setCooldown(45);
                 },
             },
         );
@@ -94,14 +103,17 @@ export default function TwoFactorChallenge({
                 </p>
             )}
 
-            {errors && Object.keys(errors).length > 0 && !form.errors.code && (
-                <p
-                    role="alert"
-                    className="mt-4 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger-strong"
-                >
-                    {Object.values(errors)[0]}
-                </p>
-            )}
+            {errors &&
+                Object.keys(errors).length > 0 &&
+                !form.errors.code &&
+                !hasResentCode && (
+                    <p
+                        role="alert"
+                        className="mt-4 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger-strong"
+                    >
+                        {Object.values(errors)[0]}
+                    </p>
+                )}
 
             <form onSubmit={submit} className="mt-6 space-y-4">
                 <label className="block text-sm font-medium text-ink">

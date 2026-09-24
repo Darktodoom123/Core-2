@@ -86,6 +86,16 @@ test.describe('Web new-device sign-in flow and device trust handoff', () => {
         await expect(resendButton).toBeEnabled();
         await expect(resendButton).toHaveText('Resend code');
 
+        // A prior invalid entry should be cleared after a successful resend.
+        await codeInput.fill('000000');
+        await verifyButton.click();
+        const errorAlert = page
+            .locator('span[role="alert"], p[role="alert"]')
+            .first();
+        await expect(errorAlert).toContainText(
+            /incorrect.*4 attempt\(s\) remaining/i,
+        );
+
         // Clear server-side throttle to mirror the passage of time on the server
         clearOtpCooldown(username);
 
@@ -96,6 +106,8 @@ test.describe('Web new-device sign-in flow and device trust handoff', () => {
         await expect(page.getByRole('status')).toHaveText(
             'A new verification code has been sent to your email.',
         );
+        await expect(page.locator('[role="alert"]')).toHaveCount(0);
+        await expect(codeInput).toHaveValue('');
 
         // Resend cooldown immediately re-engages and disables button
         await expect(resendButton).toBeDisabled();
@@ -115,9 +127,6 @@ test.describe('Web new-device sign-in flow and device trust handoff', () => {
 
         // Verification must be rejected, keeping user on challenge page with error
         await expect(page).toHaveURL(/\/login\/challenge$/);
-        const errorAlert = page
-            .locator('span[role="alert"], p[role="alert"]')
-            .first();
         await expect(errorAlert).toBeVisible();
         await expect(errorAlert).toContainText(/incorrect|invalid|not found/i);
 
@@ -175,6 +184,31 @@ test.describe('Web new-device sign-in flow and device trust handoff', () => {
                 name: 'Available operations modules',
             }),
         ).toBeVisible();
+    });
+
+    test('does not start a resend cooldown when the request fails', async ({
+        page,
+        context,
+    }) => {
+        const fixtures = browserFixtures();
+        const username = fixtures.users.manager;
+
+        await context.clock.install();
+        await page.goto('/login');
+        await page.getByLabel('Username').fill(username);
+        await page
+            .getByLabel('Password', { exact: true })
+            .fill(fixtures.password);
+        await page.getByRole('button', { name: 'Sign in' }).click();
+        await page.waitForURL(/\/login\/challenge$/);
+
+        await context.clock.runFor(46_000);
+        const resendButton = page.getByRole('button', { name: 'Resend code' });
+        await page.route('**/login/challenge/resend', (route) => route.abort());
+        await resendButton.click();
+
+        await expect(resendButton).toBeEnabled();
+        await expect(resendButton).toHaveText('Resend code');
     });
 
     test('unchecking trust_device does not issue trust cookie and requires challenge on next sign-in', async ({
