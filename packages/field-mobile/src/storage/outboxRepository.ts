@@ -47,6 +47,8 @@ const commandTypes: OutboxCommandType[] = [
     'change_hos_duty_status',
     'certify_hos_shift',
     'report_delay',
+    'submit_fuel_request',
+    'record_fuel_log',
 ];
 const commandStates: OutboxCommandState[] = [
     'queued',

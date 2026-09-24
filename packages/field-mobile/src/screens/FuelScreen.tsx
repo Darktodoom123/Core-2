@@ -16,6 +16,7 @@ import {
 import { FuelLogForm } from '../components/fuel/fuel-log-form';
 import { TileScreenHeader } from '../components/layout/tile-screen-header';
 import { useFuelManagement } from '../hooks/useFuelManagement';
+import type { FuelCommandQueue } from '../hooks/useFuelManagement';
 import type { FuelDraftStore } from '../storage/fuelDraftStore';
 import { useTheme } from '../theme';
 import { fuelStatusLabels } from '../types/fuel';
@@ -25,6 +26,9 @@ export interface FuelScreenProps {
     apiClient: FuelApi;
     actorId: number;
     isOnline: boolean | null;
+    commandOutbox: FuelCommandQueue;
+    isOutboxReady: boolean;
+    syncQueue: () => Promise<unknown>;
     onBack: () => void;
     draftStore?: FuelDraftStore;
 }
@@ -33,11 +37,22 @@ export function FuelScreen({
     apiClient,
     actorId,
     isOnline,
+    commandOutbox,
+    isOutboxReady,
+    syncQueue,
     onBack,
     draftStore,
 }: FuelScreenProps) {
     const { theme } = useTheme();
-    const fuel = useFuelManagement(apiClient, actorId, isOnline, draftStore);
+    const fuel = useFuelManagement(
+        apiClient,
+        actorId,
+        isOnline,
+        commandOutbox,
+        isOutboxReady,
+        syncQueue,
+        draftStore,
+    );
     const [tab, setTab] = useState<'requests' | 'logs'>('requests');
     const [creating, setCreating] = useState(false);
     const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -62,6 +77,7 @@ export function FuelScreen({
         <KeyboardAvoidingView
             style={{ flex: 1, backgroundColor: theme.canvas }}
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            testID="fuel-management-screen"
         >
             <TileScreenHeader
                 title="Fuel Management"
@@ -91,8 +107,13 @@ export function FuelScreen({
                 {isOnline !== true && (
                     <Text style={[textStyle, { paddingVertical: 12 }]}>
                         {isOnline === false
-                            ? 'Offline. Requests can be saved as drafts; reconnect to submit or refresh.'
+                            ? 'Offline. Fuel requests and logs can be queued on this device; they sync when the connection returns.'
                             : 'Checking connection…'}
+                    </Text>
+                )}
+                {!isOutboxReady && (
+                    <Text style={[textStyle, { paddingVertical: 12 }]}>
+                        Preparing secure on-device fuel sync…
                     </Text>
                 )}
                 {fuel.error && (
@@ -112,6 +133,7 @@ export function FuelScreen({
                     <Text
                         accessibilityLiveRegion="polite"
                         style={[textStyle, { paddingVertical: 12 }]}
+                        testID="fuel-notice"
                     >
                         {fuel.notice}
                     </Text>
@@ -159,6 +181,7 @@ export function FuelScreen({
                                         })
                                     }
                                     disabled={locked}
+                                    testID={`fuel-asset-${asset.id}`}
                                 />
                             ))}
                         </View>
@@ -247,16 +270,17 @@ export function FuelScreen({
                             disabled={
                                 fuel.busy ||
                                 !fuel.draftReady ||
-                                isOnline !== true ||
+                                !isOutboxReady ||
                                 !fuel.options?.can_request
                             }
                             onPress={() => {
-                                void fuel.submit().then((request) => {
-                                    if (request) {
-                                        showRequest(request);
+                                void fuel.submit().then((result) => {
+                                    if (result?.request) {
+                                        showRequest(result.request);
                                     }
                                 });
                             }}
+                            testID="fuel-submit-request-button"
                         />
                         <FuelButton
                             title="Back to requests"
@@ -373,6 +397,7 @@ export function FuelScreen({
                                 request={selected}
                                 busy={fuel.busy}
                                 isOnline={isOnline === true}
+                                outboxReady={isOutboxReady}
                                 onCancel={() => setLogging(false)}
                                 onSave={async (payload, receipt) => {
                                     const saved = await fuel.record(
@@ -462,7 +487,10 @@ export function FuelScreen({
                             onPress={() => setCreating(true)}
                             disabled={
                                 fuel.options?.can_request === false ||
-                                !fuel.draftReady
+                                !fuel.draftReady ||
+                                !isOutboxReady ||
+                                (fuel.options?.can_request !== true &&
+                                    !draft.pending)
                             }
                         />
                         {fuel.draftNotice && (
@@ -535,6 +563,7 @@ export function FuelScreen({
                                     <FuelButton
                                         title={`View ${request.reference}`}
                                         onPress={() => showRequest(request)}
+                                        testID={`fuel-view-request-${request.id}`}
                                     />
                                 </View>
                             ))}

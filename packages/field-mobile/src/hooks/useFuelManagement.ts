@@ -2,15 +2,40 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { ApiClientError } from '../services/apiClient';
 import { createCommandId } from '../services/commandOutbox';
+import { durableAttachmentStorage } from '../services/durableAttachmentStorage';
 import { emptyFuelDraft, fuelDraftStore } from '../storage/fuelDraftStore';
 import type { FuelDraft, FuelDraftStore } from '../storage/fuelDraftStore';
+import type { OutboxCommand } from '../types/index';
 import type {
     FuelApi,
+    FuelLogCommandPayload,
+    FuelOfflineSnapshot,
     FuelOptions,
     FuelReceiptUpload,
     MobileFuelRequest,
     RecordFuelPayload,
 } from '../types/fuel';
+
+export interface FuelCommandQueue {
+    enqueueSubmitFuelRequest(payload: {
+        client_request_id: string;
+        quantity_litres: number;
+        fuel_type: 'diesel' | 'gasoline';
+        purpose: string;
+        operational_asset_id?: number;
+        dispatch_job_id?: number;
+    }): Promise<OutboxCommand>;
+    enqueueRecordFuelLog(payload: FuelLogCommandPayload): Promise<OutboxCommand>;
+    getCommand(id: string): OutboxCommand | undefined;
+    getCommands(): OutboxCommand[];
+    subscribe(listener: (commands: OutboxCommand[]) => void): () => void;
+}
+
+export interface FuelSubmitResult {
+    status: 'queued';
+    commandId: string;
+    request: MobileFuelRequest | null;
+}
 
 export function fuelErrorMessage(error: unknown): string {
     if (error instanceof ApiClientError) {
@@ -29,10 +54,22 @@ export function fuelErrorMessage(error: unknown): string {
     return 'Could not reach the server. Check your connection and retry.';
 }
 
+function isActionableOutboxState(state: OutboxCommand['state'] | undefined) {
+    return (
+        state === 'failed' ||
+        state === 'conflict' ||
+        state === 'unresolved' ||
+        state === 'expired'
+    );
+}
+
 export function useFuelManagement(
     api: FuelApi,
     actorId: number,
     isOnline: boolean | null,
+    commandOutbox: FuelCommandQueue,
+    isOutboxReady: boolean,
+    syncQueue: () => Promise<unknown>,
     store: FuelDraftStore = fuelDraftStore,
 ) {
     const [requests, setRequests] = useState<MobileFuelRequest[]>([]);
@@ -40,6 +77,8 @@ export function useFuelManagement(
     const [draft, setDraft] = useState<FuelDraft>(emptyFuelDraft);
     const [draftReady, setDraftReady] = useState(false);
     const [draftNotice, setDraftNotice] = useState('Loading saved draft…');
+    const [cacheNotice, setCacheNotice] = useState<string | null>(null);
+    const [cacheWritableReady, setCacheWritableReady] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [notice, setNotice] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
@@ -52,6 +91,7 @@ export function useFuelManagement(
     useEffect(() => {
         mounted.current = true;
         let ignore = false;
+
         void store
             .read(actorId)
             .then((saved) => {
@@ -71,12 +111,33 @@ export function useFuelManagement(
                 }
             });
 
-        const versionRef = requestVersion;
+        void store
+            .readOfflineSnapshot(actorId)
+            .then((snapshot) => {
+                if (ignore) {
+                    return;
+                }
+
+                if (snapshot) {
+                    setRequests(snapshot.requests);
+                    setOptions(snapshot.options);
+                    setNextPage(snapshot.nextPage);
+                }
+
+                setCacheWritableReady(true);
+            })
+            .catch(() => {
+                if (!ignore) {
+                    setCacheNotice(
+                        'Saved fuel records could not be read from this device. Reconnect to reload them.',
+                    );
+                }
+            });
 
         return () => {
             ignore = true;
             mounted.current = false;
-            versionRef.current += 1;
+            requestVersion.current += 1;
         };
     }, [actorId, store]);
 
@@ -113,6 +174,33 @@ export function useFuelManagement(
         };
     }, [actorId, draft, draftReady, store]);
 
+    useEffect(() => {
+        if (!cacheWritableReady) {
+            return;
+        }
+
+        let ignore = false;
+        const snapshot: FuelOfflineSnapshot = { options, requests, nextPage };
+        void store
+            .writeOfflineSnapshot(actorId, snapshot)
+            .then(() => {
+                if (!ignore) {
+                    setCacheNotice(null);
+                }
+            })
+            .catch(() => {
+                if (!ignore) {
+                    setCacheNotice(
+                        'Fuel updates are available now but could not be cached for offline use.',
+                    );
+                }
+            });
+
+        return () => {
+            ignore = true;
+        };
+    }, [actorId, cacheWritableReady, nextPage, options, requests, store]);
+
     const refresh = useCallback(async () => {
         if (isOnline !== true) {
             return;
@@ -131,6 +219,7 @@ export function useFuelManagement(
                 setRequests(page.items);
                 setNextPage(page.nextPage);
                 setOptions(available);
+                setCacheWritableReady(true);
                 setError(null);
             }
         } catch (e) {
@@ -149,6 +238,7 @@ export function useFuelManagement(
             void refresh();
         });
     }, [refresh]);
+
     useEffect(() => {
         const subscription = AppState.addEventListener('change', (state) => {
             if (state === 'active') {
@@ -158,6 +248,40 @@ export function useFuelManagement(
 
         return () => subscription.remove();
     }, [refresh]);
+
+    useEffect(() => {
+        const completedFuelCommands = new Set(
+            commandOutbox
+                .getCommands()
+                .filter(
+                    (command) =>
+                        (command.type === 'submit_fuel_request' ||
+                            command.type === 'record_fuel_log') &&
+                        command.state === 'completed',
+                )
+                .map((command) => command.id),
+        );
+
+        return commandOutbox.subscribe((commands) => {
+            let shouldRefresh = false;
+
+            for (const command of commands) {
+                if (
+                    (command.type === 'submit_fuel_request' ||
+                        command.type === 'record_fuel_log') &&
+                    command.state === 'completed' &&
+                    !completedFuelCommands.has(command.id)
+                ) {
+                    completedFuelCommands.add(command.id);
+                    shouldRefresh = true;
+                }
+            }
+
+            if (shouldRefresh && isOnline === true) {
+                void refresh();
+            }
+        });
+    }, [commandOutbox, isOnline, refresh]);
 
     const loadMore = async () => {
         if (!nextPage || loading || isOnline !== true) {
@@ -199,8 +323,13 @@ export function useFuelManagement(
         setDraft((value) => ({ ...value, ...patch }));
     };
 
-    const submit = async (): Promise<MobileFuelRequest | null> => {
-        if (mutationLock.current || !draftReady || isOnline !== true) {
+    const submit = async (): Promise<FuelSubmitResult | null> => {
+        if (
+            mutationLock.current ||
+            !draftReady ||
+            !isOutboxReady ||
+            options?.can_request !== true
+        ) {
             return null;
         }
 
@@ -247,19 +376,58 @@ export function useFuelManagement(
             }
 
             setDraft(snapshot);
-            const result = await api.createFuelRequest(snapshot.pending!);
+            const command = await commandOutbox.enqueueSubmitFuelRequest(
+                snapshot.pending!,
+            );
             await store.remove(actorId);
 
             if (mounted.current) {
                 setDraft(emptyFuelDraft());
-                setNotice(`${result.reference} submitted to the office.`);
-                setRequests((items) => [
-                    result,
-                    ...items.filter((item) => item.id !== result.id),
-                ]);
+                setNotice('Fuel request saved to the on-device sync queue.');
             }
 
-            return result;
+            let request: MobileFuelRequest | null = null;
+
+            if (isOnline === true) {
+                try {
+                    await syncQueue();
+                    const state = commandOutbox.getCommand(command.id);
+
+                    if (state?.state === 'completed') {
+                        const page = await api.fetchFuelRequests();
+                        request =
+                            page.items.find(
+                                (item) =>
+                                    item.client_request_id ===
+                                    snapshot.pending?.client_request_id,
+                            ) ?? null;
+                        setRequests((items) => [
+                            ...(request ? [request] : []),
+                            ...items.filter(
+                                (item) => item.id !== request?.id,
+                            ),
+                        ]);
+                        setNextPage(page.nextPage);
+
+                        if (request) {
+                            setNotice(`${request.reference} submitted to the office.`);
+                        }
+                    } else if (isActionableOutboxState(state?.state)) {
+                        setError(
+                            state?.error?.message ??
+                                'The fuel request needs attention in Sync status.',
+                        );
+                    }
+                } catch {
+                    // The durable command remains queued for the normal retry loop.
+                }
+            } else if (mounted.current) {
+                setNotice(
+                    'Fuel request saved on this device. It will sync when the connection returns.',
+                );
+            }
+
+            return { status: 'queued', commandId: command.id, request };
         } catch (e) {
             if (e instanceof ApiClientError && e.status === 422) {
                 snapshot = { ...snapshot, pending: null };
@@ -289,7 +457,17 @@ export function useFuelManagement(
         payload: RecordFuelPayload,
         receipt?: FuelReceiptUpload,
     ): Promise<boolean> => {
-        if (mutationLock.current || isOnline !== true) {
+        if (mutationLock.current || !isOutboxReady) {
+            return false;
+        }
+
+        const request = requests.find((item) => item.id === id);
+
+        if (!request?.can_record || request.status !== 'verified') {
+            setError(
+                'This request is not verified for fuel logging. Refresh Fuel Management before recording refueling.',
+            );
+
             return false;
         }
 
@@ -297,40 +475,72 @@ export function useFuelManagement(
         setBusy(true);
         setError(null);
         setNotice(null);
+        let durableReceipt: FuelReceiptUpload | undefined;
 
         try {
-            const updated = await api.recordFuel(id, payload, receipt);
+            if (receipt) {
+                const stored =
+                    await durableAttachmentStorage.saveAttachmentDurably(
+                        { uri: receipt.uri, fileName: receipt.name },
+                        actorId,
+                    );
+                durableReceipt = {
+                    uri: stored.uri,
+                    name: stored.fileName,
+                    type: receipt.type,
+                };
+            }
+
+            const command = await commandOutbox.enqueueRecordFuelLog({
+                fuel_request_id: id,
+                details: payload,
+                receipt: durableReceipt,
+            });
 
             if (mounted.current) {
-                setRequests((items) =>
-                    items.map((item) => (item.id === id ? updated : item)),
+                setNotice(
+                    isOnline === true
+                        ? 'Fuel log queued for synchronization.'
+                        : 'Fuel log and receipt saved on this device. They will sync when the connection returns.',
                 );
-                setNotice('Refueling saved to Fuel Management.');
+            }
+
+            if (isOnline === true) {
+                try {
+                    await syncQueue();
+                    const state = commandOutbox.getCommand(command.id);
+
+                    if (state?.state === 'completed') {
+                        const updated = await api.fetchFuelRequest(id);
+                        setRequests((items) =>
+                            items.map((item) => (item.id === id ? updated : item)),
+                        );
+
+                        if (updated.status === 'logged') {
+                            setNotice(
+                                durableReceipt
+                                    ? 'Refueling and receipt saved to Fuel Management.'
+                                    : 'Refueling saved to Fuel Management.',
+                            );
+                        }
+                    } else if (isActionableOutboxState(state?.state)) {
+                        setError(
+                            state?.error?.message ??
+                                'The fuel log needs attention in Sync status.',
+                        );
+                    }
+                } catch {
+                    // Keep the staged file and command for automatic retry.
+                }
             }
 
             return true;
         } catch (e) {
-            // Resolve a lost response by reading the canonical record before inviting a retry.
-            try {
-                const current = await api.fetchFuelRequest(id);
-
-                if (mounted.current) {
-                    setRequests((items) =>
-                        items.map((item) => (item.id === id ? current : item)),
-                    );
-                }
-
-                if (current.status === 'logged') {
-                    if (mounted.current) {
-                        setNotice(
-                            'This request already has a saved fuel log. Review the recorded details.',
-                        );
-                    }
-
-                    return true;
-                }
-            } catch {
-                /* Preserve the original actionable error. */
+            if (durableReceipt) {
+                await durableAttachmentStorage.deleteAttachment(
+                    durableReceipt.uri,
+                    commandOutbox.getCommands(),
+                );
             }
 
             if (mounted.current) {
@@ -353,6 +563,7 @@ export function useFuelManagement(
         draft,
         draftReady,
         draftNotice,
+        cacheNotice,
         error,
         notice,
         loading,

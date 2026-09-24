@@ -35,9 +35,11 @@ These are integration checks against existing capabilities, not authorization to
 
 ## Confirmed findings to fix first
 
-### Current mobile compatibility addendum (source audit, 2026-09-07)
+### Mobile compatibility baseline (source audit, 2026-09-07)
 
-The web refinement is compatible in scope, but mobile feature parity is incomplete. These findings describe the repository source, not a verified installed-device build. Keep native fixes as a separate workstream; the web implementation must accommodate the actual payload rather than assume the mobile PRD is fully implemented.
+The web refinement was compatible in scope, but mobile feature parity was incomplete at this audit date. These findings describe the repository source at that time, not a verified installed-device build. Keep native fixes as a separate workstream; the web implementation must accommodate the actual payload rather than assume the mobile PRD is fully implemented.
+
+The fuel findings in this dated baseline were re-audited on 2026-09-24 and are superseded by the mobile fuel alignment update below. The other rows remain the 2026-09-07 source snapshot.
 
 | Area | Current implementation evidence | Required compatibility behavior / separate gap |
 | --- | --- | --- |
@@ -56,7 +58,17 @@ Additional non-regression rules:
 - Mobile compatibility acceptance includes an actual current mobile report payload with missing interval/location/attachments, sign-off metadata without an image, delayed command replay, and a location whose capture time differs materially from receipt time.
 - Reuse `packages/field-mobile/src/__tests__/liveContractsE2E.test.ts`, API-client/outbox tests, and relevant backend tests if shared contracts are touched. Mocked contract tests are not substitutes for a physical-device/emulator integration demonstration.
 
-The capstone fuel demonstration must currently be reported as a web/server workflow unless a real mobile-to-server fuel implementation is independently established. A local fuel-receipt success message is not that evidence.
+At the time of the 2026-09-07 audit, the capstone fuel demonstration had to be reported as a web/server workflow because no real mobile-to-server fuel implementation was established. A local fuel-receipt success message was not evidence of that integration.
+
+### Mobile fuel alignment update (2026-09-24)
+
+The current native app has one canonical fuel workflow. `EquipmentInspectionScreen.tsx` now links its Fuel tab to `FuelScreen.tsx`; the former local-only `FuelReceiptTab` and its fabricated sample receipt were removed. `FuelScreen` creates requests and records verified refueling through the Operations fuel API, so saved requests and logs appear in the same web Fuel Management workflow.
+
+Receipt evidence is supported by that canonical workflow: `FuelLogForm` accepts one receipt image, copies it into actor-scoped durable storage, and queues it with the fuel log. The Operations API persists it as an attachment outside the database transaction, and the web log surface exposes the saved receipt. The field-mobile component and outbox tests cover online and offline receipt handling; the Operations mobile workflow test covers receipt persistence and replay.
+
+Fuel request and log mutations now use the transactional SQLite command outbox with UUID command IDs and both idempotency headers. Fuel options and request history are cached per actor for offline use. Operations replays requests and logs by command ID and rejects reuse with different details; the receipt checksum is included in the replay payload. Fuel logging remains limited to a server-verified request, and duplicate active log submissions are suppressed locally.
+
+The cross-system Detox journey is defined in `packages/field-mobile/e2e/fuel-workflow.e2e.test.js`. Mobile component/outbox/API checks and the Operations fuel feature suite pass. The native runner was attempted on API 36 but stopped before boot because the Android Emulator hypervisor driver is not installed; the authenticated native-to-web journey therefore remains unverified on this machine.
 
 ### Web findings
 

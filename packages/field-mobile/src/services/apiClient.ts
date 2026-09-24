@@ -355,12 +355,14 @@ export class FieldApiClient {
 
     public async createFuelRequest(
         payload: CreateFuelPayload,
+        commandId?: string,
     ): Promise<MobileFuelRequest> {
+        const resolvedCommandId = commandId ?? payload.client_request_id;
         const response = await this.fetchFn(
             `${this.baseUrl}/api/v1/fuel-requests`,
             {
                 method: 'POST',
-                headers: this.getHeaders(),
+                headers: this.getHeaders(resolvedCommandId),
                 body: JSON.stringify(payload),
             },
         );
@@ -372,6 +374,7 @@ export class FieldApiClient {
         id: number,
         payload: RecordFuelPayload,
         receipt?: FuelReceiptUpload,
+        commandId?: string,
     ): Promise<MobileFuelRequest> {
         const body = new FormData();
         Object.entries(payload).forEach(([key, value]) => {
@@ -385,7 +388,7 @@ export class FieldApiClient {
             body.append('receipt', receipt as unknown as Blob);
         }
 
-        const headers = this.getHeaders();
+        const headers = this.getHeaders(commandId);
         delete headers['Content-Type'];
         const response = await this.fetchFn(
             `${this.baseUrl}/api/v1/fuel-requests/${id}/logs`,

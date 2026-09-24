@@ -78,6 +78,18 @@ export interface FuelReceiptUpload {
     type: string;
 }
 
+export interface FuelLogCommandPayload {
+    fuel_request_id: number;
+    details: RecordFuelPayload;
+    receipt?: FuelReceiptUpload;
+}
+
+export interface FuelOfflineSnapshot {
+    options: FuelOptions | null;
+    requests: MobileFuelRequest[];
+    nextPage: number | null;
+}
+
 export interface FuelRequestPage {
     items: MobileFuelRequest[];
     nextPage: number | null;
@@ -87,11 +99,15 @@ export type FuelApi = {
     fetchFuelOptions(): Promise<FuelOptions>;
     fetchFuelRequests(page?: number): Promise<FuelRequestPage>;
     fetchFuelRequest(id: number): Promise<MobileFuelRequest>;
-    createFuelRequest(payload: CreateFuelPayload): Promise<MobileFuelRequest>;
+    createFuelRequest(
+        payload: CreateFuelPayload,
+        commandId?: string,
+    ): Promise<MobileFuelRequest>;
     recordFuel(
         id: number,
         payload: RecordFuelPayload,
         receipt?: FuelReceiptUpload,
+        commandId?: string,
     ): Promise<MobileFuelRequest>;
 };
 

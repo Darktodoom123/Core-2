@@ -14,12 +14,14 @@ export function FuelLogForm({
     request,
     busy,
     isOnline,
+    outboxReady,
     onSave,
     onCancel,
 }: {
     request: MobileFuelRequest;
     busy: boolean;
     isOnline: boolean;
+    outboxReady: boolean;
     onSave: (
         payload: RecordFuelPayload,
         receipt?: FuelReceiptUpload,
@@ -160,6 +162,7 @@ export function FuelLogForm({
                     onAddAttachment={setReceipt}
                     onRemoveAttachment={() => setReceipt(null)}
                     maxCount={1}
+                    testID="fuel-receipt-picker"
                 />
             </View>
             {error && (
@@ -172,15 +175,16 @@ export function FuelLogForm({
             )}
             {!isOnline && (
                 <Text style={{ color: theme.textPrimary }}>
-                    Reconnect to save this log. Keep this form open to retain
-                    your entries.
+                    This log and receipt will be queued securely on this device
+                    and uploaded when the connection returns.
                 </Text>
             )}
             <FuelButton
                 title={busy ? 'Saving refueling…' : 'Save refueling'}
                 primary
                 onPress={() => void save()}
-                disabled={busy || !isOnline}
+                disabled={busy || !outboxReady}
+                testID="fuel-save-log-button"
             />
             <FuelButton
                 title="Cancel logging"

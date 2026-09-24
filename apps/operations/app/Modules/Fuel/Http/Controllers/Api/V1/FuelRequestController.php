@@ -11,9 +11,13 @@ use App\Modules\Fuel\Http\Requests\StoreMobileFuelLog;
 use App\Modules\Fuel\Http\Requests\StoreMobileFuelRequest;
 use App\Modules\Fuel\Http\Resources\V1\FuelRequestResource;
 use App\Modules\Fuel\Models\FuelRequest;
+use App\Platform\Idempotency\Services\IdempotentCommandService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\Response;
 
 final class FuelRequestController extends Controller
 {
@@ -37,15 +41,84 @@ final class FuelRequestController extends Controller
         return response()->json(['data' => new FuelRequestResource($fuelRequest->load(['asset', 'job', 'logs']))]);
     }
 
-    public function store(StoreMobileFuelRequest $request, SubmitMobileFuelRequest $action): JsonResponse
-    {
-        $fuel = $action->handle($request->user(), $request->validated());
+    public function store(
+        StoreMobileFuelRequest $request,
+        SubmitMobileFuelRequest $action,
+        IdempotentCommandService $commands,
+    ): Response {
+        $payload = $request->validated();
+        $commandId = $commands->resolveCommandId($request);
+
+        if ($commandId !== null) {
+            return $commands->process(
+                $request->user(),
+                $commandId,
+                'fuel.request.create',
+                null,
+                function () use ($request, $action, $payload): JsonResponse {
+                    $fuel = $action->handle($request->user(), $payload);
+
+                    return response()->json(
+                        ['data' => new FuelRequestResource($fuel->load(['asset', 'job', 'logs']))],
+                        $fuel->wasRecentlyCreated ? 201 : 200,
+                    );
+                },
+                $payload,
+            );
+        }
+
+        $fuel = $action->handle($request->user(), $payload);
 
         return response()->json(['data' => new FuelRequestResource($fuel->load(['asset', 'job', 'logs']))], $fuel->wasRecentlyCreated ? 201 : 200);
     }
 
-    public function record(StoreMobileFuelLog $request, FuelRequest $fuelRequest, TransitionFuelRequest $action): JsonResponse
-    {
+    public function record(
+        StoreMobileFuelLog $request,
+        FuelRequest $fuelRequest,
+        TransitionFuelRequest $action,
+        IdempotentCommandService $commands,
+    ): Response {
+        $payload = $request->validated();
+        $commandId = $commands->resolveCommandId($request);
+
+        if ($commandId !== null) {
+            $receipt = $payload['receipt'] ?? null;
+            unset($payload['receipt']);
+
+            if ($receipt instanceof UploadedFile) {
+                $receiptHash = hash_file('sha256', $receipt->getRealPath());
+                if (! is_string($receiptHash)) {
+                    throw ValidationException::withMessages([
+                        'receipt' => ['The uploaded receipt could not be read safely.'],
+                    ]);
+                }
+                $payload['receipt_sha256'] = $receiptHash;
+            }
+
+            return $commands->process(
+                $request->user(),
+                $commandId,
+                "fuel.request.log:{$fuelRequest->id}",
+                null,
+                function () use ($request, $fuelRequest, $action): JsonResponse {
+                    $fuel = $action->handle(
+                        $request->user(),
+                        $fuelRequest,
+                        FuelRequestStatus::Logged,
+                        null,
+                        $request->validated(),
+                    );
+
+                    return response()->json(
+                        ['data' => new FuelRequestResource($fuel->load(['asset', 'job', 'logs']))],
+                        201,
+                    );
+                },
+                $payload,
+                wrapInTransaction: ! ($receipt instanceof UploadedFile),
+            );
+        }
+
         $fuel = $action->handle($request->user(), $fuelRequest, FuelRequestStatus::Logged, null, $request->validated());
 
         return response()->json(['data' => new FuelRequestResource($fuel->load(['asset', 'job', 'logs']))], 201);

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
-    FuelReceiptTab,
     HandoverTab,
     InspectionChecklistTab,
     MaintenanceWorkOrderTab,
@@ -11,7 +10,6 @@ import { colors } from '../components/nativeStyles';
 import { useTheme } from '../theme';
 import type {
     AssetAssignment,
-    FuelReceiptLog,
     MaintenanceWorkOrder,
     SafeReleaseVerification,
     TechnicianHandover,
@@ -35,7 +33,6 @@ export interface EquipmentInspectionScreenProps {
         assetId?: number,
     ) => void;
     onSafeRelease?: (verification: SafeReleaseVerification) => void;
-    onLogFuelReceipt?: (fuelLog: FuelReceiptLog) => void;
     onCompleteHandover?: (handover: TechnicianHandover) => void;
     assetAssignments?: AssetAssignment[];
     selectedAssetId?: number | null;
@@ -90,7 +87,6 @@ export const EquipmentInspectionScreen: React.FC<
     onOpenDvir,
     onSaveInspection,
     onLogWorkOrder,
-    onLogFuelReceipt,
     onOpenFuel,
     onCompleteHandover,
 }) => {
@@ -151,20 +147,6 @@ export const EquipmentInspectionScreen: React.FC<
     const [verifiedWorkOrderIds, setVerifiedWorkOrderIds] = useState<string[]>(
         [],
     );
-    const [fuelLogs, setFuelLogs] = useState<FuelReceiptLog[]>([
-        {
-            id: 'FL-301',
-            assetCode: currentAssetCode,
-            quantityLiters: 140,
-            fuelCost: 285.5,
-            odometerKm: 42150,
-            engineHours: 1840,
-            receiptNumber: 'RCPT-PETRO-9921',
-            vendorName: 'Apex Commercial Fuel Station',
-            loggedAt: new Date().toISOString(),
-        },
-    ]);
-
     const handleToggleCheck = (id: string) => {
         setChecks((prev) =>
             prev.map((item) => {
@@ -244,11 +226,6 @@ export const EquipmentInspectionScreen: React.FC<
         };
         setWorkOrders((prev) => [orderWithAsset, ...prev]);
         onLogWorkOrder?.(orderWithAsset, activeSelectedAssetId ?? undefined);
-    };
-
-    const handleLogFuel = (log: FuelReceiptLog) => {
-        setFuelLogs((prev) => [log, ...prev]);
-        onLogFuelReceipt?.(log);
     };
 
     return (
@@ -454,7 +431,7 @@ export const EquipmentInspectionScreen: React.FC<
                     </Pressable>
 
                     <Pressable
-                        accessibilityLabel="Fuel receipts"
+                        accessibilityLabel="Fuel management"
                         accessibilityRole="tab"
                         accessibilityState={{ selected: activeTab === 'fuel' }}
                         onPress={() => setActiveTab('fuel')}
@@ -480,32 +457,8 @@ export const EquipmentInspectionScreen: React.FC<
                                     styles.darkTabPillTextActive,
                             ]}
                         >
-                            Fuel
+                            Fuel Management
                         </Text>
-                        <View
-                            style={[
-                                styles.countBadge,
-                                isDarkHud && styles.darkCountBadge,
-                                activeTab === 'fuel' && styles.countBadgeActive,
-                                isDarkHud &&
-                                    activeTab === 'fuel' &&
-                                    styles.darkCountBadgeActive,
-                            ]}
-                        >
-                            <Text
-                                style={[
-                                    styles.countBadgeText,
-                                    isDarkHud && styles.darkCountBadgeText,
-                                    activeTab === 'fuel' &&
-                                        styles.countBadgeTextActive,
-                                    isDarkHud &&
-                                        activeTab === 'fuel' &&
-                                        styles.darkCountBadgeTextActive,
-                                ]}
-                            >
-                                {fuelLogs.length}
-                            </Text>
-                        </View>
                     </Pressable>
 
                     <Pressable
@@ -602,9 +555,22 @@ export const EquipmentInspectionScreen: React.FC<
                     />
                 ) : null}
 
-                {/* TAB 2: Fuel Receipts */}
+                {/* Fuel actions stay in the canonical Fuel Management flow. */}
                 {activeTab === 'fuel' ? (
-                    <View style={{ gap: 12 }}>
+                    <View style={{ gap: 12 }} testID="fuel-management-link">
+                        <Text
+                            style={{
+                                color: isDarkHud
+                                    ? colors.white
+                                    : colors.secondary,
+                                paddingHorizontal: 16,
+                                paddingTop: 12,
+                            }}
+                        >
+                            Submit fuel requests and record verified refueling
+                            in Fuel Management. Saved records appear in the
+                            office queue.
+                        </Text>
                         {onOpenFuel ? (
                             <View
                                 style={{
@@ -616,6 +582,7 @@ export const EquipmentInspectionScreen: React.FC<
                                     accessibilityRole="button"
                                     accessibilityLabel="Open Fuel Management"
                                     onPress={onOpenFuel}
+                                    testID="open-fuel-management-button"
                                     style={{
                                         minHeight: 48,
                                         paddingHorizontal: 14,
@@ -632,16 +599,23 @@ export const EquipmentInspectionScreen: React.FC<
                                             fontWeight: '700',
                                         }}
                                     >
-                                        Open Full Fuel Management Module
+                                        Open Fuel Management
                                     </Text>
                                 </Pressable>
                             </View>
-                        ) : null}
-                        <FuelReceiptTab
-                            assetCode={currentAssetCode}
-                            fuelLogs={fuelLogs}
-                            onLogFuelReceipt={handleLogFuel}
-                        />
+                        ) : (
+                            <Text
+                                style={{
+                                    color: isDarkHud
+                                        ? colors.white
+                                        : colors.secondary,
+                                    paddingHorizontal: 16,
+                                }}
+                            >
+                                Return to the field home screen to open Fuel
+                                Management.
+                            </Text>
+                        )}
                     </View>
                 ) : null}
 

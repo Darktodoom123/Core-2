@@ -833,6 +833,85 @@ describe('CommandOutboxManager', () => {
         assert.equal(submittedPayload?.verified_vin, 'CAT320GC12345');
     });
 
+    test('durably queues fuel requests and receipt logs and replays each with its command id', async () => {
+        const repository = new MemoryOutboxRepository();
+        const outbox = await createOutbox(5, { repository });
+        const storedReceipt =
+            await durableAttachmentStorage.saveAttachmentDurably(
+                {
+                    base64: 'ZmFrZS1mdWVsLXJlY2VpcHQ=',
+                    fileName: 'fuel-receipt.jpg',
+                },
+                5,
+            );
+        const requestPayload = {
+            client_request_id: 'f1111111-1111-4111-8111-111111111111',
+            quantity_litres: 45,
+            fuel_type: 'diesel' as const,
+            purpose: 'Generator fuel',
+        };
+        const requestCommand =
+            await outbox.enqueueSubmitFuelRequest(requestPayload);
+        const logPayload = {
+            fuel_request_id: 88,
+            details: {
+                quantity_litres: 44,
+                total_cost: 3200,
+                fuel_station: 'North depot',
+            },
+            receipt: {
+                uri: storedReceipt.uri,
+                name: storedReceipt.fileName,
+                type: 'image/jpeg',
+            },
+        };
+        const logCommand = await outbox.enqueueRecordFuelLog(logPayload);
+        const duplicateLog = await outbox.enqueueRecordFuelLog(logPayload);
+        let createdRequestCommandId: string | undefined;
+        let recordedLogCommandId: string | undefined;
+        let recordedReceiptUri: string | undefined;
+
+        assert.equal(requestCommand.type, 'submit_fuel_request');
+        assert.equal(logCommand.type, 'record_fuel_log');
+        assert.equal(duplicateLog.id, logCommand.id);
+        await assert.rejects(
+            () =>
+                outbox.enqueueRecordFuelLog({
+                    ...logPayload,
+                    details: { ...logPayload.details, quantity_litres: 43 },
+                }),
+            /fuel log.*already queued/i,
+        );
+
+        const apiClient = {
+            createFuelRequest: async (_payload: unknown, commandId?: string) => {
+                createdRequestCommandId = commandId;
+
+                return { id: 9, status: 'submitted' };
+            },
+            recordFuel: async (
+                _requestId: number,
+                _details: unknown,
+                receipt?: { uri: string },
+                commandId?: string,
+            ) => {
+                recordedLogCommandId = commandId;
+                recordedReceiptUri = receipt?.uri;
+
+                return { id: 88, status: 'logged' };
+            },
+        } as unknown as FieldApiClient;
+
+        const result = await outbox.processQueue(apiClient);
+
+        assert.equal(result.completed, 2);
+        assert.equal(createdRequestCommandId, requestCommand.id);
+        assert.equal(recordedLogCommandId, logCommand.id);
+        assert.equal(recordedReceiptUri, storedReceipt.uri);
+        assert.equal(outbox.getCommand(requestCommand.id)?.state, 'completed');
+        assert.equal(outbox.getCommand(logCommand.id)?.state, 'completed');
+    });
+
     test('durable offline attachments survive restart, maintain account isolation, and remain available on retry', async () => {
         const repository = new MemoryOutboxRepository();
         const actorId = 5;

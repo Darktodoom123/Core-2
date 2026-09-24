@@ -21,6 +21,10 @@ import type {
     ReportDelayPayload,
     SalesDeliveryCommandPayload,
 } from '../types/index';
+import type {
+    CreateFuelPayload,
+    FuelLogCommandPayload,
+} from '../types/fuel';
 import type { FieldApiClient } from './apiClient';
 import { ApiClientError } from './apiClient';
 import { durableAttachmentStorage } from './durableAttachmentStorage';
@@ -467,6 +471,47 @@ export class CommandOutboxManager {
             null,
             payload as unknown as Record<string, unknown>,
         );
+    }
+
+    public enqueueSubmitFuelRequest(
+        payload: CreateFuelPayload,
+    ): Promise<OutboxCommand> {
+        return this.enqueue(
+            'submit_fuel_request',
+            null,
+            null,
+            payload as unknown as Record<string, unknown>,
+        );
+    }
+
+    public async enqueueRecordFuelLog(
+        payload: FuelLogCommandPayload,
+    ): Promise<OutboxCommand> {
+        const payloadRecord = payload as unknown as Record<string, unknown>;
+        const payloadHash = await this.payloadHash(
+            'record_fuel_log',
+            null,
+            null,
+            payloadRecord,
+        );
+        const existing = this.getCommands().find(
+            (command) =>
+                command.type === 'record_fuel_log' &&
+                command.payload.fuel_request_id === payload.fuel_request_id &&
+                command.state !== 'completed',
+        );
+
+        if (existing) {
+            if (existing.payloadHash === payloadHash) {
+                return existing;
+            }
+
+            throw new Error(
+                'A fuel log is already queued for this request. Sync or resolve it before changing the details.',
+            );
+        }
+
+        return this.enqueue('record_fuel_log', null, null, payloadRecord);
     }
 
     public enqueueSubmitDvir(
@@ -1443,6 +1488,19 @@ export class CommandOutboxManager {
                 response = await apiClient.reportDelay(
                     command.jobId!,
                     payload as unknown as Record<string, unknown>,
+                    command.id,
+                );
+            } else if (command.type === 'submit_fuel_request') {
+                response = await apiClient.createFuelRequest(
+                    command.payload as unknown as CreateFuelPayload,
+                    command.id,
+                );
+            } else if (command.type === 'record_fuel_log') {
+                const payload = command.payload as unknown as FuelLogCommandPayload;
+                response = await apiClient.recordFuel(
+                    payload.fuel_request_id,
+                    payload.details,
+                    payload.receipt,
                     command.id,
                 );
             }

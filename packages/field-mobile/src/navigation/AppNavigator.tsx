@@ -1276,33 +1276,40 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         }
     }, [apiClient, isOnline, status]);
 
-    const syncQueue = useCallback(async () => {
-        if (status !== 'authenticated' || isOnline !== true || !isOutboxReady) {
-            return;
-        }
+    const syncQueue = useCallback(
+        async (refreshViewState = true) => {
+            if (
+                status !== 'authenticated' ||
+                isOnline !== true ||
+                !isOutboxReady
+            ) {
+                return;
+            }
 
-        const result = await commandOutbox.processQueue(apiClient);
+            const result = await commandOutbox.processQueue(apiClient);
 
-        if (result.requiresAuthentication) {
-            await handleLogout();
+            if (result.requiresAuthentication) {
+                await handleLogout();
 
-            return;
-        }
+                return;
+            }
 
-        if (result.completed > 0) {
-            await fetchJobs();
-            await refreshHosClocks();
-        }
-    }, [
-        apiClient,
-        commandOutbox,
-        fetchJobs,
-        handleLogout,
-        refreshHosClocks,
-        isOnline,
-        isOutboxReady,
-        status,
-    ]);
+            if (result.completed > 0 && refreshViewState) {
+                await fetchJobs();
+                await refreshHosClocks();
+            }
+        },
+        [
+            apiClient,
+            commandOutbox,
+            fetchJobs,
+            handleLogout,
+            refreshHosClocks,
+            isOnline,
+            isOutboxReady,
+            status,
+        ],
+    );
 
     const handleActivateSos = useCallback(
         async (payload: ActivateSosIncidentPayload) => {
@@ -2861,6 +2868,9 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 actorId={user.id}
                                 apiClient={apiClient}
                                 isOnline={isOnline}
+                                commandOutbox={commandOutbox}
+                                isOutboxReady={isOutboxReady}
+                                syncQueue={() => syncQueue(false)}
                                 onBack={() => setActiveAppView('main')}
                             />
                         ) : activeAppView === 'inspection' ? (

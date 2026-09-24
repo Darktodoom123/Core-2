@@ -1,5 +1,8 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
-import type { CreateFuelPayload } from '../types/fuel';
+import type {
+    CreateFuelPayload,
+    FuelOfflineSnapshot,
+} from '../types/fuel';
 
 export interface FuelDraft {
     quantity: string;
@@ -23,6 +26,11 @@ export interface FuelDraftStore {
     read(actorId: number): Promise<FuelDraft | null>;
     write(actorId: number, draft: FuelDraft): Promise<void>;
     remove(actorId: number): Promise<void>;
+    readOfflineSnapshot(actorId: number): Promise<FuelOfflineSnapshot | null>;
+    writeOfflineSnapshot(
+        actorId: number,
+        snapshot: FuelOfflineSnapshot,
+    ): Promise<void>;
 }
 
 // A single ordered queue prevents a late autosave from resurrecting a submitted draft.
@@ -36,6 +44,9 @@ export class SqliteFuelDraftStore implements FuelDraftStore {
                 const db = await openDatabaseAsync('core2-fuel-drafts.db');
                 await db.execAsync(
                     'CREATE TABLE IF NOT EXISTS fuel_drafts (actor_id INTEGER PRIMARY KEY, draft_json TEXT NOT NULL)',
+                );
+                await db.execAsync(
+                    'CREATE TABLE IF NOT EXISTS fuel_offline_cache (actor_id INTEGER PRIMARY KEY, cache_json TEXT NOT NULL)',
                 );
 
                 return db;
@@ -102,6 +113,49 @@ export class SqliteFuelDraftStore implements FuelDraftStore {
             await db.runAsync(
                 'DELETE FROM fuel_drafts WHERE actor_id = ?',
                 actorId,
+            );
+        });
+    }
+
+    readOfflineSnapshot(
+        actorId: number,
+    ): Promise<FuelOfflineSnapshot | null> {
+        return this.ordered(async () => {
+            const db = await this.open();
+            const row = await db.getFirstAsync<{ cache_json: string }>(
+                'SELECT cache_json FROM fuel_offline_cache WHERE actor_id = ?',
+                actorId,
+            );
+
+            if (!row) {
+                return null;
+            }
+
+            const value: unknown = JSON.parse(row.cache_json);
+
+            if (
+                !value ||
+                typeof value !== 'object' ||
+                !('requests' in value) ||
+                !Array.isArray(value.requests)
+            ) {
+                throw new Error('The saved fuel records could not be read.');
+            }
+
+            return value as FuelOfflineSnapshot;
+        });
+    }
+
+    writeOfflineSnapshot(
+        actorId: number,
+        snapshot: FuelOfflineSnapshot,
+    ): Promise<void> {
+        return this.ordered(async () => {
+            const db = await this.open();
+            await db.runAsync(
+                'INSERT INTO fuel_offline_cache (actor_id, cache_json) VALUES (?, ?) ON CONFLICT(actor_id) DO UPDATE SET cache_json = excluded.cache_json',
+                actorId,
+                JSON.stringify(snapshot),
             );
         });
     }

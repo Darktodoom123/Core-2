@@ -274,7 +274,9 @@ export type OutboxCommandType =
     | 'start_hos_shift'
     | 'change_hos_duty_status'
     | 'certify_hos_shift'
-    | 'report_delay';
+    | 'report_delay'
+    | 'submit_fuel_request'
+    | 'record_fuel_log';
 
 export interface HosStartCommandPayload {
     operational_asset_id?: number | null;
@@ -824,19 +826,6 @@ export interface SafeReleaseVerification {
     certificationDate?: string | null;
     certificateNumber?: string | null;
     remarks?: string | null;
-}
-
-export interface FuelReceiptLog {
-    id: string;
-    assetCode: string;
-    quantityLiters: number;
-    fuelCost?: number | null;
-    odometerKm?: number | null;
-    engineHours?: number | null;
-    receiptNumber: string;
-    vendorName?: string | null;
-    receiptPhotoUri?: string | null;
-    loggedAt: string;
 }
 
 export type HandoverType = 'tech_to_operator' | 'operator_to_tech';

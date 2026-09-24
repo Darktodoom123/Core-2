@@ -305,6 +305,34 @@ export function getHumanReadableActionType(cmd: OutboxCommand): {
             break;
         }
 
+        case 'submit_fuel_request': {
+            title = 'Fuel Request';
+            reference = 'Fuel Management';
+            const quantity = payload.quantity_litres;
+            subtitle =
+                typeof quantity === 'number' || typeof quantity === 'string'
+                    ? `${quantity} L requested`
+                    : 'Fuel request for office approval';
+            break;
+        }
+
+        case 'record_fuel_log': {
+            title = 'Fuel Log';
+            const requestId = payload.fuel_request_id;
+            reference = requestId ? `Request #${requestId}` : 'Fuel Management';
+            const details =
+                typeof payload.details === 'object' && payload.details !== null
+                    ? (payload.details as Record<string, unknown>)
+                    : {};
+            const quantity = details.quantity_litres;
+            subtitle =
+                typeof quantity === 'number' || typeof quantity === 'string'
+                    ? `${quantity} L recorded`
+                    : 'Refueling record';
+            attachmentCount = payload.receipt ? 1 : 0;
+            break;
+        }
+
         case 'transition_status': {
             const targetStatus =
                 typeof payload.status === 'string'

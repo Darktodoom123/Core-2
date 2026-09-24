@@ -542,4 +542,66 @@ describe('FieldApiClient', () => {
         assert.equal(capturedCalls[3].headers['x-command-id'], commandId4);
         assert.equal(capturedCalls[3].body.command_id, commandId4);
     });
+
+    test('sends fuel request and log writes with both idempotency headers', async () => {
+        const calls: Array<{
+            headers: Headers;
+            method: string;
+            url: string;
+            body: BodyInit | null | undefined;
+        }> = [];
+        const client = new FieldApiClient({
+            baseUrl: 'https://field.example.test',
+            getToken: () => 'test-token',
+            fetchFn: async (input, init) => {
+                calls.push({
+                    headers: new Headers(init?.headers),
+                    method: init?.method ?? 'GET',
+                    url: input.toString(),
+                    body: init?.body,
+                });
+
+                return new Response(
+                    JSON.stringify({ data: { id: 7, status: 'submitted' } }),
+                    { status: 201 },
+                );
+            },
+        });
+        const requestCommandId = 'e1111111-1111-4111-8111-111111111111';
+        const logCommandId = 'e2222222-2222-4222-8222-222222222222';
+
+        await client.createFuelRequest(
+            {
+                client_request_id: 'e3333333-3333-4333-8333-333333333333',
+                quantity_litres: 45,
+                fuel_type: 'diesel',
+                purpose: 'Generator fuel',
+            },
+            requestCommandId,
+        );
+        await client.recordFuel(
+            7,
+            { quantity_litres: 44, total_cost: 3200 },
+            undefined,
+            logCommandId,
+        );
+
+        assert.equal(
+            calls[0].url,
+            'https://field.example.test/api/v1/fuel-requests',
+        );
+        assert.equal(calls[0].method, 'POST');
+        assert.equal(
+            calls[0].headers.get('idempotency-key'),
+            requestCommandId,
+        );
+        assert.equal(calls[0].headers.get('x-command-id'), requestCommandId);
+        assert.equal(
+            calls[1].url,
+            'https://field.example.test/api/v1/fuel-requests/7/logs',
+        );
+        assert.equal(calls[1].method, 'POST');
+        assert.equal(calls[1].headers.get('idempotency-key'), logCommandId);
+        assert.equal(calls[1].headers.get('x-command-id'), logCommandId);
+    });
 });

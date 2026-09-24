@@ -118,3 +118,79 @@ it('creates an authenticated mobile fuel request exactly once across retries', f
     expect(FuelRequest::count())->toBe(1);
     $this->postJson('/api/v1/fuel-requests', [...$payload, 'quantity_litres' => 90])->assertConflict();
 });
+
+it('replays fuel request command ids without creating a second request', function (): void {
+    $user = mobileFuelActor();
+    $this->withToken($user->createToken('mobile')->plainTextToken);
+    $commandId = (string) Str::uuid();
+    $payload = mobileFuelPayload();
+    $headers = [
+        'Idempotency-Key' => $commandId,
+        'X-Command-Id' => $commandId,
+    ];
+
+    $first = $this->withHeaders($headers)
+        ->postJson('/api/v1/fuel-requests', $payload)
+        ->assertCreated()
+        ->json('data.id');
+    $replay = $this->withHeaders($headers)
+        ->postJson('/api/v1/fuel-requests', $payload)
+        ->assertCreated()
+        ->json('data.id');
+
+    expect($replay)->toBe($first)
+        ->and(FuelRequest::count())->toBe(1);
+
+    $this->withHeaders($headers)
+        ->postJson('/api/v1/fuel-requests', [...$payload, 'purpose' => 'Changed payload'])
+        ->assertUnprocessable();
+});
+
+it('replays a fuel log command with its receipt without duplicating the log', function (): void {
+    Storage::fake(config('attachments.disk'));
+    $user = mobileFuelActor();
+    $fuel = FuelRequest::create([
+        'reference' => 'FUEL-LOG-IDEMPOTENT',
+        'requester_id' => $user->id,
+        'quantity_litres' => 50,
+        'fuel_type' => 'diesel',
+        'purpose' => 'Generator fuel',
+        'status' => 'verified',
+    ]);
+    $this->withToken($user->createToken('mobile')->plainTextToken);
+    $commandId = (string) Str::uuid();
+    $headers = [
+        'Idempotency-Key' => $commandId,
+        'X-Command-Id' => $commandId,
+    ];
+    $payload = [
+        'quantity_litres' => 44,
+        'total_cost' => 3200,
+        'fuel_station' => 'North depot',
+    ];
+    $receipt = UploadedFile::fake()->image('fuel-receipt.jpg');
+
+    $first = $this->withHeaders($headers)
+        ->postJson("/api/v1/fuel-requests/{$fuel->id}/logs", [...$payload, 'receipt' => $receipt])
+        ->assertCreated()
+        ->assertJsonPath('data.status', 'logged')
+        ->assertJsonPath('data.logs.0.has_receipt', true)
+        ->json('data.logs.0.id');
+    $replay = $this->withHeaders($headers)
+        ->postJson("/api/v1/fuel-requests/{$fuel->id}/logs", [...$payload, 'receipt' => $receipt])
+        ->assertCreated()
+        ->assertJsonPath('data.status', 'logged')
+        ->assertJsonPath('data.logs.0.has_receipt', true)
+        ->json('data.logs.0.id');
+
+    expect($replay)->toBe($first)
+        ->and($fuel->logs()->count())->toBe(1);
+
+    $this->withHeaders($headers)
+        ->postJson("/api/v1/fuel-requests/{$fuel->id}/logs", [
+            ...$payload,
+            'quantity_litres' => 43,
+            'receipt' => $receipt,
+        ])
+        ->assertUnprocessable();
+});
