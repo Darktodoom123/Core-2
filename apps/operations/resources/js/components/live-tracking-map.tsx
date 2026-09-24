@@ -60,7 +60,9 @@ import { groupOverlappingMarkers } from './maplibre/marker-overlap';
 import {
     createAssetMarker,
     createMarkerGroup,
+    createPopupCard,
     createSosMarker,
+    createWarehouseMarker,
     getSosMarkerPosition,
 } from './maplibre/markers';
 import type { SosMarkerOptions } from './maplibre/markers';
@@ -71,6 +73,7 @@ import {
     formatReportAge,
     trackingUnitLabel,
 } from './maplibre/tracking-map-popups';
+import { FOCHUN_WAREHOUSE } from './maplibre/warehouse-location';
 
 export type { AssetKind } from '@/lib/asset-kind';
 export {
@@ -320,9 +323,7 @@ export function LiveTrackingMap({
                     searchQuery={searchQuery}
                     onSearchQueryChange={setSearchQuery}
                     onFitAll={() => mapActionsRef.current?.fitAll()}
-                    fitAllDisabled={
-                        !mapActionsReady || filteredMappedLocations.length === 0
-                    }
+                    fitAllDisabled={!mapActionsReady}
                     isFullscreen={isFullscreen}
                     onToggleFullscreen={() =>
                         setIsFullscreen((value) => !value)
@@ -420,8 +421,8 @@ export function LiveTrackingMap({
                                     {searchQuery.trim()
                                         ? `No assets match “${searchQuery}”.`
                                         : locations.length === 0
-                                          ? 'No location updates are available.'
-                                          : 'Coordinates are unavailable for these assets.'}
+                                          ? 'No location updates are available. The yard and warehouse reference remains on the map.'
+                                          : 'Coordinates are unavailable for these assets. The yard and warehouse reference remains on the map.'}
                                 </div>
                             </div>
                         )}
@@ -751,6 +752,58 @@ function TrackingMapContent({
             ),
         [locations, selected?.id],
     );
+
+    useEffect(() => {
+        const markerElement = createWarehouseMarker({
+            label: FOCHUN_WAREHOUSE.label,
+            address: FOCHUN_WAREHOUSE.address,
+        });
+        let popup: InstanceType<typeof maplibregl.Popup> | undefined;
+        const openPopup = () => {
+            popup?.remove();
+            popup = new maplibregl.Popup({
+                closeButton: true,
+                closeOnClick: true,
+                offset: 28,
+                maxWidth: '320px',
+            }).setDOMContent(
+                createPopupCard({
+                    title: FOCHUN_WAREHOUSE.label,
+                    subtitle: 'Fochun Industrial Compound',
+                    status: 'Reference location',
+                    statusTone: 'info',
+                    fields: [
+                        { label: 'Type', value: 'Yard and warehouse' },
+                        { label: 'Address', value: FOCHUN_WAREHOUSE.address },
+                    ],
+                    locationName: FOCHUN_WAREHOUSE.address,
+                    coordinateText: `${FOCHUN_WAREHOUSE.position[1].toFixed(5)}, ${FOCHUN_WAREHOUSE.position[0].toFixed(5)}`,
+                    onCopyCoordinates: (button) => {
+                        void navigator.clipboard?.writeText(
+                            `${FOCHUN_WAREHOUSE.position[1]}, ${FOCHUN_WAREHOUSE.position[0]}`,
+                        );
+                        button.textContent = 'Copied';
+                    },
+                }),
+            );
+            popup.setLngLat(FOCHUN_WAREHOUSE.position).addTo(map);
+        };
+
+        markerElement.addEventListener('click', openPopup);
+
+        const marker = new maplibregl.Marker({
+            element: markerElement,
+            anchor: 'bottom',
+        })
+            .setLngLat(FOCHUN_WAREHOUSE.position)
+            .addTo(map);
+
+        return () => {
+            markerElement.removeEventListener('click', openPopup);
+            popup?.remove();
+            marker.remove();
+        };
+    }, [map, maplibregl]);
 
     useEffect(() => {
         map.addSource('tracking-accuracy', {
@@ -1490,6 +1543,7 @@ function MapActionBridge({
 
     const fitAll = useCallback(() => {
         const positions = [
+            FOCHUN_WAREHOUSE.position,
             ...mappedLocations.map(toLngLat),
             ...activeSosIncidents.flatMap((incident) => {
                 const position = getSosMarkerPosition(
@@ -1509,7 +1563,13 @@ function MapActionBridge({
             }),
         ];
 
-        if (positions.length === 0) {
+        if (positions.length === 1) {
+            map.easeTo({
+                center: positions[0],
+                zoom: 13,
+                duration: prefersReducedMotion ? 0 : 350,
+            });
+
             return;
         }
 
@@ -1582,6 +1642,7 @@ function LiveMapControls({
 
     const fitAll = () => {
         const positions = [
+            FOCHUN_WAREHOUSE.position,
             ...mappedLocations.map(toLngLat),
             ...activeSosIncidents.flatMap((incident) => {
                 const position = getSosMarkerPosition(
@@ -1601,7 +1662,13 @@ function LiveMapControls({
             }),
         ];
 
-        if (positions.length === 0) {
+        if (positions.length === 1) {
+            map.easeTo({
+                center: positions[0],
+                zoom: 13,
+                duration: prefersReducedMotion ? 0 : 350,
+            });
+
             return;
         }
 
@@ -1879,7 +1946,7 @@ function CompactMapToolbar({
                         className="min-h-10 px-2.5 text-xs"
                         onClick={onFitAll}
                         disabled={fitAllDisabled}
-                        aria-label="Fit all assets"
+                        aria-label="Fit all assets and yard"
                     >
                         <Maximize2 className="h-3.5 w-3.5" aria-hidden="true" />
                         Fit all
@@ -2065,6 +2132,13 @@ function MapLegend() {
                 />
                 Worker
             </span>
+            <span className="flex items-center gap-1.5 font-medium">
+                <MapPin
+                    className="h-3.5 w-3.5 text-brand-strong"
+                    aria-hidden="true"
+                />
+                Yard / warehouse
+            </span>
         </div>
     );
 }
@@ -2097,7 +2171,7 @@ function averageSosPosition(incidents: SosIncidentViewModel[]): LngLat {
     });
 
     if (coordinates.length === 0) {
-        return DEFAULT_CENTER;
+        return FOCHUN_WAREHOUSE.position;
     }
 
     return [

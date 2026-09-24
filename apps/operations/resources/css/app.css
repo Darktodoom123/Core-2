@@ -541,6 +541,55 @@ textarea {
     outline-offset: 3px;
 }
 
+.maplibre-warehouse-marker {
+    position: relative;
+    display: flex;
+    width: 50px;
+    height: 50px;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 9999px;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    transition: transform 150ms ease-out;
+    z-index: 80;
+}
+
+.maplibre-warehouse-marker__surface {
+    position: relative;
+    display: flex;
+    width: 36px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--color-brand-strong);
+    border-radius: 10px;
+    background: var(--color-brand-soft);
+    color: var(--color-brand-strong);
+    box-shadow: 0 5px 12px rgb(0 0 0 / 20%);
+    transition:
+        transform 150ms ease-out,
+        box-shadow 150ms ease-out;
+}
+
+.maplibre-warehouse-marker__surface svg {
+    width: 20px;
+    height: 20px;
+}
+
+.maplibre-warehouse-marker:hover .maplibre-warehouse-marker__surface,
+.maplibre-warehouse-marker:focus-visible .maplibre-warehouse-marker__surface {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgb(0 0 0 / 26%);
+}
+
+.maplibre-warehouse-marker:focus-visible {
+    outline: 3px solid var(--color-brand-strong);
+    outline-offset: 3px;
+}
+
 .maplibre-asset-marker[data-sos-active='true'],
 .maplibre-sos-marker {
     overflow: visible;

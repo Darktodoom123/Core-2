@@ -3,11 +3,14 @@
 namespace Database\Seeders;
 
 use App\Modules\Assignment\Enums\AssignmentResponse;
+use App\Modules\Assignment\Models\DispatchAssetAssignment;
 use App\Modules\Assignment\Models\DispatchPersonnelAssignment;
 use App\Modules\Dispatch\Enums\DispatchPriority;
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\DispatchJob;
+use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
+use App\Shared\Assets\Models\OperationalAsset;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use LogicException;
@@ -50,6 +53,19 @@ final class Session1NativeAcceptanceSeeder extends Seeder
             $user->forceFill(['password' => Hash::make($fixturePassword)])->save();
         }
 
+        $secondaryOperator = User::query()->updateOrCreate(
+            ['email' => 'operator-secondary@example.com'],
+            [
+                'name' => 'Session 1 Secondary Operator',
+                'username' => 'operator-secondary',
+                'email_verified_at' => now(),
+                'password' => Hash::make($fixturePassword),
+                'is_active' => true,
+                'suspended_at' => null,
+            ],
+        );
+        $secondaryOperator->syncRoles([RoleName::CraneOperator->value]);
+
         $assignedJob = DispatchJob::query()->updateOrCreate(
             ['reference' => self::ASSIGNED_JOB_REFERENCE],
             [
@@ -85,6 +101,37 @@ final class Session1NativeAcceptanceSeeder extends Seeder
                 'assignment_type' => 'crane_operator',
                 'assigned_by' => $manager->id,
                 'response_status' => AssignmentResponse::Pending,
+                'active_from' => now()->subMinute(),
+                'active_until' => null,
+            ],
+        );
+
+        DispatchPersonnelAssignment::query()->updateOrCreate(
+            [
+                'dispatch_job_id' => $forbiddenJob->id,
+                'user_id' => $secondaryOperator->id,
+            ],
+            [
+                'assignment_type' => 'crane_operator',
+                'assigned_by' => $manager->id,
+                'response_status' => AssignmentResponse::Pending,
+                'active_from' => now()->subMinute(),
+                'active_until' => null,
+            ],
+        );
+
+        $unit = OperationalAsset::query()
+            ->where('code', 'MOB-CRN-401')
+            ->firstOrFail();
+
+        DispatchAssetAssignment::query()->updateOrCreate(
+            [
+                'dispatch_job_id' => $assignedJob->id,
+                'operational_asset_id' => $unit->id,
+            ],
+            [
+                'assignment_type' => 'crane',
+                'assigned_by' => $manager->id,
                 'active_from' => now()->subMinute(),
                 'active_until' => null,
             ],

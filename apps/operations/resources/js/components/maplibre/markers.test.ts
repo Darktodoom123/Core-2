@@ -2,7 +2,7 @@ import { strict as assert } from 'node:assert';
 import { afterEach, test } from 'node:test';
 // prettier-ignore
 // @ts-expect-error TS5097: this test is executed directly by Node's strip-types runner.
-import { createAssetMarker, createPopupCard, getSosMarkerPosition } from './markers.ts';
+import { createAssetMarker, createPopupCard, createWarehouseMarker, getSosMarkerPosition } from './markers.ts';
 
 class FakeElement {
     public readonly children: FakeElement[] = [];
@@ -145,6 +145,31 @@ test('keeps the halo inside the same marker element that MapLibre repositions', 
     assert.ok(surface);
     assert.ok(marker.children.includes(halo));
     assert.ok(marker.children.includes(surface));
+});
+
+test('renders an accessible fixed warehouse marker', () => {
+    installFakeDocument();
+
+    const marker = createWarehouseMarker({
+        label: 'Alibaton Yard & Warehouse',
+        address:
+            'Fochun Industrial Compound, Balagtas, 3016 Bulacan, Philippines',
+    }) as unknown as FakeElement;
+
+    assert.equal(marker.className, 'maplibre-warehouse-marker');
+    assert.equal(marker.dataset.markerType, 'warehouse');
+    assert.equal(
+        marker.attributes.get('aria-label'),
+        'Alibaton Yard & Warehouse. Fochun Industrial Compound, Balagtas, 3016 Bulacan, Philippines',
+    );
+    assert.equal(
+        marker.title,
+        'Fochun Industrial Compound, Balagtas, 3016 Bulacan, Philippines',
+    );
+    assert.ok(
+        findByClass(marker, 'maplibre-warehouse-marker__surface'),
+        'Warehouse marker should include a visible facility icon',
+    );
 });
 
 test('follows the affected worker when a newer live location replaces the SOS snapshot', () => {

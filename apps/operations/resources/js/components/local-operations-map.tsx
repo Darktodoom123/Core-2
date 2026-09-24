@@ -19,7 +19,12 @@ import {
 } from './maplibre/geojson';
 import type { LngLat } from './maplibre/geojson';
 import { MapLibreMap, useMapLibre } from './maplibre/maplibre-map';
-import { createAssetMarker, createPopupCard } from './maplibre/markers';
+import {
+    createAssetMarker,
+    createPopupCard,
+    createWarehouseMarker,
+} from './maplibre/markers';
+import { FOCHUN_WAREHOUSE } from './maplibre/warehouse-location';
 
 const DEFAULT_CENTER: LngLat = [121.04, 14.64];
 const DEFAULT_ZOOM = 11;
@@ -300,6 +305,58 @@ function OperationsMapContent({
         // Sources are created once for each map instance; updates are handled below.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [map]);
+
+    useEffect(() => {
+        const markerElement = createWarehouseMarker({
+            label: FOCHUN_WAREHOUSE.label,
+            address: FOCHUN_WAREHOUSE.address,
+        });
+        let popup: InstanceType<typeof maplibregl.Popup> | undefined;
+        const openPopup = () => {
+            popup?.remove();
+            popup = new maplibregl.Popup({
+                closeButton: true,
+                closeOnClick: true,
+                offset: 28,
+                maxWidth: '320px',
+            }).setDOMContent(
+                createPopupCard({
+                    title: FOCHUN_WAREHOUSE.label,
+                    subtitle: 'Fochun Industrial Compound',
+                    status: 'Reference location',
+                    statusTone: 'info',
+                    fields: [
+                        { label: 'Type', value: 'Yard and warehouse' },
+                        { label: 'Address', value: FOCHUN_WAREHOUSE.address },
+                    ],
+                    locationName: FOCHUN_WAREHOUSE.address,
+                    coordinateText: `${FOCHUN_WAREHOUSE.position[1].toFixed(5)}, ${FOCHUN_WAREHOUSE.position[0].toFixed(5)}`,
+                    onCopyCoordinates: (button) => {
+                        void navigator.clipboard?.writeText(
+                            `${FOCHUN_WAREHOUSE.position[1]}, ${FOCHUN_WAREHOUSE.position[0]}`,
+                        );
+                        button.textContent = 'Copied';
+                    },
+                }),
+            );
+            popup.setLngLat(FOCHUN_WAREHOUSE.position).addTo(map);
+        };
+
+        markerElement.addEventListener('click', openPopup);
+
+        const marker = new maplibregl.Marker({
+            element: markerElement,
+            anchor: 'bottom',
+        })
+            .setLngLat(FOCHUN_WAREHOUSE.position)
+            .addTo(map);
+
+        return () => {
+            markerElement.removeEventListener('click', openPopup);
+            popup?.remove();
+            marker.remove();
+        };
+    }, [map, maplibregl]);
 
     useEffect(() => {
         routeSourceRef.current?.setData(routeData);

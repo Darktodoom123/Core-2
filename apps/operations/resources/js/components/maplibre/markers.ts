@@ -63,6 +63,9 @@ const ASSET_SVG_ICONS: Record<AssetKind, string> = {
         '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
 };
 
+const WAREHOUSE_SVG_ICON =
+    '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-6 9 6"/><path d="M5 9v10h14V9"/><path d="M8 19v-6h8v6"/><path d="M8 10h.01M12 10h.01M16 10h.01"/></svg>';
+
 export function createAssetMarker({
     kind,
     freshness,
@@ -92,6 +95,29 @@ export function createAssetMarker({
     const surface = document.createElement('span');
     surface.className = 'maplibre-asset-marker__surface';
     surface.innerHTML = ASSET_SVG_ICONS[kind];
+    marker.appendChild(surface);
+
+    return marker;
+}
+
+export function createWarehouseMarker({
+    label,
+    address,
+}: {
+    label: string;
+    address: string;
+}): HTMLButtonElement {
+    const marker = document.createElement('button');
+    marker.type = 'button';
+    marker.className = 'maplibre-warehouse-marker';
+    marker.dataset.markerType = 'warehouse';
+    marker.setAttribute('aria-label', `${label}. ${address}`);
+    marker.title = address;
+
+    const surface = document.createElement('span');
+    surface.className = 'maplibre-warehouse-marker__surface';
+    surface.setAttribute('aria-hidden', 'true');
+    surface.innerHTML = WAREHOUSE_SVG_ICON;
     marker.appendChild(surface);
 
     return marker;
