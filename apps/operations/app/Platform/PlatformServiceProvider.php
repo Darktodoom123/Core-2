@@ -73,6 +73,7 @@ final class PlatformServiceProvider extends ServiceProvider
         DispatchPersonnelAssignment::observe(WorkspaceResourceObserver::class);
         ApprovalRequest::observe(WorkspaceResourceObserver::class);
         FuelRequest::observe(WorkspaceResourceObserver::class);
+        Notification::observe(WorkspaceResourceObserver::class);
         OperationalAsset::observe(WorkspaceResourceObserver::class);
 
         // Preserve polymorphic rows created before model namespaces became module-oriented.

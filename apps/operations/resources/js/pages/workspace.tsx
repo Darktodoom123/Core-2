@@ -77,7 +77,11 @@ const SECTION_PROPS: Record<WorkspaceSection, string[]> = {
         'reportExports',
         'jobs',
     ],
-    notifications: ['notifications'],
+    notifications: [
+        'notifications',
+        'notifications_total',
+        'notifications_has_more',
+    ],
     archive: ['archivedJobs'],
     'gpt-recommendations': [
         'gptRecommendations',
@@ -110,6 +114,8 @@ export default function Workspace(props: WorkspacePageProps) {
     const activeRefreshes = useRef(
         new Map<RefreshScope, { mode: RefreshMode; completed: boolean }>(),
     );
+    const navigationPending = useRef(false);
+    const navigationSequence = useRef(0);
     const handledServerRefresh = useRef<string | null>(null);
     const observedServerRefresh = useRef(props.workspace.refreshed_at);
     const [, setOutboxQueue] = useState<OutboxItem[]>(() => getOutboxQueue());
@@ -125,7 +131,9 @@ export default function Workspace(props: WorkspacePageProps) {
             props.capabilities.respond_sos ||
             props.activeSosIncidents.length > 0)
             ? 'sos'
-            : props.navigation.some((item) => item.id === section)
+            : section === 'notifications'
+              ? 'notifications'
+              : props.navigation.some((item) => item.id === section)
               ? section
               : (props.navigation[0]?.id ?? null);
 
@@ -235,13 +243,21 @@ export default function Workspace(props: WorkspacePageProps) {
     );
 
     const refresh = useCallback(
-        (scope: RefreshScope = 'workspace', mode: RefreshMode = 'manual') => {
+        (
+            scope: RefreshScope = 'workspace',
+            mode: RefreshMode = 'manual',
+            includeNotifications = false,
+        ) => {
+            if (navigationPending.current) {
+                return;
+            }
+
             if (!beginRefresh(scope, mode)) {
                 return;
             }
 
             router.reload({
-                preserveUrl: availableSection === 'dispatch',
+                preserveUrl: true,
                 only: [
                     'workspace',
                     'badges',
@@ -251,6 +267,13 @@ export default function Workspace(props: WorkspacePageProps) {
                         : availableSection
                           ? SECTION_PROPS[availableSection]
                           : []),
+                    ...(includeNotifications
+                        ? [
+                              'notifications',
+                              'notifications_total',
+                              'notifications_has_more',
+                          ]
+                        : []),
                 ],
                 preserveErrors: true,
                 onSuccess: (page) => markRefreshSuccess(scope, page),
@@ -276,6 +299,44 @@ export default function Workspace(props: WorkspacePageProps) {
         ],
     );
     const refreshWorkspace = useCallback(() => refresh('workspace'), [refresh]);
+    const refreshNotifications = useCallback(() => {
+        void fetch('/operations/notifications?per_page=100', {
+            credentials: 'same-origin',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        })
+            .then((response) => {
+                if (!response.ok) {
+                    return null;
+                }
+
+                return response.json() as Promise<{
+                    data: WorkspacePageProps['notifications'];
+                    unread_count: number;
+                    has_more: boolean;
+                    total: number;
+                }>;
+            })
+            .then((payload) => {
+                if (!payload) {
+                    return;
+                }
+
+                router.replaceProp('notifications', payload.data ?? []);
+                router.replaceProp('notifications_total', payload.total);
+                router.replaceProp(
+                    'notifications_has_more',
+                    payload.has_more,
+                );
+                router.replaceProp(
+                    'badges.unread_notifications',
+                    payload.unread_count,
+                );
+            })
+            .catch(() => undefined);
+    }, []);
     const refreshRef = useRef(refresh);
 
     useEffect(() => {
@@ -285,11 +346,13 @@ export default function Workspace(props: WorkspacePageProps) {
     const fallbackPoll = usePoll(
         FALLBACK_POLL_INTERVAL_MS,
         () => ({
+            preserveUrl: true,
             only: [
                 'workspace',
                 'badges',
                 'activeSosIncidents',
                 ...(availableSection ? SECTION_PROPS[availableSection] : []),
+                'notifications',
             ],
             onStart: () => beginRefresh('workspace', 'polling'),
             onSuccess: (page) => markRefreshSuccess('workspace', page),
@@ -370,9 +433,16 @@ export default function Workspace(props: WorkspacePageProps) {
         echo.private('operations.workspace')
             .subscribed(() => setWsState(echo.connectionStatus()))
             .error(() => setWsState('failed'))
-            .listen('.WorkspaceUpdated', () => {
-                refreshRef.current('workspace', 'realtime');
-            });
+            .listen(
+                '.WorkspaceUpdated',
+                (event: { resource_type?: string }) => {
+                    refreshRef.current(
+                        'workspace',
+                        'realtime',
+                        event.resource_type === 'notification',
+                    );
+                },
+            );
 
         echo.private('operations.sos').listen('.SosIncidentChanged', () => {
             refreshRef.current('workspace', 'realtime');
@@ -433,6 +503,10 @@ export default function Workspace(props: WorkspacePageProps) {
         setSelectedServiceRequestId(options?.serviceRequestId ?? null);
         const url = new URL(window.location.href);
         url.searchParams.set('view', nextSection);
+        const navigationId = ++navigationSequence.current;
+        navigationPending.current = true;
+        fallbackPollControls.current.stop();
+        router.cancelAll({ async: true, prefetch: false, sync: false });
         router.visit(url.toString(), {
             only: [
                 'workspace',
@@ -443,6 +517,17 @@ export default function Workspace(props: WorkspacePageProps) {
             preserveState: true,
             preserveScroll: true,
             preserveErrors: true,
+            onFinish: () => {
+                if (navigationId !== navigationSequence.current) {
+                    return;
+                }
+
+                navigationPending.current = false;
+
+                if (wsState !== 'connected') {
+                    fallbackPollControls.current.start();
+                }
+            },
         });
     };
 
@@ -668,6 +753,7 @@ export default function Workspace(props: WorkspacePageProps) {
                 notifications={props.notifications ?? []}
                 onSectionChange={changeSection}
                 onRefresh={refreshWorkspace}
+                onRefreshNotifications={refreshNotifications}
                 onShareLocation={shareLocation}
             >
                 {props.capabilities.view_sos && (
@@ -800,6 +886,11 @@ export default function Workspace(props: WorkspacePageProps) {
                         jobReportsPagination={props.jobReports_pagination}
                         reportExports={props.reportExports}
                         notifications={props.notifications}
+                        notificationsTotal={props.notifications_total}
+                        notificationsHasMore={
+                            props.notifications_has_more
+                        }
+                        unreadNotificationCount={unreadNotificationCount}
                         archivedJobs={props.archivedJobs}
                         gptRecommendations={props.gptRecommendations}
                         gptRecommendationHistoryPagination={

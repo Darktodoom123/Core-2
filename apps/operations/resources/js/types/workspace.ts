@@ -1184,6 +1184,8 @@ export interface WorkspacePageProps {
     jobReports_pagination?: PaginationMeta;
     reportExports?: ReportExportViewModel[];
     notifications?: NotificationViewModel[];
+    notifications_total?: number;
+    notifications_has_more?: boolean;
     archivedJobs?: ArchivedJobViewModel[];
     navigation: WorkspaceNavigationItem[];
     initial_section: WorkspaceSection | null;

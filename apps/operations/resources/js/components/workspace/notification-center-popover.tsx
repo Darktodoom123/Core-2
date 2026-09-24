@@ -43,10 +43,12 @@ export function NotificationCenterPopover({
     notifications = [],
     onViewAll,
     onNavigate,
+    onOpen,
 }: {
     notifications?: NotificationViewModel[];
     onViewAll: () => void;
     onNavigate?: (section: WorkspaceSection) => void;
+    onOpen?: () => void;
 }) {
     const [open, setOpen] = useState(false);
     const [filter, setFilter] = useState<NotificationFilter>('all');
@@ -81,6 +83,43 @@ export function NotificationCenterPopover({
             if (event.key === 'Escape') {
                 event.preventDefault();
                 setOpen(false);
+
+                return;
+            }
+
+            if (event.key === 'Tab') {
+                const focusableElements = Array.from(
+                    panelRef.current?.querySelectorAll<HTMLElement>(
+                        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+                    ) ?? [],
+                );
+
+                if (focusableElements.length === 0) {
+                    event.preventDefault();
+                    panelRef.current?.focus();
+
+                    return;
+                }
+
+                const firstElement = focusableElements[0];
+                const lastElement = focusableElements.at(-1);
+                const activeElement = document.activeElement;
+
+                if (
+                    event.shiftKey &&
+                    (activeElement === firstElement ||
+                        !panelRef.current?.contains(activeElement))
+                ) {
+                    event.preventDefault();
+                    lastElement?.focus();
+                } else if (
+                    !event.shiftKey &&
+                    (activeElement === lastElement ||
+                        !panelRef.current?.contains(activeElement))
+                ) {
+                    event.preventDefault();
+                    firstElement?.focus();
+                }
             }
         };
 
@@ -114,10 +153,17 @@ export function NotificationCenterPopover({
     }, [open]);
 
     const toggleOpen = () => {
+        if (!open) {
+            onOpen?.();
+        }
+
         setOpen((current) => !current);
     };
 
-    const markAsRead = (notification: NotificationViewModel) => {
+    const markAsRead = (
+        notification: NotificationViewModel,
+        afterFinish?: () => void,
+    ) => {
         if (!isUnread(notification) || processingId !== null) {
             return;
         }
@@ -132,14 +178,17 @@ export function NotificationCenterPopover({
         setProcessingId(notification.id);
         setAnnouncement('Marking notification as read.');
 
+        let requestSucceeded = false;
         router.post(
             `/operations/notifications/${notification.id}/read`,
             {},
             {
                 preserveScroll: true,
                 preserveState: true,
-                onSuccess: () =>
-                    setAnnouncement('Notification marked as read.'),
+                onSuccess: () => {
+                    requestSucceeded = true;
+                    setAnnouncement('Notification marked as read.');
+                },
                 onError: () => {
                     setReadOverrides((current) => {
                         const next = new Set(current);
@@ -152,7 +201,24 @@ export function NotificationCenterPopover({
                         'Notification could not be marked as read. Try again.',
                     );
                 },
-                onFinish: () => setProcessingId(null),
+                onCancel: () => {
+                    setReadOverrides((current) => {
+                        const next = new Set(current);
+                        next.delete(notification.id);
+
+                        return next;
+                    });
+                    setAnnouncement(
+                        'Notification could not be marked as read. Try again.',
+                    );
+                },
+                onFinish: () => {
+                    setProcessingId(null);
+
+                    if (requestSucceeded) {
+                        afterFinish?.();
+                    }
+                },
             },
         );
     };
@@ -163,25 +229,26 @@ export function NotificationCenterPopover({
     };
 
     const handleNotificationClick = (notification: NotificationViewModel) => {
-        if (isUnread(notification)) {
-            markAsRead(notification);
+        if (processingId !== null) {
+            return;
         }
 
         setOpen(false);
 
-        if (!onNavigate) {
+        const destination = notificationDestination(notification);
+        const navigate = () => {
+            if (destination) {
+                onNavigate?.(destination);
+            }
+        };
+
+        if (isUnread(notification)) {
+            markAsRead(notification, navigate);
+
             return;
         }
 
-        const category = categorizeNotification(notification);
-
-        if (notification.dispatch_job || category === 'dispatch') {
-            onNavigate('dispatch');
-        } else if (category === 'fuel') {
-            onNavigate('fuel');
-        } else if (category === 'safety') {
-            onNavigate('sos');
-        }
+        navigate();
     };
 
     const panel = (
@@ -190,6 +257,7 @@ export function NotificationCenterPopover({
             ref={panelRef}
             role="dialog"
             aria-labelledby="notification-center-title"
+            aria-modal="true"
             tabIndex={-1}
             className="fixed inset-x-0 bottom-0 z-[80] max-h-[82vh] overflow-y-auto rounded-t-2xl border border-line bg-surface shadow-[0_18px_50px_rgba(15,23,42,0.18)] sm:inset-x-auto sm:top-[4.75rem] sm:right-4 sm:bottom-auto sm:max-h-[calc(100vh-6rem)] sm:w-[min(26rem,calc(100vw-2rem))] sm:rounded-xl"
         >
@@ -278,50 +346,39 @@ export function NotificationCenterPopover({
                                         />
                                     </span>
                                     <div className="min-w-0 flex-1">
-                                        <div
-                                            role="button"
-                                            tabIndex={0}
+                                        <button
+                                            type="button"
+                                            disabled={processingId !== null}
                                             onClick={() =>
                                                 handleNotificationClick(
                                                     notification,
                                                 )
                                             }
-                                            onKeyDown={(e) => {
-                                                if (
-                                                    e.key === 'Enter' ||
-                                                    e.key === ' '
-                                                ) {
-                                                    e.preventDefault();
-                                                    handleNotificationClick(
-                                                        notification,
-                                                    );
-                                                }
-                                            }}
-                                            className="cursor-pointer rounded focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none"
+                                            className="w-full cursor-pointer rounded text-left focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none disabled:cursor-wait"
                                         >
-                                            <div className="flex items-start justify-between gap-3">
-                                                <div className="min-w-0">
-                                                    <p className="text-sm font-semibold text-ink group-hover:text-brand-strong">
+                                            <span className="flex items-start justify-between gap-3">
+                                                <span className="block min-w-0">
+                                                    <span className="block text-sm font-semibold text-ink group-hover:text-brand-strong">
                                                         {presentation.title}
-                                                    </p>
+                                                    </span>
                                                     {notification.dispatch_job && (
-                                                        <p className="mt-0.5 truncate font-mono text-xs text-ink-soft">
+                                                        <span className="mt-0.5 block truncate font-mono text-xs text-ink-soft">
                                                             {
                                                                 notification
                                                                     .dispatch_job
                                                                     .reference
                                                             }
-                                                        </p>
+                                                        </span>
                                                     )}
-                                                </div>
+                                                </span>
                                                 {unread && (
                                                     <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-brand-strong" />
                                                 )}
-                                            </div>
-                                            <p className="mt-1 text-sm leading-5 text-ink">
+                                            </span>
+                                            <span className="mt-1 block text-sm leading-5 text-ink">
                                                 {presentation.message}
-                                            </p>
-                                        </div>
+                                            </span>
+                                        </button>
                                         <div className="mt-2 flex items-center justify-between gap-2">
                                             <p
                                                 className="text-xs text-ink-soft"
@@ -351,7 +408,7 @@ export function NotificationCenterPopover({
                                                     disabled={
                                                         processingId !== null
                                                     }
-                                                    className="inline-flex min-h-7 items-center rounded px-2 text-xs font-semibold text-brand-strong hover:bg-brand-soft focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                                                    className="inline-flex min-h-11 items-center rounded px-2 text-xs font-semibold text-brand-strong hover:bg-brand-soft focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
                                                 >
                                                     {processingId ===
                                                     notification.id
@@ -372,7 +429,8 @@ export function NotificationCenterPopover({
                 <button
                     type="button"
                     onClick={handleViewAll}
-                    className="flex min-h-11 w-full items-center justify-center rounded-lg border border-line-strong bg-surface px-3 text-sm font-semibold text-ink hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none"
+                    disabled={processingId !== null}
+                    className="flex min-h-11 w-full items-center justify-center rounded-lg border border-line-strong bg-surface px-3 text-sm font-semibold text-ink hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
                 >
                     View all notifications
                 </button>
@@ -472,6 +530,37 @@ export function categorizeNotification(
     }
 
     return 'system';
+}
+
+export function notificationDestination(
+    notification: NotificationViewModel,
+): WorkspaceSection | null {
+    const category = categorizeNotification(notification);
+    const event =
+        stringValue(notification.data.event) ?? notification.type ?? '';
+
+    if (
+        event === 'sos.incident' ||
+        event.startsWith('sos.') ||
+        event.startsWith('safety.sos_') ||
+        event.startsWith('safety.sos.')
+    ) {
+        return 'sos';
+    }
+
+    if (notification.dispatch_job || category === 'dispatch') {
+        return 'dispatch';
+    }
+
+    if (category === 'fuel') {
+        return 'fuel';
+    }
+
+    if (category === 'safety') {
+        return 'safety';
+    }
+
+    return null;
 }
 
 export function presentNotification(

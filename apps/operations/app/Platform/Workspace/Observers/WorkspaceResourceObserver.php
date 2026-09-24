@@ -7,6 +7,7 @@ use App\Modules\Assignment\Models\DispatchPersonnelAssignment;
 use App\Modules\Dispatch\Models\ApprovalRequest;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Fuel\Models\FuelRequest;
+use App\Platform\Notifications\Models\Notification;
 use App\Platform\Workspace\Events\WorkspaceUpdated;
 use App\Shared\Assets\Models\OperationalAsset;
 use Illuminate\Database\Eloquent\Model;
@@ -21,6 +22,10 @@ final class WorkspaceResourceObserver
 
     public function updated(Model $model): void
     {
+        if ($model instanceof Notification) {
+            return;
+        }
+
         $this->broadcast($model, 'updated');
     }
 
@@ -48,6 +53,7 @@ final class WorkspaceResourceObserver
             $model instanceof DispatchJob,
             $model instanceof DispatchAssetAssignment,
             $model instanceof DispatchPersonnelAssignment => 'job',
+            $model instanceof Notification => 'notification',
             $model instanceof ApprovalRequest => 'approval',
             $model instanceof FuelRequest => 'fuel',
             $model instanceof OperationalAsset => 'asset',

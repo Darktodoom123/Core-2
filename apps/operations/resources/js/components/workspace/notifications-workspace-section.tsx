@@ -15,6 +15,7 @@ import {
     categorizeNotification,
     exactTimestamp,
     formatRelativeTime,
+    notificationDestination,
     presentNotification,
     toneClasses,
 } from '@/components/workspace/notification-center-popover';
@@ -27,9 +28,15 @@ import type {
 
 export function NotificationsSurface({
     notifications = [],
+    total,
+    hasMore = false,
+    unreadCount,
     onNavigate,
 }: {
     notifications?: NotificationViewModel[];
+    total?: number;
+    hasMore?: boolean;
+    unreadCount?: number;
     onNavigate?: (section: WorkspaceSection) => void;
 }) {
     const [categoryFilter, setCategoryFilter] =
@@ -38,31 +45,61 @@ export function NotificationsSurface({
     const [searchQuery, setSearchQuery] = useState('');
     const [markingAllAsRead, setMarkingAllAsRead] = useState(false);
     const [processingId, setProcessingId] = useState<string | null>(null);
+    const [olderNotifications, setOlderNotifications] = useState<
+        NotificationViewModel[]
+    >([]);
+    const [loadingOlder, setLoadingOlder] = useState(false);
+    const [loadOlderError, setLoadOlderError] = useState<string | null>(null);
 
     const isUnread = (n: NotificationViewModel) =>
         n.status !== 'read' && !n.read_at;
 
+    const allNotifications = useMemo(() => {
+        const seen = new Set<string>();
+
+        return [...notifications, ...olderNotifications].filter((item) => {
+            if (seen.has(item.id)) {
+                return false;
+            }
+
+            seen.add(item.id);
+
+            return true;
+        });
+    }, [notifications, olderNotifications]);
+
+    const totalCount = total ?? allNotifications.length;
+    const moreAvailable =
+        total === undefined ? hasMore : totalCount > allNotifications.length;
+    const nextPage = Math.floor(allNotifications.length / 25) + 1;
+
     const stats = useMemo(() => {
-        const total = notifications.length;
-        const unread = notifications.filter(isUnread).length;
-        const dispatch = notifications.filter(
+        const unread = unreadCount ?? allNotifications.filter(isUnread).length;
+        const dispatch = allNotifications.filter(
             (n) => categorizeNotification(n) === 'dispatch',
         ).length;
-        const safety = notifications.filter(
+        const safety = allNotifications.filter(
             (n) => categorizeNotification(n) === 'safety',
         ).length;
-        const fuel = notifications.filter(
+        const fuel = allNotifications.filter(
             (n) => categorizeNotification(n) === 'fuel',
         ).length;
-        const system = notifications.filter(
+        const system = allNotifications.filter(
             (n) => categorizeNotification(n) === 'system',
         ).length;
 
-        return { total, unread, dispatch, safety, fuel, system };
-    }, [notifications]);
+        return {
+            total: totalCount,
+            unread,
+            dispatch,
+            safety,
+            fuel,
+            system,
+        };
+    }, [allNotifications, totalCount, unreadCount]);
 
     const filteredNotifications = useMemo(() => {
-        return notifications.filter((n) => {
+        return allNotifications.filter((n) => {
             if (readFilter === 'unread' && !isUnread(n)) {
                 return false;
             }
@@ -91,60 +128,147 @@ export function NotificationsSurface({
 
             return true;
         });
-    }, [notifications, categoryFilter, readFilter, searchQuery]);
+    }, [allNotifications, categoryFilter, readFilter, searchQuery]);
 
-    const markAsRead = (id: string) => {
+    const loadOlderNotifications = async () => {
+        if (!moreAvailable || loadingOlder) {
+            return;
+        }
+
+        setLoadingOlder(true);
+        setLoadOlderError(null);
+
+        try {
+            const response = await fetch(
+                `/operations/notifications?page=${nextPage}&per_page=25`,
+                {
+                    credentials: 'same-origin',
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                },
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    'The notification history could not be loaded.',
+                );
+            }
+
+            const payload = (await response.json()) as {
+                data: NotificationViewModel[];
+                next_page_url: string | null;
+            };
+            const currentIds = new Set(allNotifications.map((item) => item.id));
+            const addedNotifications = payload.data.filter(
+                (item) => !currentIds.has(item.id),
+            );
+
+            setOlderNotifications((current) => [
+                ...current,
+                ...addedNotifications,
+            ]);
+        } catch {
+            setLoadOlderError(
+                'Notification history could not be loaded. Try again.',
+            );
+        } finally {
+            setLoadingOlder(false);
+        }
+    };
+
+    const markAsRead = (id: string, afterFinish?: () => void) => {
+        if (processingId !== null || markingAllAsRead) {
+            return;
+        }
+
+        let requestSucceeded = false;
         setProcessingId(id);
         router.post(
             `/operations/notifications/${id}/read`,
             {},
             {
                 preserveScroll: true,
-                onFinish: () => setProcessingId(null),
+                preserveState: true,
+                onSuccess: () => {
+                    requestSucceeded = true;
+                    const readAt = new Date().toISOString();
+                    setOlderNotifications((current) =>
+                        current.map((item) =>
+                            item.id === id
+                                ? { ...item, status: 'read', read_at: readAt }
+                                : item,
+                        ),
+                    );
+                },
+                onFinish: () => {
+                    setProcessingId(null);
+
+                    if (requestSucceeded) {
+                        afterFinish?.();
+                    }
+                },
             },
         );
     };
 
     const markAllAsRead = () => {
-        const unreadItems = notifications.filter(isUnread);
-
-        if (unreadItems.length === 0) {
+        if (stats.unread === 0) {
             return;
         }
 
         setMarkingAllAsRead(true);
-        // Mark each unread notification or use batch if available
-        Promise.all(
-            unreadItems.map((item) =>
-                router.post(
-                    `/operations/notifications/${item.id}/read`,
-                    {},
-                    { preserveScroll: true },
-                ),
-            ),
-        ).finally(() => {
-            setMarkingAllAsRead(false);
-        });
+        let requestSucceeded = false;
+        router.post(
+            '/operations/notifications/read-all',
+            {},
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onSuccess: () => {
+                    requestSucceeded = true;
+                    const readAt = new Date().toISOString();
+                    setOlderNotifications((current) =>
+                        current.map((item) => ({
+                            ...item,
+                            status: 'read',
+                            read_at: item.read_at ?? readAt,
+                        })),
+                    );
+                },
+                onFinish: () => {
+                    setMarkingAllAsRead(false);
+
+                    if (!requestSucceeded) {
+                        setLoadOlderError(
+                            'Notifications could not be marked as read. Try again.',
+                        );
+                    }
+                },
+            },
+        );
     };
 
     const handleNotificationClick = (n: NotificationViewModel) => {
-        if (isUnread(n)) {
-            markAsRead(n.id);
-        }
-
-        if (!onNavigate) {
+        if (processingId !== null || markingAllAsRead) {
             return;
         }
 
-        const category = categorizeNotification(n);
+        const destination = notificationDestination(n);
+        const navigate = () => {
+            if (destination) {
+                onNavigate?.(destination);
+            }
+        };
 
-        if (n.dispatch_job || category === 'dispatch') {
-            onNavigate('dispatch');
-        } else if (category === 'fuel') {
-            onNavigate('fuel');
-        } else if (category === 'safety') {
-            onNavigate('sos');
+        if (isUnread(n)) {
+            markAsRead(n.id, navigate);
+
+            return;
         }
+
+        navigate();
     };
 
     return (
@@ -238,7 +362,7 @@ export function NotificationsSurface({
                                         className={cn(
                                             'inline-flex min-h-11 min-w-11 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
                                             categoryFilter === cat.id
-                                                ? 'bg-brand-strong text-white dark:text-brand-contrast shadow-sm'
+                                                ? 'bg-brand-strong text-white shadow-sm dark:text-brand-contrast'
                                                 : 'bg-surface-subtle text-ink-soft hover:bg-surface-subtle/80 hover:text-ink',
                                         )}
                                     >
@@ -291,7 +415,10 @@ export function NotificationsSurface({
                                         size="sm"
                                         variant="secondary"
                                         onClick={markAllAsRead}
-                                        disabled={markingAllAsRead}
+                                        disabled={
+                                            markingAllAsRead ||
+                                            processingId !== null
+                                        }
                                     >
                                         <CheckCheck className="mr-1.5 h-3.5 w-3.5 text-success-strong" />
                                         {markingAllAsRead
@@ -325,7 +452,7 @@ export function NotificationsSurface({
                     </Panel>
 
                     {/* Notifications List */}
-                    {notifications.length === 0 ? (
+                    {allNotifications.length === 0 ? (
                         <Panel>
                             <EmptyState
                                 icon={Bell}
@@ -375,29 +502,21 @@ export function NotificationsSurface({
                                                 </span>
 
                                                 <div className="min-w-0 flex-1">
-                                                    <div
-                                                        role="button"
-                                                        tabIndex={0}
+                                                    <button
+                                                        type="button"
+                                                        disabled={
+                                                            processingId !==
+                                                                null ||
+                                                            markingAllAsRead
+                                                        }
                                                         onClick={() =>
                                                             handleNotificationClick(
                                                                 n,
                                                             )
                                                         }
-                                                        onKeyDown={(e) => {
-                                                            if (
-                                                                e.key ===
-                                                                    'Enter' ||
-                                                                e.key === ' '
-                                                            ) {
-                                                                e.preventDefault();
-                                                                handleNotificationClick(
-                                                                    n,
-                                                                );
-                                                            }
-                                                        }}
-                                                        className="cursor-pointer rounded focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none"
+                                                        className="block w-full cursor-pointer rounded text-left focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none disabled:cursor-wait"
                                                     >
-                                                        <div className="flex flex-wrap items-center gap-2">
+                                                        <span className="flex flex-wrap items-center gap-2">
                                                             <span className="font-semibold text-ink group-hover:text-brand-strong">
                                                                 {
                                                                     presentation.title
@@ -424,14 +543,14 @@ export function NotificationsSurface({
                                                             {unread && (
                                                                 <span className="h-2 w-2 rounded-full bg-brand-strong" />
                                                             )}
-                                                        </div>
+                                                        </span>
 
-                                                        <p className="mt-1 text-sm leading-relaxed text-ink">
+                                                        <span className="mt-1 block text-sm leading-relaxed text-ink">
                                                             {
                                                                 presentation.message
                                                             }
-                                                        </p>
-                                                    </div>
+                                                        </span>
+                                                    </button>
 
                                                     {n.created_at && (
                                                         <p
@@ -456,7 +575,8 @@ export function NotificationsSurface({
                                                         markAsRead(n.id)
                                                     }
                                                     disabled={
-                                                        processingId === n.id
+                                                        processingId !== null ||
+                                                        markingAllAsRead
                                                     }
                                                 >
                                                     <CheckCircle2 className="mr-1.5 h-3.5 w-3.5 text-success-strong" />
@@ -470,6 +590,27 @@ export function NotificationsSurface({
                                 })}
                             </ul>
                         </Panel>
+                    )}
+
+                    {loadOlderError && (
+                        <p role="alert" className="text-sm text-danger">
+                            {loadOlderError}
+                        </p>
+                    )}
+
+                    {moreAvailable && (
+                        <div className="flex justify-center">
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                onClick={() => void loadOlderNotifications()}
+                                disabled={loadingOlder}
+                            >
+                                {loadingOlder
+                                    ? 'Loading older notifications…'
+                                    : 'Load older notifications'}
+                            </Button>
+                        </div>
                     )}
                 </div>
             </div>

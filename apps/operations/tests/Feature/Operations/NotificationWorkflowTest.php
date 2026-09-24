@@ -88,3 +88,49 @@ it('allows recipient to list and mark notification as read while protecting cros
     expect($notifA->status)->toBe('read')
         ->and($notifA->read_at)->not()->toBeNull();
 });
+
+it('marks only the current user notifications as read in one request', function (): void {
+    $userA = createNotifUser(RoleName::OperationsManager);
+    $userB = createNotifUser(RoleName::OperationsManager);
+
+    $notificationA = Notification::query()->create([
+        'type' => 'browser.notification-center.e2e',
+        'notifiable_type' => $userA->getMorphClass(),
+        'notifiable_id' => $userA->id,
+        'status' => 'unread',
+        'data' => ['message' => 'User A notification'],
+    ]);
+    $notificationB = Notification::query()->create([
+        'type' => 'browser.notification-center.e2e',
+        'notifiable_type' => $userA->getMorphClass(),
+        'notifiable_id' => $userA->id,
+        'status' => 'unread',
+        'data' => ['message' => 'Another User A notification'],
+    ]);
+    $otherUserNotification = Notification::query()->create([
+        'type' => 'browser.notification-center.e2e',
+        'notifiable_type' => $userB->getMorphClass(),
+        'notifiable_id' => $userB->id,
+        'status' => 'unread',
+        'data' => ['message' => 'User B notification'],
+    ]);
+
+    $this->actingAs($userA)
+        ->getJson('/operations/notifications?per_page=1')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('total', 2)
+        ->assertJsonPath('has_more', true)
+        ->assertJsonPath('unread_count', 2);
+
+    $this->actingAs($userA)
+        ->postJson('/operations/notifications/read-all')
+        ->assertOk()
+        ->assertJson(['updated' => 2, 'unread_count' => 0]);
+
+    expect($notificationA->fresh()->status)->toBe('read')
+        ->and($notificationA->fresh()->read_at)->not()->toBeNull()
+        ->and($notificationB->fresh()->status)->toBe('read')
+        ->and($otherUserNotification->fresh()->status)->toBe('unread')
+        ->and($otherUserNotification->fresh()->read_at)->toBeNull();
+});

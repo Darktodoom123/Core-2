@@ -58,7 +58,7 @@ final class OperationsWorkspaceController extends Controller
         'fuel' => ['fuelRequests', 'fuelRequests_total', 'fuelRequests_stats', 'fuelRequests_pagination', 'assets', 'assets_total'],
         'approvals' => ['approvals'],
         'reports' => ['jobReports', 'jobReports_total', 'jobReports_stats', 'jobReports_pagination', 'reportExports', 'jobs'],
-        'notifications' => ['notifications'],
+        'notifications' => ['notifications', 'notifications_total', 'notifications_has_more'],
         'archive' => ['archivedJobs'],
         'gpt-recommendations' => ['gptRecommendations', 'gptRecommendationHistory_pagination', 'gptSelectedRecommendation', 'jobs'],
         'users' => ['users', 'auditEvents'],
@@ -140,8 +140,13 @@ final class OperationsWorkspaceController extends Controller
 
         foreach ($this->allSectionProps() as $prop) {
             $resolver = fn (): mixed => $this->resolveSectionProp($prop, $loadSection, $user, $canCreateDispatch, $canViewRentalHandoffs, $canViewSalesHandoffs, $canViewAllAssignments, $assetFilters, $fuelFilters, $reportFilters);
-            $props[$prop] = in_array($prop, self::SECTION_PROPS[$initialSection] ?? [], true)
-                ? ($hasErrors ? $resolver() : Inertia::defer($resolver, 'workspace-'.($initialSection ?? 'none')))
+            $belongsToInitialSection = in_array($prop, self::SECTION_PROPS[$initialSection] ?? [], true);
+            $isNotificationSectionProp = $initialSection === 'notifications'
+                && in_array($prop, ['notifications', 'notifications_total', 'notifications_has_more'], true);
+            $props[$prop] = $belongsToInitialSection
+                ? ($hasErrors || $isNotificationSectionProp
+                    ? $resolver()
+                    : Inertia::defer($resolver, 'workspace-'.($initialSection ?? 'none')))
                 : Inertia::optional($resolver);
         }
 
@@ -270,7 +275,15 @@ final class OperationsWorkspaceController extends Controller
                     'jobs' => OperationsWorkspaceViewModel::jobs($this->fetchJobs($user, $canViewAllAssignments)),
                 ];
             })(),
-            'notifications' => ['notifications' => OperationsWorkspaceViewModel::notifications($this->fetchNotifications($user))],
+            'notifications' => (function () use ($user): array {
+                $total = $this->countNotifications($user);
+
+                return [
+                    'notifications' => OperationsWorkspaceViewModel::notifications($this->fetchNotifications($user)),
+                    'notifications_total' => $total,
+                    'notifications_has_more' => $total > 100,
+                ];
+            })(),
             'archive' => ['archivedJobs' => OperationsWorkspaceViewModel::archivedJobs($this->fetchArchivedJobs($user))],
             'gpt-recommendations' => (function () use ($user, $canViewAllAssignments): array {
                 [$recommendations, $history, $selected] = $this->fetchGptRecommendationsForGovernance(
@@ -387,6 +400,8 @@ final class OperationsWorkspaceController extends Controller
             ],
             'reportExports' => OperationsWorkspaceViewModel::reportExports($this->fetchReportExports($user)),
             'notifications' => OperationsWorkspaceViewModel::notifications($this->fetchNotifications($user)),
+            'notifications_total' => $this->countNotifications($user),
+            'notifications_has_more' => $this->countNotifications($user) > 100,
             'archivedJobs' => OperationsWorkspaceViewModel::archivedJobs($this->fetchArchivedJobs($user)),
             default => [],
         };
@@ -406,6 +421,10 @@ final class OperationsWorkspaceController extends Controller
 
         if ($requested === 'sos' && ($user->can('sos.view') || $user->can('sos.respond') || count($activeSos) > 0)) {
             return 'sos';
+        }
+
+        if ($requested === 'notifications') {
+            return 'notifications';
         }
 
         if (is_string($requested) && collect($navigation)->contains('id', $requested)) {
@@ -802,9 +821,8 @@ final class OperationsWorkspaceController extends Controller
         $unreadNotifications = Notification::query()
             ->where('notifiable_type', $user->getMorphClass())
             ->where('notifiable_id', $user->id)
-            ->where(function ($query): void {
-                $query->where('status', '!=', 'read')->orWhereNull('read_at');
-            })
+            ->where('status', '!=', 'read')
+            ->whereNull('read_at')
             ->count();
         $blockingAssets = Gate::forUser($user)->allows('viewAny', OperationalAsset::class)
             ? OperationalAsset::query()
@@ -1007,9 +1025,18 @@ final class OperationsWorkspaceController extends Controller
             ->where('notifiable_type', $user->getMorphClass())
             ->where('notifiable_id', $user->id)
             ->with(['dispatchJob:id,reference,title'])
-            ->latest()
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->limit(100)
             ->get();
+    }
+
+    private function countNotifications(User $user): int
+    {
+        return Notification::query()
+            ->where('notifiable_type', $user->getMorphClass())
+            ->where('notifiable_id', $user->id)
+            ->count();
     }
 
     /** @return Collection<int, DispatchJob> */

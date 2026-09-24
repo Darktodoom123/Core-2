@@ -68,6 +68,9 @@ export function LiveWorkspaceSection({
     jobReportsPagination,
     reportExports = [],
     notifications = [],
+    notificationsTotal,
+    notificationsHasMore = false,
+    unreadNotificationCount = 0,
     archivedJobs = [],
     gptRecommendations = [],
     gptRecommendationHistoryPagination,
@@ -95,6 +98,9 @@ export function LiveWorkspaceSection({
     jobReportsPagination?: PaginationMeta;
     reportExports?: ReportExportViewModel[];
     notifications?: NotificationViewModel[];
+    notificationsTotal?: number;
+    notificationsHasMore?: boolean;
+    unreadNotificationCount?: number;
     archivedJobs?: ArchivedJobViewModel[];
     gptRecommendations?: GptRecommendationViewModel[];
     gptRecommendationHistoryPagination?: PaginationMeta;
@@ -162,7 +168,15 @@ export function LiveWorkspaceSection({
             );
 
         case 'notifications':
-            return <NotificationsSurface notifications={notifications} />;
+            return (
+                <NotificationsSurface
+                    notifications={notifications}
+                    total={notificationsTotal}
+                    hasMore={notificationsHasMore}
+                    unreadCount={unreadNotificationCount}
+                    onNavigate={onSectionChange}
+                />
+            );
         case 'archive':
             return (
                 <ArchiveSurface

@@ -94,6 +94,7 @@ export function LiveWorkspaceShell({
     notifications = [],
     onSectionChange,
     onRefresh,
+    onRefreshNotifications,
     onShareLocation,
     children,
 }: PropsWithChildren<{
@@ -111,6 +112,7 @@ export function LiveWorkspaceShell({
     notifications?: NotificationViewModel[];
     onSectionChange: (section: WorkspaceSection) => void;
     onRefresh: () => void;
+    onRefreshNotifications: () => void;
     onShareLocation: () => void;
 }>) {
     const { auth } = usePage().props;
@@ -732,6 +734,7 @@ export function LiveWorkspaceShell({
                             {/* Bell notification button */}
                             <NotificationCenterPopover
                                 notifications={notifications}
+                                onOpen={onRefreshNotifications}
                                 onViewAll={() =>
                                     onSectionChange('notifications')
                                 }
