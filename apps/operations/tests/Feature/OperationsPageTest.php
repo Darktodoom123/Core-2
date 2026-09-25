@@ -123,7 +123,7 @@ it('serves canonical live dispatch view models and capability navigation', funct
             ->where('navigation.3.label', 'Fuel Management')
             ->where('navigation.4.id', 'reports')
             ->where('navigation.4.label', 'Job reports')
-            ->missing('navigation.5')
+            ->where('navigation', fn ($navigation): bool => ! collect($navigation)->contains('id', 'users'))
             ->where('capabilities.create_dispatch', true)
             ->where('capabilities.create_client', true)
             ->where('capabilities.create_service_request', true)
@@ -215,6 +215,37 @@ it('serves operational overview workspace for Operations Manager and System Admi
                 ->has('users')
                 ->has('auditEvents'))
         );
+});
+
+it('exposes the live users workspace only to accounts with user-management permission', function () {
+    $admin = User::factory()->create();
+    $admin->syncRoles([RoleName::SystemAdministrator->value]);
+
+    $this->actingAs($admin)->get('/?view=users')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('initial_section', 'users')
+            ->where('navigation', fn ($navigation): bool => collect($navigation)
+                ->contains(fn (array $item): bool => $item['id'] === 'users'
+                    && $item['label'] === 'Users & access'))
+            ->loadDeferredProps('workspace-users', fn (Assert $section) => $section
+                ->has('users', 1)
+                ->where('users.0.id', $admin->id)));
+
+    $this->actingAs($admin)->get('/?view=audit')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('initial_section', 'audit')
+            ->has('auditEvents', 0));
+
+    $manager = User::factory()->create();
+    $manager->syncRoles([RoleName::OperationsManager->value]);
+
+    $this->actingAs($manager)->get('/?view=users')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('initial_section', 'overview')
+            ->where('navigation', fn ($navigation): bool => ! collect($navigation)->contains('id', 'users')));
 });
 
 it('serves only the latest visible location per asset in the workspace feed', function () {

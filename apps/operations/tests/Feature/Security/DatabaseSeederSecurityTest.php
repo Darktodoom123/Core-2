@@ -99,6 +99,9 @@ it('keeps local developer seeding idempotent and usable', function (): void {
         app(DatabaseSeeder::class)->run();
 
         expect(User::query()->where('email', 'admin@example.com')->count())->toBe(1)
+            ->and(User::query()->role(RoleName::SystemAdministrator->value)->count())->toBe(1)
+            ->and(User::query()->role(RoleName::OperationsManager->value)->count())->toBe(1)
+            ->and(User::query()->role(RoleName::Rigger->value)->exists())->toBeTrue()
             ->and(User::query()->whereIn('email', [
                 'manager@example.com',
                 'operator@example.com',

@@ -24,7 +24,7 @@ import { FleetSurface } from '@/components/workspace/fleet';
 import { FuelSurface } from '@/components/workspace/fuel';
 import { GptRecommendationsSurface } from '@/components/workspace/gpt-workspace-section';
 import { NotificationsSurface } from '@/components/workspace/notifications-workspace-section';
-import { PersonnelWorkspaceSection } from '@/components/workspace/personnel/personnel-workspace-section';
+import { UserManagementWorkspaceSection } from '@/components/workspace/personnel/user-management-workspace-section';
 import { ReportsSurface } from '@/components/workspace/reports-workspace-section';
 import { formatDateTime } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
@@ -196,10 +196,9 @@ export function LiveWorkspaceSection({
             );
         case 'users':
             return (
-                <PersonnelWorkspaceSection
+                <UserManagementWorkspaceSection
                     users={users ?? []}
                     capabilities={capabilities}
-                    auditEvents={auditEvents}
                 />
             );
         case 'audit':

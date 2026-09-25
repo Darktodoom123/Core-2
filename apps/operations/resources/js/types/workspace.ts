@@ -968,6 +968,7 @@ export interface WorkspaceCapabilities {
     view_sos: boolean;
     respond_sos: boolean;
     manage_users?: boolean;
+    view_audit?: boolean;
 }
 
 export interface SosPersonViewModel {

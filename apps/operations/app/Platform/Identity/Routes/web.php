@@ -94,6 +94,7 @@ Route::middleware(['auth', 'active', ValidateActiveSession::class])->group(funct
 
 Route::middleware(['auth', 'active', ValidateActiveSession::class, 'verified', 'throttle:120,1'])->prefix('operations')->group(function (): void {
     Route::get('/users', [UserManagementController::class, 'index']);
+    Route::get('/users/{userId}/sign-in-activity', [UserManagementController::class, 'signInActivity'])->whereNumber('userId');
     Route::post('/users', [UserManagementController::class, 'store']);
     Route::patch('/users/{user}', [UserManagementController::class, 'update']);
     Route::post('/users/{user}/reset-password', [UserManagementController::class, 'resetPassword']);

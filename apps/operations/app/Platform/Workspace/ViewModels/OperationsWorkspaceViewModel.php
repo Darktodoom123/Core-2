@@ -893,6 +893,11 @@ final class OperationsWorkspaceViewModel
                 ],
             ],
             [
+                'id' => 'users',
+                'label' => 'Users & access',
+                'permissions' => [PermissionName::UsersManage],
+            ],
+            [
                 'id' => 'dispatch',
                 'label' => $fieldRole ? "Today's work" : 'Dispatch workspace',
                 'permissions' => [
@@ -1011,6 +1016,7 @@ final class OperationsWorkspaceViewModel
             'view_sos' => $user->can('sos.view'),
             'respond_sos' => $user->can('sos.respond'),
             'manage_users' => $user->can(PermissionName::UsersManage->value),
+            'view_audit' => $user->can(PermissionName::AuditView->value),
         ];
     }
 
