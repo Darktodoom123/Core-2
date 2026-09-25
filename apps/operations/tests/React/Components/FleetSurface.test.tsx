@@ -24,6 +24,7 @@ import type {
 } from '@/types/workspace';
 
 let mockPost = vi.fn();
+let mockPageUrl = '/operations';
 
 vi.mock('@inertiajs/react', () => {
     return {
@@ -33,7 +34,7 @@ vi.mock('@inertiajs/react', () => {
                 flash: {},
                 errors: {},
             },
-            url: '/operations',
+            url: mockPageUrl,
             component: 'Operations',
             version: null,
         }),
@@ -108,16 +109,19 @@ vi.mock('@/components/live-tracking-map', () => ({
     LiveTrackingMap: ({
         locations,
         selectedLocationId,
+        categoryFilter,
         onCollapse,
     }: {
         locations: LocationUpdateViewModel[];
         selectedLocationId?: number | null;
+        categoryFilter?: string | null;
         onCollapse?: () => void;
     }) => (
         <>
             <div
                 data-testid="live-tracking-map"
                 data-selected-location-id={selectedLocationId ?? ''}
+                data-category-filter={categoryFilter ?? 'all'}
             >
                 LiveTrackingMap Mock ({locations?.length ?? 0} markers)
             </div>
@@ -256,6 +260,8 @@ function createLocation(
 describe('FleetSurface & Modular Fleet Components', () => {
     beforeEach(() => {
         mockPost = vi.fn();
+        mockPageUrl = '/operations';
+        window.history.replaceState({}, '', '/operations');
     });
 
     describe('Calm Operate-Mode Interface & Elimination of Bulky KPI Strip', () => {
@@ -299,7 +305,7 @@ describe('FleetSurface & Modular Fleet Components', () => {
             expect(categoryFilterTrigger).toBeInTheDocument();
             fireEvent.click(categoryFilterTrigger);
             const categoryMenu = screen.getByRole('menu', {
-                name: 'Fleet asset category filters',
+                name: 'Fleet asset category and state filters',
             });
             expect(
                 within(categoryMenu).getByRole('menuitemradio', {
@@ -308,7 +314,7 @@ describe('FleetSurface & Modular Fleet Components', () => {
             ).toBeInTheDocument();
             expect(
                 within(categoryMenu).getByRole('menuitemradio', {
-                    name: /cranes \(1\)/i,
+                    name: /mobile cranes \(1\)/i,
                 }),
             ).toBeInTheDocument();
             expect(
@@ -318,12 +324,139 @@ describe('FleetSurface & Modular Fleet Components', () => {
             ).toBeInTheDocument();
             expect(
                 within(categoryMenu).getByRole('menuitemradio', {
-                    name: /ready \(2\)/i,
+                    name: /ready for dispatch \(2\)/i,
                 }),
             ).toBeInTheDocument();
             expect(
                 within(categoryMenu).getByRole('menuitemradio', {
-                    name: /holds \(0\)/i,
+                    name: /holds \/ maintenance \(0\)/i,
+                }),
+            ).toBeInTheDocument();
+        });
+
+        it('hydrates asset filters from the URL and keeps the current filter URL-backed', () => {
+            mockPageUrl =
+                '/operations?asset_category=mobile_cranes&asset_search=XCMG';
+            window.history.replaceState(
+                {},
+                '',
+                '/operations?asset_category=mobile_cranes&asset_search=XCMG',
+            );
+
+            render(
+                <FleetSurface
+                    assets={[createAsset(1, 'MOB-001', 'crane')]}
+                    locations={[]}
+                    capabilities={createCapabilities()}
+                />,
+            );
+
+            expect(
+                screen.getByRole('button', {
+                    name: /filter assets: mobile cranes/i,
+                }),
+            ).toBeInTheDocument();
+            expect(
+                screen.getByPlaceholderText(/search code, name, model/i),
+            ).toHaveValue('XCMG');
+
+            const searchInput = screen.getByPlaceholderText(
+                /search code, name, model/i,
+            );
+            fireEvent.change(searchInput, { target: { value: 'LTM' } });
+            expect(
+                new URL(window.location.href).searchParams.get('asset_search'),
+            ).toBe('LTM');
+
+            fireEvent.click(
+                screen.getByRole('button', {
+                    name: /filter assets: mobile cranes/i,
+                }),
+            );
+            fireEvent.click(
+                screen.getByRole('menuitemradio', {
+                    name: /all assets \(1\)/i,
+                }),
+            );
+            expect(
+                new URL(window.location.href).searchParams.get(
+                    'asset_category',
+                ),
+            ).toBeNull();
+        });
+
+        it('passes the selected asset category through to the synchronized Fleet map', () => {
+            render(
+                <FleetSurface
+                    assets={[
+                        createAsset(1, 'TC-001', 'crane'),
+                        createAsset(2, 'MC-002', 'crane'),
+                    ]}
+                    locations={[]}
+                    capabilities={createCapabilities()}
+                />,
+            );
+
+            fireEvent.click(
+                screen.getByRole('button', {
+                    name: /filter assets: all assets/i,
+                }),
+            );
+            fireEvent.click(
+                screen.getByRole('menuitemradio', {
+                    name: /mobile cranes/i,
+                }),
+            );
+
+            expect(screen.getByTestId('live-tracking-map')).toHaveAttribute(
+                'data-category-filter',
+                'mobile_cranes',
+            );
+        });
+
+        it('distinguishes tower cranes, mobile cranes, and heavy equipment', () => {
+            const assets = [
+                createAsset(1, 'TWR-001', 'tower_crane', 'available', {
+                    subtype: 'Luffing Tower Crane',
+                }),
+                createAsset(2, 'MOB-001', 'crane', 'available', {
+                    subtype: 'Truck Crane',
+                }),
+                createAsset(3, 'HEQ-001', 'equipment', 'available', {
+                    subtype: 'Wheel Loader',
+                }),
+            ];
+
+            render(
+                <FleetSurface
+                    assets={assets}
+                    locations={[]}
+                    capabilities={createCapabilities()}
+                />,
+            );
+
+            fireEvent.click(
+                screen.getByRole('button', {
+                    name: /filter assets: all assets/i,
+                }),
+            );
+
+            const categoryMenu = screen.getByRole('menu', {
+                name: 'Fleet asset category and state filters',
+            });
+            expect(
+                within(categoryMenu).getByRole('menuitemradio', {
+                    name: /tower cranes \(1\)/i,
+                }),
+            ).toBeInTheDocument();
+            expect(
+                within(categoryMenu).getByRole('menuitemradio', {
+                    name: /mobile cranes \(1\)/i,
+                }),
+            ).toBeInTheDocument();
+            expect(
+                within(categoryMenu).getByRole('menuitemradio', {
+                    name: /heavy equipment \(1\)/i,
                 }),
             ).toBeInTheDocument();
         });
@@ -605,6 +738,57 @@ describe('FleetSurface & Modular Fleet Components', () => {
                 />,
             );
             expect(screen.getByText('Speed not recorded')).toBeInTheDocument();
+        });
+
+        it('renders grouped specifications and clickable source references without raw metadata rows', () => {
+            const asset = createAsset(1, 'HEQ-856H', 'equipment', 'available', {
+                subtype: 'Wheel Loader',
+                specifications: {
+                    capacity_note: 'Verify the applicable load chart.',
+                    data_scope: 'manufacturer_specification_reference',
+                    source_url: 'https://www.liugong.com/en/product/856h/',
+                    source_reviewed_on: '2026-09-24',
+                    alibaton_reference_url: 'https://alibaton.com.ph/products/',
+                    availability_note: 'Reference row only.',
+                    capacity_type: 'rated_load',
+                    standard_bucket_capacity_m3: 3.5,
+                    bucket_capacity_range_m3: '2.7-5.6',
+                },
+            });
+
+            render(
+                <FleetDetailPane
+                    asset={asset}
+                    capabilities={createCapabilities()}
+                />,
+            );
+
+            expect(
+                screen.getByRole('heading', {
+                    name: 'Specifications & references',
+                }),
+            ).toBeInTheDocument();
+            expect(
+                screen.getByText('Capacity & performance'),
+            ).toBeInTheDocument();
+            expect(
+                screen.getByText('Standard bucket capacity'),
+            ).toBeInTheDocument();
+            expect(screen.getByText('3.5 m³')).toBeInTheDocument();
+            expect(screen.queryByText('data scope')).not.toBeInTheDocument();
+            expect(
+                screen.queryByText('https://www.liugong.com/en/product/856h/'),
+            ).not.toBeInTheDocument();
+
+            const sourceLink = screen.getByRole('link', {
+                name: /manufacturer specification/i,
+            });
+            expect(sourceLink).toHaveAttribute(
+                'href',
+                'https://www.liugong.com/en/product/856h/',
+            );
+            expect(sourceLink).toHaveAttribute('target', '_blank');
+            expect(sourceLink).toHaveAttribute('rel', 'noreferrer');
         });
 
         it('renders the Current operation empty states and both inspection summaries', () => {
@@ -1477,7 +1661,7 @@ describe('FleetSurface & Modular Fleet Components', () => {
                 screen.getByText('Status updated to Available.'),
             ).toBeInTheDocument();
             expect(
-                screen.queryByText('Operations overview'),
+                screen.queryByText('Operation Dashboard'),
             ).not.toBeInTheDocument();
         });
 
@@ -1674,8 +1858,7 @@ describe('FleetSurface & Modular Fleet Components', () => {
                     onCategoryFilterChange={vi.fn()}
                     counts={{
                         total: 1,
-                        cranes: 1,
-                        trucks: 0,
+                        mobileCranes: 1,
                         ready: 1,
                         maintenance: 0,
                     }}
@@ -2216,8 +2399,7 @@ describe('FleetSurface & Modular Fleet Components', () => {
                     onCategoryFilterChange={vi.fn()}
                     counts={{
                         total: 1,
-                        cranes: 1,
-                        trucks: 0,
+                        mobileCranes: 1,
                         ready: 1,
                         maintenance: 0,
                     }}

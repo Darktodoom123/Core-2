@@ -34,6 +34,7 @@ it('excludes unlinked location updates (null operational_asset_id) from workspac
         'code' => 'CRN-LIVE-1',
         'name' => 'Heavy Crane 1',
         'kind' => 'crane',
+        'subtype' => 'Tower_Crane',
         'status' => AssetStatus::Available,
         'location' => 'North Yard',
     ]);
@@ -69,6 +70,8 @@ it('excludes unlinked location updates (null operational_asset_id) from workspac
                 ->has('locations', 1)
                 ->where('locations.0.asset.id', $crane->id)
                 ->where('locations.0.asset.code', 'CRN-LIVE-1')
+                ->where('locations.0.asset.subtype', 'Tower_Crane')
+                ->where('locations.0.asset.category', 'tower_cranes')
                 ->where('locations.0.user.name', 'Operator With Asset')
             )
         );

@@ -2,6 +2,12 @@ import { AlertTriangle, ChevronDown, ChevronUp, MapPin } from 'lucide-react';
 import React, { lazy, Suspense, useMemo, useState } from 'react';
 import { Button, Panel } from '@/components/ui';
 import {
+    classifyFleetAsset,
+    filterFleetLocationsByCategory,
+    FLEET_ASSET_CATEGORY_LABELS,
+} from '@/components/workspace/fleet/fleet-asset-classification';
+import type { FleetAssetCategory } from '@/components/workspace/fleet/fleet-asset-classification';
+import {
     getFleetLocationFreshnessLabel,
     hasLocationCoordinates,
 } from '@/components/workspace/fleet/fleet-location-labels';
@@ -64,8 +70,10 @@ export function FleetMapFailureFallback({
     onRetry,
     onCollapse,
     compact,
+    categoryFilter = null,
 }: {
     locations: LocationUpdateViewModel[];
+    categoryFilter?: FleetAssetCategory | null;
     selectedLocationId?: number | null;
     onSelectedLocationChange?: (locationId: number) => void;
     onRetry: () => void;
@@ -73,15 +81,21 @@ export function FleetMapFailureFallback({
     compact: boolean;
 }) {
     const [searchQuery, setSearchQuery] = useState('');
-    const mappedLocationCount = locations.filter(hasLocationCoordinates).length;
+    const categoryLocations = useMemo(
+        () => filterFleetLocationsByCategory(locations, categoryFilter),
+        [categoryFilter, locations],
+    );
+    const mappedLocationCount = categoryLocations.filter(
+        hasLocationCoordinates,
+    ).length;
     const filteredLocations = useMemo(() => {
         const query = searchQuery.trim().toLowerCase();
 
         if (!query) {
-            return locations;
+            return categoryLocations;
         }
 
-        return locations.filter((location) =>
+        return categoryLocations.filter((location) =>
             [
                 location.asset?.code,
                 location.asset?.name,
@@ -93,7 +107,7 @@ export function FleetMapFailureFallback({
                 .toLowerCase()
                 .includes(query),
         );
-    }, [locations, searchQuery]);
+    }, [categoryLocations, searchQuery]);
 
     return (
         <div
@@ -158,7 +172,7 @@ export function FleetMapFailureFallback({
                             {mappedLocationCount} mapped ·{' '}
                             {Math.max(
                                 0,
-                                locations.length - mappedLocationCount,
+                                categoryLocations.length - mappedLocationCount,
                             )}{' '}
                             without coordinates
                         </p>
@@ -189,6 +203,9 @@ export function FleetMapFailureFallback({
                         filteredLocations.map((location) => {
                             const isSelected =
                                 location.id === selectedLocationId;
+                            const category = classifyFleetAsset(
+                                location.asset!,
+                            );
                             const locationLabel =
                                 location.asset?.code ??
                                 location.asset?.name ??
@@ -217,7 +234,14 @@ export function FleetMapFailureFallback({
                                             location.user?.name ??
                                             'Asset details unavailable'}
                                     </span>
+                                    <span className="text-ink-muted mt-0.5 block text-[11px] font-medium">
+                                        {FLEET_ASSET_CATEGORY_LABELS[category]}
+                                    </span>
                                     <span className="mt-1 block text-[11px] text-ink-soft">
+                                        {hasLocationCoordinates(location)
+                                            ? 'Map position available'
+                                            : 'No map position'}
+                                        {' · '}
                                         {getFleetLocationFreshnessLabel(
                                             location,
                                         )}
@@ -236,6 +260,7 @@ export function FleetMapFailureFallback({
 
 export interface FleetMapViewProps {
     locations?: LocationUpdateViewModel[];
+    categoryFilter?: FleetAssetCategory | null;
     activeSosIncidents?: SosIncidentViewModel[];
     onSectionChange?: (section: WorkspaceSection) => void;
     selectedLocationId?: number | null;
@@ -250,6 +275,7 @@ export interface FleetMapViewProps {
 
 export function FleetMapView({
     locations = [],
+    categoryFilter = null,
     activeSosIncidents = [],
     onSectionChange,
     selectedLocationId,
@@ -263,12 +289,16 @@ export function FleetMapView({
 }: FleetMapViewProps) {
     const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
 
-    const mappedLocationCount = locations.filter(
-        (location) => location.latitude !== null && location.longitude !== null,
+    const categoryLocations = filterFleetLocationsByCategory(
+        locations,
+        categoryFilter,
+    );
+    const mappedLocationCount = categoryLocations.filter(
+        hasLocationCoordinates,
     ).length;
     const missingLocationCount = Math.max(
         0,
-        locations.length - mappedLocationCount,
+        categoryLocations.length - mappedLocationCount,
     );
 
     return (
@@ -326,6 +356,7 @@ export function FleetMapView({
                         fallbackRender={({ retry }) => (
                             <FleetMapFailureFallback
                                 locations={locations}
+                                categoryFilter={categoryFilter}
                                 selectedLocationId={selectedLocationId}
                                 onSelectedLocationChange={
                                     onSelectedLocationChange
@@ -357,6 +388,7 @@ export function FleetMapView({
                         >
                             <LiveTrackingMap
                                 locations={locations}
+                                categoryFilter={categoryFilter}
                                 activeSosIncidents={activeSosIncidents}
                                 selectedLocationId={selectedLocationId}
                                 onSelectedLocationChange={

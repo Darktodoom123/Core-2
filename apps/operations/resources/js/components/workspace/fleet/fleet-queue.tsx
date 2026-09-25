@@ -2,6 +2,7 @@ import { ChevronDown, ListFilter, Search, SearchX } from 'lucide-react';
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { Button, EmptyState, Panel } from '@/components/ui';
 import { FleetAssetCard } from '@/components/workspace/fleet/fleet-asset-card';
+import type { FleetAssetCategory } from '@/components/workspace/fleet/fleet-asset-classification';
 import { FleetTriageBar } from '@/components/workspace/fleet/fleet-triage-bar';
 import type {
     FleetTriageCounts,
@@ -14,18 +15,30 @@ import type {
 } from '@/types/workspace';
 
 export type FleetCategoryFilter =
-    'all' | 'cranes' | 'trucks' | 'available' | 'maintenance';
+    | 'all'
+    | FleetAssetCategory
+    | 'available'
+    | 'working'
+    | 'maintenance'
+    | 'inspection';
+
+export interface FleetAssetFilterCounts {
+    total: number;
+    towerCranes?: number;
+    mobileCranes?: number;
+    heavyEquipment?: number;
+    transport?: number;
+    other?: number;
+    ready?: number;
+    working?: number;
+    maintenance?: number;
+    inspection?: number;
+}
 
 interface FleetCategoryFilterMenuProps {
     categoryFilter: FleetCategoryFilter;
     onCategoryFilterChange: (category: FleetCategoryFilter) => void;
-    counts: {
-        total: number;
-        cranes: number;
-        trucks: number;
-        ready: number;
-        maintenance: number;
-    };
+    counts: FleetAssetFilterCounts;
 }
 
 function FleetCategoryFilterMenu({
@@ -38,16 +51,59 @@ function FleetCategoryFilterMenu({
     const triggerRef = useRef<HTMLButtonElement>(null);
     const menuId = `fleet-category-menu-${useId().replace(/:/g, '')}`;
 
-    const options = [
-        { key: 'all' as const, label: 'All assets', count: counts.total },
-        { key: 'cranes' as const, label: 'Cranes', count: counts.cranes },
-        { key: 'trucks' as const, label: 'Transport', count: counts.trucks },
-        { key: 'available' as const, label: 'Ready', count: counts.ready },
+    const typeOptions = [
+        {
+            key: 'tower_cranes' as const,
+            label: 'Tower cranes',
+            count: counts.towerCranes ?? 0,
+        },
+        {
+            key: 'mobile_cranes' as const,
+            label: 'Mobile cranes',
+            count: counts.mobileCranes ?? 0,
+        },
+        {
+            key: 'heavy_equipment' as const,
+            label: 'Heavy equipment',
+            count: counts.heavyEquipment ?? 0,
+        },
+        {
+            key: 'transport' as const,
+            label: 'Transport',
+            count: counts.transport ?? 0,
+        },
+        {
+            key: 'other' as const,
+            label: 'Other assets',
+            count: counts.other ?? 0,
+        },
+    ].filter(({ key, count }) => count > 0 || categoryFilter === key);
+    const stateOptions = [
+        {
+            key: 'available' as const,
+            label: 'Ready for dispatch',
+            count: counts.ready ?? 0,
+        },
+        {
+            key: 'working' as const,
+            label: 'Working / assigned',
+            count: counts.working ?? 0,
+        },
         {
             key: 'maintenance' as const,
-            label: 'Holds',
-            count: counts.maintenance,
+            label: 'Holds / maintenance',
+            count: counts.maintenance ?? 0,
         },
+        {
+            key: 'inspection' as const,
+            label: 'Inspection required',
+            count: counts.inspection ?? 0,
+        },
+    ];
+    const options = [
+        { key: 'all' as const, label: 'All assets', count: counts.total },
+        ...typeOptions,
+        ...stateOptions,
     ];
     const activeOption =
         options.find((option) => option.key === categoryFilter) ?? options[0];
@@ -125,34 +181,90 @@ function FleetCategoryFilterMenu({
                 <div
                     id={menuId}
                     role="menu"
-                    aria-label="Fleet asset category filters"
-                    className="absolute top-full left-0 z-30 mt-2 w-56 rounded-lg border border-line bg-surface p-1.5 shadow-lg"
+                    aria-label="Fleet asset category and state filters"
+                    className="absolute top-full left-0 z-30 mt-2 w-64 rounded-lg border border-line bg-surface p-1.5 shadow-lg"
                 >
                     <p className="px-2 py-1.5 text-[11px] font-semibold text-ink-soft">
                         Filter fleet assets
                     </p>
-                    {options.map(({ key, label, count }) => (
-                        <button
-                            key={key}
-                            type="button"
-                            role="menuitemradio"
-                            aria-checked={categoryFilter === key}
-                            onClick={() => {
-                                handleSelect(key);
-                                triggerRef.current?.focus();
-                            }}
-                            className={cn(
-                                'flex min-h-9 w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
-                                categoryFilter === key
-                                    ? 'bg-brand-soft font-semibold text-brand-strong'
-                                    : 'text-ink hover:bg-surface-subtle',
-                            )}
-                        >
-                            <span className="min-w-0 flex-1">
-                                {label} ({count})
-                            </span>
-                        </button>
-                    ))}
+                    <div className="space-y-0.5">
+                        {options.slice(0, 1).map(({ key, label, count }) => (
+                            <button
+                                key={key}
+                                type="button"
+                                role="menuitemradio"
+                                aria-checked={categoryFilter === key}
+                                onClick={() => {
+                                    handleSelect(key);
+                                    triggerRef.current?.focus();
+                                }}
+                                className={cn(
+                                    'flex min-h-9 w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
+                                    categoryFilter === key
+                                        ? 'bg-brand-soft font-semibold text-brand-strong'
+                                        : 'text-ink hover:bg-surface-subtle',
+                                )}
+                            >
+                                <span className="min-w-0 flex-1">
+                                    {label} ({count})
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+                    <div className="mt-2 border-t border-line pt-2">
+                        <p className="px-2 py-1 text-[10px] font-bold tracking-[0.08em] text-ink-soft uppercase">
+                            Asset type
+                        </p>
+                        {typeOptions.map(({ key, label, count }) => (
+                            <button
+                                key={key}
+                                type="button"
+                                role="menuitemradio"
+                                aria-checked={categoryFilter === key}
+                                onClick={() => {
+                                    handleSelect(key);
+                                    triggerRef.current?.focus();
+                                }}
+                                className={cn(
+                                    'flex min-h-9 w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
+                                    categoryFilter === key
+                                        ? 'bg-brand-soft font-semibold text-brand-strong'
+                                        : 'text-ink hover:bg-surface-subtle',
+                                )}
+                            >
+                                <span className="min-w-0 flex-1">
+                                    {label} ({count})
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+                    <div className="mt-2 border-t border-line pt-2">
+                        <p className="px-2 py-1 text-[10px] font-bold tracking-[0.08em] text-ink-soft uppercase">
+                            Operational state
+                        </p>
+                        {stateOptions.map(({ key, label, count }) => (
+                            <button
+                                key={key}
+                                type="button"
+                                role="menuitemradio"
+                                aria-checked={categoryFilter === key}
+                                onClick={() => {
+                                    handleSelect(key);
+                                    triggerRef.current?.focus();
+                                }}
+                                className={cn(
+                                    'flex min-h-9 w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
+                                    categoryFilter === key
+                                        ? 'bg-brand-soft font-semibold text-brand-strong'
+                                        : 'text-ink hover:bg-surface-subtle',
+                                )}
+                            >
+                                <span className="min-w-0 flex-1">
+                                    {label} ({count})
+                                </span>
+                            </button>
+                        ))}
+                    </div>
                 </div>
             )}
         </div>
@@ -168,13 +280,7 @@ export interface FleetQueueProps {
     onSearchChange: (query: string) => void;
     categoryFilter: FleetCategoryFilter;
     onCategoryFilterChange: (category: FleetCategoryFilter) => void;
-    counts: {
-        total: number;
-        cranes: number;
-        trucks: number;
-        ready: number;
-        maintenance: number;
-    };
+    counts: FleetAssetFilterCounts;
     onClearFilters: () => void;
     triageFilter?: FleetTriageException | null;
     onTriageFilterChange?: (filter: FleetTriageException | null) => void;

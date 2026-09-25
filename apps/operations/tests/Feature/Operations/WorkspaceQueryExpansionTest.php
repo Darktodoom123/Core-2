@@ -66,6 +66,25 @@ it('paginates and searches assets beyond 100 records with stable ordering and wi
     $cranes = $query->paginate($dispatcher, ['category' => 'cranes', 'per_page' => 100]);
     expect($cranes->total())->toBe(50);
 
+    OperationalAsset::query()->create([
+        'code' => 'TWR-CATEGORY-01',
+        'name' => 'Tower category test',
+        'kind' => 'tower_crane',
+        'subtype' => 'Topless Tower Crane',
+        'status' => AssetStatus::Available,
+    ]);
+    OperationalAsset::query()->create([
+        'code' => 'HEQ-CATEGORY-01',
+        'name' => 'Heavy equipment category test',
+        'kind' => 'equipment',
+        'subtype' => 'Wheel Loader',
+        'status' => AssetStatus::Available,
+    ]);
+
+    expect($query->total($dispatcher, ['category' => 'mobile_cranes']))->toBe(50)
+        ->and($query->total($dispatcher, ['category' => 'tower_cranes']))->toBe(1)
+        ->and($query->total($dispatcher, ['category' => 'heavy_equipment']))->toBe(2);
+
     // Escaped wildcard search: searching "AST_SPECIAL" should match "AST_SPECIAL%01" literally
     $wildcardSearch = $query->paginate($dispatcher, ['search' => 'AST_SPECIAL%']);
     expect($wildcardSearch->total())->toBe(1);

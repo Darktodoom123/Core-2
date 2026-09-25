@@ -2,6 +2,7 @@ import { AlertTriangle, Radio, ShieldAlert } from 'lucide-react';
 import React from 'react';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import { DvirStatusBadge } from '@/components/workspace/fleet/dvir-status-badge';
+import { getFleetAssetCategoryLabel } from '@/components/workspace/fleet/fleet-asset-classification';
 import { getFleetDispatchabilityState } from '@/components/workspace/fleet/fleet-dispatchability';
 import {
     getFleetLocationFreshnessLabel,
@@ -40,6 +41,13 @@ export function FleetAssetCard({
         hasLocationCoordinates(location) &&
         location.freshness_status === 'fresh';
     const dispatchabilityState = getFleetDispatchabilityState(asset);
+    const categoryLabel = getFleetAssetCategoryLabel(asset);
+    const modelSummary = [asset.manufacturer, asset.model]
+        .filter(Boolean)
+        .join(' ');
+    const modelIsAlreadyInName = modelSummary
+        ? asset.name.toLowerCase().includes(modelSummary.toLowerCase())
+        : true;
 
     const cardClasses = cn(
         'min-h-[72px] w-full px-3.5 py-2.5 text-left transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
@@ -59,7 +67,10 @@ export function FleetAssetCard({
                     >
                         {asset.code}
                     </span>
-                    {!compact && Boolean(asset.rated_capacity) && (
+                    <span className="rounded border border-line bg-surface-subtle px-1.5 py-0.5 text-[10px] font-semibold text-ink-soft">
+                        {categoryLabel}
+                    </span>
+                    {Boolean(asset.rated_capacity) && (
                         <span className="rounded border border-line bg-surface-subtle px-1.5 py-0.5 font-mono text-[10px] font-semibold text-ink-soft tabular-nums">
                             {asset.rated_capacity}
                             {asset.capacity_unit
@@ -89,6 +100,11 @@ export function FleetAssetCard({
             >
                 {asset.name}
             </p>
+            {!modelIsAlreadyInName && modelSummary && (
+                <p className="mt-0.5 truncate text-[11px] text-ink-soft">
+                    {modelSummary}
+                </p>
+            )}
 
             <div
                 className={cn(
@@ -96,11 +112,9 @@ export function FleetAssetCard({
                     compact ? 'text-xs' : 'text-[11px]',
                 )}
             >
-                {!compact && (
-                    <span className="truncate">
-                        {humanize(asset.subtype || asset.kind)}
-                    </span>
-                )}
+                <span className="truncate">
+                    {humanize(asset.subtype || asset.kind)}
+                </span>
                 {location && hasLocationCoordinates(location) ? (
                     hasFreshLocation ? (
                         <span className="inline-flex items-center gap-1 text-xs font-semibold text-success-strong tabular-nums">

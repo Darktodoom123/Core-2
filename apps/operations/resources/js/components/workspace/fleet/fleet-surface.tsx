@@ -1,6 +1,17 @@
+import { usePage } from '@inertiajs/react';
 import { Truck } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
-import { EmptyState, InlineNotice, PageHeading, Panel } from '@/components/ui';
+import {
+    Button,
+    EmptyState,
+    InlineNotice,
+    PageHeading,
+    Panel,
+} from '@/components/ui';
+import {
+    classifyFleetAsset,
+    isFleetAssetCategory,
+} from '@/components/workspace/fleet/fleet-asset-classification';
 import { FleetDetailPane } from '@/components/workspace/fleet/fleet-detail-pane';
 import { FleetMapView } from '@/components/workspace/fleet/fleet-map-view';
 import type { FleetCategoryFilter } from '@/components/workspace/fleet/fleet-queue';
@@ -27,6 +38,51 @@ export interface FleetSurfaceProps {
     pagination?: PaginationMeta;
 }
 
+const FLEET_FILTER_VALUES: readonly FleetCategoryFilter[] = [
+    'all',
+    'tower_cranes',
+    'mobile_cranes',
+    'heavy_equipment',
+    'transport',
+    'other',
+    'available',
+    'working',
+    'maintenance',
+    'inspection',
+];
+
+interface FleetFilterUrlState {
+    search: string;
+    category: FleetCategoryFilter;
+}
+
+function readFleetFilterFromUrl(url: string | undefined): FleetFilterUrlState {
+    if (!url) {
+        return { search: '', category: 'all' };
+    }
+
+    try {
+        const parsed = new URL(
+            url,
+            typeof window === 'undefined'
+                ? 'http://localhost'
+                : window.location.origin,
+        );
+        const category = parsed.searchParams.get('asset_category');
+
+        return {
+            search: parsed.searchParams.get('asset_search') ?? '',
+            category: FLEET_FILTER_VALUES.includes(
+                category as FleetCategoryFilter,
+            )
+                ? (category as FleetCategoryFilter)
+                : 'all',
+        };
+    } catch {
+        return { search: '', category: 'all' };
+    }
+}
+
 export function FleetSurface({
     assets,
     assetsTotal,
@@ -35,9 +91,15 @@ export function FleetSurface({
     capabilities,
     onSectionChange,
 }: FleetSurfaceProps) {
-    const [searchQuery, setSearchQuery] = useState('');
-    const [categoryFilter, setCategoryFilter] =
-        useState<FleetCategoryFilter>('all');
+    const page = usePage();
+    const initialFleetFilter = readFleetFilterFromUrl(page.url);
+    const [searchQuery, setSearchQuery] = useState(initialFleetFilter.search);
+    const [categoryFilter, setCategoryFilter] = useState<FleetCategoryFilter>(
+        initialFleetFilter.category,
+    );
+    const mapCategoryFilter = isFleetAssetCategory(categoryFilter)
+        ? categoryFilter
+        : null;
 
     const [triageFilter, setTriageFilter] =
         useState<FleetTriageException | null>(null);
@@ -46,46 +108,101 @@ export function FleetSurface({
     );
     const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
 
+    const syncFleetFilterUrl = (
+        nextSearch: string,
+        nextCategory: FleetCategoryFilter,
+    ) => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+
+        const url = new URL(window.location.href);
+
+        if (nextSearch.trim() !== '') {
+            url.searchParams.set('asset_search', nextSearch);
+        } else {
+            url.searchParams.delete('asset_search');
+        }
+
+        if (nextCategory !== 'all') {
+            url.searchParams.set('asset_category', nextCategory);
+        } else {
+            url.searchParams.delete('asset_category');
+        }
+
+        window.history.replaceState(
+            window.history.state,
+            '',
+            `${url.pathname}${url.search}${url.hash}`,
+        );
+    };
+
+    const handleSearchChange = (query: string) => {
+        setSearchQuery(query);
+        syncFleetFilterUrl(query, categoryFilter);
+    };
+
+    const handleCategoryFilterChange = (category: FleetCategoryFilter) => {
+        setCategoryFilter(category);
+        syncFleetFilterUrl(searchQuery, category);
+    };
+
     const counts = useMemo(() => {
         let ready = 0;
         let working = 0;
         let maintenance = 0;
-        let cranes = 0;
-        let trucks = 0;
+        let inspection = 0;
+        let towerCranes = 0;
+        let mobileCranes = 0;
+        let heavyEquipment = 0;
+        let transport = 0;
+        let other = 0;
 
         for (const a of assets) {
             const v = a.status?.value;
-            const k = (a.kind || '').toLowerCase();
-            const sub = (a.subtype || '').toLowerCase();
+            const category = classifyFleetAsset(a);
 
-            if (k.includes('crane') || sub.includes('crane')) {
-                cranes += 1;
-            } else if (
-                k.includes('truck') ||
-                k.includes('vehicle') ||
-                k.includes('trailer') ||
-                sub.includes('truck') ||
-                sub.includes('trailer')
-            ) {
-                trucks += 1;
+            if (category === 'tower_cranes') {
+                towerCranes += 1;
+            } else if (category === 'mobile_cranes') {
+                mobileCranes += 1;
+            } else if (category === 'heavy_equipment') {
+                heavyEquipment += 1;
+            } else if (category === 'transport') {
+                transport += 1;
+            } else {
+                other += 1;
             }
 
             if (a.is_dispatchable === true) {
                 ready += 1;
-            } else if (
+            }
+
+            if (
                 v === 'working' ||
                 v === 'assigned' ||
                 v === 'in_transit' ||
                 v === 'on_site'
             ) {
                 working += 1;
-            } else if (
+            }
+
+            if (
                 v === 'maintenance' ||
                 v === 'out_of_service' ||
                 v === 'under_maintenance' ||
+                v === 'awaiting_parts' ||
                 a.blocking_work_orders_count > 0
             ) {
                 maintenance += 1;
+            }
+
+            if (
+                a.dispatchability?.blockers?.some(
+                    (blocker) => blocker.code === 'inspection',
+                )
+            ) {
+                inspection += 1;
             }
         }
 
@@ -94,8 +211,12 @@ export function FleetSurface({
             ready,
             working,
             maintenance,
-            cranes,
-            trucks,
+            inspection,
+            towerCranes,
+            mobileCranes,
+            heavyEquipment,
+            transport,
+            other,
         };
     }, [assets]);
 
@@ -159,38 +280,39 @@ export function FleetSurface({
         const q = searchQuery.trim().toLowerCase();
 
         return assets.filter((asset) => {
-            const kindLower = (asset.kind || '').toLowerCase();
-            const subtypeLower = (asset.subtype || '').toLowerCase();
-            const isCrane =
-                kindLower.includes('crane') || subtypeLower.includes('crane');
-            const isTruck =
-                kindLower.includes('truck') ||
-                kindLower.includes('vehicle') ||
-                kindLower.includes('trailer') ||
-                subtypeLower.includes('truck') ||
-                subtypeLower.includes('trailer');
-            const isAvailable =
-                (asset.status?.value === 'available' ||
-                    asset.status?.value === 'ready_for_service') &&
-                asset.blocking_work_orders_count === 0;
+            const assetCategory = classifyFleetAsset(asset);
+            const status = asset.status?.value;
+            const isAvailable = asset.is_dispatchable === true;
+            const isWorking = [
+                'working',
+                'assigned',
+                'in_transit',
+                'on_site',
+            ].includes(status);
             const isMaintenance =
-                asset.status?.value === 'maintenance' ||
-                asset.status?.value === 'out_of_service' ||
-                asset.status?.value === 'under_maintenance' ||
+                status === 'maintenance' ||
+                status === 'out_of_service' ||
+                status === 'under_maintenance' ||
+                status === 'awaiting_parts' ||
                 asset.blocking_work_orders_count > 0;
+            const needsInspection = Boolean(
+                asset.dispatchability?.blockers?.some(
+                    (blocker) => blocker.code === 'inspection',
+                ),
+            );
 
             const matchesCategory =
                 categoryFilter === 'all'
                     ? true
-                    : categoryFilter === 'cranes'
-                      ? isCrane
-                      : categoryFilter === 'trucks'
-                        ? isTruck
-                        : categoryFilter === 'available'
-                          ? isAvailable
-                          : categoryFilter === 'maintenance'
-                            ? isMaintenance
-                            : true;
+                    : categoryFilter === 'available'
+                      ? isAvailable
+                      : categoryFilter === 'working'
+                        ? isWorking
+                        : categoryFilter === 'maintenance'
+                          ? isMaintenance
+                          : categoryFilter === 'inspection'
+                            ? needsInspection
+                            : assetCategory === categoryFilter;
 
             const matchesQuery =
                 q === '' ||
@@ -253,6 +375,13 @@ export function FleetSurface({
                 : null,
         [locations, selectedAsset],
     );
+    const selectionOutsideFilters = Boolean(
+        selectedAsset &&
+        !filteredAssets.some((asset) => asset.id === selectedAsset.id),
+    );
+    const selectedAssetUnavailable =
+        selectedAssetId !== null &&
+        !assets.some((asset) => asset.id === selectedAssetId);
 
     const handleSelectAsset = (assetId: number) => {
         setSelectedAssetId(assetId);
@@ -280,18 +409,20 @@ export function FleetSurface({
         setSearchQuery('');
         setCategoryFilter('all');
         setTriageFilter(null);
+        syncFleetFilterUrl('', 'all');
     };
 
     return (
         <div>
             <PageHeading
                 title="Fleet Management"
-                description="Core 3 assets, GPS location updates and freshness, readiness status, specifications, safety inspections, and maintenance work orders."
+                description="Asset types, GPS freshness, dispatch readiness, specifications, inspections, and maintenance work orders."
             />
             <div className="space-y-6 p-4 md:p-6">
                 {/* Live Fleet GIS Map prominently positioned on top */}
                 <FleetMapView
                     locations={locations}
+                    categoryFilter={mapCategoryFilter}
                     activeSosIncidents={activeSosIncidents}
                     onSectionChange={onSectionChange}
                     selectedLocationId={selectedAssetLocation?.id ?? null}
@@ -339,9 +470,11 @@ export function FleetSurface({
                                 onSelectAsset={handleSelectAsset}
                                 locations={locations}
                                 searchQuery={searchQuery}
-                                onSearchChange={setSearchQuery}
+                                onSearchChange={handleSearchChange}
                                 categoryFilter={categoryFilter}
-                                onCategoryFilterChange={setCategoryFilter}
+                                onCategoryFilterChange={
+                                    handleCategoryFilterChange
+                                }
                                 counts={counts}
                                 onClearFilters={handleClearFilters}
                                 triageFilter={triageFilter}
@@ -358,23 +491,53 @@ export function FleetSurface({
                             )}
                         >
                             {selectedAsset ? (
-                                <FleetDetailPane
-                                    key={selectedAsset.id}
-                                    asset={selectedAsset}
-                                    assetLocation={selectedAssetLocation}
-                                    activeSosIncidents={activeSosIncidents}
-                                    capabilities={capabilities}
-                                    onViewFullTracking={handleViewFullTracking}
-                                    onBackToList={() =>
-                                        setIsMobileDetailOpen(false)
-                                    }
-                                />
+                                <div className="space-y-3">
+                                    {selectionOutsideFilters && (
+                                        <InlineNotice
+                                            tone="info"
+                                            title="Selected asset is outside the filtered list"
+                                            action={
+                                                <Button
+                                                    size="sm"
+                                                    variant="secondary"
+                                                    onClick={handleClearFilters}
+                                                >
+                                                    Show selected asset
+                                                </Button>
+                                            }
+                                        >
+                                            Clear the search and filters to see
+                                            it in the fleet list.
+                                        </InlineNotice>
+                                    )}
+                                    <FleetDetailPane
+                                        key={selectedAsset.id}
+                                        asset={selectedAsset}
+                                        assetLocation={selectedAssetLocation}
+                                        activeSosIncidents={activeSosIncidents}
+                                        capabilities={capabilities}
+                                        onViewFullTracking={
+                                            handleViewFullTracking
+                                        }
+                                        onBackToList={() =>
+                                            setIsMobileDetailOpen(false)
+                                        }
+                                    />
+                                </div>
+                            ) : selectedAssetUnavailable ? (
+                                <Panel>
+                                    <EmptyState
+                                        icon={Truck}
+                                        title="Selected asset is no longer available"
+                                        message="It may have been removed or your access may have changed. Select another asset from the fleet list."
+                                    />
+                                </Panel>
                             ) : (
                                 <Panel>
                                     <EmptyState
                                         icon={Truck}
                                         title="Select an asset"
-                                        message="Choose a crane or transport unit to review its specifications, readiness, and maintenance records."
+                                        message="Choose an asset to review its type, specifications, dispatch readiness, and maintenance records."
                                     />
                                 </Panel>
                             )}

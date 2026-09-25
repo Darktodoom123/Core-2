@@ -5,6 +5,7 @@ import {
     CheckCircle2,
     ClipboardCheck,
     Clock3,
+    ExternalLink,
     FileText,
     Gauge,
     MapPin,
@@ -18,6 +19,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Button, Panel } from '@/components/ui';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import { DvirWalkaroundModal } from '@/components/workspace/fleet/dvir-walkaround-modal';
+import { getFleetAssetCategoryLabel } from '@/components/workspace/fleet/fleet-asset-classification';
 import { getFleetDispatchabilityState } from '@/components/workspace/fleet/fleet-dispatchability';
 import { FleetDocumentsSection } from '@/components/workspace/fleet/fleet-documents-section';
 import { FleetInspectionsSection } from '@/components/workspace/fleet/fleet-inspections-section';
@@ -27,6 +29,7 @@ import {
 } from '@/components/workspace/fleet/fleet-location-labels';
 import { FleetMaintenanceSection } from '@/components/workspace/fleet/fleet-maintenance-section';
 import { FleetQuickActionToolbar } from '@/components/workspace/fleet/fleet-quick-action-toolbar';
+import { presentFleetSpecifications } from '@/components/workspace/fleet/fleet-specifications';
 import { FleetStatusForm } from '@/components/workspace/fleet/fleet-status-form';
 import { HosDutyBadge } from '@/components/workspace/fleet/hos-duty-badge';
 import { SafetyLockoutBanner } from '@/components/workspace/fleet/safety-lockout-banner';
@@ -123,6 +126,10 @@ export function FleetDetailPane({
         hasLocationCoordinates(assetLocation) &&
         assetLocation.freshness_status === 'fresh';
     const dispatchabilityState = getFleetDispatchabilityState(asset);
+    const assetCategoryLabel = getFleetAssetCategoryLabel(asset);
+    const specificationPresentation = presentFleetSpecifications(
+        asset.specifications,
+    );
     const inspectionCount = asset.inspections_count ?? null;
     const dvirInspectionCount = asset.dvir_inspections_count ?? null;
     const totalInspectionsCount =
@@ -305,7 +312,7 @@ export function FleetDetailPane({
                     </h2>
                     <div className="mt-1 space-y-1.5 text-sm">
                         <p className="text-ink-soft">
-                            {humanize(asset.kind)}{' '}
+                            {assetCategoryLabel}{' '}
                             {asset.subtype ? `· ${asset.subtype}` : ''}
                         </p>
                         {assetLocation &&
@@ -1122,12 +1129,23 @@ export function FleetDetailPane({
                                 Asset profile
                             </h3>
                             <p className="mt-1 text-sm leading-5 text-ink-soft">
-                                Registered identity, capacity, and current
-                                readings.
+                                Registered identity, asset type, capacity, and
+                                current readings.
                             </p>
                         </div>
 
                         <dl className="grid gap-x-6 sm:grid-cols-2 md:grid-cols-3">
+                            <div className="border-b border-line py-4">
+                                <dt className="text-xs font-semibold text-ink-soft">
+                                    Asset type
+                                </dt>
+                                <dd className="mt-1 text-base font-semibold text-ink">
+                                    {assetCategoryLabel}
+                                </dd>
+                                <p className="mt-1 text-xs text-ink-soft">
+                                    {asset.subtype ?? 'Subtype not recorded'}
+                                </p>
+                            </div>
                             <div className="border-b border-line py-4">
                                 <dt className="text-xs font-semibold text-ink-soft">
                                     Registration number
@@ -1147,11 +1165,11 @@ export function FleetDetailPane({
                             </div>
                             <div className="border-b border-line py-4">
                                 <dt className="text-xs font-semibold text-ink-soft">
-                                    Rated capacity
+                                    Rated capacity / bucket
                                 </dt>
                                 <dd className="mt-1 text-base font-semibold text-ink tabular-nums">
                                     {asset.rated_capacity
-                                        ? `${asset.rated_capacity}${asset.capacity_unit ? ` ${asset.capacity_unit}` : ''}`
+                                        ? `${asset.rated_capacity}${asset.capacity_unit ? ` ${asset.capacity_unit.replace('m3', 'm³')}` : ''}`
                                         : 'Not recorded'}
                                 </dd>
                             </div>
@@ -1194,34 +1212,108 @@ export function FleetDetailPane({
                         </dl>
                     </section>
 
-                    {Object.keys(asset.specifications ?? {}).length > 0 && (
-                        <section className="space-y-3 border-t border-line pt-5">
+                    {(specificationPresentation.groups.length > 0 ||
+                        specificationPresentation.sources.length > 0 ||
+                        specificationPresentation.notes.length > 0) && (
+                        <section className="space-y-5 border-t border-line pt-5">
                             <div>
                                 <h3 className="text-base font-semibold text-ink">
-                                    Equipment specifications
+                                    Specifications &amp; references
                                 </h3>
                                 <p className="mt-1 text-sm leading-5 text-ink-soft">
-                                    Recorded configuration details for this
-                                    asset.
+                                    Operator-facing values are grouped below;
+                                    source and availability notes are kept in
+                                    the reference panel.
                                 </p>
                             </div>
-                            <dl className="grid gap-x-6 sm:grid-cols-2">
-                                {Object.entries(asset.specifications).map(
-                                    ([key, val]) => (
-                                        <div
-                                            key={key}
-                                            className="flex min-h-12 items-center justify-between gap-4 border-b border-line py-3"
-                                        >
-                                            <dt className="text-sm font-medium text-ink">
-                                                {humanize(key)}
-                                            </dt>
-                                            <dd className="text-right text-sm text-ink-soft">
-                                                {String(val)}
-                                            </dd>
-                                        </div>
-                                    ),
-                                )}
-                            </dl>
+
+                            {specificationPresentation.groups.length > 0 && (
+                                <div className="space-y-5">
+                                    {specificationPresentation.groups.map(
+                                        (group) => (
+                                            <div key={group.key}>
+                                                <h4 className="text-sm font-semibold text-ink">
+                                                    {group.label}
+                                                </h4>
+                                                <dl className="mt-2 grid gap-x-6 sm:grid-cols-2">
+                                                    {group.items.map((item) => (
+                                                        <div
+                                                            key={item.key}
+                                                            className="flex min-h-12 items-center justify-between gap-4 border-b border-line py-3"
+                                                        >
+                                                            <dt className="text-sm font-medium text-ink">
+                                                                {item.label}
+                                                            </dt>
+                                                            <dd className="max-w-[60%] text-right text-sm font-medium text-ink-soft tabular-nums">
+                                                                {item.value}
+                                                            </dd>
+                                                        </div>
+                                                    ))}
+                                                </dl>
+                                            </div>
+                                        ),
+                                    )}
+                                </div>
+                            )}
+
+                            {specificationPresentation.notes.length > 0 && (
+                                <div className="rounded-lg border border-warning/30 bg-warning-soft/50 p-4">
+                                    <h4 className="text-sm font-semibold text-ink">
+                                        Reference notes
+                                    </h4>
+                                    <ul className="mt-2 space-y-1.5 text-xs leading-5 text-ink-soft">
+                                        {specificationPresentation.notes.map(
+                                            (note) => (
+                                                <li key={note}>{note}</li>
+                                            ),
+                                        )}
+                                    </ul>
+                                </div>
+                            )}
+
+                            {specificationPresentation.sources.length > 0 && (
+                                <div className="border-t border-line pt-4">
+                                    <h4 className="text-sm font-semibold text-ink">
+                                        Source references
+                                    </h4>
+                                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                                        {specificationPresentation.sources.map(
+                                            (source) => (
+                                                <a
+                                                    key={source.url}
+                                                    href={source.url}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="group flex min-w-0 items-start justify-between gap-3 rounded-lg border border-line bg-surface-subtle/50 px-3 py-2.5 text-sm transition-colors hover:border-brand-strong/50 hover:bg-brand-soft/40 focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
+                                                >
+                                                    <span className="min-w-0">
+                                                        <span className="block truncate font-semibold text-ink">
+                                                            {source.label}
+                                                        </span>
+                                                        <span className="mt-0.5 block text-xs text-ink-soft">
+                                                            {source.reviewedOn
+                                                                ? `Reviewed ${source.reviewedOn}`
+                                                                : 'Open reference'}
+                                                        </span>
+                                                    </span>
+                                                    <ExternalLink
+                                                        className="mt-0.5 h-4 w-4 shrink-0 text-ink-soft transition-colors group-hover:text-brand-strong"
+                                                        aria-hidden="true"
+                                                    />
+                                                </a>
+                                            ),
+                                        )}
+                                    </div>
+                                    <p className="mt-3 text-xs leading-5 text-ink-soft">
+                                        These links are public catalogue or
+                                        manufacturer references. They describe
+                                        the model and published capacity; they
+                                        do not by themselves confirm current
+                                        physical inventory or safe lift
+                                        configuration.
+                                    </p>
+                                </div>
+                            )}
                         </section>
                     )}
                 </div>

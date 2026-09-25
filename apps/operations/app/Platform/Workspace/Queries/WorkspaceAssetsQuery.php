@@ -29,30 +29,7 @@ final class WorkspaceAssetsQuery
         }
 
         $query = OperationalAsset::query()->visibleTo($user);
-
-        $category = $filters['category'] ?? 'all';
-        if ($category === 'cranes') {
-            $query->where(function (Builder $q): void {
-                $q->whereRaw("LOWER(kind) LIKE '%crane%'")
-                    ->orWhereRaw("LOWER(subtype) LIKE '%crane%'");
-            });
-        } elseif ($category === 'trucks') {
-            $query->where(function (Builder $q): void {
-                $q->whereRaw("LOWER(kind) LIKE '%truck%'")
-                    ->orWhereRaw("LOWER(kind) LIKE '%vehicle%'")
-                    ->orWhereRaw("LOWER(kind) LIKE '%trailer%'")
-                    ->orWhereRaw("LOWER(subtype) LIKE '%truck%'")
-                    ->orWhereRaw("LOWER(subtype) LIKE '%trailer%'");
-            });
-        } elseif ($category === 'available') {
-            $query->whereIn('status', ['available', 'ready_for_service'])
-                ->whereDoesntHave('maintenanceWorkOrders', fn ($mwo) => $mwo->where('dispatch_blocking', true)->whereNull('released_at'));
-        } elseif ($category === 'maintenance') {
-            $query->where(function (Builder $q): void {
-                $q->whereIn('status', ['maintenance', 'out_of_service', 'under_maintenance'])
-                    ->orWhereHas('maintenanceWorkOrders', fn ($mwo) => $mwo->where('dispatch_blocking', true)->whereNull('released_at'));
-            });
-        }
+        $this->applyCategoryFilter($query, $filters['category'] ?? 'all');
 
         $search = trim($filters['search'] ?? '');
         if ($search !== '') {
@@ -91,6 +68,7 @@ final class WorkspaceAssetsQuery
                 'dvirInspections.photos',
                 'dvirInspections.checks',
                 'activeBlockingWorkOrder',
+                'latestStatusChange.actor:id,name',
             ])
             ->orderBy('code')
             ->orderBy('id')
@@ -109,30 +87,7 @@ final class WorkspaceAssetsQuery
         }
 
         $query = OperationalAsset::query()->visibleTo($user);
-
-        $category = $filters['category'] ?? 'all';
-        if ($category === 'cranes') {
-            $query->where(function (Builder $q): void {
-                $q->whereRaw("LOWER(kind) LIKE '%crane%'")
-                    ->orWhereRaw("LOWER(subtype) LIKE '%crane%'");
-            });
-        } elseif ($category === 'trucks') {
-            $query->where(function (Builder $q): void {
-                $q->whereRaw("LOWER(kind) LIKE '%truck%'")
-                    ->orWhereRaw("LOWER(kind) LIKE '%vehicle%'")
-                    ->orWhereRaw("LOWER(kind) LIKE '%trailer%'")
-                    ->orWhereRaw("LOWER(subtype) LIKE '%truck%'")
-                    ->orWhereRaw("LOWER(subtype) LIKE '%trailer%'");
-            });
-        } elseif ($category === 'available') {
-            $query->whereIn('status', ['available', 'ready_for_service'])
-                ->whereDoesntHave('maintenanceWorkOrders', fn ($mwo) => $mwo->where('dispatch_blocking', true)->whereNull('released_at'));
-        } elseif ($category === 'maintenance') {
-            $query->where(function (Builder $q): void {
-                $q->whereIn('status', ['maintenance', 'out_of_service', 'under_maintenance'])
-                    ->orWhereHas('maintenanceWorkOrders', fn ($mwo) => $mwo->where('dispatch_blocking', true)->whereNull('released_at'));
-            });
-        }
+        $this->applyCategoryFilter($query, $filters['category'] ?? 'all');
 
         $search = trim($filters['search'] ?? '');
         if ($search !== '') {
@@ -145,5 +100,55 @@ final class WorkspaceAssetsQuery
         }
 
         return $query->toBase()->count();
+    }
+
+    /**
+     * @param  Builder<OperationalAsset>  $query
+     */
+    private function applyCategoryFilter(Builder $query, ?string $category): void
+    {
+        match ($category ?? 'all') {
+            'tower_cranes' => $query->where(function (Builder $q): void {
+                $q->whereRaw("LOWER(kind) LIKE '%tower_crane%'")
+                    ->orWhereRaw("LOWER(subtype) LIKE '%tower crane%'");
+            }),
+            'mobile_cranes' => $query
+                ->where(function (Builder $q): void {
+                    $q->whereRaw("LOWER(kind) LIKE '%crane%'")
+                        ->orWhereRaw("LOWER(subtype) LIKE '%crane%'");
+                })
+                ->where(function (Builder $q): void {
+                    $q->whereNull('kind')
+                        ->orWhereRaw("LOWER(kind) NOT LIKE '%tower_crane%'");
+                })
+                ->where(function (Builder $q): void {
+                    $q->whereNull('subtype')
+                        ->orWhereRaw("LOWER(subtype) NOT LIKE '%tower crane%'");
+                }),
+            'heavy_equipment' => $query->where(function (Builder $q): void {
+                $q->whereRaw("LOWER(kind) LIKE '%equipment%'")
+                    ->orWhereRaw("LOWER(subtype) LIKE '%excavator%'")
+                    ->orWhereRaw("LOWER(subtype) LIKE '%loader%'");
+            }),
+            // Keep the legacy aliases valid for existing deep links and tests.
+            'cranes' => $query->where(function (Builder $q): void {
+                $q->whereRaw("LOWER(kind) LIKE '%crane%'")
+                    ->orWhereRaw("LOWER(subtype) LIKE '%crane%'");
+            }),
+            'transport', 'trucks' => $query->where(function (Builder $q): void {
+                $q->whereRaw("LOWER(kind) LIKE '%truck%'")
+                    ->orWhereRaw("LOWER(kind) LIKE '%vehicle%'")
+                    ->orWhereRaw("LOWER(kind) LIKE '%trailer%'")
+                    ->orWhereRaw("LOWER(subtype) LIKE '%truck%'")
+                    ->orWhereRaw("LOWER(subtype) LIKE '%trailer%'");
+            }),
+            'available' => $query->whereIn('status', ['available', 'ready_for_service'])
+                ->whereDoesntHave('maintenanceWorkOrders', fn ($mwo) => $mwo->where('dispatch_blocking', true)->whereNull('released_at')),
+            'maintenance' => $query->where(function (Builder $q): void {
+                $q->whereIn('status', ['maintenance', 'out_of_service', 'under_maintenance'])
+                    ->orWhereHas('maintenanceWorkOrders', fn ($mwo) => $mwo->where('dispatch_blocking', true)->whereNull('released_at'));
+            }),
+            default => null,
+        };
     }
 }

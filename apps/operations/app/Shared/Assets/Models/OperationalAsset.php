@@ -6,6 +6,7 @@ use App\Modules\Dvir\Models\DvirInspection;
 use App\Modules\Fleet\Models\AssetDocument;
 use App\Modules\HoursOfService\Enums\ShiftStatus;
 use App\Modules\HoursOfService\Models\OperatorShift;
+use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
 use App\Shared\Assets\Enums\AssetStatus;
@@ -14,6 +15,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -106,6 +108,14 @@ class OperationalAsset extends Model
             ->where('dispatch_blocking', true)
             ->whereNull('released_at')
             ->latestOfMany();
+    }
+
+    /** @return MorphOne<AuditEvent, $this> */
+    public function latestStatusChange(): MorphOne
+    {
+        return $this->morphOne(AuditEvent::class, 'subject')
+            ->where('action', 'asset.status_updated')
+            ->latestOfMany('occurred_at');
     }
 
     /**
