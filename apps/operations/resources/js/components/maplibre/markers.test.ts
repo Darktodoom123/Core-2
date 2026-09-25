@@ -1,8 +1,13 @@
 import { strict as assert } from 'node:assert';
 import { afterEach, test } from 'node:test';
-// prettier-ignore
-// @ts-expect-error TS5097: this test is executed directly by Node's strip-types runner.
-import { createAssetMarker, createPopupCard, createWarehouseMarker, getSosMarkerPosition } from './markers.ts';
+import { getFleetAssetCategorySvgMarkup } from '../workspace/fleet/fleet-asset-category-icon-paths.js';
+import {
+    createAssetMarker,
+    createPopupCard,
+    createSosMarker,
+    createWarehouseMarker,
+    getSosMarkerPosition,
+} from './markers';
 
 class FakeElement {
     public readonly children: FakeElement[] = [];
@@ -76,16 +81,10 @@ function createMarker(
 ): FakeElement {
     installFakeDocument();
 
-    return createAssetMarker({
-        kind: 'truck',
-        freshness: 'fresh',
-        isSelected: false,
-        label: 'Worker One, fresh location',
-        sos: {
-            status,
-            label: `SOS incident for Worker One (${status})`,
-            prefersReducedMotion,
-        },
+    return createSosMarker({
+        status,
+        label: `SOS incident for Worker One (${status})`,
+        prefersReducedMotion,
     }) as unknown as FakeElement;
 }
 
@@ -98,13 +97,12 @@ test('renders an unmistakable halo for active, escalated, and acknowledged SOS',
         const indicator = findByClass(marker, 'maplibre-sos-marker__indicator');
 
         assert.ok(halo, `${status} SOS should have a halo`);
+        assert.equal(marker.className, 'maplibre-sos-marker');
         assert.equal(halo?.dataset.sosStatus, status);
         assert.ok(indicator?.innerHTML.includes('SOS'));
         assert.equal(
             marker.attributes.get('aria-label'),
-            'Worker One, fresh location. SOS incident for Worker One (' +
-                status +
-                ')',
+            'SOS incident for Worker One (' + status + ')',
         );
     }
 });
@@ -139,7 +137,7 @@ test('uses a strong static halo when reduced motion is requested', () => {
 test('keeps the halo inside the same marker element that MapLibre repositions', () => {
     const marker = createMarker('acknowledged');
     const halo = findByClass(marker, 'maplibre-sos-marker__halo');
-    const surface = findByClass(marker, 'maplibre-asset-marker__surface');
+    const surface = findByClass(marker, 'maplibre-sos-marker__surface');
 
     assert.ok(halo);
     assert.ok(surface);
@@ -170,6 +168,57 @@ test('renders an accessible fixed warehouse marker', () => {
         findByClass(marker, 'maplibre-warehouse-marker__surface'),
         'Warehouse marker should include a visible facility icon',
     );
+});
+
+test('renders a distinct accessible equipment silhouette for each asset category', () => {
+    const categories = [
+        'tower_cranes',
+        'mobile_cranes',
+        'heavy_equipment',
+        'transport',
+        'other',
+    ] as const;
+    const silhouettes = new Set<string>();
+
+    for (const category of categories) {
+        installFakeDocument();
+        const marker = createAssetMarker({
+            category,
+            freshness: 'fresh',
+            isSelected: false,
+            label: `CR-001, ${category}, fresh location`,
+        }) as unknown as FakeElement;
+        const surface = findByClass(marker, 'maplibre-asset-marker__surface');
+
+        assert.equal(marker.dataset.category, category);
+        assert.match(
+            marker.attributes.get('aria-label') ?? '',
+            new RegExp(category),
+        );
+        assert.ok(surface?.innerHTML.includes('<svg'));
+        assert.equal(
+            surface?.innerHTML,
+            getFleetAssetCategorySvgMarkup(category),
+        );
+        silhouettes.add(surface?.innerHTML ?? '');
+    }
+
+    assert.equal(silhouettes.size, categories.length);
+});
+
+test('keeps freshness and selection as separate marker states', () => {
+    installFakeDocument();
+    const marker = createAssetMarker({
+        category: 'mobile_cranes',
+        freshness: 'delayed',
+        isSelected: true,
+        label: 'MC-01, Mobile cranes, delayed location',
+    }) as unknown as FakeElement;
+
+    assert.equal(marker.dataset.freshness, 'delayed');
+    assert.equal(marker.dataset.selected, 'true');
+    assert.equal(marker.attributes.get('aria-pressed'), 'true');
+    assert.match(marker.attributes.get('aria-label') ?? '', /Mobile cranes/);
 });
 
 test('follows the affected worker when a newer live location replaces the SOS snapshot', () => {

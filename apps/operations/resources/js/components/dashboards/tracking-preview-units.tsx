@@ -2,18 +2,16 @@ import {
     CheckCircle2,
     CircleAlert,
     Clock3,
-    Construction,
     MapPin,
     Siren,
-    Truck,
-    UserRoundCog,
     WifiOff,
-    Wrench,
     X,
 } from 'lucide-react';
 import { useId } from 'react';
 import { formatLocationSource } from '@/components/maplibre/tracking-map-popups';
 import { Button } from '@/components/ui';
+import { FleetAssetCategoryIcon } from '@/components/workspace/fleet/fleet-asset-category-icon';
+import { classifyFleetAsset } from '@/components/workspace/fleet/fleet-asset-classification';
 import { getAssetKind, getAssetKindLabel } from '@/lib/asset-kind';
 import { cn } from '@/lib/utils';
 import { usePreciseLocation } from '@/services/reverse-geocoder';
@@ -401,15 +399,9 @@ export function FreshnessStatus({
 }
 
 function AssetIcon({ location }: { location: LocationUpdateViewModel }) {
-    const kind = getAssetKind(location);
-    const Icon =
-        kind === 'truck'
-            ? Truck
-            : kind === 'equipment'
-              ? Wrench
-              : kind === 'personnel'
-                ? UserRoundCog
-                : Construction;
+    const category = location.asset
+        ? classifyFleetAsset(location.asset)
+        : 'other';
 
-    return <Icon className="size-4" aria-hidden="true" />;
+    return <FleetAssetCategoryIcon category={category} className="size-4" />;
 }

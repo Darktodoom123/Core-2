@@ -229,11 +229,15 @@ test('uses the configured attribution fallback when a style has no metadata', as
 test('keeps the synchronized list available when the style fails', async ({
     page,
 }) => {
+    test.setTimeout(120_000);
     await page.route('https://tiles.stadiamaps.com/styles/**', (route) =>
         route.abort(),
     );
     await openTracking(page);
 
+    await expect(page.getByTestId('live-tracking-map')).toBeVisible({
+        timeout: 60_000,
+    });
     await expect(
         page.getByTestId('live-tracking-map').getByRole('alert'),
     ).toContainText('Map unavailable', { timeout: 20_000 });
@@ -266,12 +270,25 @@ test('keeps the synchronized list available when WebGL is unavailable', async ({
 test('keeps controls usable at a 390px viewport with reduced motion', async ({
     page,
 }) => {
+    test.setTimeout(90_000);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await stubStadiaStyle(page);
     await openTracking(page);
 
     await expectMapReady(page);
+    await page.getByRole('button', { name: 'Map options' }).click();
+    await page.getByRole('menuitem', { name: 'Map key' }).click();
+    const mapKey = page.getByRole('region', { name: 'Map key' });
+    await expect(mapKey).toBeVisible();
+    await expect(mapKey).toContainText('Tower cranes');
+    await expect(mapKey).toContainText('Mobile cranes');
+    await expect(mapKey).toContainText('Heavy equipment');
+    await expect(mapKey).toContainText('Transport');
+    await expect(mapKey).toContainText('Other assets');
+    await expect(mapKey).toContainText('SOS');
+    await expect(mapKey).not.toContainText('Worker');
+    await mapKey.getByRole('button', { name: 'Close' }).click();
     await page.getByRole('button', { name: 'Zoom in' }).focus();
     await expect(page.getByRole('button', { name: 'Zoom in' })).toBeFocused();
     await expect(

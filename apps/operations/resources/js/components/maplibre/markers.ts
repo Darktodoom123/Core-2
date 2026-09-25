@@ -1,9 +1,10 @@
-import type { AssetKind } from '@/lib/asset-kind';
+import type { FleetAssetCategory } from '@/components/workspace/fleet/fleet-asset-classification';
 import type {
     LocationUpdateViewModel,
     SosIncidentStatusValue,
     SosIncidentViewModel,
 } from '@/types/workspace';
+import { getFleetAssetCategorySvgMarkup } from '../workspace/fleet/fleet-asset-category-icon-paths.js';
 
 export type SosMarkerStatus = SosIncidentStatusValue;
 
@@ -50,51 +51,32 @@ export function getSosMarkerPosition(
     return null;
 }
 
-const ASSET_SVG_ICONS: Record<AssetKind, string> = {
-    truck: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>',
-    crane: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="8" rx="1"/><path d="M17 14v7"/><path d="M7 14v7"/><path d="M17 3v3"/><path d="M7 3v3"/><path d="M10 14v7"/><path d="M14 14v7"/></svg>',
-    mobile_crane:
-        '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="8" rx="1"/><path d="M17 14v7"/><path d="M7 14v7"/><path d="M17 3v3"/><path d="M7 3v3"/><path d="M10 14v7"/><path d="M14 14v7"/></svg>',
-    tower_crane:
-        '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16"/><path d="M10 22V3h4v19"/><path d="M10 7h4"/><path d="M10 12h4"/><path d="M10 17h4"/><path d="M2 3h20"/><path d="M20 3v5l-3-2"/><circle cx="6" cy="3" r="1.5"/></svg>',
-    equipment:
-        '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="16" width="13" height="4" rx="2"/><path d="M4 16V10a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v6"/><path d="M6 10h4v3H6z"/><path d="M10 11l4-5 5 4"/><path d="M19 10l2 3h-3.5"/></svg>',
-    personnel:
-        '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
-};
-
 const WAREHOUSE_SVG_ICON =
     '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-6 9 6"/><path d="M5 9v10h14V9"/><path d="M8 19v-6h8v6"/><path d="M8 10h.01M12 10h.01M16 10h.01"/></svg>';
 
 export function createAssetMarker({
-    kind,
+    category,
     freshness,
     isSelected,
     label,
-    sos,
 }: {
-    kind: AssetKind;
+    category: FleetAssetCategory;
     freshness: string;
     isSelected: boolean;
     label: string;
-    sos?: SosMarkerOptions;
 }): HTMLButtonElement {
     const marker = document.createElement('button');
     marker.type = 'button';
     marker.className = 'maplibre-asset-marker';
-    marker.dataset.kind = kind;
+    marker.dataset.category = category;
     marker.dataset.freshness = freshness.toLowerCase();
     marker.dataset.selected = String(isSelected);
-    marker.setAttribute('aria-label', sos ? `${label}. ${sos.label}` : label);
+    marker.setAttribute('aria-label', label);
     marker.setAttribute('aria-pressed', String(isSelected));
-
-    if (sos) {
-        appendSosMarkerTreatment(marker, sos);
-    }
 
     const surface = document.createElement('span');
     surface.className = 'maplibre-asset-marker__surface';
-    surface.innerHTML = ASSET_SVG_ICONS[kind];
+    surface.innerHTML = getFleetAssetCategorySvgMarkup(category);
     marker.appendChild(surface);
 
     return marker;

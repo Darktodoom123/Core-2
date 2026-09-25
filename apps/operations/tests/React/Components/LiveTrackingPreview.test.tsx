@@ -2,6 +2,8 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LiveTrackingPreview } from '@/components/dashboards/live-tracking-preview';
 import type { LiveTrackingPreviewProps } from '@/components/dashboards/live-tracking-preview';
+import { FLEET_ASSET_CATEGORY_ICON_PATHS } from '@/components/workspace/fleet/fleet-asset-category-icon-paths';
+import type { FleetAssetCategory } from '@/components/workspace/fleet/fleet-asset-classification';
 import type {
     LocationUpdateViewModel,
     SosIncidentViewModel,
@@ -233,6 +235,40 @@ describe('field tracking preview', () => {
         expect(
             screen.queryByText(/Feed connected|Feed disconnected/),
         ).not.toBeInTheDocument();
+    });
+
+    it('uses the map-matching equipment silhouette for every asset category', async () => {
+        const iconCases: Array<{
+            category: FleetAssetCategory;
+            kind: string;
+        }> = [
+            { category: 'tower_cranes', kind: 'tower_crane' },
+            { category: 'mobile_cranes', kind: 'crane' },
+            { category: 'heavy_equipment', kind: 'equipment' },
+            { category: 'transport', kind: 'truck' },
+            { category: 'other', kind: 'personnel' },
+        ];
+        const locations = iconCases.map(({ category, kind }, index) => ({
+            ...location(20 + index),
+            asset: {
+                id: 220 + index,
+                code: `ICON-${index}`,
+                name: `${category} test asset`,
+                kind,
+                category,
+            },
+        }));
+
+        await show({ locations });
+
+        for (const [index, { category }] of iconCases.entries()) {
+            const icon = inspect(`ICON-${index}`).querySelector('svg');
+            const paths = Array.from(icon?.querySelectorAll('path') ?? []).map(
+                (path) => path.getAttribute('d'),
+            );
+
+            expect(paths).toEqual(FLEET_ASSET_CATEGORY_ICON_PATHS[category]);
+        }
     });
 
     it('searches case-insensitively by asset ID, equipment name, and personnel name', async () => {

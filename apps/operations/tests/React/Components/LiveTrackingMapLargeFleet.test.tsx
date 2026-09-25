@@ -317,8 +317,10 @@ function createMapHarness(): MapHarness {
 
             return harness.map;
         },
-        project() {
-            return { x: 0, y: 0 };
+        project(position) {
+            const [longitude, latitude] = position as [number, number];
+
+            return { x: longitude * 10_000, y: latitude * 10_000 };
         },
         queryRenderedFeatures() {
             return harness.queryFeature ? [harness.queryFeature] : [];
@@ -461,6 +463,68 @@ function sosMarker(): HTMLButtonElement {
 }
 
 describe('LiveTrackingMap large-fleet behavior', () => {
+    it('keeps an asset without coordinates in the list and the warehouse as a separate facility marker', async () => {
+        const location = {
+            ...makeLocation(1),
+            latitude: null,
+            longitude: null,
+            has_gps_report: false,
+        };
+        mapHarness.current = createMapHarness();
+
+        render(<LiveTrackingMap locations={[location]} />);
+
+        await waitFor(() => {
+            expect(
+                currentSource('tracking-marker-overview').latestData.features,
+            ).toHaveLength(0);
+        });
+
+        expect(screen.getByText('TRK-1')).toBeInTheDocument();
+        expect(screen.getByText('No map position')).toBeInTheDocument();
+        expect(
+            document.querySelector('.maplibre-warehouse-marker'),
+        ).toBeInTheDocument();
+        expect(
+            document.querySelector('.maplibre-asset-marker'),
+        ).not.toBeInTheDocument();
+    });
+
+    it('renders emergency SOS as a distinct overlay beside the asset marker', async () => {
+        const location = makeLocation(1);
+        const incident = makeSosIncident(location);
+        incident.worker = { ...incident.worker, id: 99_999 };
+        incident.asset = null;
+        incident.location = {
+            latitude: 14.8,
+            longitude: 121.2,
+            accuracy_metres: 1,
+            captured_at: null,
+            freshness_status: 'fresh',
+            context: null,
+        };
+        mapHarness.current = createMapHarness();
+
+        render(
+            <LiveTrackingMap
+                locations={[location]}
+                activeSosIncidents={[incident]}
+                showLocationList={false}
+            />,
+        );
+
+        await waitFor(() => expect(sosMarker()).toBeInTheDocument());
+
+        const assetMarker = document.querySelector<HTMLButtonElement>(
+            '.maplibre-asset-marker',
+        );
+        expect(assetMarker).toHaveAccessibleName(
+            'TRK-1, Transport, fresh location',
+        );
+        expect(assetMarker).not.toHaveAttribute('data-sos-status');
+        expect(sosMarker()).not.toHaveClass('maplibre-asset-marker');
+    });
+
     it('publishes and clears selectedCount for a null-accuracy unit in an aggregated overview', async () => {
         const fleet = makeFleet();
         const harness = createMapHarness();
@@ -492,7 +556,7 @@ describe('LiveTrackingMap large-fleet behavior', () => {
         expect(overviewLayer?.paint?.['circle-stroke-color']).toEqual([
             'case',
             ['>', ['coalesce', ['get', 'selectedCount'], 0], 0],
-            '#c98f12',
+            '#806000',
             '#ffffff',
         ]);
         expect(

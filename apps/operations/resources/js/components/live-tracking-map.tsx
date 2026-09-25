@@ -1,9 +1,9 @@
 import {
+    AlertTriangle,
     Check,
     ChevronLeft,
     ChevronRight,
     ChevronUp,
-    Construction,
     Layers,
     LocateFixed,
     MapPin,
@@ -11,9 +11,6 @@ import {
     Maximize2,
     Minimize,
     Search,
-    Truck,
-    UserRoundCog,
-    Wrench,
     ZoomIn,
     ZoomOut,
 } from 'lucide-react';
@@ -32,12 +29,18 @@ import {
 } from 'react';
 import type { MutableRefObject } from 'react';
 import { Button } from '@/components/ui';
+import { FleetAssetCategoryIcon } from '@/components/workspace/fleet/fleet-asset-category-icon';
+import {
+    classifyFleetAsset,
+    filterFleetLocationsByCategory,
+    FLEET_ASSET_CATEGORY_LABELS,
+} from '@/components/workspace/fleet/fleet-asset-classification';
+import type { FleetAssetCategory } from '@/components/workspace/fleet/fleet-asset-classification';
 import {
     getFleetLocationFreshnessDescription,
     getFleetLocationFreshnessLabel,
     hasLocationCoordinates,
 } from '@/components/workspace/fleet/fleet-location-labels';
-import { getAssetKind, getAssetKindLabel } from '@/lib/asset-kind';
 import { cn } from '@/lib/utils';
 import {
     reverseGeocode,
@@ -113,8 +116,8 @@ function PreciseLocationDisplay({
                 {isMapped
                     ? locationName
                     : location.recorded_location
-                      ? `Recorded location: ${location.recorded_location}`
-                      : 'Location unavailable'}
+                      ? `No map position · Recorded location: ${location.recorded_location}`
+                      : 'No map position'}
             </span>
         </span>
     );
@@ -125,6 +128,7 @@ const EMPTY_SOS_INCIDENTS: SosIncidentViewModel[] = [];
 export function LiveTrackingMap({
     locations,
     activeSosIncidents = EMPTY_SOS_INCIDENTS,
+    categoryFilter = null,
     compact = false,
     showLocationList = true,
     selectedLocationId,
@@ -135,6 +139,7 @@ export function LiveTrackingMap({
 }: {
     locations: LocationUpdateViewModel[];
     activeSosIncidents?: SosIncidentViewModel[];
+    categoryFilter?: FleetAssetCategory | null;
     compact?: boolean;
     showLocationList?: boolean;
     selectedLocationId?: number | null;
@@ -238,7 +243,15 @@ export function LiveTrackingMap({
         };
     }, [isFullscreen]);
 
+    const assetLocations = useMemo(
+        () => filterFleetLocationsByCategory(locations, null),
+        [locations],
+    );
     const mappedLocations = useMemo(
+        () => assetLocations.filter(hasLocationCoordinates),
+        [assetLocations],
+    );
+    const sosLocations = useMemo(
         () => locations.filter(hasLocationCoordinates),
         [locations],
     );
@@ -251,38 +264,43 @@ export function LiveTrackingMap({
         }
     }, [mappedLocations]);
     const filteredLocations = useMemo(() => {
+        const categoryLocations = filterFleetLocationsByCategory(
+            locations,
+            categoryFilter,
+        );
+
         if (!searchQuery.trim()) {
-            return locations;
+            return categoryLocations;
         }
 
-        const query = searchQuery.toLowerCase();
+        const query = searchQuery.trim().toLowerCase();
 
-        return locations.filter(
+        return categoryLocations.filter(
             (location) =>
                 location.user.name.toLowerCase().includes(query) ||
                 (location.asset?.code ?? '').toLowerCase().includes(query) ||
                 (location.asset?.name ?? '').toLowerCase().includes(query),
         );
-    }, [locations, searchQuery]);
+    }, [categoryFilter, locations, searchQuery]);
     const filteredMappedLocations = useMemo(
         () => filteredLocations.filter(hasLocationCoordinates),
         [filteredLocations],
     );
     const mapCenter = useMemo(
         () =>
-            mappedLocations.length > 0
-                ? averagePosition(mappedLocations)
-                : averageSosPosition(activeSosIncidents),
-        [activeSosIncidents, mappedLocations],
+            filteredMappedLocations.length > 0
+                ? averagePosition(filteredMappedLocations)
+                : averageSosPosition(activeSosIncidents, sosLocations),
+        [activeSosIncidents, filteredMappedLocations, sosLocations],
     );
     const selectedId =
         selectedLocationId === undefined
-            ? (internalSelectedId ?? mappedLocations[0]?.id ?? null)
+            ? (internalSelectedId ?? filteredMappedLocations[0]?.id ?? null)
             : selectedLocationId;
     const selected =
         (selectedId === null
             ? undefined
-            : locations.find((location) => location.id === selectedId)) ??
+            : assetLocations.find((location) => location.id === selectedId)) ??
         undefined;
 
     const selectLocation = useCallback(
@@ -381,6 +399,7 @@ export function LiveTrackingMap({
                     >
                         <TrackingMapContent
                             locations={filteredMappedLocations}
+                            sosLocations={sosLocations}
                             activeSosIncidents={activeSosIncidents}
                             selected={
                                 selected && hasLocationCoordinates(selected)
@@ -391,6 +410,7 @@ export function LiveTrackingMap({
                         />
                         <MapActionBridge
                             mappedLocations={filteredMappedLocations}
+                            sosLocations={sosLocations}
                             activeSosIncidents={activeSosIncidents}
                             actionsRef={mapActionsRef}
                             onReady={setMapActionsReady}
@@ -399,6 +419,7 @@ export function LiveTrackingMap({
                             compact={compact}
                             activeSosIncidents={activeSosIncidents}
                             mappedLocations={filteredMappedLocations}
+                            sosLocations={sosLocations}
                             mapCenter={mapCenter}
                             styleVariant={styleVariant}
                             onStyleVariantChange={setStyleVariant}
@@ -414,14 +435,28 @@ export function LiveTrackingMap({
                     {filteredMappedLocations.length === 0 &&
                         activeSosIncidents.every(
                             (incident) =>
-                                getSosMarkerPosition(incident) === null,
+                                getSosMarkerPosition(
+                                    incident,
+                                    sosLocations.find(
+                                        (location) =>
+                                            location.user.id ===
+                                            incident.worker.id,
+                                    ),
+                                    incident.asset?.id
+                                        ? sosLocations.find(
+                                              (location) =>
+                                                  location.asset?.id ===
+                                                  incident.asset?.id,
+                                          )
+                                        : undefined,
+                                ) === null,
                         ) && (
                             <div className="pointer-events-none absolute inset-0 z-[2] flex items-center justify-center bg-surface/40 p-6 backdrop-blur-xs">
                                 <div className="rounded-xl border border-line bg-surface/95 px-5 py-4 text-center text-sm text-ink-soft shadow-lg">
                                     {searchQuery.trim()
                                         ? `No assets match “${searchQuery}”.`
-                                        : locations.length === 0
-                                          ? 'No location updates are available. The yard and warehouse reference remains on the map.'
+                                        : filteredLocations.length === 0
+                                          ? 'No assets match this category or search. The yard and warehouse reference remains on the map.'
                                           : 'Coordinates are unavailable for these assets. The yard and warehouse reference remains on the map.'}
                                 </div>
                             </div>
@@ -449,11 +484,12 @@ export function LiveTrackingMap({
                                         Asset locations
                                     </h3>
                                     <p className="text-xs text-ink-soft">
-                                        {mappedLocations.length} mapped ·{' '}
+                                        {filteredMappedLocations.length} mapped
+                                        ·{' '}
                                         {Math.max(
                                             0,
-                                            locations.length -
-                                                mappedLocations.length,
+                                            filteredLocations.length -
+                                                filteredMappedLocations.length,
                                         )}{' '}
                                         without coordinates
                                     </p>
@@ -512,7 +548,9 @@ export function LiveTrackingMap({
                                         hasLocationCoordinates(location);
                                     const isSelected =
                                         location.id === selectedId;
-                                    const kind = getAssetKind(location);
+                                    const category = classifyFleetAsset(
+                                        location.asset!,
+                                    );
                                     const operationalStatus =
                                         location.asset?.status_label ??
                                         location.asset?.status ??
@@ -556,30 +594,10 @@ export function LiveTrackingMap({
                                                     )}
                                                 >
                                                     <span className="flex items-center justify-center">
-                                                        {kind === 'truck' ? (
-                                                            <Truck
-                                                                className="h-4 w-4"
-                                                                aria-hidden="true"
-                                                            />
-                                                        ) : kind === 'crane' ||
-                                                          kind ===
-                                                              'mobile_crane' ? (
-                                                            <Construction
-                                                                className="h-4 w-4"
-                                                                aria-hidden="true"
-                                                            />
-                                                        ) : kind ===
-                                                          'equipment' ? (
-                                                            <Wrench
-                                                                className="h-4 w-4"
-                                                                aria-hidden="true"
-                                                            />
-                                                        ) : (
-                                                            <UserRoundCog
-                                                                className="h-4 w-4"
-                                                                aria-hidden="true"
-                                                            />
-                                                        )}
+                                                        <FleetAssetCategoryIcon
+                                                            category={category}
+                                                            className="h-4 w-4"
+                                                        />
                                                     </span>
                                                 </span>
 
@@ -597,9 +615,16 @@ export function LiveTrackingMap({
                                                             <span className="mt-0.5 line-clamp-2 block text-xs leading-4 text-ink-soft">
                                                                 {location.asset
                                                                     ?.name ??
-                                                                    getAssetKindLabel(
-                                                                        kind,
-                                                                    )}
+                                                                    FLEET_ASSET_CATEGORY_LABELS[
+                                                                        category
+                                                                    ]}
+                                                            </span>
+                                                            <span className="text-ink-muted mt-1 block text-[11px] font-medium">
+                                                                {
+                                                                    FLEET_ASSET_CATEGORY_LABELS[
+                                                                        category
+                                                                    ]
+                                                                }
                                                             </span>
                                                         </div>
                                                     </div>
@@ -700,11 +725,13 @@ export function LiveTrackingMap({
 
 function TrackingMapContent({
     locations,
+    sosLocations,
     activeSosIncidents,
     selected,
     onSelect,
 }: {
     locations: LocationUpdateViewModel[];
+    sosLocations: LocationUpdateViewModel[];
     activeSosIncidents: SosIncidentViewModel[];
     selected?: LocationUpdateViewModel;
     onSelect: (id: number) => void;
@@ -966,7 +993,6 @@ function TrackingMapContent({
         };
         const useHtml = locations.length <= HTML_MARKER_THRESHOLD;
         const entries: Entry[] = [];
-        const representedSosIds = new Set<SosIncidentViewModel['id']>();
         const incidentsByWorker = new Map(
             activeSosIncidents.map((incident) => [
                 incident.worker.id,
@@ -974,10 +1000,10 @@ function TrackingMapContent({
             ]),
         );
         const locationsByWorker = new Map(
-            locations.map((location) => [location.user.id, location]),
+            sosLocations.map((location) => [location.user.id, location]),
         );
         const locationsByAsset = new Map(
-            locations
+            sosLocations
                 .filter((location) => location.asset?.id !== undefined)
                 .map((location) => [location.asset!.id, location]),
         );
@@ -992,29 +1018,23 @@ function TrackingMapContent({
         if (useHtml) {
             for (const location of locations) {
                 const incident = incidentsByWorker.get(location.user.id);
-                const sos = incident ? sosOptions(incident) : undefined;
-
-                if (incident) {
-                    representedSosIds.add(incident.id);
-                }
-
                 const label = trackingUnitLabel(location);
+                const category = classifyFleetAsset(location.asset!);
+                const categoryLabel = FLEET_ASSET_CATEGORY_LABELS[category];
                 entries.push({
                     key: `location:${location.id}`,
                     locationId: location.id,
                     position: toLngLat(location),
                     label,
-                    description: `${location.freshness_status} · Received ${formatReportAge(location.received_at)}`,
-                    sos,
+                    description: `${categoryLabel} · ${location.freshness_status} · Received ${formatReportAge(location.received_at)}`,
                     content: () =>
                         createTrackingLocationPopup(location, incident),
                     element: () =>
                         createAssetMarker({
-                            kind: getAssetKind(location),
+                            category,
                             freshness: location.freshness_status,
                             isSelected: false,
-                            label: `${label}, ${location.freshness_status} location`,
-                            sos,
+                            label: `${label}, ${categoryLabel}, ${location.freshness_status} location`,
                         }),
                 });
             }
@@ -1025,10 +1045,6 @@ function TrackingMapContent({
             const assetLocation = incident.asset?.id
                 ? locationsByAsset.get(incident.asset.id)
                 : undefined;
-
-            if (representedSosIds.has(incident.id)) {
-                continue;
-            }
 
             const position = getSosMarkerPosition(
                 incident,
@@ -1272,7 +1288,7 @@ function TrackingMapContent({
 
                         return {
                             label: trackingUnitLabel(location),
-                            description: `${location.freshness_status} · Received ${formatReportAge(location.received_at)}`,
+                            description: `${FLEET_ASSET_CATEGORY_LABELS[classifyFleetAsset(location.asset!)]} · ${location.freshness_status} · Received ${formatReportAge(location.received_at)}`,
                             hasSos: Boolean(incident),
                             onSelect: () => {
                                 popupGeneration += 1;
@@ -1443,7 +1459,7 @@ function TrackingMapContent({
                         createTrackingGroupPopup(
                             members.map((location) => ({
                                 label: trackingUnitLabel(location),
-                                description: `${location.freshness_status} · Received ${formatReportAge(location.received_at)}`,
+                                description: `${FLEET_ASSET_CATEGORY_LABELS[classifyFleetAsset(location.asset!)]} · ${location.freshness_status} · Received ${formatReportAge(location.received_at)}`,
                                 hasSos: Boolean(
                                     findSosIncidentForLocation(
                                         location,
@@ -1492,7 +1508,14 @@ function TrackingMapContent({
             activePopup?.remove();
             map.off('click', 'tracking-marker-overview', onOverviewClick);
         };
-    }, [activeSosIncidents, locations, map, maplibregl, onSelect]);
+    }, [
+        activeSosIncidents,
+        locations,
+        map,
+        maplibregl,
+        onSelect,
+        sosLocations,
+    ]);
     useEffect(() => {
         if (!selected) {
             previousSelectedAssetKeyRef.current = null;
@@ -1530,11 +1553,13 @@ type MapActions = {
 
 function MapActionBridge({
     mappedLocations,
+    sosLocations,
     activeSosIncidents,
     actionsRef,
     onReady,
 }: {
     mappedLocations: LocationUpdateViewModel[];
+    sosLocations: LocationUpdateViewModel[];
     activeSosIncidents: SosIncidentViewModel[];
     actionsRef: MutableRefObject<MapActions | null>;
     onReady: (ready: boolean) => void;
@@ -1548,11 +1573,11 @@ function MapActionBridge({
             ...activeSosIncidents.flatMap((incident) => {
                 const position = getSosMarkerPosition(
                     incident,
-                    mappedLocations.find(
+                    sosLocations.find(
                         (location) => location.user.id === incident.worker.id,
                     ),
                     incident.asset?.id
-                        ? mappedLocations.find(
+                        ? sosLocations.find(
                               (location) =>
                                   location.asset?.id === incident.asset?.id,
                           )
@@ -1586,6 +1611,7 @@ function MapActionBridge({
         maplibregl,
         mappedLocations,
         prefersReducedMotion,
+        sosLocations,
     ]);
 
     useEffect(() => {
@@ -1605,6 +1631,7 @@ function LiveMapControls({
     compact,
     activeSosIncidents,
     mappedLocations,
+    sosLocations,
     mapCenter,
     styleVariant,
     onStyleVariantChange,
@@ -1614,6 +1641,7 @@ function LiveMapControls({
     compact: boolean;
     activeSosIncidents: SosIncidentViewModel[];
     mappedLocations: LocationUpdateViewModel[];
+    sosLocations: LocationUpdateViewModel[];
     mapCenter: LngLat;
     styleVariant: MapStyleVariant;
     onStyleVariantChange: (variant: MapStyleVariant) => void;
@@ -1647,11 +1675,11 @@ function LiveMapControls({
             ...activeSosIncidents.flatMap((incident) => {
                 const position = getSosMarkerPosition(
                     incident,
-                    mappedLocations.find(
+                    sosLocations.find(
                         (location) => location.user.id === incident.worker.id,
                     ),
                     incident.asset?.id
-                        ? mappedLocations.find(
+                        ? sosLocations.find(
                               (location) =>
                                   location.asset?.id === incident.asset?.id,
                           )
@@ -1886,6 +1914,7 @@ function CompactMapToolbar({
     const menuRef = useRef<HTMLDivElement>(null);
     const triggerRef = useRef<HTMLButtonElement>(null);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isMapKeyOpen, setIsMapKeyOpen] = useState(false);
     const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
 
     useEffect(() => {
@@ -2062,6 +2091,18 @@ function CompactMapToolbar({
                     <p className="px-3 py-2 text-xs font-medium text-ink-soft">
                         Basemap
                     </p>
+                    <button
+                        type="button"
+                        role="menuitem"
+                        className="flex min-h-11 w-full items-center gap-2 rounded-md border-b border-line px-3 text-left text-sm hover:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-brand-strong"
+                        onClick={() => {
+                            setIsMenuOpen(false);
+                            setIsMapKeyOpen((value) => !value);
+                            triggerRef.current?.focus();
+                        }}
+                    >
+                        Map key
+                    </button>
                     {(['light', 'dark'] as const).map((variant) => (
                         <button
                             key={variant}
@@ -2097,48 +2138,110 @@ function CompactMapToolbar({
                     )}
                 </div>
             )}
+            {isMapKeyOpen && (
+                <div
+                    role="region"
+                    aria-label="Map key"
+                    className="absolute top-full right-2 z-40 mt-2 w-[min(20rem,calc(100vw-1rem))] rounded-xl border border-line bg-surface p-3 text-xs text-ink shadow-lg"
+                >
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                        <h3 className="font-semibold">Map key</h3>
+                        <button
+                            type="button"
+                            className="min-h-8 rounded-md px-2 text-ink-soft hover:bg-surface-subtle hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-strong"
+                            onClick={() => setIsMapKeyOpen(false)}
+                        >
+                            Close
+                        </button>
+                    </div>
+                    <MapKeyContent />
+                </div>
+            )}
         </div>
     );
 }
 
 function MapLegend() {
     return (
-        <div className="pointer-events-none absolute bottom-3 left-3 z-[2] flex flex-wrap items-center gap-3 rounded-xl border border-line/70 bg-surface/90 px-3 py-2 text-[11px] text-ink shadow-sm backdrop-blur-md">
-            <span className="flex items-center gap-1.5 font-medium">
-                <Truck
-                    className="h-3.5 w-3.5 text-success-strong"
-                    aria-hidden="true"
-                />
-                Truck
-            </span>
-            <span className="flex items-center gap-1.5 font-medium">
-                <Construction
-                    className="h-3.5 w-3.5 text-success-strong"
-                    aria-hidden="true"
-                />
-                Crane
-            </span>
-            <span className="flex items-center gap-1.5 font-medium">
-                <Wrench
-                    className="h-3.5 w-3.5 text-success-strong"
-                    aria-hidden="true"
-                />
-                Equipment
-            </span>
-            <span className="flex items-center gap-1.5 font-medium">
-                <UserRoundCog
-                    className="h-3.5 w-3.5 text-success-strong"
-                    aria-hidden="true"
-                />
-                Worker
-            </span>
-            <span className="flex items-center gap-1.5 font-medium">
-                <MapPin
-                    className="h-3.5 w-3.5 text-brand-strong"
-                    aria-hidden="true"
-                />
-                Yard / warehouse
-            </span>
+        <div
+            role="region"
+            aria-label="Map key"
+            className="absolute bottom-3 left-3 z-[2] max-w-[calc(100%-1.5rem)] rounded-xl border border-line/70 bg-surface/95 px-3 py-2 text-[11px] text-ink shadow-sm backdrop-blur-md"
+        >
+            <MapKeyContent />
+        </div>
+    );
+}
+
+function MapKeyContent() {
+    const categories = Object.keys(
+        FLEET_ASSET_CATEGORY_LABELS,
+    ) as FleetAssetCategory[];
+
+    return (
+        <div
+            className="space-y-2"
+            role="group"
+            aria-label="Asset categories and map states"
+        >
+            <div className="flex flex-wrap gap-x-3 gap-y-2">
+                {categories.map((category) => (
+                    <span
+                        key={category}
+                        className="inline-flex items-center gap-1.5 font-medium"
+                    >
+                        <FleetAssetCategoryIcon
+                            category={category}
+                            className="h-3.5 w-3.5 text-ink-soft"
+                        />
+                        {FLEET_ASSET_CATEGORY_LABELS[category]}
+                    </span>
+                ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-line pt-2 text-ink-soft">
+                <span className="inline-flex items-center gap-1.5">
+                    <span
+                        className="h-3 w-3 rounded-full border-2 border-success-strong"
+                        aria-hidden="true"
+                    />
+                    GPS current
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                    <span
+                        className="h-3 w-3 rounded-full border-2 border-warning-strong"
+                        aria-hidden="true"
+                    />
+                    Delayed
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                    <span
+                        className="border-ink-muted h-3 w-3 rounded-full border-2 border-dashed"
+                        aria-hidden="true"
+                    />
+                    Stale / offline
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                    <span
+                        className="h-3 w-3 rounded-full border-2 border-brand-strong"
+                        aria-hidden="true"
+                    />
+                    Selected
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                    <AlertTriangle
+                        className="h-3.5 w-3.5 text-danger-strong"
+                        aria-hidden="true"
+                    />
+                    SOS
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                    <MapPin
+                        className="h-3.5 w-3.5 text-brand-strong"
+                        aria-hidden="true"
+                    />
+                    Yard / warehouse
+                </span>
+            </div>
         </div>
     );
 }
@@ -2159,15 +2262,26 @@ function findSosIncidentForLocation(
     );
 }
 
-function averageSosPosition(incidents: SosIncidentViewModel[]): LngLat {
+function averageSosPosition(
+    incidents: SosIncidentViewModel[],
+    locations: LocationUpdateViewModel[] = [],
+): LngLat {
     const coordinates = incidents.flatMap((incident) => {
-        const location = incident.location;
+        const location = locations.find(
+            (candidate) => candidate.user.id === incident.worker.id,
+        );
+        const assetLocation = incident.asset?.id
+            ? locations.find(
+                  (candidate) => candidate.asset?.id === incident.asset?.id,
+              )
+            : undefined;
+        const position = getSosMarkerPosition(
+            incident,
+            location,
+            assetLocation,
+        );
 
-        return location !== null &&
-            location.latitude !== null &&
-            location.longitude !== null
-            ? [[location.longitude, location.latitude] as LngLat]
-            : [];
+        return position ? [position] : [];
     });
 
     if (coordinates.length === 0) {

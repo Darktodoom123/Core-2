@@ -10,7 +10,7 @@ final readonly class LatestLocationDto
 {
     /**
      * @param  array{id: int, name: string}|null  $user
-     * @param  array{id: int, code: string, name: string, kind: string, status?: ?string, status_label?: ?string, location?: ?string}|null  $asset
+     * @param  array{id: int, code: string, name: string, kind: string, subtype?: ?string, category?: ?string, status?: ?string, status_label?: ?string, location?: ?string}|null  $asset
      * @param  array{id: int, reference: string, title: string, site?: ?string}|null  $job
      */
     public function __construct(
@@ -120,12 +120,14 @@ final readonly class LatestLocationDto
             'name' => (string) $data['user']['name'],
         ] : null;
 
-        /** @var array{id: int, code: string, name: string, kind: string, status?: string|null, status_label?: string|null, location?: string|null}|null $assetPayload */
+        /** @var array{id: int, code: string, name: string, kind: string, subtype?: string|null, category?: string|null, status?: string|null, status_label?: string|null, location?: string|null}|null $assetPayload */
         $assetPayload = isset($data['asset']) && is_array($data['asset']) ? [
             'id' => (int) $data['asset']['id'],
             'code' => (string) $data['asset']['code'],
             'name' => (string) $data['asset']['name'],
             'kind' => (string) $data['asset']['kind'],
+            'subtype' => isset($data['asset']['subtype']) ? (string) $data['asset']['subtype'] : null,
+            'category' => isset($data['asset']['category']) ? (string) $data['asset']['category'] : null,
             'status' => isset($data['asset']['status']) ? (string) $data['asset']['status'] : null,
             'status_label' => isset($data['asset']['status_label']) ? (string) $data['asset']['status_label'] : null,
             'location' => isset($data['asset']['location']) ? (string) $data['asset']['location'] : null,
@@ -179,7 +181,7 @@ final readonly class LatestLocationDto
      * Return a new instance with hydrated entity data.
      *
      * @param  array{id: int, name: string}|null  $user
-     * @param  array{id: int, code: string, name: string, kind: string, status?: ?string, status_label?: ?string, location?: ?string}|null  $asset
+     * @param  array{id: int, code: string, name: string, kind: string, subtype?: ?string, category?: ?string, status?: ?string, status_label?: ?string, location?: ?string}|null  $asset
      * @param  array{id: int, reference: string, title: string, site?: ?string}|null  $job
      */
     public function withHydratedEntities(

@@ -15,6 +15,8 @@ const location: LocationUpdateViewModel = {
         code: 'CRN-101',
         name: 'Mobile crane',
         kind: 'mobile_crane',
+        subtype: 'All-terrain mobile crane',
+        category: 'mobile_cranes',
     },
     job: null,
     latitude: 14.6,
@@ -139,6 +141,47 @@ describe('LiveTrackingMap controlled selection', () => {
         expect(screen.getByText('TRK-202')).toBeInTheDocument();
         expect(screen.queryByText('CRN-101')).not.toBeInTheDocument();
         expect(screen.getAllByText('No GPS report').length).toBeGreaterThan(0);
+        expect(screen.getByText(/No map position/)).toBeInTheDocument();
+    });
+
+    it('filters map-list assets by the Fleet category and omits unlinked worker locations', () => {
+        const towerCrane: LocationUpdateViewModel = {
+            ...location,
+            id: 2,
+            asset: {
+                id: 2,
+                code: 'TC-220',
+                name: 'Tower crane 220',
+                kind: 'crane',
+                subtype: 'Tower crane',
+                category: 'tower_cranes',
+            },
+            latitude: null,
+            longitude: null,
+            has_gps_report: false,
+        };
+        const workerOnlyLocation: LocationUpdateViewModel = {
+            ...location,
+            id: 3,
+            user: { id: 3, name: 'Worker without an asset' },
+            asset: null,
+        };
+
+        render(
+            <LiveTrackingMap
+                locations={[location, towerCrane, workerOnlyLocation]}
+                categoryFilter="tower_cranes"
+                compact
+            />,
+        );
+
+        expect(screen.getByText('TC-220')).toBeInTheDocument();
+        expect(screen.getByText('Tower cranes')).toBeInTheDocument();
+        expect(screen.queryByText('CRN-101')).not.toBeInTheDocument();
+        expect(
+            screen.queryByText('Worker without an asset'),
+        ).not.toBeInTheDocument();
+        expect(screen.getByText('No map position')).toBeInTheDocument();
     });
 
     it('exposes a keyboard-safe compact map settings menu', () => {

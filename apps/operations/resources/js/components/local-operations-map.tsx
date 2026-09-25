@@ -4,12 +4,15 @@ import {
     Layers3,
     LocateFixed,
     Route,
-    Truck,
-    UserRoundCog,
 } from 'lucide-react';
 import type { GeoJSONSource, Marker as MapLibreMarker } from 'maplibre-gl';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, StatusBadge } from '@/components/ui';
+import { FleetAssetCategoryIcon } from '@/components/workspace/fleet/fleet-asset-category-icon';
+import {
+    classifyFleetAsset,
+    FLEET_ASSET_CATEGORY_LABELS,
+} from '@/components/workspace/fleet/fleet-asset-classification';
 import { cn } from '@/lib/utils';
 import type { TelemetryPoint } from '@/types/operations';
 import {
@@ -45,29 +48,32 @@ export function LocalOperationsMap({
 }) {
     const [showRoutes, setShowRoutes] = useState(true);
     const [showGeofences, setShowGeofences] = useState(true);
+    const assetPoints = useMemo(
+        () => points.filter((point) => point.kind !== 'operator'),
+        [points],
+    );
     const selected = useMemo(
         () =>
-            points.find((point) => point.resourceId === selectedId) ??
-            points[0],
-        [points, selectedId],
+            assetPoints.find((point) => point.resourceId === selectedId) ??
+            assetPoints[0],
+        [assetPoints, selectedId],
     );
     const routePositions = useMemo(
         () =>
-            points
+            assetPoints
                 .filter((point) => point.freshness !== 'Offline')
                 .map(pointPosition),
-        [points],
+        [assetPoints],
     );
     const geofenceCenters = useMemo(
         () =>
-            Array.from(new Set(points.map((point) => point.destination))).map(
-                (destination) => ({
-                    destination,
-                    position:
-                        destinationCoordinates[destination] ?? DEFAULT_CENTER,
-                }),
-            ),
-        [points],
+            Array.from(
+                new Set(assetPoints.map((point) => point.destination)),
+            ).map((destination) => ({
+                destination,
+                position: destinationCoordinates[destination] ?? DEFAULT_CENTER,
+            })),
+        [assetPoints],
     );
 
     return (
@@ -79,7 +85,7 @@ export function LocalOperationsMap({
                     ariaLabel="Interactive prototype operations map showing simulated resources, routes, and job-site geofences"
                 >
                     <OperationsMapContent
-                        points={points}
+                        points={assetPoints}
                         selected={selected}
                         routePositions={routePositions}
                         geofenceCenters={geofenceCenters}
@@ -119,20 +125,20 @@ export function LocalOperationsMap({
                     </h3>
                     <p className="mt-0.5 text-xs text-ink-soft">
                         {
-                            points.filter((point) => point.freshness === 'Live')
-                                .length
+                            assetPoints.filter(
+                                (point) => point.freshness === 'Live',
+                            ).length
                         }{' '}
-                        live · {points.length} total
+                        live · {assetPoints.length} assets
                     </p>
                 </div>
                 <ul className="divide-y divide-line">
-                    {points.map((point) => {
-                        const Icon =
-                            point.kind === 'truck'
-                                ? Truck
-                                : point.kind === 'crane'
-                                  ? Construction
-                                  : UserRoundCog;
+                    {assetPoints.map((point) => {
+                        const category = classifyFleetAsset({
+                            kind: point.kind,
+                            subtype: point.subtype ?? null,
+                            category: point.category ?? null,
+                        });
                         const isSelected =
                             selected?.resourceId === point.resourceId;
 
@@ -151,22 +157,12 @@ export function LocalOperationsMap({
                                         <div className="flex items-start gap-2.5">
                                             <span
                                                 className={cn(
-                                                    'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center text-xs font-semibold text-white shadow-xs',
-                                                    point.kind === 'truck'
-                                                        ? 'rounded-lg bg-success-strong'
-                                                        : point.kind === 'crane'
-                                                          ? 'rotate-45 rounded-md bg-success-strong'
-                                                          : 'rounded-full bg-success-strong',
+                                                    'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-success-strong text-white shadow-xs',
                                                 )}
                                             >
-                                                <Icon
-                                                    className={cn(
-                                                        'h-3.5 w-3.5',
-                                                        point.kind ===
-                                                            'crane' &&
-                                                            '-rotate-45',
-                                                    )}
-                                                    aria-hidden="true"
+                                                <FleetAssetCategoryIcon
+                                                    category={category}
+                                                    className="h-3.5 w-3.5"
                                                 />
                                             </span>
                                             <span>
@@ -175,6 +171,13 @@ export function LocalOperationsMap({
                                                 </span>
                                                 <span className="mt-0.5 block text-xs text-ink-soft">
                                                     {point.destination}
+                                                </span>
+                                                <span className="text-ink-muted mt-0.5 block text-[11px] font-medium">
+                                                    {
+                                                        FLEET_ASSET_CATEGORY_LABELS[
+                                                            category
+                                                        ]
+                                                    }
                                                 </span>
                                             </span>
                                         </div>
@@ -395,12 +398,17 @@ function OperationsMapContent({
         markersRef.current = [];
 
         points.forEach((point) => {
-            const kind = point.kind === 'operator' ? 'personnel' : point.kind;
+            const category = classifyFleetAsset({
+                kind: point.kind,
+                subtype: point.subtype ?? null,
+                category: point.category ?? null,
+            });
+            const categoryLabel = FLEET_ASSET_CATEGORY_LABELS[category];
             const markerElement = createAssetMarker({
-                kind,
+                category,
                 freshness: point.freshness,
                 isSelected: selected?.resourceId === point.resourceId,
-                label: `${point.label}, ${point.freshness} telemetry`,
+                label: `${point.label}, ${categoryLabel}, ${point.freshness} telemetry`,
             });
             markerElement.addEventListener('click', () =>
                 onSelect(point.resourceId),
@@ -426,6 +434,7 @@ function OperationsMapContent({
                     status: point.freshness,
                     statusTone,
                     fields: [
+                        { label: 'Asset category', value: categoryLabel },
                         { label: 'Updated', value: point.updatedAt },
                         { label: 'ETA', value: point.eta },
                     ],

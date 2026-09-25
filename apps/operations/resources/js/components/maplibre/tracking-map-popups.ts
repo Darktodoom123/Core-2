@@ -1,9 +1,9 @@
-import { getFleetLocationFreshnessLabel } from '@/components/workspace/fleet/fleet-location-labels';
 import {
-    getAssetKind,
-    getAssetKindLabel,
-    resolveLocationName,
-} from '@/lib/asset-kind';
+    classifyFleetAsset,
+    FLEET_ASSET_CATEGORY_LABELS,
+} from '@/components/workspace/fleet/fleet-asset-classification';
+import { getFleetLocationFreshnessLabel } from '@/components/workspace/fleet/fleet-location-labels';
+import { resolveLocationName } from '@/lib/asset-kind';
 import {
     getCoordinatesCacheKey,
     onLocationResolved,
@@ -74,11 +74,14 @@ export function createTrackingLocationPopup(
     onCopyCoordinates?: (button: HTMLButtonElement) => void,
 ): HTMLDivElement {
     const freshnessText = getFleetLocationFreshnessLabel(location);
-    const kind = getAssetKind(location);
+    const category = location.asset
+        ? classifyFleetAsset(location.asset)
+        : 'other';
+    const categoryLabel = FLEET_ASSET_CATEGORY_LABELS[category];
 
     const card = createPopupCard({
         title: trackingUnitLabel(location),
-        subtitle: location.asset?.name ?? getAssetKindLabel(kind),
+        subtitle: location.asset?.name ?? categoryLabel,
         status: freshnessText,
         statusTone:
             location.freshness_status === 'fresh'
@@ -105,7 +108,10 @@ export function createTrackingLocationPopup(
             },
             { label: 'Captured', value: timestamp(location.captured_at) },
             { label: 'Received', value: timestamp(location.received_at) },
-            { label: 'Equipment type', value: getAssetKindLabel(kind) },
+            { label: 'Asset category', value: categoryLabel },
+            ...(location.asset?.subtype
+                ? [{ label: 'Asset subtype', value: location.asset.subtype }]
+                : []),
             {
                 label: 'Operational status',
                 value:
