@@ -211,8 +211,7 @@ describe('Phase 2 Factual Truth & 5-Stage Machine Challenger', () => {
                     onCategoryFilterChange={vi.fn()}
                     counts={{
                         total: 1,
-                        cranes: 1,
-                        trucks: 0,
+                        mobileCranes: 1,
                         ready: 1,
                         maintenance: 0,
                     }}

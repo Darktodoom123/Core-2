@@ -34,6 +34,7 @@ use App\Platform\Reporting\Models\JobReport;
 use App\Platform\Reporting\Models\ReportExport;
 use App\Platform\Tracking\Data\LatestLocationDto;
 use App\Platform\Tracking\Models\LocationUpdate;
+use App\Shared\Assets\Enums\AssetCategory;
 use App\Shared\Assets\Models\OperationalAsset;
 use BackedEnum;
 use Illuminate\Database\Eloquent\Model;
@@ -330,17 +331,22 @@ final class OperationsWorkspaceViewModel
         $assetIds = $assets
             ->map(static fn (OperationalAsset $asset): int => (int) $asset->getKey())
             ->values();
-        $latestStatusChanges = $assetIds->isEmpty()
-            ? collect()
-            : AuditEvent::query()
-                ->with('actor:id,name')
-                ->where('subject_type', (new OperationalAsset)->getMorphClass())
-                ->where('action', 'asset.status_updated')
-                ->whereIn('subject_id', $assetIds->all())
-                ->latest('occurred_at')
-                ->get()
-                ->groupBy('subject_id')
-                ->map(static fn (Collection $events): ?AuditEvent => $events->first());
+        $relationLoaded = $assets->first()?->relationLoaded('latestStatusChange') ?? false;
+        $latestStatusChanges = $relationLoaded
+            ? $assets->mapWithKeys(static fn (OperationalAsset $asset): array => [
+                (string) $asset->getKey() => $asset->latestStatusChange,
+            ])
+            : ($assetIds->isEmpty()
+                ? collect()
+                : AuditEvent::query()
+                    ->with('actor:id,name')
+                    ->where('subject_type', (new OperationalAsset)->getMorphClass())
+                    ->where('action', 'asset.status_updated')
+                    ->whereIn('subject_id', $assetIds->all())
+                    ->latest('occurred_at')
+                    ->get()
+                    ->groupBy('subject_id')
+                    ->map(static fn (Collection $events): ?AuditEvent => $events->first()));
 
         return $assets->map(static function (OperationalAsset $asset) use ($latestStatusChanges): array {
             $blockingCount = (int) $asset->getAttribute('blocking_work_orders_count');
@@ -448,7 +454,7 @@ final class OperationsWorkspaceViewModel
                     'has_defects' => (bool) $latestDvir->has_defects,
                     'critical_defects_count' => $criticalCount,
                     'completed_at' => $latestDvir->completed_at->toIso8601String(),
-                    'received_at' => $latestDvir->created_at?->toIso8601String(),
+                    'received_at' => $latestDvir->created_at->toIso8601String(),
                     'inspector_name' => $latestDvir->inspector_name,
                     'photos' => $photos,
                 ];
@@ -496,7 +502,7 @@ final class OperationsWorkspaceViewModel
                     'has_defects' => (bool) $dvir->has_defects,
                     'critical_defects_count' => $critCount,
                     'completed_at' => $dvir->completed_at->toIso8601String(),
-                    'received_at' => $dvir->created_at?->toIso8601String(),
+                    'received_at' => $dvir->created_at->toIso8601String(),
                     'inspector_name' => $dvir->inspector_name,
                     'starting_odometer_km' => $dvir->starting_odometer_km !== null ? (float) $dvir->starting_odometer_km : null,
                     'ending_odometer_km' => $dvir->ending_odometer_km !== null ? (float) $dvir->ending_odometer_km : null,
@@ -527,6 +533,7 @@ final class OperationsWorkspaceViewModel
                 'can_override' => true,
                 'blocking_work_order_id' => $blockingOrder?->id,
             ];
+            $assetCategory = AssetCategory::fromAsset($asset->kind, $asset->subtype);
 
             return [
                 'id' => (int) $asset->getKey(),
@@ -534,6 +541,8 @@ final class OperationsWorkspaceViewModel
                 'name' => $asset->name,
                 'kind' => $asset->kind,
                 'subtype' => $asset->subtype,
+                'category' => $assetCategory->value,
+                'category_label' => $assetCategory->label(),
                 'registration_number' => $asset->registration_number,
                 'manufacturer' => $asset->manufacturer,
                 'model' => $asset->model,
@@ -829,6 +838,8 @@ final class OperationsWorkspaceViewModel
                     'code' => $location->asset->code,
                     'name' => $location->asset->name,
                     'kind' => $location->asset->kind,
+                    'subtype' => $location->asset->subtype,
+                    'category' => AssetCategory::fromAsset($location->asset->kind, $location->asset->subtype)->value,
                     'location' => $location->asset->location,
                 ],
                 'job' => $location->job === null ? null : [
@@ -873,7 +884,7 @@ final class OperationsWorkspaceViewModel
         $items = [
             [
                 'id' => 'overview',
-                'label' => 'Operations overview',
+                'label' => 'Operation Dashboard',
                 'permissions' => [
                     PermissionName::DispatchViewAll,
                     PermissionName::DispatchViewAssigned,
@@ -934,6 +945,11 @@ final class OperationsWorkspaceViewModel
                     PermissionName::ReportsViewDispatch,
                     PermissionName::ReportsViewOwn,
                 ],
+            ],
+            [
+                'id' => 'safety',
+                'label' => 'Safety governance',
+                'permissions' => [PermissionName::SafetyGovernanceView],
             ],
             [
                 'id' => 'archive',
@@ -1015,6 +1031,13 @@ final class OperationsWorkspaceViewModel
             'restore_dispatch' => $user->can(PermissionName::ArchiveManage->value),
             'view_sos' => $user->can('sos.view'),
             'respond_sos' => $user->can('sos.respond'),
+            'safety_governance_view' => $user->can(PermissionName::SafetyGovernanceView->value),
+            'safety_tbm_cosign' => $user->can(PermissionName::SafetyTbmCoSign->value),
+            'safety_lift_plan_approve' => $user->can(PermissionName::SafetyLiftPlanApprove->value),
+            'safety_hazard_report' => $user->can(PermissionName::SafetyHazardReport->value),
+            'safety_hazard_rectify' => $user->can(PermissionName::SafetyHazardRectify->value),
+            'safety_work_stoppage_issue' => $user->can(PermissionName::SafetyWorkStoppageIssue->value),
+            'safety_work_stoppage_lift' => $user->can(PermissionName::SafetyWorkStoppageLift->value),
             'manage_users' => $user->can(PermissionName::UsersManage->value),
             'view_audit' => $user->can(PermissionName::AuditView->value),
         ];
@@ -1177,38 +1200,45 @@ final class OperationsWorkspaceViewModel
      * @param  Collection<int, ReportExport>  $exports
      * @return array<int, array<string, mixed>>
      */
-    public static function reportExports(Collection $exports): array
+    public static function reportExports(Collection $exports, User $actor): array
     {
-        return $exports->map(static fn (ReportExport $export): array => [
-            'id' => (string) $export->getKey(),
-            'export_type' => [
-                'value' => $export->export_type->value,
-                'label' => $export->export_type->label(),
-            ],
-            'format' => strtoupper($export->format),
-            'status' => [
-                'value' => $export->status->value,
-                'label' => $export->status->label(),
-            ],
-            'filters' => $export->filters,
-            'file_size_bytes' => $export->file_size_bytes,
-            'row_count' => $export->row_count,
-            'error_message' => $export->error_message,
-            'expires_at' => $export->expires_at?->toIso8601String(),
-            'created_at' => $export->created_at?->toIso8601String(),
-            'completed_at' => $export->completed_at?->toIso8601String(),
-            'is_downloadable' => $export->isDownloadable(),
-            'is_expired' => $export->isExpired(),
-            'download_url' => $export->isDownloadable()
-                ? URL::temporarySignedRoute(
-                    'operations.exports.download',
-                    $export->download_expires_at ?? $export->expires_at ?? now()->addDay(),
-                    ['export' => $export->getKey()],
-                    absolute: false,
-                )
-                : null,
-            'retry_url' => "/operations/reports/exports/{$export->getKey()}/retry",
-        ])->values()->all();
+        $gate = Gate::forUser($actor);
+
+        return $exports->map(static function (ReportExport $export) use ($gate): array {
+            $canDownload = $export->isDownloadable() && $gate->allows('download', $export);
+
+            return [
+                'id' => (string) $export->getKey(),
+                'export_type' => [
+                    'value' => $export->export_type->value,
+                    'label' => $export->export_type->label(),
+                ],
+                'format' => strtoupper($export->format),
+                'status' => [
+                    'value' => $export->status->value,
+                    'label' => $export->status->label(),
+                ],
+                'filters' => $export->filters,
+                'file_size_bytes' => $export->file_size_bytes,
+                'row_count' => $export->row_count,
+                'error_message' => $export->error_message,
+                'expires_at' => $export->expires_at?->toIso8601String(),
+                'created_at' => $export->created_at?->toIso8601String(),
+                'completed_at' => $export->completed_at?->toIso8601String(),
+                'is_downloadable' => $export->isDownloadable(),
+                'can_download' => $canDownload,
+                'is_expired' => $export->isExpired(),
+                'download_url' => $canDownload
+                    ? URL::temporarySignedRoute(
+                        'operations.exports.download',
+                        $export->download_expires_at ?? $export->expires_at ?? now()->addDay(),
+                        ['export' => $export->getKey()],
+                        absolute: false,
+                    )
+                    : null,
+                'retry_url' => "/operations/reports/exports/{$export->getKey()}/retry",
+            ];
+        })->values()->all();
     }
 
     /**

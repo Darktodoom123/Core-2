@@ -164,7 +164,7 @@ function DashboardHeader({
             <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="min-w-0">
                     <h1 className="text-2xl font-semibold tracking-[-0.02em] text-ink">
-                        Operations overview
+                        Operation Dashboard
                     </h1>
                     <p className="mt-1 text-sm text-ink-soft">
                         {isSystemAdmin

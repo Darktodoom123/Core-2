@@ -25,8 +25,8 @@ final class ProjectPlanningDemoSeeder extends Seeder
         }
         $this->call(RolePermissionSeeder::class);
         DB::transaction(function (): void {
-            $manager = $this->user('demo.planner', 'Demo Project Coordinator', RoleName::OperationsManager->value);
-            $approver = $this->user('demo.approver', 'Demo Operations Approver', RoleName::OperationsManager->value);
+            $manager = $this->existingOrSeededRoleUser(RoleName::OperationsManager, 'demo.planner', 'Demo Project Coordinator');
+            $approver = $this->existingOrSeededRoleUser(RoleName::SystemAdministrator, 'demo.approver', 'Demo Operations Approver');
             $operators = [$this->user('demo.operator.a', 'Alex Reyes', RoleName::CraneOperator->value), $this->user('demo.operator.b', 'Sam Cruz', RoleName::CraneOperator->value)];
             $riggers = [$this->user('demo.rigger.a', 'Jordan Santos', RoleName::Rigger->value), $this->user('demo.rigger.b', 'Casey Mendoza', RoleName::Rigger->value), $this->user('demo.rigger.c', 'Taylor Ramos', RoleName::Rigger->value), $this->user('demo.rigger.d', 'Morgan Garcia', RoleName::Rigger->value)];
             foreach ([...$operators, ...$riggers] as $person) {
@@ -72,10 +72,16 @@ final class ProjectPlanningDemoSeeder extends Seeder
         });
     }
 
+    private function existingOrSeededRoleUser(RoleName $role, string $username, string $name): User
+    {
+        return User::query()->role($role->value)->orderBy('id')->first()
+            ?? $this->user($username, $name, $role->value);
+    }
+
     private function user(string $username, string $name, string $role): User
     {
         $user = User::query()->firstOrCreate(['username' => $username], ['name' => $name, 'email' => $username.'@example.test', 'password' => 'PlanningDemo!2026', 'is_active' => true, 'email_verified_at' => now()]);
-        $user->assignRole($role);
+        $user->syncRoles([$role]);
 
         return $user;
     }

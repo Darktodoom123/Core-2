@@ -82,5 +82,4 @@ class NotificationController extends Controller
             'message' => 'All notifications marked as read.',
         ]);
     }
-
 }

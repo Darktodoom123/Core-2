@@ -88,7 +88,11 @@ export function AdministratorOverview({
                 title="System overview"
                 description="Maintain platform access, registry quality, integration health, and recoverability."
                 actions={
-                    <Button variant="primary">
+                    <Button
+                        variant="primary"
+                        disabled
+                        title="User invitations are not available in this read-only simulation."
+                    >
                         <UserCog className="h-4 w-4" aria-hidden="true" />
                         Invite user
                     </Button>
@@ -233,7 +237,11 @@ export function AdministrationSurface() {
                 title="Users & platform settings"
                 description="Control access, dispatch policies, notifications, GPS retention, and prototype permissions."
                 actions={
-                    <Button variant="primary">
+                    <Button
+                        variant="primary"
+                        disabled
+                        title="User invitations are not available in this read-only simulation."
+                    >
                         <UserCog className="h-4 w-4" aria-hidden="true" />
                         Invite user
                     </Button>
@@ -294,7 +302,12 @@ export function AdministrationSurface() {
                                             {user.lastSeen}
                                         </TableCell>
                                         <TableCell>
-                                            <Button size="sm" variant="quiet">
+                                            <Button
+                                                size="sm"
+                                                variant="quiet"
+                                                disabled
+                                                title="Access changes are not available in this read-only simulation."
+                                            >
                                                 Manage access
                                             </Button>
                                         </TableCell>
@@ -631,7 +644,11 @@ export function ReportsSurface({
                         : 'Compare dispatch reliability, utilization, safety completion, and fuel performance.'
                 }
                 actions={
-                    <Button variant="secondary">
+                    <Button
+                        variant="secondary"
+                        disabled
+                        title="Report export is not available in this read-only simulation."
+                    >
                         <Download className="h-4 w-4" aria-hidden="true" />
                         Export report
                     </Button>

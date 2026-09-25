@@ -3,8 +3,6 @@ import {
     Archive,
     Bell,
     ChevronDown,
-    ChevronLeft,
-    ChevronRight,
     ClipboardList,
     Cpu,
     FileText,
@@ -13,6 +11,8 @@ import {
     Fuel,
     MapPin,
     Menu,
+    PanelLeftClose,
+    PanelLeftOpen,
     RefreshCw,
     ShieldAlert,
     ShieldCheck,
@@ -37,6 +37,12 @@ import type {
 } from '@/types/workspace';
 
 const WORKSPACE_SIDEBAR_BREAKPOINT = 840;
+const localDateFormatter = new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+});
+const localTimeFormatter = new Intl.DateTimeFormat(undefined, {
+    timeStyle: 'short',
+});
 
 const sectionIcons: Record<WorkspaceSection, LucideIcon> = {
     overview: LayoutDashboard,
@@ -75,7 +81,7 @@ const NAV_GROUPS: NavGroupDefinition[] = [
     {
         id: 'safety_system',
         label: 'Safety & System',
-        sections: ['gpt-recommendations', 'users', 'audit'],
+        sections: ['safety', 'gpt-recommendations', 'users', 'audit'],
     },
 ];
 
@@ -452,7 +458,7 @@ export function LiveWorkspaceShell({
                                     className={groupIndex > 0 ? 'pt-2' : ''}
                                 >
                                     {!collapsed && (
-                                        <p className="px-3 pb-1.5 text-[10px] font-bold tracking-wider text-ink-soft/70 uppercase">
+                                        <p className="px-3 pb-1.5 text-[10px] font-bold tracking-wider text-ink-soft uppercase">
                                             {group.label}
                                         </p>
                                     )}
@@ -606,37 +612,6 @@ export function LiveWorkspaceShell({
                         </div>
                     </nav>
 
-                    <div className="border-t border-line p-3">
-                        <button
-                            type="button"
-                            onClick={() => setCollapsed((value) => !value)}
-                            className={cn(
-                                'hidden min-h-11 w-full items-center rounded-lg text-sm text-ink-soft hover:bg-surface-subtle hover:text-ink min-[840px]:flex',
-                                collapsed ? 'justify-center' : 'gap-3 px-3',
-                            )}
-                            aria-label={
-                                collapsed
-                                    ? 'Expand navigation'
-                                    : 'Collapse navigation'
-                            }
-                            aria-expanded={!collapsed}
-                        >
-                            {collapsed ? (
-                                <ChevronRight
-                                    className="h-5 w-5"
-                                    aria-hidden="true"
-                                />
-                            ) : (
-                                <>
-                                    <ChevronLeft
-                                        className="h-5 w-5"
-                                        aria-hidden="true"
-                                    />
-                                    Collapse navigation
-                                </>
-                            )}
-                        </button>
-                    </div>
                 </aside>
 
                 <div
@@ -656,8 +631,33 @@ export function LiveWorkspaceShell({
                         >
                             <Menu className="h-5 w-5" aria-hidden="true" />
                         </button>
+                        <button
+                            type="button"
+                            onClick={() => setCollapsed((value) => !value)}
+                            className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none min-[840px]:flex"
+                            aria-label={
+                                collapsed ? 'Expand sidebar' : 'Collapse sidebar'
+                            }
+                            title={
+                                collapsed ? 'Expand sidebar' : 'Collapse sidebar'
+                            }
+                            aria-expanded={!collapsed}
+                            aria-controls="workspace-navigation"
+                        >
+                            {collapsed ? (
+                                <PanelLeftOpen
+                                    className="h-5 w-5"
+                                    aria-hidden="true"
+                                />
+                            ) : (
+                                <PanelLeftClose
+                                    className="h-5 w-5"
+                                    aria-hidden="true"
+                                />
+                            )}
+                        </button>
                         <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-2.5">
-                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-surface-subtle text-ink">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-surface-subtle text-ink min-[840px]:hidden">
                                 {section && sectionIcons[section] ? (
                                     (() => {
                                         const Icon = sectionIcons[section];
@@ -699,7 +699,7 @@ export function LiveWorkspaceShell({
                                 <button
                                     type="button"
                                     onClick={() => onSectionChange('sos')}
-                                    className="hidden min-h-11 shrink-0 animate-pulse items-center gap-1.5 rounded-full bg-danger-soft px-2.5 py-1 text-xs font-semibold text-danger-strong ring-1 ring-danger/40 hover:bg-danger-soft/80 focus-visible:ring-2 focus-visible:ring-danger focus-visible:outline-none min-[480px]:flex lg:min-h-8"
+                                    className="hidden min-h-11 shrink-0 items-center gap-1.5 rounded-full bg-danger-soft px-2.5 py-1 text-xs font-semibold text-ink ring-1 ring-danger/40 hover:bg-danger-soft/80 focus-visible:ring-2 focus-visible:ring-danger focus-visible:outline-none min-[480px]:flex lg:min-h-8"
                                     title={`${activeSosCount} active emergency in queue · Click to open`}
                                 >
                                     <span className="h-2 w-2 rounded-full bg-danger" />
@@ -730,6 +730,8 @@ export function LiveWorkspaceShell({
                                     </span>
                                 </Button>
                             )}
+
+                            <WorkspaceClock />
 
                             {/* Bell notification button */}
                             <NotificationCenterPopover
@@ -837,6 +839,34 @@ export function LiveWorkspaceShell({
                 </div>
             </div>
         </MotionConfig>
+    );
+}
+
+function WorkspaceClock() {
+    const [now, setNow] = useState(() => new Date());
+
+    useEffect(() => {
+        const interval = window.setInterval(() => setNow(new Date()), 30_000);
+
+        return () => window.clearInterval(interval);
+    }, []);
+
+    const dateLabel = localDateFormatter.format(now);
+    const timeLabel = localTimeFormatter.format(now);
+
+    return (
+        <time
+            dateTime={now.toISOString()}
+            aria-label={`Current local date and time: ${dateLabel}, ${timeLabel}`}
+            className="hidden min-w-28 flex-col items-end gap-0.5 border-l border-line pl-3 leading-tight tabular-nums min-[1000px]:flex"
+        >
+            <span className="text-[10px] font-medium text-ink-soft">
+                {dateLabel}
+            </span>
+            <span className="text-xs font-semibold text-ink">
+                {timeLabel}
+            </span>
+        </time>
     );
 }
 

@@ -86,7 +86,7 @@ final class AssetDvirHistoryController extends Controller
                 'has_more' => $hasMore,
                 'next' => $hasMore && $last !== null ? [
                     'before_id' => (int) $last->getKey(),
-                    'before_completed_at' => $last->completed_at?->toIso8601String(),
+                    'before_completed_at' => $last->completed_at->toIso8601String(),
                 ] : null,
             ],
         ]);
@@ -110,8 +110,8 @@ final class AssetDvirHistoryController extends Controller
             'status' => $status,
             'has_defects' => (bool) $dvir->has_defects,
             'critical_defects_count' => $criticalCount,
-            'completed_at' => $dvir->completed_at?->toIso8601String(),
-            'received_at' => $dvir->created_at?->toIso8601String(),
+            'completed_at' => $dvir->completed_at->toIso8601String(),
+            'received_at' => $dvir->created_at->toIso8601String(),
             'inspector_name' => $dvir->inspector_name,
             'starting_odometer_km' => $dvir->starting_odometer_km !== null ? (float) $dvir->starting_odometer_km : null,
             'ending_odometer_km' => $dvir->ending_odometer_km !== null ? (float) $dvir->ending_odometer_km : null,

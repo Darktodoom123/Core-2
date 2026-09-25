@@ -18,6 +18,8 @@ const response = (total: number) => ({
         current_page: 1,
         last_page: Math.max(1, Math.ceil(total / 25)),
         per_page: 25,
+        attention_total: 0,
+        needs_assignment_total: 0,
     }),
 });
 

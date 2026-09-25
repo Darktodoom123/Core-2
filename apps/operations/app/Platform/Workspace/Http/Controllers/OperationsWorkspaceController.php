@@ -29,6 +29,7 @@ use App\Platform\Workspace\Queries\WorkspaceAssetsQuery;
 use App\Platform\Workspace\Queries\WorkspaceFuelRequestsQuery;
 use App\Platform\Workspace\Queries\WorkspaceJobReportsQuery;
 use App\Platform\Workspace\ViewModels\OperationsWorkspaceViewModel;
+use App\Shared\Assets\Enums\AssetCategory;
 use App\Shared\Assets\Models\OperationalAsset;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -143,8 +144,9 @@ final class OperationsWorkspaceController extends Controller
             $belongsToInitialSection = in_array($prop, self::SECTION_PROPS[$initialSection] ?? [], true);
             $isNotificationSectionProp = $initialSection === 'notifications'
                 && in_array($prop, ['notifications', 'notifications_total', 'notifications_has_more'], true);
+            $isAuditTrailProp = $initialSection === 'audit' && $prop === 'auditEvents';
             $props[$prop] = $belongsToInitialSection
-                ? ($hasErrors || $isNotificationSectionProp
+                ? ($hasErrors || $isNotificationSectionProp || $isAuditTrailProp
                     ? $resolver()
                     : Inertia::defer($resolver, 'workspace-'.($initialSection ?? 'none')))
                 : Inertia::optional($resolver);
@@ -271,7 +273,7 @@ final class OperationsWorkspaceController extends Controller
                         'per_page' => $reportPaginator->perPage(),
                         'total' => $reportPaginator->total(),
                     ],
-                    'reportExports' => OperationsWorkspaceViewModel::reportExports($this->fetchReportExports($user)),
+                    'reportExports' => OperationsWorkspaceViewModel::reportExports($this->fetchReportExports($user), $user),
                     'jobs' => OperationsWorkspaceViewModel::jobs($this->fetchJobs($user, $canViewAllAssignments)),
                 ];
             })(),
@@ -398,7 +400,7 @@ final class OperationsWorkspaceController extends Controller
                 'per_page' => 25,
                 'total' => app(WorkspaceJobReportsQuery::class)->stats($user, $reportFilters)['total'],
             ],
-            'reportExports' => OperationsWorkspaceViewModel::reportExports($this->fetchReportExports($user)),
+            'reportExports' => OperationsWorkspaceViewModel::reportExports($this->fetchReportExports($user), $user),
             'notifications' => OperationsWorkspaceViewModel::notifications($this->fetchNotifications($user)),
             'notifications_total' => $this->countNotifications($user),
             'notifications_has_more' => $this->countNotifications($user) > 100,
@@ -464,7 +466,7 @@ final class OperationsWorkspaceController extends Controller
 
         /** @var Collection<int, OperationalAsset> $authorizedAssets */
         $authorizedAssets = $authorizedAssetsQuery
-            ->get(['id', 'code', 'name', 'kind', 'status', 'location'])
+            ->get(['id', 'code', 'name', 'kind', 'subtype', 'status', 'location'])
             ->keyBy('id');
 
         if ($authorizedAssets->isEmpty()) {
@@ -547,6 +549,8 @@ final class OperationsWorkspaceController extends Controller
                 'code' => $asset->code,
                 'name' => $asset->name,
                 'kind' => $asset->kind,
+                'subtype' => $asset->subtype,
+                'category' => AssetCategory::fromAsset($asset->kind, $asset->subtype)->value,
                 'status' => $asset->status->value,
                 'status_label' => $asset->status->label(),
                 'location' => $asset->location,
@@ -682,6 +686,7 @@ final class OperationsWorkspaceController extends Controller
                 'dvirInspections.photos',
                 'dvirInspections.checks',
                 'activeBlockingWorkOrder',
+                'latestStatusChange.actor:id,name',
             ])
             ->orderBy('code')
             ->limit($limit)
@@ -950,6 +955,7 @@ final class OperationsWorkspaceController extends Controller
                     });
             })
             ->latest()
+            ->orderByDesc('id')
             ->get();
 
         $history = (clone $base)

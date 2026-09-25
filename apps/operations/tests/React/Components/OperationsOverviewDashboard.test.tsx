@@ -254,11 +254,11 @@ describe('OperationsOverviewDashboard', () => {
             />,
         );
 
-        // 1. Dashboard title exists (sentence case: "Operations overview")
+        // 1. Dashboard title exists: "Operation Dashboard"
         expect(
             screen.getByRole('heading', {
                 level: 1,
-                name: /operations overview/i,
+                name: /operation dashboard/i,
             }),
         ).toBeInTheDocument();
 
@@ -385,7 +385,7 @@ describe('OperationsOverviewDashboard', () => {
         expect(
             screen.getByRole('heading', {
                 level: 1,
-                name: /operations overview/i,
+                name: /operation dashboard/i,
             }),
         ).toBeInTheDocument();
         const dispatchActionBtn = screen.getByRole('button', {

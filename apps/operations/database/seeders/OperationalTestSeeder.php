@@ -48,42 +48,59 @@ final class OperationalTestSeeder extends Seeder
             ?? User::query()->where('email', 'admin@example.com')->first()
             ?? $operator;
 
-        // 2. Heavy Crane Asset (CRN-101)
-        $crane = OperationalAsset::query()->updateOrCreate(
-            ['code' => 'CRN-101'],
-            [
-                'name' => '50T Tadano All-Terrain Crane',
-                'kind' => 'crane',
-                'subtype' => 'All-Terrain',
-                'status' => AssetStatus::Assigned->value,
-                'registration_number' => 'CRN-5501-PH',
-                'manufacturer' => 'Tadano',
-                'model' => 'ATF 50G-3',
-                'rated_capacity' => 50.00,
-                'capacity_unit' => 'tonnes',
-                'meter_type' => 'hour_meter',
-                'meter_value' => 1420.50,
-                'baseline_burn_rate' => 18.50,
-                'burn_rate_unit' => 'L/hr',
-                'location' => 'North Staging Terminal - Pier 4',
-                'specifications' => [
-                    'boom_length' => '40m',
-                    'counterweight' => '12t',
-                    'outrigger_spread' => '6.3m',
-                    'jib_length_meters' => 60,
-                    'attachments' => ['20T Counterweight', 'Jib Extension'],
-                ],
-            ]
-        );
+        $usingAlibatonFleet = app()->environment('local');
+
+        if ($usingAlibatonFleet) {
+            // Keep standalone local scenario seeding aligned with the canonical local fleet.
+            if (! OperationalAsset::query()->where('code', 'MOB-CRN-401')->exists()) {
+                $this->call(AlibatonCraneFleetSeeder::class);
+            }
+
+            $crane = OperationalAsset::query()
+                ->where('code', 'MOB-CRN-401')
+                ->firstOrFail();
+        } else {
+            // Testing retains the stable CRN-101 fixture used by the API contract suite.
+            $crane = OperationalAsset::query()->updateOrCreate(
+                ['code' => 'CRN-101'],
+                [
+                    'name' => '50T Tadano All-Terrain Crane',
+                    'kind' => 'crane',
+                    'subtype' => 'All-Terrain',
+                    'status' => AssetStatus::Assigned->value,
+                    'registration_number' => 'CRN-5501-PH',
+                    'manufacturer' => 'Tadano',
+                    'model' => 'ATF 50G-3',
+                    'rated_capacity' => 50.00,
+                    'capacity_unit' => 'tonnes',
+                    'meter_type' => 'hour_meter',
+                    'meter_value' => 1420.50,
+                    'baseline_burn_rate' => 18.50,
+                    'burn_rate_unit' => 'L/hr',
+                    'location' => 'North Staging Terminal - Pier 4',
+                    'specifications' => [
+                        'boom_length' => '40m',
+                        'counterweight' => '12t',
+                        'outrigger_spread' => '6.3m',
+                        'jib_length_meters' => 60,
+                        'attachments' => ['20T Counterweight', 'Jib Extension'],
+                    ],
+                ]
+            );
+        }
 
         // 3. Active Heavy Crane Dispatch Job (DSP-2026-0891)
         $job = DispatchJob::query()->updateOrCreate(
             ['reference' => 'DSP-2026-0891'],
             [
                 'client' => 'Megawide - Metro Manila Subway Project',
-                'title' => '50T Tandem Lift & Structural Steel Erection',
+                'title' => $usingAlibatonFleet
+                    ? '25T XCMG Truck Crane Structural Steel Erection'
+                    : '50T Tandem Lift & Structural Steel Erection',
                 'site' => 'North Staging Terminal - Pier 4',
-                'site_notes' => 'Tandem lift with secondary 80T crane. Outrigger ground compaction verified. Radio channel 4.',
+                'site_notes' => $usingAlibatonFleet
+                    ? 'XCMG XCT25L5_S1 truck-crane lift. Outrigger ground compaction verified. Radio channel 4.'
+                    : 'Tandem lift with secondary 80T crane. Outrigger ground compaction verified. Radio channel 4.',
                 'site_latitude' => 14.5547000,
                 'site_longitude' => 121.0244000,
                 'priority' => DispatchPriority::Priority,
@@ -110,7 +127,7 @@ final class OperationalTestSeeder extends Seeder
             ]
         );
 
-        // 5. Asset Assignment for CRN-101 on Job
+        // 5. Asset Assignment for the selected scenario crane on Job
         DispatchAssetAssignment::query()->updateOrCreate(
             [
                 'dispatch_job_id' => $job->id,
@@ -175,7 +192,9 @@ final class OperationalTestSeeder extends Seeder
                 'latitude' => 14.5547000,
                 'longitude' => 121.0244000,
                 'location_name' => 'North Staging Terminal - Pier 4',
-                'remarks' => 'Operating 50T crane for structural tandem lift',
+                'remarks' => $usingAlibatonFleet
+                    ? 'Operating XCMG XCT25L5_S1 truck crane for structural steel erection'
+                    : 'Operating 50T crane for structural tandem lift',
             ]
         );
 
@@ -188,7 +207,9 @@ final class OperationalTestSeeder extends Seeder
                 'longitude' => 121.0244000,
                 'accuracy_metres' => 2.5,
                 'speed' => 0.0,
-                'remarks' => 'Active tandem lift operations at Pier 4',
+                'remarks' => $usingAlibatonFleet
+                    ? 'Active XCMG XCT25L5_S1 truck-crane operations at Pier 4'
+                    : 'Active tandem lift operations at Pier 4',
                 'sharing_enabled' => true,
                 'source' => 'field_mobile',
                 'captured_at' => $now,

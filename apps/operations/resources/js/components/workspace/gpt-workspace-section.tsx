@@ -1082,7 +1082,10 @@ function PendingRecommendationCard({
         auth?.prototype_role === 'system_administrator';
 
     return (
-        <Panel className="space-y-4 border-brand-strong/30 bg-surface p-5 shadow-sm">
+        <Panel
+            data-testid={`gpt-recommendation-card-${rec.id}`}
+            className="space-y-4 border-brand-strong/30 bg-surface p-5 shadow-sm"
+        >
             {/* Header / Purpose & 15-Minute Expiry Countdown */}
             <div className="flex items-start justify-between border-b border-line pb-3">
                 <div>

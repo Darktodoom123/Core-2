@@ -268,7 +268,7 @@ export function AppShell({
                     aria-label={`${roleLabels[role]} navigation`}
                 >
                     {!collapsed && navigation.some((item) => item.module) && (
-                        <p className="px-3 pb-2 text-[10px] font-bold tracking-wider text-ink-soft/70 uppercase">
+                        <p className="px-3 pb-2 text-[10px] font-bold tracking-wider text-ink-soft uppercase">
                             Core modules
                         </p>
                     )}

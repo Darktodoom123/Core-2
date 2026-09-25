@@ -490,6 +490,15 @@ export interface AssetViewModel {
     name: string;
     kind: string;
     subtype: string | null;
+    category?:
+        | 'tower_cranes'
+        | 'mobile_cranes'
+        | 'heavy_equipment'
+        | 'transport'
+        | 'other'
+        | string
+        | null;
+    category_label?: string | null;
     registration_number: string | null;
     manufacturer: string | null;
     model: string | null;
@@ -767,6 +776,15 @@ export interface LocationUpdateViewModel {
             | 'tower_crane'
             | 'equipment'
             | string;
+        subtype?: string | null;
+        category?:
+            | 'tower_cranes'
+            | 'mobile_cranes'
+            | 'heavy_equipment'
+            | 'transport'
+            | 'other'
+            | string
+            | null;
         location?: string | null;
         status?: string | null;
         status_label?: string | null;
@@ -901,8 +919,9 @@ export interface ReportExportViewModel {
     created_at: string | null;
     completed_at: string | null;
     is_downloadable: boolean;
+    can_download: boolean;
     is_expired: boolean;
-    download_url: string;
+    download_url: string | null;
     retry_url: string;
 }
 
@@ -967,6 +986,13 @@ export interface WorkspaceCapabilities {
     restore_dispatch: boolean;
     view_sos: boolean;
     respond_sos: boolean;
+    safety_governance_view?: boolean;
+    safety_tbm_cosign?: boolean;
+    safety_lift_plan_approve?: boolean;
+    safety_hazard_report?: boolean;
+    safety_hazard_rectify?: boolean;
+    safety_work_stoppage_issue?: boolean;
+    safety_work_stoppage_lift?: boolean;
     manage_users?: boolean;
     view_audit?: boolean;
 }

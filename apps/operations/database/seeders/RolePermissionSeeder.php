@@ -66,6 +66,7 @@ final class RolePermissionSeeder extends Seeder
                 PermissionName::SalesCreateQuote,
                 PermissionName::SalesApproveOrder, PermissionName::SalesFulfill, PermissionName::SalesTransferOwnership,
                 PermissionName::SosView, PermissionName::SosRespond,
+                PermissionName::SafetyGovernanceView,
                 PermissionName::SafetyHazardReport, PermissionName::SafetyHazardRectify,
                 PermissionName::SafetyTbmCoSign, PermissionName::SafetyLiftPlanApprove,
                 PermissionName::SafetyWorkStoppageIssue, PermissionName::SafetyWorkStoppageLift,
@@ -78,6 +79,7 @@ final class RolePermissionSeeder extends Seeder
                 PermissionName::SosTrigger,
                 PermissionName::SafetyHazardReport,
                 PermissionName::SafetyTbmSubmit, PermissionName::SafetyLiftPlanCreate,
+                PermissionName::SafetyWorkStoppageIssue,
             ]),
             RoleName::Rigger->value => self::values([
                 PermissionName::DispatchViewAssigned, PermissionName::DispatchRespondOwn,
@@ -85,6 +87,7 @@ final class RolePermissionSeeder extends Seeder
                 PermissionName::ReportsViewOwn,
                 PermissionName::SosTrigger,
                 PermissionName::SafetyHazardReport,
+                PermissionName::SafetyWorkStoppageIssue,
             ]),
         ];
     }

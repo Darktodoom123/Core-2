@@ -220,21 +220,20 @@ test.describe('UI-2 Complete Dispatch Lifecycle & Scheduling Journeys', () => {
         // 3. Verify next valid action button has touch target >= 44px
         const nextActionButton = page.locator(`[id^="field-next-action-"]`);
 
-        if (await nextActionButton.isVisible()) {
-            const boundingBox = await nextActionButton.boundingBox();
-            expect(boundingBox).not.toBeNull();
-            expect(boundingBox?.height).toBeGreaterThanOrEqual(44);
+        await expect(nextActionButton).toBeVisible();
+        const boundingBox = await nextActionButton.boundingBox();
+        expect(boundingBox).not.toBeNull();
+        expect(boundingBox?.height).toBeGreaterThanOrEqual(44);
 
-            // Click forward transition
-            await nextActionButton.click();
+        // Click forward transition
+        await nextActionButton.click();
 
-            // Verify confirmation modal / dialog
-            const confirmationTitle = page.locator('#field-confirmation-title');
-            await expect(confirmationTitle).toBeVisible();
-            await expect(
-                page.getByRole('button', { name: 'Keep current status' }),
-            ).toBeVisible();
-        }
+        // Verify confirmation modal / dialog
+        const confirmationTitle = page.locator('#field-confirmation-title');
+        await expect(confirmationTitle).toBeVisible();
+        await expect(
+            page.getByRole('button', { name: 'Keep current status' }),
+        ).toBeVisible();
 
         // 4. Verify accessibility
         const results = await new AxeBuilder({ page }).analyze();

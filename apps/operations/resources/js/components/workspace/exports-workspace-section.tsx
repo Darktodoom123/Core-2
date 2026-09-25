@@ -261,7 +261,9 @@ export function ExportsSurface({
 
                                         <TableCell className="text-right">
                                             <div className="flex items-center justify-end gap-2">
-                                                {exp.is_downloadable && (
+                                                {exp.is_downloadable &&
+                                                exp.can_download &&
+                                                exp.download_url ? (
                                                     <a
                                                         href={exp.download_url}
                                                         download
@@ -270,7 +272,15 @@ export function ExportsSurface({
                                                         <Download className="h-3.5 w-3.5" />
                                                         Download
                                                     </a>
-                                                )}
+                                                ) : exp.is_downloadable ? (
+                                                    <span
+                                                        className="inline-flex min-h-11 items-center px-2.5 text-xs font-medium text-ink-soft"
+                                                        title="Only the export owner or a system administrator can download this file."
+                                                    >
+                                                        Owner or system admin
+                                                        only
+                                                    </span>
+                                                ) : null}
 
                                                 {(exp.status.value ===
                                                     'failed' ||

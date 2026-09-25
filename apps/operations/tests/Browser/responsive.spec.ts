@@ -176,7 +176,7 @@ test.describe('responsive operations workspace contract', () => {
         await expect(page.locator('#workspace-content')).toBeVisible();
         await expect(
             page.locator('#workspace-content').getByRole('heading', {
-                name: 'Operations overview',
+                name: 'Operation Dashboard',
             }),
         ).toBeVisible();
         await expect(
@@ -227,7 +227,7 @@ test.describe('responsive operations workspace contract', () => {
         await expect(openTrigger).toBeHidden();
         await expect(
             page.getByRole('button', {
-                name: /Collapse navigation|Expand navigation/,
+                name: /Collapse sidebar|Expand sidebar/,
             }),
         ).toBeVisible();
         await expect(navigation).toHaveClass(/min-\[840px\]:sticky/);
@@ -269,7 +269,7 @@ test.describe('responsive operations workspace contract', () => {
         await page.goto('/?view=overview', { waitUntil: 'domcontentloaded' });
         await expect(
             page.locator('#workspace-content').getByRole('heading', {
-                name: 'Operations overview',
+                name: 'Operation Dashboard',
             }),
         ).toBeVisible();
         await expect
@@ -287,7 +287,9 @@ test.describe('responsive operations workspace contract', () => {
         expect(mobileResults.violations).toEqual([]);
 
         await page.setViewportSize({ width: 1280, height: 800 });
-        await page.goto('/?view=dispatch', { waitUntil: 'domcontentloaded' });
+        await page.goto('/?view=dispatch&dispatch_workspace=classic', {
+            waitUntil: 'domcontentloaded',
+        });
         await page
             .getByRole('button', { name: /Operational attention/ })
             .click();
@@ -460,7 +462,7 @@ async function assertResponsiveContract(
     const navigation = page.locator('#workspace-navigation');
     const openTrigger = page.getByRole('button', { name: 'Open navigation' });
     const collapseControl = page.getByRole('button', {
-        name: /Collapse navigation|Expand navigation/,
+        name: /Collapse sidebar|Expand sidebar/,
     });
 
     if (viewport.width < 840) {

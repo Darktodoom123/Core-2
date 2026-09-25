@@ -37,7 +37,7 @@ test.describe('Web new-device sign-in flow and device trust handoff', () => {
         // 2. Password sign-in from an untrusted device
         await page.goto('/login');
         await page.getByLabel('Username').fill(username);
-        await page.getByLabel('Password').fill(password);
+        await page.getByLabel('Password', { exact: true }).fill(password);
         await page.getByRole('button', { name: 'Sign in' }).click();
 
         // 3. Confirm redirection to the OTP challenge
@@ -173,7 +173,7 @@ test.describe('Web new-device sign-in flow and device trust handoff', () => {
 
         // 10. Sign in again in the SAME browser context
         await page.getByLabel('Username').fill(username);
-        await page.getByLabel('Password').fill(password);
+        await page.getByLabel('Password', { exact: true }).fill(password);
         await page.getByRole('button', { name: 'Sign in' }).click();
 
         // Confirm NO further OTP challenge is prompted; browser is trusted and enters dashboard directly
@@ -222,7 +222,7 @@ test.describe('Web new-device sign-in flow and device trust handoff', () => {
         // 1. Password sign-in on untrusted device
         await page.goto('/login');
         await page.getByLabel('Username').fill(username);
-        await page.getByLabel('Password').fill(password);
+        await page.getByLabel('Password', { exact: true }).fill(password);
         await page.getByRole('button', { name: 'Sign in' }).click();
 
         // 2. Challenged for OTP
@@ -254,7 +254,7 @@ test.describe('Web new-device sign-in flow and device trust handoff', () => {
 
         // 4. Sign in again in the same browser context
         await page.getByLabel('Username').fill(username);
-        await page.getByLabel('Password').fill(password);
+        await page.getByLabel('Password', { exact: true }).fill(password);
         await page.getByRole('button', { name: 'Sign in' }).click();
 
         // Because device was not trusted, user MUST be challenged again

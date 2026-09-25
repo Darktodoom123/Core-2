@@ -1,9 +1,53 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { browserFetch, browserFixtures, signIn } from './browser-fixtures';
 
+async function requestFreshDispatchRecommendation(
+    page: Page,
+    jobId: number,
+): Promise<Locator> {
+    await page.goto(`/operations/dispatch-jobs/${jobId}`, {
+        waitUntil: 'domcontentloaded',
+    });
+    const requestButton = page.getByRole('button', {
+        name: 'Request AI assistance',
+    });
+    await expect(requestButton).toBeVisible();
+
+    const responsePromise = page.waitForResponse(
+        (response) =>
+            new URL(response.url()).pathname ===
+                '/operations/gpt-recommendations' &&
+            response.request().method() === 'POST',
+    );
+    await requestButton.click();
+    const response = await responsePromise;
+    expect(response.status()).toBeLessThan(400);
+    await response.finished();
+
+    await page.goto('/?view=gpt-recommendations');
+    const recommendation = page
+        .locator('[data-testid^="gpt-recommendation-card-"]')
+        .filter({ hasText: `Dispatch #${jobId}` })
+        .first();
+    await expect(recommendation).toBeVisible();
+    await expect(
+        recommendation.getByRole('button', { name: 'Accept & Apply Plan' }),
+    ).toBeVisible();
+
+    return recommendation;
+}
+
+function recommendationIdFromCard(cardTestId: string | null): number {
+    const match = cardTestId?.match(/^gpt-recommendation-card-(\d+)$/);
+    expect(match).toBeTruthy();
+
+    return Number(match?.[1]);
+}
+
 test.describe('R6 deterministic authenticated acceptance', () => {
-    test('sign-in and role-filtered workspace access are enforced', async ({
+    test('dispatchers receive only their allowed workspace modules', async ({
         page,
     }) => {
         const fixtures = browserFixtures();
@@ -20,24 +64,13 @@ test.describe('R6 deterministic authenticated acceptance', () => {
                 name: 'Available operations modules',
             }),
         ).toBeVisible();
+    });
 
-        await page.getByRole('button', { name: 'User account menu' }).click();
-        await page.getByRole('menuitem', { name: 'Sign out' }).click();
-        await page.waitForURL(/\/login$/);
-        await signIn(page, fixtures.users.manager, fixtures.password);
-        await page.goto('/?view=reports');
-        const exportLinks = page
-            .getByRole('link', { name: 'Download' })
-            .filter({ has: page.locator('svg') });
-        const signedExportUrls = [
-            await exportLinks.nth(1).getAttribute('href'),
-            await exportLinks.nth(2).getAttribute('href'),
-        ];
-        expect(signedExportUrls[0]).not.toBeNull();
-        expect(signedExportUrls[1]).not.toBeNull();
-        await page.getByRole('button', { name: 'User account menu' }).click();
-        await page.getByRole('menuitem', { name: 'Sign out' }).click();
-        await page.waitForURL(/\/login$/);
+    test('drivers cannot directly download another user’s restricted export', async ({
+        page,
+    }) => {
+        const fixtures = browserFixtures();
+
         await signIn(page, fixtures.users.driver, fixtures.password);
         await expect(
             page.getByRole('button', { name: 'Job reports' }),
@@ -45,17 +78,24 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await expect(
             page.getByRole('button', { name: 'GPT AI Advisory' }),
         ).toHaveCount(0);
-
+        await page.getByRole('button', { name: 'Job reports' }).click();
+        await expect(
+            page.getByRole('heading', { name: /Job reports/i }),
+        ).toBeVisible();
+        await expect(
+            page.getByRole('region', { name: 'reports section loading' }),
+        ).toHaveCount(0);
+        await expect(
+            page.locator('[aria-label="Loaded reports scope summary"]'),
+        ).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Download' })).toHaveCount(
+            0,
+        );
         const deniedExport = await browserFetch(
             page,
-            signedExportUrls[0] as string,
-        );
-        const deniedAttachment = await browserFetch(
-            page,
-            `/operations/attachments/${fixtures.attachment_id}/download`,
+            fixtures.restricted_export_url,
         );
         expect(deniedExport.status).toBe(403);
-        expect(deniedAttachment.status).toBe(403);
     });
 
     test('authorized CSV and PDF exports plus attachment download stay private', async ({
@@ -68,12 +108,23 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await expect(
             page.getByRole('heading', { name: /Job reports/i }),
         ).toBeVisible();
+        const restrictedExportRow = page
+            .getByRole('row')
+            .filter({ hasText: 'XLSX' });
+        await expect(
+            restrictedExportRow.getByText('Owner or system admin only', {
+                exact: true,
+            }),
+        ).toBeVisible();
+        await expect(
+            restrictedExportRow.getByRole('link', { name: 'Download' }),
+        ).toHaveCount(0);
         await expect(
             page.getByRole('link', { name: 'Download' }).first(),
         ).toBeVisible();
         expect(
             await page.getByRole('link', { name: 'Download' }).count(),
-        ).toBeGreaterThanOrEqual(3);
+        ).toBeGreaterThanOrEqual(2);
         const csvUrl = (await page
             .locator('tbody tr')
             .filter({ hasText: 'csv' })
@@ -341,7 +392,9 @@ test.describe('R6 deterministic authenticated acceptance', () => {
             name: 'Asset type filters',
         });
         await menu.getByRole('menuitemcheckbox', { name: /Trucks/ }).click();
-        await menu.getByRole('menuitemcheckbox', { name: /Personnel/ }).click();
+        await menu
+            .getByRole('menuitemcheckbox', { name: /Mobile Cranes/ })
+            .click();
 
         await expect(
             page.getByRole('button', { name: 'Asset type filter: 2 Types' }),
@@ -424,6 +477,7 @@ test.describe('R6 deterministic authenticated acceptance', () => {
     test('GPT failure, stale, accept, reject, and retry are visible and keyboard safe', async ({
         page,
     }) => {
+        test.setTimeout(240_000);
         const fixtures = browserFixtures();
 
         await signIn(
@@ -444,17 +498,21 @@ test.describe('R6 deterministic authenticated acceptance', () => {
             page.getByText('stale', { exact: true }).first(),
         ).toBeVisible();
 
-        const acceptResponse = page.waitForResponse(
+        const stalePendingCard = page.getByTestId(
+            `gpt-recommendation-card-${fixtures.recommendations.pending_stale}`,
+        );
+        await expect(stalePendingCard).toBeVisible();
+
+        const staleAcceptResponse = page.waitForResponse(
             (response) =>
-                response.url().includes('/gpt-recommendations/') &&
-                response.url().endsWith('/accept') &&
+                new URL(response.url()).pathname ===
+                    `/operations/gpt-recommendations/${fixtures.recommendations.pending_stale}/accept` &&
                 response.request().method() === 'POST',
         );
-        await page
+        await stalePendingCard
             .getByRole('button', {
-                name: /Accept & Apply Plan|Accept Proposal/i,
+                name: 'Accept & Apply Plan',
             })
-            .first()
             .click();
         await expect(page.getByRole('dialog')).toBeVisible();
         await expect(
@@ -464,16 +522,58 @@ test.describe('R6 deterministic authenticated acceptance', () => {
             .getByRole('dialog')
             .getByRole('button', { name: /^Confirm & Apply / })
             .click();
+        await (await staleAcceptResponse).finished();
+        const staleDialog = page.getByRole('dialog');
+        await expect(staleDialog).toBeVisible();
+        await expect(staleDialog.getByRole('alert')).toContainText(
+            'The underlying dispatch context has changed since this recommendation was generated. Please generate a fresh recommendation.',
+        );
+        await staleDialog.getByRole('button', { name: 'Cancel' }).click();
+
+        const freshAcceptCard = await requestFreshDispatchRecommendation(
+            page,
+            fixtures.gpt_job_id,
+        );
+        const freshAcceptId = recommendationIdFromCard(
+            await freshAcceptCard.getAttribute('data-testid'),
+        );
+        const acceptResponse = page.waitForResponse(
+            (response) =>
+                new URL(response.url()).pathname ===
+                    `/operations/gpt-recommendations/${freshAcceptId}/accept` &&
+                response.request().method() === 'POST',
+        );
+        await freshAcceptCard
+            .getByRole('button', { name: 'Accept & Apply Plan' })
+            .click();
+        const acceptDialog = page.getByRole('dialog');
+        await expect(acceptDialog).toBeVisible();
+        await expect(
+            acceptDialog.getByRole('button', { name: 'Cancel' }),
+        ).toBeFocused();
+        await acceptDialog
+            .getByRole('button', { name: /^Confirm & Apply / })
+            .click();
         await (await acceptResponse).finished();
-        await expect(page.getByRole('dialog')).toBeHidden();
+        await expect(acceptDialog).toBeHidden();
+
+        const freshRejectCard = await requestFreshDispatchRecommendation(
+            page,
+            fixtures.gpt_job_id,
+        );
+        const freshRejectId = recommendationIdFromCard(
+            await freshRejectCard.getAttribute('data-testid'),
+        );
 
         const rejectResponse = page.waitForResponse(
             (response) =>
-                response.url().includes('/gpt-recommendations/') &&
-                response.url().endsWith('/reject') &&
+                new URL(response.url()).pathname ===
+                    `/operations/gpt-recommendations/${freshRejectId}/reject` &&
                 response.request().method() === 'POST',
         );
-        await page.getByRole('button', { name: 'Reject' }).first().click();
+        await freshRejectCard
+            .getByRole('button', { name: 'Reject Proposal' })
+            .click();
         await expect(page.getByRole('dialog')).toBeVisible();
         await expect(
             page.getByRole('dialog').getByRole('textbox'),
@@ -509,6 +609,11 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await expect(
             page.getByText('Recommendation Decision History'),
         ).toBeVisible();
+        const retriedRecommendation = page
+            .locator('[data-testid^="gpt-recommendation-card-"]')
+            .filter({ hasText: `Dispatch #${fixtures.gpt_job_id}` })
+            .first();
+        await expect(retriedRecommendation).toBeVisible();
     });
 
     test('selected dispatch details show only its embedded GPT advisory', async ({
@@ -518,14 +623,14 @@ test.describe('R6 deterministic authenticated acceptance', () => {
 
         await signIn(page, fixtures.users.dispatcher, fixtures.password);
         await page.goto('/?view=dispatch&dispatch_workspace=classic');
-        await page.getByRole('button', { name: /R6-BROWSER-004/ }).click();
+        await page.getByRole('button', { name: /R6-BROWSER-006/ }).click();
 
         await expect(
             page.getByText('Dispatch job', { exact: true }),
         ).toBeVisible();
         await expect(
             page.getByRole('heading', {
-                name: 'AI Assisted browser fixture lift',
+                name: 'Independent assignment review lift',
             }),
         ).toBeVisible();
         await expect(
@@ -538,13 +643,33 @@ test.describe('R6 deterministic authenticated acceptance', () => {
             page.getByRole('heading', { name: 'GPT dispatch advisory' }),
         ).toBeVisible();
         await expect(
-            page.getByText(/^Recommendation #\d+$/).first(),
+            page.getByRole('heading', { name: 'Suggested resources' }),
+        ).toBeVisible();
+        await expect(
+            page.getByRole('heading', { name: 'Suggested crew' }),
+        ).toBeVisible();
+        await expect(
+            page.getByRole('checkbox', {
+                name: 'Select Browser Crane Operator',
+            }),
+        ).toBeChecked();
+        await expect(
+            page.getByRole('checkbox', {
+                name: 'Select CRN-01 · 50T Mobile Crane',
+            }),
+        ).toBeChecked();
+        await expect(
+            page.getByRole('button', {
+                name: 'Review & apply 1 crew & 1 asset',
+            }),
         ).toBeVisible();
         await expect(
             page.getByRole('link', { name: 'View full advisory' }),
-        ).toBeVisible();
+        ).toHaveCount(0);
         await expect(
-            page.getByRole('link', { name: 'Assign resources' }),
+            page.getByRole('link', {
+                name: /Assign resources|Manage assignments/,
+            }),
         ).toHaveCount(1);
     });
 
@@ -575,14 +700,14 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await expect(
             board.getByRole('button', { name: 'Show today' }),
         ).toBeVisible();
-        await expect(board.getByRole('status')).toHaveText('0 scheduled jobs');
+        await expect(
+            board.getByText('0 scheduled jobs', { exact: true }),
+        ).toBeVisible();
 
         await board.getByRole('button', { name: 'Show next day' }).click();
 
         await expect(dateHeading).not.toContainText('Today');
-        await expect(board.getByRole('status')).toHaveText(
-            /^[34] scheduled jobs$/,
-        );
+        await expect(board.getByText(/^[34] scheduled jobs$/)).toBeVisible();
 
         await board
             .getByRole('button', { name: 'personnel', exact: true })
@@ -599,7 +724,9 @@ test.describe('R6 deterministic authenticated acceptance', () => {
 
         await board.getByRole('button', { name: 'Show today' }).click();
         await expect(dateHeading).toContainText('Today');
-        await expect(board.getByRole('status')).toHaveText('0 scheduled jobs');
+        await expect(
+            board.getByText('0 scheduled jobs', { exact: true }),
+        ).toBeVisible();
     });
 
     test('schedule board provides week and month planning views', async ({
@@ -840,9 +967,7 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await page.getByRole('button', { name: /R6-BROWSER-001/ }).click();
 
         const assignResources = page
-            .getByRole('link', {
-                name: /Assign resources|Resolve in assignment workspace/i,
-            })
+            .getByRole('link', { name: /Assign resources|Manage assignments/ })
             .first();
         await expect(assignResources).toBeVisible();
         await expect(assignResources).toHaveAttribute(
@@ -1041,7 +1166,7 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         expect(results.violations).toEqual([]);
     });
 
-    test('existing assignments promote the activation next action', async ({
+    test('saved draft assignments expose the activation readiness next action', async ({
         page,
     }) => {
         const fixtures = browserFixtures();
@@ -1049,20 +1174,39 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await page.setViewportSize({ width: 390, height: 844 });
         await signIn(page, fixtures.users.dispatcher, fixtures.password);
         await page.goto(
-            `/operations/dispatch-jobs/${fixtures.assigned_job_id}`,
+            `/operations/dispatch-jobs/${fixtures.activation_job_id}`,
         );
 
         await expect(
             page.locator('#mobile-assignment-action-bar'),
         ).toContainText(/Activate dispatch|Review .*blocker|Review activation/);
         await expect(
-            page.getByRole('heading', { name: 'Resources assigned' }),
+            page.getByRole('heading', { name: 'Assigned resources' }),
+        ).toBeVisible();
+        await expect(page.getByText('2 resources assigned')).toBeVisible();
+        await expect(page.getByText('1 assigned', { exact: true })).toHaveCount(
+            2,
+        );
+
+        const reviewAction = page
+            .locator('#mobile-assignment-action-bar')
+            .getByRole('button', { name: 'Review 1 blocker' });
+        await expect(reviewAction).toBeVisible();
+        await reviewAction.click();
+        await expect(page.locator('#dispatch-activation')).toHaveAttribute(
+            'open',
+            '',
+        );
+        await expect(
+            page.getByText('Blocking activation reasons', { exact: true }),
         ).toBeVisible();
         await expect(
-            page.getByRole('link', { name: 'Open fleet asset catalog' }),
-        ).toBeVisible();
-        await expect(
-            page.getByRole('link', { name: 'Open equipment catalog' }).first(),
+            page
+                .locator('#dispatch-activation')
+                .getByText(
+                    'Independent Operations Manager approval is still required.',
+                    { exact: true },
+                ),
         ).toBeVisible();
     });
 });

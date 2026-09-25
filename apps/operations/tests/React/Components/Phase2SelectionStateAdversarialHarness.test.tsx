@@ -311,8 +311,8 @@ describe('Empirical Adversarial Stress Harness: Selection Invariants & State Iso
         window.history.replaceState({}, '', '/operations');
     });
 
-    describe('Edge Case 1: Filtering when 0 records match results in null selection and empty state (no zombie detail pane)', () => {
-        it('FleetSurface: completely clears detail pane to EmptyState on zero filter matches', () => {
+    describe('Edge Case 1: Empty filtered queues retain clear recovery context', () => {
+        it('FleetSurface: explains that the selected asset is outside a zero-match filter', async () => {
             const assets = [
                 createAsset(1, 'CRN-001', 'crane', 'available'),
                 createAsset(2, 'TRK-002', 'truck', 'available'),
@@ -325,6 +325,7 @@ describe('Empirical Adversarial Stress Harness: Selection Invariants & State Iso
                     capabilities={createCapabilities()}
                 />,
             );
+            await screen.findByTestId('live-tracking-map');
 
             // Initially CRN-001 is selected
             expect(
@@ -342,25 +343,16 @@ describe('Empirical Adversarial Stress Harness: Selection Invariants & State Iso
                 target: { value: 'ZERO_MATCH_QUERY_xyz' },
             });
 
-            // Invariant: ZERO zombie detail pane
+            // The queue shows no matches while the active detail remains stable.
+            expect(screen.getByText('No matching assets')).toBeInTheDocument();
             expect(
-                screen.queryByRole('heading', {
+                screen.getByRole('heading', {
                     level: 2,
                     name: 'Asset CRN-001',
                 }),
-            ).not.toBeInTheDocument();
+            ).toBeInTheDocument();
             expect(
-                screen.queryByRole('heading', {
-                    level: 2,
-                    name: 'Asset TRK-002',
-                }),
-            ).not.toBeInTheDocument();
-
-            // Queue and detail both show empty state
-            expect(screen.getByText('No matching assets')).toBeInTheDocument();
-            expect(screen.getByText('Select an asset')).toBeInTheDocument();
-            expect(
-                screen.getByText(/Choose a crane or transport unit to review/i),
+                screen.getByText('Selected asset is outside the filtered list'),
             ).toBeInTheDocument();
 
             // Category filter with 0 matches (e.g. holds filter when 0 hold assets)
@@ -372,16 +364,27 @@ describe('Empirical Adversarial Stress Harness: Selection Invariants & State Iso
                 }),
             ).toBeInTheDocument();
 
-            const holdsFilter = screen.getByRole('button', {
-                name: /holds \(0\)/i,
-            });
-            fireEvent.click(holdsFilter);
+            fireEvent.click(
+                screen.getByRole('button', {
+                    name: 'Filter assets: All assets',
+                }),
+            );
+            fireEvent.click(
+                screen.getByRole('menuitemradio', {
+                    name: 'Holds / maintenance (0)',
+                }),
+            );
 
-            // Invariant: ZERO zombie detail pane on category 0-match
+            // The current selection stays visible, with the same filter explanation.
             expect(
-                screen.queryByRole('heading', { level: 2, name: /Asset CRN/i }),
-            ).not.toBeInTheDocument();
-            expect(screen.getByText('Select an asset')).toBeInTheDocument();
+                screen.getByRole('heading', {
+                    level: 2,
+                    name: 'Asset CRN-001',
+                }),
+            ).toBeInTheDocument();
+            expect(
+                screen.getByText('Selected asset is outside the filtered list'),
+            ).toBeInTheDocument();
         });
 
         it('FuelSurface: completely clears detail pane to EmptyState on zero search or status matches', () => {
@@ -626,7 +629,7 @@ describe('Empirical Adversarial Stress Harness: Selection Invariants & State Iso
             consoleErrorSpy.mockRestore();
         });
 
-        it('isolates map crash in top FleetMapView and allows queue, detail pane, and tabs to remain fully interactive', async () => {
+        it('shows map failure without blocking the fleet queue, detail pane, and tabs', async () => {
             const consoleErrorSpy = vi
                 .spyOn(console, 'error')
                 .mockImplementation(() => {});
@@ -644,11 +647,9 @@ describe('Empirical Adversarial Stress Harness: Selection Invariants & State Iso
                 />,
             );
 
-            // MapErrorBoundary in top FleetMapView caught the error (await Suspense resolution)
+            // The map shows an accessible failure state while the rest of fleet stays usable.
             expect(await screen.findByRole('alert')).toBeInTheDocument();
-            expect(
-                screen.getByText('Fleet Map Currently Unavailable'),
-            ).toBeInTheDocument();
+            expect(screen.getByText('Map unavailable')).toBeInTheDocument();
 
             // Invariant: Asset registry and detail pane are fully interactive
             expect(
@@ -663,7 +664,9 @@ describe('Empirical Adversarial Stress Harness: Selection Invariants & State Iso
                 name: /overview & specs/i,
             });
             fireEvent.click(specsTab);
-            expect(screen.getByText('Rated Capacity')).toBeInTheDocument();
+            expect(
+                screen.getByText(/Rated capacity/),
+            ).toBeInTheDocument();
 
             // Inspections tab works
             const inspectionsTab = screen.getByRole('tab', {
@@ -671,16 +674,18 @@ describe('Empirical Adversarial Stress Harness: Selection Invariants & State Iso
             });
             fireEvent.click(inspectionsTab);
             expect(
-                screen.getByRole('button', { name: /record new inspection/i }),
+                screen.getByRole('button', {
+                    name: /record workshop inspection/i,
+                }),
             ).toBeInTheDocument();
 
             // User can collapse the broken map using the toggle
             const hideMapBtn = screen.getByRole('button', {
-                name: /hide map/i,
+                name: /collapse fleet map/i,
             });
             fireEvent.click(hideMapBtn);
             expect(
-                screen.queryByText('Fleet Map Currently Unavailable'),
+                screen.queryByText('Map unavailable'),
             ).not.toBeInTheDocument();
 
             consoleErrorSpy.mockRestore();

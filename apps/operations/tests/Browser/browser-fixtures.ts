@@ -13,8 +13,13 @@ export type BrowserFixtures = {
         safety_officer?: string;
         foreman?: string;
     };
+    user_ids: {
+        admin: number;
+        manager: number;
+    };
     password: string;
     job_id: number;
+    gpt_job_id: number;
     assignment_review_job_id: number;
     assigned_job_id: number;
     approval_job_id?: number;
@@ -24,6 +29,7 @@ export type BrowserFixtures = {
     crane_id?: number;
     report_id: number;
     attachment_id: number;
+    restricted_export_url: string;
     export_ids: string[];
     recommendations: Record<string, number>;
     sos_incident_id?: string;
@@ -133,14 +139,19 @@ export async function browserFetch(
     disposition: string;
     body: string;
 }> {
-    return page.evaluate(async (requestUrl) => {
-        const response = await fetch(requestUrl);
+    const response = await page.request.get(
+        new URL(url, page.url()).toString(),
+        {
+            timeout: 15_000,
+            maxRedirects: 0,
+        },
+    );
+    const headers = response.headers();
 
-        return {
-            status: response.status,
-            contentType: response.headers.get('content-type') ?? '',
-            disposition: response.headers.get('content-disposition') ?? '',
-            body: await response.text(),
-        };
-    }, url);
+    return {
+        status: response.status(),
+        contentType: headers['content-type'] ?? '',
+        disposition: headers['content-disposition'] ?? '',
+        body: await response.text(),
+    };
 }

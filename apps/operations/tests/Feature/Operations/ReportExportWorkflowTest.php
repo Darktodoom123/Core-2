@@ -324,6 +324,54 @@ it('allows authorized download of completed report export', function (): void {
     expect(AuditEvent::query()->where('action', 'report_export.downloaded')->exists())->toBeTrue();
 });
 
+it('denies a different operations manager download access to an owned report export', function (): void {
+    $owner = createExportUser(RoleName::OperationsManager);
+    $otherManager = createExportUser(RoleName::OperationsManager);
+    $path = 'exports/owner-only-export.csv';
+
+    Storage::disk('private')->put($path, "Header\nSensitive value");
+
+    $export = ReportExport::query()->create([
+        'user_id' => $owner->id,
+        'export_type' => ReportExportType::JobReports,
+        'format' => 'csv',
+        'status' => ReportExportStatus::Completed,
+        'file_path' => $path,
+        'expires_at' => now()->addDays(7),
+    ]);
+
+    $this->actingAs($otherManager)
+        ->get(URL::temporarySignedRoute('operations.exports.download', now()->addHour(), ['export' => $export->id], absolute: false))
+        ->assertForbidden();
+
+    expect(Storage::disk('private')->exists($path))->toBeTrue()
+        ->and(AuditEvent::query()->where('action', 'report_export.downloaded')->exists())->toBeFalse();
+});
+
+it('denies a field operator download access to a manager-owned report export', function (): void {
+    $owner = createExportUser(RoleName::OperationsManager);
+    $operator = createExportUser(RoleName::CraneOperator);
+    $path = 'exports/manager-only-export.csv';
+
+    Storage::disk('private')->put($path, "Header\nSensitive value");
+
+    $export = ReportExport::query()->create([
+        'user_id' => $owner->id,
+        'export_type' => ReportExportType::JobReports,
+        'format' => 'csv',
+        'status' => ReportExportStatus::Completed,
+        'file_path' => $path,
+        'expires_at' => now()->addDays(7),
+    ]);
+
+    $this->actingAs($operator)
+        ->get(URL::temporarySignedRoute('operations.exports.download', now()->addHour(), ['export' => $export->id], absolute: false))
+        ->assertForbidden();
+
+    expect(Storage::disk('private')->exists($path))->toBeTrue()
+        ->and(AuditEvent::query()->where('action', 'report_export.downloaded')->exists())->toBeFalse();
+});
+
 it('prunes expired export files on schedule', function (): void {
     $manager = createExportUser(RoleName::OperationsManager);
     $path = 'exports/expired-export.csv';

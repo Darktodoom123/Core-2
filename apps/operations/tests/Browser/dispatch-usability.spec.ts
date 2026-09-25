@@ -123,7 +123,7 @@ test('resource inspection preserves desktop context and search recovers from fai
     await page.getByLabel('Search dispatches').fill('no match');
     await expect(
         page.getByText(
-            'Dispatch search could not load. Retry to get complete results.',
+            'Dispatch search could not load. Retry to get complete results; the desk is showing its limited workspace snapshot.',
         ),
     ).toBeVisible();
     await page.unroute('**/operations/dispatch-desk/jobs?**');

@@ -400,7 +400,7 @@ it('requires independent manager approval before a priority dispatch activates',
     $job->assetAssignments()->create(['operational_asset_id' => $asset->id, 'assignment_type' => 'truck', 'assigned_by' => $dispatcher->id, 'active_from' => $job->scheduled_start]);
     $approval = ApprovalRequest::query()->create(['subject_type' => (new DispatchJob)->getMorphClass(), 'subject_id' => $job->id, 'kind' => 'dispatch_activation', 'status' => ApprovalStatus::Pending, 'requested_by' => $dispatcher->id]);
     $this->actingAs($dispatcher)->from("/operations/dispatch-jobs/{$job->id}")->post("/operations/dispatch-jobs/{$job->id}/activate", ['version' => 1])->assertSessionHasErrors('approval');
-    $this->actingAs($manager)->post("/operations/approval-requests/{$approval->id}/decision", ['status' => 'approved', 'reason' => 'Resources and timing verified'])->assertRedirect('/');
+    $this->actingAs($manager)->from("/operations/dispatch-jobs/{$job->id}")->post("/operations/approval-requests/{$approval->id}/decision", ['status' => 'approved', 'reason' => 'Resources and timing verified'])->assertRedirect("/operations/dispatch-jobs/{$job->id}");
     $this->actingAs($dispatcher)->from("/operations/dispatch-jobs/{$job->id}")->post("/operations/dispatch-jobs/{$job->id}/activate", ['version' => 1])->assertRedirect("/operations/dispatch-jobs/{$job->id}");
     expect($job->refresh()->status)->toBe(DispatchStatus::Dispatched);
 });

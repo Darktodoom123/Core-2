@@ -34,7 +34,10 @@ vi.mock('@inertiajs/react', () => {
                     if (typeof keyOrFn === 'function') {
                         setDataState(keyOrFn);
                     } else if (typeof keyOrFn === 'string') {
-                        setDataState((prev: any) => ({ ...prev, [keyOrFn]: val }));
+                        setDataState((prev: any) => ({
+                            ...prev,
+                            [keyOrFn]: val,
+                        }));
                     } else {
                         setDataState(keyOrFn);
                     }
@@ -155,7 +158,12 @@ function createAsset(
         specifications: {},
         status: {
             value: statusValue,
-            label: statusValue === 'available' ? 'Available' : statusValue === 'maintenance' ? 'Maintenance' : 'Working',
+            label:
+                statusValue === 'available'
+                    ? 'Available'
+                    : statusValue === 'maintenance'
+                      ? 'Maintenance'
+                      : 'Working',
         },
         blocking_work_orders_count: statusValue === 'maintenance' ? 1 : 0,
         is_dispatchable: statusValue === 'available',
@@ -208,7 +216,7 @@ describe('Phase 1 Empirical Challenge: Selection Invariants & State Isolation', 
     });
 
     describe('Invariant 1: AssetsSurface Selection and Filtering Invariant', () => {
-        it('immediately updates detail pane to filtered[0] when category filter excludes the selected asset', () => {
+        it('keeps the selected detail visible and explains when a category filter hides it', () => {
             const assets: AssetViewModel[] = [
                 createAsset(1, 'CRN-001', 'crane', 'available'),
                 createAsset(2, 'TRK-002', 'truck', 'available'),
@@ -228,20 +236,51 @@ describe('Phase 1 Empirical Challenge: Selection Invariants & State Isolation', 
             );
 
             // Initially CRN-001 is selected (first asset)
-            expect(screen.getByRole('heading', { level: 2, name: 'Asset CRN-001' })).toBeInTheDocument();
+            expect(
+                screen.getByRole('heading', {
+                    level: 2,
+                    name: 'Asset CRN-001',
+                }),
+            ).toBeInTheDocument();
 
-            // Filter by "Transport" (excludes CRN-001)
-            const transportFilterBtn = screen.getByRole('button', { name: /transport/i });
-            fireEvent.click(transportFilterBtn);
+            // Filter by "Transport" (excludes CRN-001 from the visible queue)
+            fireEvent.click(
+                screen.getByRole('button', {
+                    name: 'Filter assets: All assets',
+                }),
+            );
+            fireEvent.click(
+                screen.getByRole('menuitemradio', { name: 'Transport (2)' }),
+            );
 
-            // Invariant check: selectedAsset MUST NOT be CRN-001 (no zombie detail pane)
-            expect(screen.queryByRole('heading', { level: 2, name: 'Asset CRN-001' })).not.toBeInTheDocument();
+            // The map/list selection remains authoritative and the mismatch is explicit.
+            expect(
+                screen.getByRole('heading', {
+                    level: 2,
+                    name: 'Asset CRN-001',
+                }),
+            ).toBeInTheDocument();
+            expect(
+                screen.getByText('Selected asset is outside the filtered list'),
+            ).toBeInTheDocument();
 
-            // It MUST immediately resolve to filtered[0], which is TRK-002
-            expect(screen.getByRole('heading', { level: 2, name: 'Asset TRK-002' })).toBeInTheDocument();
+            fireEvent.click(
+                screen.getByRole('button', { name: 'Show selected asset' }),
+            );
+            expect(
+                screen.getByRole('heading', {
+                    level: 2,
+                    name: 'Asset CRN-001',
+                }),
+            ).toBeInTheDocument();
+            expect(
+                screen.queryByText(
+                    'Selected asset is outside the filtered list',
+                ),
+            ).not.toBeInTheDocument();
         });
 
-        it('clears detail pane to EmptyState when search excludes all assets', () => {
+        it('keeps the selected detail available and explains when search excludes it', () => {
             const assets: AssetViewModel[] = [
                 createAsset(1, 'CRN-001', 'crane', 'available'),
                 createAsset(2, 'TRK-002', 'truck', 'available'),
@@ -259,29 +298,64 @@ describe('Phase 1 Empirical Challenge: Selection Invariants & State Isolation', 
                 />,
             );
 
-            expect(screen.getByRole('heading', { level: 2, name: 'Asset CRN-001' })).toBeInTheDocument();
+            expect(
+                screen.getByRole('heading', {
+                    level: 2,
+                    name: 'Asset CRN-001',
+                }),
+            ).toBeInTheDocument();
 
             // Search for an asset code that does not exist
-            const searchInput = screen.getByPlaceholderText(/search code, name, model/i);
-            fireEvent.change(searchInput, { target: { value: 'NONEXISTENT-CODE-999' } });
+            const searchInput = screen.getByPlaceholderText(
+                /search code, name, model/i,
+            );
+            fireEvent.change(searchInput, {
+                target: { value: 'NONEXISTENT-CODE-999' },
+            });
 
-            // Invariant check: ZERO zombie detail panes. Must render EmptyState
-            expect(screen.queryByRole('heading', { level: 2, name: /Asset CRN/i })).not.toBeInTheDocument();
-            expect(screen.queryByRole('heading', { level: 2, name: /Asset TRK/i })).not.toBeInTheDocument();
-            expect(screen.getByText('Select an asset')).toBeInTheDocument();
-            expect(screen.getByText(/Choose a crane or transport unit to review/i)).toBeInTheDocument();
+            // Keep current detail context and explain why the matching queue is empty.
+            expect(
+                screen.getByRole('heading', {
+                    level: 2,
+                    name: 'Asset CRN-001',
+                }),
+            ).toBeInTheDocument();
+            expect(screen.getByText('No matching assets')).toBeInTheDocument();
+            expect(
+                screen.getByText('Selected asset is outside the filtered list'),
+            ).toBeInTheDocument();
 
-            // Clear search restores filtered[0]
-            fireEvent.change(searchInput, { target: { value: '' } });
-            expect(screen.getByRole('heading', { level: 2, name: 'Asset CRN-001' })).toBeInTheDocument();
+            // The recovery action restores the selected row in the queue.
+            fireEvent.click(
+                screen.getByRole('button', { name: 'Show selected asset' }),
+            );
+            expect(
+                screen.getByRole('heading', {
+                    level: 2,
+                    name: 'Asset CRN-001',
+                }),
+            ).toBeInTheDocument();
+            expect(
+                screen.queryByText(
+                    'Selected asset is outside the filtered list',
+                ),
+            ).not.toBeInTheDocument();
         });
     });
 
     describe('Invariant 2: ReportsSurface Selection and Filtering Invariant', () => {
         it('immediately updates detail pane to filtered[0] when status filter excludes the selected report', () => {
             const reports: JobReportViewModel[] = [
-                createReport(101, 'submitted', 'Crane setup at North Pier Alpha'),
-                createReport(102, 'approved', 'Foundation concrete pour at Beta Site'),
+                createReport(
+                    101,
+                    'submitted',
+                    'Crane setup at North Pier Alpha',
+                ),
+                createReport(
+                    102,
+                    'approved',
+                    'Foundation concrete pour at Beta Site',
+                ),
                 createReport(103, 'approved', 'Girder placement at Gamma Site'),
             ];
 
@@ -295,27 +369,49 @@ describe('Phase 1 Empirical Challenge: Selection Invariants & State Isolation', 
             );
 
             // Initially Report 101 is selected (first report). Both list and detail show summary.
-            expect(screen.getAllByText('Crane setup at North Pier Alpha')).toHaveLength(2);
-            expect(screen.getByRole('link', { name: 'JOB-1101' })).toBeInTheDocument();
+            expect(
+                screen.getAllByText('Crane setup at North Pier Alpha'),
+            ).toHaveLength(2);
+            expect(
+                screen.getByRole('link', { name: 'JOB-1101' }),
+            ).toBeInTheDocument();
 
             // Click "Approved Reports" filter
-            const approvedStatBtn = screen.getByRole('button', { name: /approved reports/i });
+            const approvedStatBtn = screen.getByRole('button', {
+                name: /approved reports/i,
+            });
             fireEvent.click(approvedStatBtn);
 
             // Invariant check: Report 101 is submitted, so it's excluded from approved filter.
             // There MUST NOT be a zombie detail view for Report 101!
-            expect(screen.queryByText('Crane setup at North Pier Alpha')).not.toBeInTheDocument();
-            expect(screen.queryByRole('link', { name: 'JOB-1101' })).not.toBeInTheDocument();
+            expect(
+                screen.queryByText('Crane setup at North Pier Alpha'),
+            ).not.toBeInTheDocument();
+            expect(
+                screen.queryByRole('link', { name: 'JOB-1101' }),
+            ).not.toBeInTheDocument();
 
             // Detail pane MUST update immediately to filtered[0] -> Report 102
-            expect(screen.getByRole('link', { name: 'JOB-1102' })).toBeInTheDocument();
-            expect(screen.getAllByText('Foundation concrete pour at Beta Site')).toHaveLength(2);
+            expect(
+                screen.getByRole('link', { name: 'JOB-1102' }),
+            ).toBeInTheDocument();
+            expect(
+                screen.getAllByText('Foundation concrete pour at Beta Site'),
+            ).toHaveLength(2);
         });
 
         it('clears detail pane to EmptyState when search query excludes all reports', () => {
             const reports: JobReportViewModel[] = [
-                createReport(101, 'submitted', 'Crane setup at North Pier Alpha'),
-                createReport(102, 'approved', 'Foundation concrete pour at Beta Site'),
+                createReport(
+                    101,
+                    'submitted',
+                    'Crane setup at North Pier Alpha',
+                ),
+                createReport(
+                    102,
+                    'approved',
+                    'Foundation concrete pour at Beta Site',
+                ),
             ];
 
             render(
@@ -327,29 +423,53 @@ describe('Phase 1 Empirical Challenge: Selection Invariants & State Isolation', 
                 />,
             );
 
-            expect(screen.getByRole('link', { name: 'JOB-1101' })).toBeInTheDocument();
+            expect(
+                screen.getByRole('link', { name: 'JOB-1101' }),
+            ).toBeInTheDocument();
 
             // Type impossible search query
-            const searchInput = screen.getByPlaceholderText(/search by job reference, title, author, or report text/i);
-            fireEvent.change(searchInput, { target: { value: 'Z_IMPOSSIBLE_QUERY_9999' } });
+            const searchInput = screen.getByPlaceholderText(
+                /search by job reference, title, author, or report text/i,
+            );
+            fireEvent.change(searchInput, {
+                target: { value: 'Z_IMPOSSIBLE_QUERY_9999' },
+            });
 
             // Invariant check: Detail pane clears and renders EmptyState with no matching reports
-            expect(screen.queryByRole('link', { name: 'JOB-1101' })).not.toBeInTheDocument();
-            expect(screen.queryByRole('link', { name: 'JOB-1102' })).not.toBeInTheDocument();
+            expect(
+                screen.queryByRole('link', { name: 'JOB-1101' }),
+            ).not.toBeInTheDocument();
+            expect(
+                screen.queryByRole('link', { name: 'JOB-1102' }),
+            ).not.toBeInTheDocument();
             expect(screen.getByText('No matching reports')).toBeInTheDocument();
-            expect(screen.getByText('No job reports match the active filter or search query.')).toBeInTheDocument();
+            expect(
+                screen.getByText(
+                    'No job reports match the active filter or search query.',
+                ),
+            ).toBeInTheDocument();
 
             // Restore search restores filtered[0]
             fireEvent.change(searchInput, { target: { value: '' } });
-            expect(screen.getByRole('link', { name: 'JOB-1101' })).toBeInTheDocument();
+            expect(
+                screen.getByRole('link', { name: 'JOB-1101' }),
+            ).toBeInTheDocument();
         });
     });
 
     describe('State Isolation 1: ReportDetailPane Draft Note and Key-Based Mount', () => {
         it('guarantees Report B mounts cleanly with an empty draft note after typing a rejection note in Report A', () => {
             const reports: JobReportViewModel[] = [
-                createReport(101, 'submitted', 'Crane setup at North Pier Alpha'),
-                createReport(102, 'submitted', 'Foundation concrete pour at Beta Site'),
+                createReport(
+                    101,
+                    'submitted',
+                    'Crane setup at North Pier Alpha',
+                ),
+                createReport(
+                    102,
+                    'submitted',
+                    'Foundation concrete pour at Beta Site',
+                ),
             ];
 
             render(
@@ -362,45 +482,75 @@ describe('Phase 1 Empirical Challenge: Selection Invariants & State Isolation', 
             );
 
             // Report 101 is selected
-            expect(screen.getByRole('link', { name: 'JOB-1101' })).toBeInTheDocument();
+            expect(
+                screen.getByRole('link', { name: 'JOB-1101' }),
+            ).toBeInTheDocument();
 
             // Enter a draft rejection note for Report 101
-            const reasonInput = screen.getByPlaceholderText(/review decision notes, quality checks, or rejection reason/i) as HTMLInputElement;
+            const reasonInput = screen.getByPlaceholderText(
+                /review decision notes, quality checks, or rejection reason/i,
+            ) as HTMLInputElement;
             expect(reasonInput.value).toBe('');
             fireEvent.change(reasonInput, {
-                target: { value: 'Report 101 rejected: missing safety officer signature.' },
+                target: {
+                    value: 'Report 101 rejected: missing safety officer signature.',
+                },
             });
-            expect(reasonInput.value).toBe('Report 101 rejected: missing safety officer signature.');
+            expect(reasonInput.value).toBe(
+                'Report 101 rejected: missing safety officer signature.',
+            );
 
             // Now select Report 102 from the queue
-            const reportBButton = screen.getByRole('button', { name: /Foundation concrete pour at Beta Site/i });
+            const reportBButton = screen.getByRole('button', {
+                name: /Foundation concrete pour at Beta Site/i,
+            });
             fireEvent.click(reportBButton);
 
             // Report 102 is now active in detail pane
-            expect(screen.getByRole('link', { name: 'JOB-1102' })).toBeInTheDocument();
+            expect(
+                screen.getByRole('link', { name: 'JOB-1102' }),
+            ).toBeInTheDocument();
 
             // State Isolation check: Report B MUST have an empty draft note!
-            const reasonInputReportB = screen.getByPlaceholderText(/review decision notes, quality checks, or rejection reason/i) as HTMLInputElement;
+            const reasonInputReportB = screen.getByPlaceholderText(
+                /review decision notes, quality checks, or rejection reason/i,
+            ) as HTMLInputElement;
             expect(reasonInputReportB.value).toBe('');
-            expect(reasonInputReportB.value).not.toContain('Report 101 rejected');
+            expect(reasonInputReportB.value).not.toContain(
+                'Report 101 rejected',
+            );
 
             // Entering note for Report B does not bleed back to Report A
             fireEvent.change(reasonInputReportB, {
                 target: { value: 'Report 102 note: incomplete log.' },
             });
-            expect(reasonInputReportB.value).toBe('Report 102 note: incomplete log.');
+            expect(reasonInputReportB.value).toBe(
+                'Report 102 note: incomplete log.',
+            );
 
             // Switch back to Report A -> mounts cleanly with pristine empty input
-            const reportAButton = screen.getByRole('button', { name: /Crane setup at North Pier Alpha/i });
+            const reportAButton = screen.getByRole('button', {
+                name: /Crane setup at North Pier Alpha/i,
+            });
             fireEvent.click(reportAButton);
-            const reasonInputReportARemounted = screen.getByPlaceholderText(/review decision notes, quality checks, or rejection reason/i) as HTMLInputElement;
+            const reasonInputReportARemounted = screen.getByPlaceholderText(
+                /review decision notes, quality checks, or rejection reason/i,
+            ) as HTMLInputElement;
             expect(reasonInputReportARemounted.value).toBe('');
         });
 
         it('guarantees client-side rejection validation error is cleared when switching reports', () => {
             const reports: JobReportViewModel[] = [
-                createReport(101, 'submitted', 'Crane setup at North Pier Alpha'),
-                createReport(102, 'submitted', 'Foundation concrete pour at Beta Site'),
+                createReport(
+                    101,
+                    'submitted',
+                    'Crane setup at North Pier Alpha',
+                ),
+                createReport(
+                    102,
+                    'submitted',
+                    'Foundation concrete pour at Beta Site',
+                ),
             ];
 
             render(
@@ -413,25 +563,41 @@ describe('Phase 1 Empirical Challenge: Selection Invariants & State Isolation', 
             );
 
             // Attempt to reject Report 101 with empty reason
-            const rejectBtn = screen.getByRole('button', { name: /reject report/i });
+            const rejectBtn = screen.getByRole('button', {
+                name: /reject report/i,
+            });
             fireEvent.click(rejectBtn);
 
             // Client validation error should appear
-            expect(screen.getByText('A reason is required when rejecting a report.')).toBeInTheDocument();
+            expect(
+                screen.getByText(
+                    'A reason is required when rejecting a report.',
+                ),
+            ).toBeInTheDocument();
 
             // Switch to Report 102
-            const reportBButton = screen.getByRole('button', { name: /Foundation concrete pour at Beta Site/i });
+            const reportBButton = screen.getByRole('button', {
+                name: /Foundation concrete pour at Beta Site/i,
+            });
             fireEvent.click(reportBButton);
 
             // Error must NOT bleed over to Report 102
-            expect(screen.queryByText('A reason is required when rejecting a report.')).not.toBeInTheDocument();
+            expect(
+                screen.queryByText(
+                    'A reason is required when rejecting a report.',
+                ),
+            ).not.toBeInTheDocument();
         });
     });
 
     describe('State Isolation 2: Rejection Validation Errors do NOT Pop Open Submit Modal', () => {
         it('does not open the submit report drawer when client-side rejection validation fails', () => {
             const reports: JobReportViewModel[] = [
-                createReport(101, 'submitted', 'Crane setup at North Pier Alpha'),
+                createReport(
+                    101,
+                    'submitted',
+                    'Crane setup at North Pier Alpha',
+                ),
             ];
 
             render(
@@ -444,17 +610,27 @@ describe('Phase 1 Empirical Challenge: Selection Invariants & State Isolation', 
             );
 
             // Submit modal should NOT be in the document initially
-            expect(screen.queryByText('Submit Job Completion Report')).not.toBeInTheDocument();
+            expect(
+                screen.queryByText('Submit Job Completion Report'),
+            ).not.toBeInTheDocument();
 
             // Trigger rejection error
-            const rejectBtn = screen.getByRole('button', { name: /reject report/i });
+            const rejectBtn = screen.getByRole('button', {
+                name: /reject report/i,
+            });
             fireEvent.click(rejectBtn);
 
             // Rejection error is present on the detail pane
-            expect(screen.getByText('A reason is required when rejecting a report.')).toBeInTheDocument();
+            expect(
+                screen.getByText(
+                    'A reason is required when rejecting a report.',
+                ),
+            ).toBeInTheDocument();
 
             // Invariant check: Submit modal MUST NOT pop open!
-            expect(screen.queryByText('Submit Job Completion Report')).not.toBeInTheDocument();
+            expect(
+                screen.queryByText('Submit Job Completion Report'),
+            ).not.toBeInTheDocument();
             expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
         });
 
@@ -466,7 +642,11 @@ describe('Phase 1 Empirical Challenge: Selection Invariants & State Isolation', 
             };
 
             const reports: JobReportViewModel[] = [
-                createReport(101, 'submitted', 'Crane setup at North Pier Alpha'),
+                createReport(
+                    101,
+                    'submitted',
+                    'Crane setup at North Pier Alpha',
+                ),
             ];
 
             render(
@@ -480,7 +660,9 @@ describe('Phase 1 Empirical Challenge: Selection Invariants & State Isolation', 
 
             // In the previous buggy code, Object.keys(pageErrors).length > 0 triggered showSubmitModal = true.
             // In the remediated code, pageErrors MUST NOT trigger showSubmitModal!
-            expect(screen.queryByText('Submit Job Completion Report')).not.toBeInTheDocument();
+            expect(
+                screen.queryByText('Submit Job Completion Report'),
+            ).not.toBeInTheDocument();
             expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
         });
     });
@@ -505,9 +687,16 @@ describe('Phase 1 Empirical Challenge: Selection Invariants & State Isolation', 
             );
 
             // Explicitly select Asset 2 (CRN-002)
-            const asset2Btn = screen.getByRole('button', { name: /Asset CRN-002/i });
+            const asset2Btn = screen.getByRole('button', {
+                name: /Asset CRN-002/i,
+            });
             fireEvent.click(asset2Btn);
-            expect(screen.getByRole('heading', { level: 2, name: 'Asset CRN-002' })).toBeInTheDocument();
+            expect(
+                screen.getByRole('heading', {
+                    level: 2,
+                    name: 'Asset CRN-002',
+                }),
+            ).toBeInTheDocument();
 
             // Simulate realtime websocket update where Asset 2 is deleted / removed from array
             const updatedAssets = [
@@ -527,14 +716,41 @@ describe('Phase 1 Empirical Challenge: Selection Invariants & State Isolation', 
                 />,
             );
 
-            // Asset 2 no longer exists. Selection invariant must gracefully fall back to filtered[0] (CRN-001)
-            expect(screen.queryByRole('heading', { level: 2, name: 'Asset CRN-002' })).not.toBeInTheDocument();
-            expect(screen.getByRole('heading', { level: 2, name: 'Asset CRN-001' })).toBeInTheDocument();
+            // Asset 2 no longer exists. Do not silently replace its details with another asset.
+            expect(
+                screen.queryByRole('heading', {
+                    level: 2,
+                    name: 'Asset CRN-002',
+                }),
+            ).not.toBeInTheDocument();
+            expect(
+                screen.queryByRole('heading', {
+                    level: 2,
+                    name: 'Asset CRN-001',
+                }),
+            ).not.toBeInTheDocument();
+            expect(
+                screen.getByText('Selected asset is no longer available'),
+            ).toBeInTheDocument();
+
+            fireEvent.click(
+                screen.getByRole('button', { name: /Asset CRN-001/i }),
+            );
+            expect(
+                screen.getByRole('heading', {
+                    level: 2,
+                    name: 'Asset CRN-001',
+                }),
+            ).toBeInTheDocument();
         });
 
         it('clears rejection validation error as soon as user types into the reason input', () => {
             const reports: JobReportViewModel[] = [
-                createReport(101, 'submitted', 'Crane setup at North Pier Alpha'),
+                createReport(
+                    101,
+                    'submitted',
+                    'Crane setup at North Pier Alpha',
+                ),
             ];
 
             render(
@@ -547,16 +763,28 @@ describe('Phase 1 Empirical Challenge: Selection Invariants & State Isolation', 
             );
 
             // Attempt reject with empty reason
-            const rejectBtn = screen.getByRole('button', { name: /reject report/i });
+            const rejectBtn = screen.getByRole('button', {
+                name: /reject report/i,
+            });
             fireEvent.click(rejectBtn);
-            expect(screen.getByText('A reason is required when rejecting a report.')).toBeInTheDocument();
+            expect(
+                screen.getByText(
+                    'A reason is required when rejecting a report.',
+                ),
+            ).toBeInTheDocument();
 
             // User starts typing reason
-            const reasonInput = screen.getByPlaceholderText(/review decision notes, quality checks, or rejection reason/i);
+            const reasonInput = screen.getByPlaceholderText(
+                /review decision notes, quality checks, or rejection reason/i,
+            );
             fireEvent.change(reasonInput, { target: { value: 'Incomplete' } });
 
             // Error must be cleared immediately
-            expect(screen.queryByText('A reason is required when rejecting a report.')).not.toBeInTheDocument();
+            expect(
+                screen.queryByText(
+                    'A reason is required when rejecting a report.',
+                ),
+            ).not.toBeInTheDocument();
         });
 
         it('survives rapid cyclic switching between 4 reports with zero cross-contamination of review notes', () => {
@@ -577,28 +805,44 @@ describe('Phase 1 Empirical Challenge: Selection Invariants & State Isolation', 
             );
 
             const getReasonInput = () =>
-                screen.getByPlaceholderText(/review decision notes, quality checks, or rejection reason/i) as HTMLInputElement;
+                screen.getByPlaceholderText(
+                    /review decision notes, quality checks, or rejection reason/i,
+                ) as HTMLInputElement;
 
             // Report 101 selected -> Type Note 1
-            fireEvent.change(getReasonInput(), { target: { value: 'Note for 101' } });
+            fireEvent.change(getReasonInput(), {
+                target: { value: 'Note for 101' },
+            });
             expect(getReasonInput().value).toBe('Note for 101');
 
             // Select Report 102 -> Must be empty
-            fireEvent.click(screen.getByRole('button', { name: /Task 2 summary/i }));
+            fireEvent.click(
+                screen.getByRole('button', { name: /Task 2 summary/i }),
+            );
             expect(getReasonInput().value).toBe('');
-            fireEvent.change(getReasonInput(), { target: { value: 'Note for 102' } });
+            fireEvent.change(getReasonInput(), {
+                target: { value: 'Note for 102' },
+            });
 
             // Select Report 103 -> Must be empty
-            fireEvent.click(screen.getByRole('button', { name: /Task 3 summary/i }));
+            fireEvent.click(
+                screen.getByRole('button', { name: /Task 3 summary/i }),
+            );
             expect(getReasonInput().value).toBe('');
-            fireEvent.change(getReasonInput(), { target: { value: 'Note for 103' } });
+            fireEvent.change(getReasonInput(), {
+                target: { value: 'Note for 103' },
+            });
 
             // Select Report 104 -> Must be empty
-            fireEvent.click(screen.getByRole('button', { name: /Task 4 summary/i }));
+            fireEvent.click(
+                screen.getByRole('button', { name: /Task 4 summary/i }),
+            );
             expect(getReasonInput().value).toBe('');
 
             // Cycle back to Report 102 -> Because component remounts via key={report.id}, it mounts fresh
-            fireEvent.click(screen.getByRole('button', { name: /Task 2 summary/i }));
+            fireEvent.click(
+                screen.getByRole('button', { name: /Task 2 summary/i }),
+            );
             expect(getReasonInput().value).toBe('');
         });
 
@@ -627,7 +871,9 @@ describe('Phase 1 Empirical Challenge: Selection Invariants & State Isolation', 
                 />,
             );
 
-            expect(screen.getByText('No job reports in loaded scope')).toBeInTheDocument();
+            expect(
+                screen.getByText('No job reports in loaded scope'),
+            ).toBeInTheDocument();
         });
 
         it('handles combined status filter and disjoint search query without retaining zombie selections', () => {
@@ -646,19 +892,28 @@ describe('Phase 1 Empirical Challenge: Selection Invariants & State Isolation', 
             );
 
             // Filter status to 'submitted' -> Report 101 selected
-            const pendingFilterBtn = screen.getByRole('button', { name: /pending sign-off/i });
+            const pendingFilterBtn = screen.getByRole('button', {
+                name: /pending sign-off/i,
+            });
             fireEvent.click(pendingFilterBtn);
-            expect(screen.getByRole('link', { name: 'JOB-1101' })).toBeInTheDocument();
+            expect(
+                screen.getByRole('link', { name: 'JOB-1101' }),
+            ).toBeInTheDocument();
 
             // Search for 'Beta Site' (which belongs to Report 102, but status is approved so disjoint from submitted filter)
-            const searchInput = screen.getByPlaceholderText(/search by job reference, title, author, or report text/i);
+            const searchInput = screen.getByPlaceholderText(
+                /search by job reference, title, author, or report text/i,
+            );
             fireEvent.change(searchInput, { target: { value: 'Beta Site' } });
 
             // Invariant check: ZERO matches. Detail pane must clear to empty state! No zombie Report 101!
-            expect(screen.queryByRole('link', { name: 'JOB-1101' })).not.toBeInTheDocument();
-            expect(screen.queryByRole('link', { name: 'JOB-1102' })).not.toBeInTheDocument();
+            expect(
+                screen.queryByRole('link', { name: 'JOB-1101' }),
+            ).not.toBeInTheDocument();
+            expect(
+                screen.queryByRole('link', { name: 'JOB-1102' }),
+            ).not.toBeInTheDocument();
             expect(screen.getByText('No matching reports')).toBeInTheDocument();
         });
     });
 });
-

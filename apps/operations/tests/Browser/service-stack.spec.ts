@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import { signIn } from './browser-fixtures';
 
 const STADIA_STYLE = JSON.stringify({
     version: 8,
@@ -36,11 +37,7 @@ async function stubMapProvider(page: Page): Promise<void> {
 }
 
 async function signInAsBrowserManager(page: Page): Promise<void> {
-    await page.goto('/login');
-    await page.getByLabel('Username').fill('browser.manager');
-    await page.getByLabel('Password').fill('password');
-    await page.getByRole('button', { name: 'Sign in' }).click();
-    await page.waitForURL(/\/$/);
+    await signIn(page, 'browser.manager', 'password');
 }
 
 async function openTelemetryWorkspace(page: Page): Promise<void> {
@@ -50,7 +47,7 @@ async function openTelemetryWorkspace(page: Page): Promise<void> {
 
     await expect(
         page.getByRole('heading', {
-            name: 'Live Fleet Telematics & GIS Map',
+            name: 'Fleet Management',
             exact: true,
         }),
     ).toBeVisible({ timeout: 30_000 });
@@ -65,16 +62,16 @@ async function openTelemetryWorkspace(page: Page): Promise<void> {
         timeout: 30_000,
     });
     await expect(
-        page.getByText(/^\d+ active GPS$/, { exact: true }),
+        page.getByText(/3 without coordinates/, { exact: false }).first(),
     ).toBeVisible({ timeout: 30_000 });
-    await expect(
-        page.getByText('CRN-101', { exact: true }).first(),
-    ).toBeVisible({
-        timeout: 30_000,
-    });
+    await expect(page.getByText('CRN-01', { exact: true }).first()).toBeVisible(
+        {
+            timeout: 30_000,
+        },
+    );
 }
 
-test('manager login displays live telemetry from the Tracking service', async ({
+test('manager sees a clear no-GPS state when Tracking has no location samples', async ({
     page,
 }) => {
     test.skip(
@@ -82,13 +79,12 @@ test('manager login displays live telemetry from the Tracking service', async ({
         'active service check is run before the outage check',
     );
     await openTelemetryWorkspace(page);
-    const craneCard = page
-        .getByRole('listitem')
-        .filter({ hasText: 'CRN-101' });
+    const craneCard = page.getByRole('listitem').filter({ hasText: 'CRN-01' });
 
-    await expect(
-        craneCard.getByText(/GPS Live/),
-    ).toBeVisible({ timeout: 30_000 });
+    await expect(craneCard.getByText('No GPS report')).toBeVisible({
+        timeout: 30_000,
+    });
+    await expect(craneCard.getByText(/GPS Live/)).toHaveCount(0);
 });
 
 test('manager can use the telemetry workspace during a Tracking outage', async ({
@@ -99,13 +95,11 @@ test('manager can use the telemetry workspace during a Tracking outage', async (
         'outage service check is run after stopping Tracking',
     );
     await openTelemetryWorkspace(page);
-    const craneCard = page
-        .getByRole('listitem')
-        .filter({ hasText: 'CRN-101' });
+    const craneCard = page.getByRole('listitem').filter({ hasText: 'CRN-01' });
 
-    await expect(
-        craneCard.getByText(/GPS Live/),
-    ).toBeVisible({ timeout: 30_000 });
+    await expect(craneCard.getByText('No GPS report')).toBeVisible({
+        timeout: 30_000,
+    });
     await expect(
         page.getByRole('heading', { name: 'Fleet Management' }).first(),
     ).toBeVisible({ timeout: 30_000 });

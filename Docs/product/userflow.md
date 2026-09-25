@@ -1,6 +1,6 @@
 # Core Transaction 2 — User Flows
 
-**Last updated:** 2026-09-16
+**Last updated:** 2026-09-25
 
 ## 1. Internal access
 
@@ -256,10 +256,31 @@ unified operational asset register in the routed workspace:
 3. Role or activation changes invalidate the user's existing sessions.
 4. The system refuses a change that would remove the last active System Administrator.
 5. The access change is written to the audit log.
+6. In the selected account details, an authorized administrator can check whether email-code two-step sign-in is enabled and review recorded sign-ins and sign-outs.
 
-The backend endpoints exist; the current workspace only lists users and roles.
+The live workspace exposes **Users & access** to accounts with the
+`users.manage` permission. Administrators can search and filter the paginated
+account list, create an account with one canonical interactive role, update a
+role, suspend or reactivate an account, and reset a password. Account creation
+generates a temporary password that the administrator sees once; the flow does
+not send an invitation email. Role changes, suspension, and password resets
+revoke existing sessions, trusted devices, and authentication codes as
+applicable, and each change is recorded in the audit log. The application
+prevents self-suspension and protects the last active System Administrator.
+System Administrator and Operations Manager roles may be assigned to multiple
+accounts; the development/demo seeders provide one of each for convenience,
+but that fixture pattern is not a production uniqueness rule. The account
+details label the email verification-code two-step sign-in status as Enabled
+or Disabled. The per-account activity view contains recorded sign-ins and
+sign-outs and requires both `users.manage` and `audit.view`. Each event shows
+the parsed browser/platform and device class, the IP address, and an
+approximate IP-derived location. This is not GPS, and browser data may not
+identify an exact device model; unknown values remain labeled as unknown.
+Personnel credentials remain in a separate view. Rigger accounts can sign in
+and are managed under Accounts; their qualifications and credentials are
+managed under Personnel credentials.
 
-## 10. Shared service: GPT-assisted dispatch — current backend flow
+## 10. Shared service: GPT-assisted dispatch — current flow
 
 1. Authorized office user requests a recommendation using scoped, redacted context.
 2. GPT returns proposed assignments, reasons, assumptions, and conflicts.
@@ -271,8 +292,14 @@ The backend endpoints exist; the current workspace only lists users and roles.
 GPT must never write directly to operational records. The current repository
 queues a bounded recommendation, stores lifecycle/usage/expiry metadata, and
 supports authorized human accept/reject commands that re-enter normal domain
-actions. The live routed workspace does not yet expose the complete GPT review
-surface.
+actions. The routed workspace includes a GPT recommendations section and a
+dispatch-detail request path. Reviewers can inspect recommendation context,
+accept or reject with an explicit decision, and retry eligible failed
+recommendations. A stale proposal is blocked until the reviewer requests a
+fresh recommendation. Governance telemetry and circuit-breaker controls are
+also exposed to authorized users. This is a scoped review workflow, not a
+general chat surface; it does not prove a live-provider-to-field execution
+chain.
 
 ## 11. Fleet & Equipment Sub-system: Driver Vehicle Inspection Reports (DVIR)
 
@@ -366,4 +393,3 @@ flowchart TD
 3. **Multi-Crane Allocation**: Manager assigns required crane fleet and operator crews across milestones. Conflict detection engine flags overlapping dispatches or equipment maintenance conflicts.
 4. **Task Dispatch Generation**: Structured tasks are converted into actionable dispatch jobs linked to the project plan.
 5. **Closeout Dossier**: Upon project completion, the system collates all dispatch tickets, job reports, DVIR walkarounds, and safety sign-offs into a unified compliance archive.
-

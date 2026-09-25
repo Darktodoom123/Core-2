@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Modules\Assignment\Enums\AssignmentResponse;
+use App\Modules\Assignment\Models\DispatchAssetAssignment;
 use App\Modules\Assignment\Models\DispatchPersonnelAssignment;
 use App\Modules\Dispatch\Enums\ApprovalStatus;
 use App\Modules\Dispatch\Enums\DispatchPriority;
@@ -39,6 +40,7 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use LogicException;
 
@@ -188,6 +190,23 @@ final class BrowserAcceptanceSeeder extends Seeder
             'completed_at' => now(),
             'purge_at' => now()->addDays(2),
         ]);
+        $restrictedExportPath = 'exports/browser/restricted-report.xlsx';
+        Storage::disk('private')->put($restrictedExportPath, 'Browser-only restricted export fixture');
+        ReportExport::query()->create([
+            'id' => '00000000-0000-0000-0000-000000000008',
+            'user_id' => $safetyOfficer->id,
+            'export_type' => ReportExportType::JobReports,
+            'format' => 'xlsx',
+            'status' => ReportExportStatus::Completed,
+            'file_path' => $restrictedExportPath,
+            'mime_type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'file_size_bytes' => Storage::disk('private')->size($restrictedExportPath),
+            'row_count' => 1,
+            'expires_at' => now()->addDay(),
+            'download_expires_at' => now()->addDay(),
+            'completed_at' => now(),
+            'purge_at' => now()->addDays(2),
+        ]);
 
         $gptJob = DispatchJob::query()->create([
             'reference' => 'R6-BROWSER-004',
@@ -203,6 +222,11 @@ final class BrowserAcceptanceSeeder extends Seeder
         ]);
 
         $recommendations = [
+            // Keep one pending proposal stale so browser coverage verifies
+            // that acceptance fails closed when its source context changes.
+            'pending_stale' => $this->recommendation($gptJob, $manager, GptRecommendationStatus::PendingReview, [
+                'context_hash' => hash('sha256', 'r6-pending-stale-'.$gptJob->id),
+            ]),
             'pending_accept' => $this->recommendation($gptJob, $manager, GptRecommendationStatus::PendingReview),
             'pending_reject' => $this->recommendation($gptJob, $manager, GptRecommendationStatus::PendingReview),
             'failed' => $this->recommendation($gptJob, $manager, GptRecommendationStatus::Failed, ['error_message' => 'GPT generation failed. Please retry.']),
@@ -225,6 +249,36 @@ final class BrowserAcceptanceSeeder extends Seeder
             'result' => 'passed',
             'checklist' => ['fixture_readiness' => true],
             'completed_at' => now()->subHour(),
+        ]);
+
+        $activationJob = DispatchJob::query()->create([
+            'reference' => 'R6-BROWSER-007',
+            'client' => 'Browser Activation Client',
+            'title' => 'Saved assignment activation review lift',
+            'site' => 'Activation fixture site',
+            'scheduled_start' => now()->addDays(2),
+            'scheduled_end' => now()->addDays(2)->addHours(4),
+            'priority' => DispatchPriority::Routine,
+            'status' => DispatchStatus::Draft,
+            'requirements' => [],
+            'created_by' => $manager->id,
+        ]);
+
+        DispatchPersonnelAssignment::query()->create([
+            'dispatch_job_id' => $activationJob->id,
+            'user_id' => $operator->id,
+            'assignment_type' => 'operator',
+            'response_status' => AssignmentResponse::Accepted,
+            'assigned_by' => $manager->id,
+            'active_from' => now()->subMinute(),
+        ]);
+
+        DispatchAssetAssignment::query()->create([
+            'dispatch_job_id' => $activationJob->id,
+            'operational_asset_id' => $crane->id,
+            'assignment_type' => 'crane',
+            'assigned_by' => $manager->id,
+            'active_from' => now()->subMinute(),
         ]);
 
         $hosNow = now();
@@ -470,7 +524,7 @@ final class BrowserAcceptanceSeeder extends Seeder
             'project_site' => 'Browser fixture site',
             'reporter_id' => $safetyOfficer->id,
             'category' => 'rigging_tackle',
-            'severity' => 'moderate',
+            'severity' => 'medium',
             'description' => 'Damaged synthetic web sling observed at staging point.',
             'location_detail' => 'Staging Yard Bay 1',
             'corrective_action_required' => 'Tag out immediately.',
@@ -489,10 +543,16 @@ final class BrowserAcceptanceSeeder extends Seeder
                 'safety_officer' => $safetyOfficer->username,
                 'foreman' => $foreman->username,
             ],
+            'user_ids' => [
+                'admin' => $admin->id,
+                'manager' => $manager->id,
+            ],
             'password' => 'password',
             'job_id' => $job->id,
+            'gpt_job_id' => $gptJob->id,
             'assignment_review_job_id' => $assignmentReviewJob->id,
             'assigned_job_id' => $assignedJob->id,
+            'activation_job_id' => $activationJob->id,
             'approval_job_id' => $approvalJob->id,
             'approval_request_id' => $approvalRequest->id,
             'lifecycle_job_id' => $lifecycleJob->id,
@@ -500,6 +560,12 @@ final class BrowserAcceptanceSeeder extends Seeder
             'crane_id' => $crane->id,
             'report_id' => $report->id,
             'attachment_id' => $attachment->id,
+            'restricted_export_url' => URL::temporarySignedRoute(
+                'operations.exports.download',
+                now()->addDay(),
+                ['export' => '00000000-0000-0000-0000-000000000008'],
+                absolute: false,
+            ),
             'export_ids' => [$export->id, $pdfExport->id],
             'sos_incident_id' => $sosIncident->id,
             'lift_plan_id' => $liftPlan->id,
@@ -528,7 +594,7 @@ final class BrowserAcceptanceSeeder extends Seeder
 
         $contextBuilder = app(BoundedContextBuilder::class);
         foreach ($recommendations as $key => $rec) {
-            if ($key !== 'stale' && $rec->status !== GptRecommendationStatus::Stale) {
+            if (! in_array($key, ['stale', 'pending_stale'], true) && $rec->status !== GptRecommendationStatus::Stale) {
                 $recJob = DispatchJob::query()->find($rec->subject_id);
                 if ($recJob) {
                     $rec->update([
@@ -585,9 +651,9 @@ final class BrowserAcceptanceSeeder extends Seeder
             'cost_usd' => 0.0002,
             'generated_at' => now()->subMinute(),
             'latency_ms' => 42,
-            'expires_at' => in_array($status, [GptRecommendationStatus::PendingReview, GptRecommendationStatus::Stale], true)
-                ? now()->addMinutes(10)
-                : null,
+            'expires_at' => $status === GptRecommendationStatus::PendingReview
+                ? now()->addDay()
+                : ($status === GptRecommendationStatus::Stale ? now()->addDay() : null),
             'purge_at' => now()->addDays(30),
         ], $overrides));
     }

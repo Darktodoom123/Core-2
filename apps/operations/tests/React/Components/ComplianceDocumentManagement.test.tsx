@@ -72,27 +72,40 @@ const defaultCapabilities: WorkspaceCapabilities = {
     create_rental_dispatch: false,
     create_sales_dispatch: false,
     share_location: false,
+    view_tracking: false,
     request_fuel: false,
+    forward_fuel: false,
     approve_fuel: false,
-    view_fuel_stats: false,
+    verify_fuel: false,
+    record_fuel: false,
+    decide_approval: false,
+    update_assigned_dispatch_status: false,
+    update_asset_status: false,
+    safety_lockdown_asset: false,
+    inspect_asset: false,
+    maintain_asset: false,
+    request_gpt_assistance: false,
+    decide_gpt_recommendation: false,
+    retry_gpt_recommendation: false,
     create_job_report: false,
-    view_reports: false,
     export_reports: false,
-    export_audit_logs: false,
-    delete_completed_jobs: false,
-    delete_archived_jobs: false,
-    view_safety: false,
-    edit_safety: false,
-    view_users: true,
-    manage_users: false,
+    attachment_upload: false,
+    attachment_policy: {
+        owner_type: 'job_report',
+        max_bytes: 10 * 1024 * 1024,
+        max_count: 5,
+        accepted_mime_types: ['application/pdf', 'image/jpeg', 'image/png'],
+    },
+    review_job_report: false,
+    manage_notifications: false,
+    view_archive: false,
+    restore_dispatch: false,
     view_sos: false,
     respond_sos: false,
-    decide_approval: false,
 };
 
 const sampleCredential: PersonnelCredentialViewModel = {
     id: 10,
-    user_id: 101,
     kind: 'driver_license',
     credential_type: 'Driver License (LTO Professional)',
     credential_number: 'N01-12-345678',
@@ -101,17 +114,12 @@ const sampleCredential: PersonnelCredentialViewModel = {
     expires_at: '2028-01-15',
     notes: 'Restriction codes 1, 2, 3',
     status: 'active',
-    is_expired: false,
-    expires_soon: false,
-    created_at: '2025-01-15T08:00:00Z',
-    updated_at: '2025-01-15T08:00:00Z',
     attachment: {
         id: 501,
-        file_name: 'license_scan.pdf',
-        file_path: 'credentials/101/license_scan.pdf',
-        file_size: 1048576,
+        original_filename: 'license_scan.pdf',
         mime_type: 'application/pdf',
-        url: '/attachments/501/download',
+        size_bytes: 1048576,
+        download_url: '/attachments/501/download',
     },
 };
 
@@ -120,7 +128,7 @@ const sampleUser: WorkspaceUserViewModel = {
     name: 'Juan Dela Cruz',
     email: 'juan@example.com',
     role: 'operator',
-    department: 'Heavy Lifting',
+    role_label: 'Operator',
     is_active: true,
     credentials: [sampleCredential],
 };
@@ -130,38 +138,45 @@ const sampleAsset: AssetViewModel = {
     code: 'ALB-CRN-050',
     name: 'Liebherr LTM 1050',
     kind: 'crane',
+    subtype: 'mobile_crane',
+    registration_number: null,
+    manufacturer: 'Liebherr',
+    model: 'LTM 1050',
+    rated_capacity: 50,
+    capacity_unit: 'tonnes',
+    meter_type: 'hours',
+    meter_value: 0,
+    location: 'Alibaton yard',
     status: {
         value: 'available',
         label: 'Available',
-        badge_variant: 'default',
-        description: 'Available for work',
     },
     specifications: {},
-    equipment_type: 'Mobile Crane',
-    is_active: true,
+    blocking_work_orders_count: 0,
+    is_dispatchable: true,
+    inspections: [],
+    maintenance_work_orders: [],
     documents: [
         {
             id: 301,
-            asset_id: 201,
             category: 'road_permits',
+            category_label: 'Road permits',
             title: 'DPWH Special Heavy Transit Permit',
             document_number: 'DPWH-2026-001',
             issuing_authority: 'DPWH',
             issued_at: '2026-01-01',
             expires_at: null,
             status: 'active',
+            validity_status: 'no_expiration',
             is_expired: false,
             expires_soon: false,
             notes: 'Daytime travel prohibited on major highways',
-            created_at: '2026-01-01T00:00:00Z',
-            updated_at: '2026-01-01T00:00:00Z',
             attachment: {
                 id: 601,
-                file_name: 'transit_permit.pdf',
-                file_path: 'assets/201/transit_permit.pdf',
-                file_size: 2048576,
+                original_filename: 'transit_permit.pdf',
                 mime_type: 'application/pdf',
-                url: '/attachments/601/download',
+                size_bytes: 2048576,
+                download_url: '/attachments/601/download',
             },
         },
     ],
@@ -177,28 +192,40 @@ describe('Compliance Document Management & RBAC Gating', () => {
             render(
                 <PersonnelWorkspaceSection
                     users={[sampleUser]}
-                    capabilities={{ ...defaultCapabilities, manage_users: false }}
+                    capabilities={{
+                        ...defaultCapabilities,
+                        manage_users: false,
+                    }}
                 />,
             );
 
-            expect(screen.getAllByText('Juan Dela Cruz').length).toBeGreaterThan(0);
+            expect(
+                screen.getAllByText('Juan Dela Cruz').length,
+            ).toBeGreaterThan(0);
             expect(screen.getByText('N01-12-345678')).toBeInTheDocument();
 
             // Mutating management actions must NOT be present
-            expect(screen.queryByText('Add Credential')).not.toBeInTheDocument();
+            expect(
+                screen.queryByText('Add Credential'),
+            ).not.toBeInTheDocument();
             expect(screen.queryByText('Edit')).not.toBeInTheDocument();
             expect(screen.queryByText('Replace File')).not.toBeInTheDocument();
             expect(screen.queryByText('Delete')).not.toBeInTheDocument();
 
             // View-only preview button MUST be present
-            expect(screen.getByTestId('preview-credential-10')).toBeInTheDocument();
+            expect(
+                screen.getByTestId('preview-credential-10'),
+            ).toBeInTheDocument();
         });
 
         it('allows credential management actions when user has manage_users capability', () => {
             render(
                 <PersonnelWorkspaceSection
                     users={[sampleUser]}
-                    capabilities={{ ...defaultCapabilities, manage_users: true }}
+                    capabilities={{
+                        ...defaultCapabilities,
+                        manage_users: true,
+                    }}
                 />,
             );
 
@@ -213,13 +240,118 @@ describe('Compliance Document Management & RBAC Gating', () => {
             render(
                 <PersonnelWorkspaceSection
                     users={[sampleUser]}
-                    capabilities={{ ...defaultCapabilities, manage_users: true }}
+                    capabilities={{
+                        ...defaultCapabilities,
+                        manage_users: true,
+                    }}
                 />,
             );
 
             fireEvent.click(screen.getByText('Add Credential'));
-            expect(screen.getByText('Add Credential for Juan Dela Cruz')).toBeInTheDocument();
-            expect(screen.getByText(/Credential Type \/ Title/i)).toBeInTheDocument();
+            expect(
+                screen.getByRole('dialog', {
+                    name: 'Add Credential for Juan Dela Cruz',
+                }),
+            ).toBeInTheDocument();
+            expect(
+                screen.getByLabelText('Credential Kind'),
+            ).toBeInTheDocument();
+            expect(
+                screen.getByText(/Credential Type \/ Title/i),
+            ).toBeInTheDocument();
+        });
+
+        it('keeps the selected details aligned with the filtered directory', () => {
+            const secondUser: WorkspaceUserViewModel = {
+                id: 102,
+                name: 'Maria Santos',
+                email: 'maria@example.com',
+                role: 'operator',
+                role_label: 'Operator',
+                is_active: true,
+                credentials: [],
+            };
+
+            render(
+                <PersonnelWorkspaceSection
+                    users={[sampleUser, secondUser]}
+                    capabilities={defaultCapabilities}
+                />,
+            );
+
+            fireEvent.change(
+                screen.getByRole('textbox', { name: /search personnel/i }),
+                {
+                    target: { value: 'Maria' },
+                },
+            );
+
+            expect(
+                screen.getByRole('heading', { name: 'Maria Santos' }),
+            ).toBeInTheDocument();
+            expect(
+                screen.queryByRole('heading', { name: 'Juan Dela Cruz' }),
+            ).not.toBeInTheDocument();
+        });
+
+        it('summarizes personnel and credentials across the full directory', () => {
+            const reviewUser: WorkspaceUserViewModel = {
+                id: 102,
+                name: 'Maria Santos',
+                email: 'maria@example.com',
+                role: 'operator',
+                role_label: 'Operator',
+                is_active: true,
+                credentials: [
+                    { ...sampleCredential, id: 11, validity_status: 'expired' },
+                    {
+                        ...sampleCredential,
+                        id: 12,
+                        validity_status: 'expiring_soon',
+                    },
+                ],
+            };
+
+            render(
+                <PersonnelWorkspaceSection
+                    users={[sampleUser, reviewUser]}
+                    capabilities={defaultCapabilities}
+                />,
+            );
+
+            expect(
+                screen.getByTestId('personnel-overview-people'),
+            ).toHaveTextContent('2');
+            expect(
+                screen.getByTestId('personnel-overview-credentials'),
+            ).toHaveTextContent('3');
+            expect(
+                screen.getByTestId('personnel-overview-review'),
+            ).toHaveTextContent(/1 expired\s*·\s*1 expiring soon/);
+            expect(
+                screen.getByRole('region', { name: 'Personnel overview' }),
+            ).toHaveTextContent(/1 expired\s*·\s*1 expiring soon/);
+        });
+
+        it('keeps the first-credential action available in the compact empty state', () => {
+            render(
+                <PersonnelWorkspaceSection
+                    users={[{ ...sampleUser, credentials: [] }]}
+                    capabilities={{
+                        ...defaultCapabilities,
+                        manage_users: true,
+                    }}
+                />,
+            );
+
+            expect(
+                screen.getByText('No credentials on file'),
+            ).toBeInTheDocument();
+            expect(
+                screen.getByRole('button', {
+                    name: 'Add compliance credential for Juan Dela Cruz',
+                }),
+            ).toBeInTheDocument();
         });
 
         it('filters user list based on search query', () => {
@@ -228,6 +360,7 @@ describe('Compliance Document Management & RBAC Gating', () => {
                 name: 'Maria Santos',
                 email: 'maria@example.com',
                 role: 'driver',
+                role_label: 'Driver',
                 is_active: true,
                 credentials: [],
             };
@@ -240,38 +373,55 @@ describe('Compliance Document Management & RBAC Gating', () => {
             );
 
             const userList = screen.getByRole('list');
-            expect(within(userList).getByText('Juan Dela Cruz')).toBeInTheDocument();
-            expect(within(userList).getByText('Maria Santos')).toBeInTheDocument();
+            expect(
+                within(userList).getByText('Juan Dela Cruz'),
+            ).toBeInTheDocument();
+            expect(
+                within(userList).getByText('Maria Santos'),
+            ).toBeInTheDocument();
 
-            const searchInput = screen.getByPlaceholderText('Search personnel...');
+            const searchInput = screen.getByPlaceholderText(
+                'Search personnel...',
+            );
             fireEvent.change(searchInput, { target: { value: 'Maria' } });
 
-            expect(within(userList).queryByText('Juan Dela Cruz')).not.toBeInTheDocument();
-            expect(within(userList).getByText('Maria Santos')).toBeInTheDocument();
+            expect(
+                within(userList).queryByText('Juan Dela Cruz'),
+            ).not.toBeInTheDocument();
+            expect(
+                within(userList).getByText('Maria Santos'),
+            ).toBeInTheDocument();
         });
     });
 
     describe('FleetDocumentsSection', () => {
         it('restricts mutating actions when canManage is false', () => {
             render(
-                <FleetDocumentsSection
-                    asset={sampleAsset}
-                    canManage={false}
-                />,
+                <FleetDocumentsSection asset={sampleAsset} canManage={false} />,
             );
 
-            expect(screen.getByText('DPWH Special Heavy Transit Permit')).toBeInTheDocument();
+            expect(
+                screen.getByText('DPWH Special Heavy Transit Permit'),
+            ).toBeInTheDocument();
             expect(screen.getByText('DPWH-2026-001')).toBeInTheDocument();
 
             // Missing expiration date is displayed as "No expiration date", not "Permanent"
-            expect(screen.getAllByText('No expiration date').length).toBeGreaterThan(0);
+            expect(
+                screen.getAllByText('No expiration date').length,
+            ).toBeGreaterThan(0);
             expect(screen.queryByText('Permanent')).not.toBeInTheDocument();
 
             // Mutating actions must NOT be present
             expect(screen.queryByText('Add Document')).not.toBeInTheDocument();
-            expect(screen.queryByTitle('Edit Document Metadata')).not.toBeInTheDocument();
-            expect(screen.queryByTitle('Replace Document File')).not.toBeInTheDocument();
-            expect(screen.queryByTitle('Delete Document')).not.toBeInTheDocument();
+            expect(
+                screen.queryByTitle('Edit Document Metadata'),
+            ).not.toBeInTheDocument();
+            expect(
+                screen.queryByTitle('Replace Document File'),
+            ).not.toBeInTheDocument();
+            expect(
+                screen.queryByTitle('Delete Document'),
+            ).not.toBeInTheDocument();
 
             // Preview and download remain available for compliance inspection
             expect(screen.getByText('Preview')).toBeInTheDocument();
@@ -280,15 +430,16 @@ describe('Compliance Document Management & RBAC Gating', () => {
 
         it('shows management actions when canManage is true', () => {
             render(
-                <FleetDocumentsSection
-                    asset={sampleAsset}
-                    canManage={true}
-                />,
+                <FleetDocumentsSection asset={sampleAsset} canManage={true} />,
             );
 
             expect(screen.getByText('Add Document')).toBeInTheDocument();
-            expect(screen.getByTitle('Edit Document Metadata')).toBeInTheDocument();
-            expect(screen.getByTitle('Replace Document File')).toBeInTheDocument();
+            expect(
+                screen.getByTitle('Edit Document Metadata'),
+            ).toBeInTheDocument();
+            expect(
+                screen.getByTitle('Replace Document File'),
+            ).toBeInTheDocument();
             expect(screen.getByTitle('Delete Document')).toBeInTheDocument();
         });
 
@@ -346,10 +497,7 @@ describe('Compliance Document Management & RBAC Gating', () => {
 
         it('makes the shared no-expiration state explicit in the upload form', () => {
             render(
-                <FleetDocumentsSection
-                    asset={sampleAsset}
-                    canManage={true}
-                />,
+                <FleetDocumentsSection asset={sampleAsset} canManage={true} />,
             );
 
             fireEvent.click(

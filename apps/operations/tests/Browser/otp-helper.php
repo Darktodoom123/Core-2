@@ -8,7 +8,32 @@ use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Facades\RateLimiter;
 
 $root = dirname(__DIR__, 2);
-$browserDatabase = $root.DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'framework'.DIRECTORY_SEPARATOR.'testing'.DIRECTORY_SEPARATOR.'browser.sqlite';
+$testingDirectory = $root.DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'framework'.DIRECTORY_SEPARATOR.'testing';
+$defaultDatabase = $testingDirectory.DIRECTORY_SEPARATOR.'browser.sqlite';
+$databaseOverride = getenv('CORE2_E2E_DB_DATABASE');
+$browserDatabase = is_string($databaseOverride) && trim($databaseOverride) !== ''
+    ? $databaseOverride
+    : $defaultDatabase;
+
+if ($browserDatabase !== $defaultDatabase) {
+    $resolvedTestingDirectory = realpath($testingDirectory);
+    $resolvedDatabase = realpath($browserDatabase);
+    $testingPrefix = $resolvedTestingDirectory === false
+        ? ''
+        : $resolvedTestingDirectory.DIRECTORY_SEPARATOR;
+
+    if (
+        $resolvedTestingDirectory === false
+        || $resolvedDatabase === false
+        || ! str_starts_with($resolvedDatabase, $testingPrefix)
+        || strtolower(pathinfo($resolvedDatabase, PATHINFO_EXTENSION)) !== 'sqlite'
+    ) {
+        fwrite(STDERR, "The OTP helper only accepts SQLite fixtures inside storage/framework/testing.\n");
+        exit(1);
+    }
+
+    $browserDatabase = $resolvedDatabase;
+}
 
 putenv('APP_ENV=testing');
 putenv('DB_CONNECTION=sqlite');

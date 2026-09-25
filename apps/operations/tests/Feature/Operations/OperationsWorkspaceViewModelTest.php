@@ -99,6 +99,8 @@ it('serializes authoritative fleet detail totals and the latest recorded status 
     expect($item)->not()->toBeNull()
         ->and($item['inspections_count'])->toBe(12)
         ->and($item['dvir_inspections_count'])->toBe(16)
+        ->and($item['category'])->toBe('mobile_cranes')
+        ->and($item['category_label'])->toBe('Mobile crane')
         ->and($item['maintenance_work_orders_count'])->toBe(1)
         ->and(count($item['inspections']))->toBeLessThanOrEqual(10)
         ->and(count($item['dvir_inspections']))->toBeLessThanOrEqual(15)

@@ -1,10 +1,12 @@
 <?php
 
 use App\Platform\Identity\Enums\RoleName;
+use App\Platform\Identity\Models\PersonnelCredential;
 use App\Platform\Identity\Models\User;
 use Database\Seeders\BrowserAcceptanceSeeder;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\LocalDevelopmentSeeder;
+use Database\Seeders\PhilippineSafetyOperationsSeeder;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -19,8 +21,9 @@ it('rejects a production bootstrap password before writing any records', functio
     config(['auth.bootstrap_admin_password' => 'too-short']);
 
     try {
-        expect(fn (): mixed => app(DatabaseSeeder::class)->run())
-            ->toThrow(RuntimeException::class, 'ADMIN_PASSWORD must contain at least 12 characters');
+        expect(function (): void {
+            app(DatabaseSeeder::class)->run();
+        })->toThrow(RuntimeException::class, 'ADMIN_PASSWORD must contain at least 12 characters');
         expect(User::query()->count())->toBe(0);
     } finally {
         app()->detectEnvironment(fn () => $originalEnvironment);
@@ -80,8 +83,9 @@ it('rejects local and browser fixture seeders outside local or testing environme
 
     try {
         foreach ([LocalDevelopmentSeeder::class, BrowserAcceptanceSeeder::class] as $seeder) {
-            expect(fn (): mixed => app($seeder)->run())
-                ->toThrow(LogicException::class, 'only be seeded in local or testing environments');
+            expect(function () use ($seeder): void {
+                app($seeder)->run();
+            })->toThrow(LogicException::class, 'only be seeded in local or testing environments');
         }
 
         expect(User::query()->count())->toBe(0);
@@ -113,4 +117,44 @@ it('keeps local developer seeding idempotent and usable', function (): void {
     } finally {
         app()->detectEnvironment(fn () => $originalEnvironment);
     }
+});
+
+it('does not seed deprecated safety fixture accounts in local environment', function (): void {
+    $originalEnvironment = app()->environment();
+    app()->detectEnvironment(fn (): string => 'local');
+
+    try {
+        app(DatabaseSeeder::class)->run();
+
+        expect(User::query()->whereIn('email', [
+            'so.morales@core2.ph',
+            'foreman.delacruz@core2.ph',
+        ])->count())->toBe(0);
+
+        $manager = User::query()->where('email', 'manager@example.com')->firstOrFail();
+        $operator = User::query()->where('email', 'operator@example.com')->firstOrFail();
+
+        expect(PersonnelCredential::query()->where('user_id', $manager->id)->where('credential_number', 'DOLE-BWC-SO3-2023-4412')->exists())->toBeTrue()
+            ->and(PersonnelCredential::query()->where('user_id', $operator->id)->where('credential_number', 'TESDA-RIG-2024-9912')->exists())->toBeTrue();
+    } finally {
+        app()->detectEnvironment(fn () => $originalEnvironment);
+    }
+});
+
+it('seeds Philippine safety fixtures using core manager and operator accounts', function (): void {
+    app(RolePermissionSeeder::class)->run();
+    app(PhilippineSafetyOperationsSeeder::class)->run();
+
+    expect(User::query()->whereIn('email', [
+        'so.morales@core2.ph',
+        'foreman.delacruz@core2.ph',
+    ])->count())->toBe(0);
+
+    $manager = User::query()->where('email', 'manager@example.com')->firstOrFail();
+    $operator = User::query()->where('email', 'operator@example.com')->firstOrFail();
+
+    expect($manager->hasRole(RoleName::OperationsManager->value))->toBeTrue()
+        ->and($operator->hasRole(RoleName::CraneOperator->value))->toBeTrue()
+        ->and(PersonnelCredential::query()->where('user_id', $manager->id)->where('credential_number', 'DOLE-BWC-SO3-2023-4412')->exists())->toBeTrue()
+        ->and(PersonnelCredential::query()->where('user_id', $operator->id)->where('credential_number', 'TESDA-RIG-2024-9912')->exists())->toBeTrue();
 });

@@ -153,6 +153,13 @@ export interface TelemetryPoint {
     resourceId: string;
     label: string;
     kind: 'truck' | 'crane' | 'operator';
+    category?:
+        | 'tower_cranes'
+        | 'mobile_cranes'
+        | 'heavy_equipment'
+        | 'transport'
+        | 'other';
+    subtype?: string | null;
     x: number;
     y: number;
     freshness: TelemetryFreshness;

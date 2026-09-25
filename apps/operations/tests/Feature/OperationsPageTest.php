@@ -114,7 +114,7 @@ it('serves canonical live dispatch view models and capability navigation', funct
         ->assertInertia(fn (Assert $page) => $page
             ->component('workspace')
             ->where('navigation.0.id', 'overview')
-            ->where('navigation.0.label', 'Operations overview')
+            ->where('navigation.0.label', 'Operation Dashboard')
             ->where('navigation.1.id', 'dispatch')
             ->where('navigation.1.label', 'Dispatch workspace')
             ->where('navigation.2.id', 'assets')
@@ -165,7 +165,7 @@ it('adapts live navigation labels for assigned field work without exposing unava
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->where('navigation.0.id', 'overview')
-            ->where('navigation.0.label', 'Operations overview')
+            ->where('navigation.0.label', 'Operation Dashboard')
             ->where('navigation.1.id', 'dispatch')
             ->where('navigation.1.label', "Today's work")
             ->where('navigation.2.id', 'assets')

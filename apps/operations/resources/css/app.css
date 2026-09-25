@@ -366,25 +366,37 @@ textarea {
 .maplibre-asset-marker::before {
     position: absolute;
     inset: 2px;
+    box-sizing: border-box;
+    border: 2px solid var(--color-line-strong);
     border-radius: 9999px;
     content: '';
 }
 
 .maplibre-asset-marker[data-freshness='fresh']::before,
 .maplibre-asset-marker[data-freshness='live']::before {
-    background: color-mix(in oklch, var(--color-success) 35%, transparent);
+    border-color: var(--color-success-strong);
     animation: map-marker-pulse 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.maplibre-asset-marker[data-freshness='delayed']::before {
+    border-color: var(--color-warning-strong);
+}
+
+.maplibre-asset-marker[data-freshness='stale']::before,
+.maplibre-asset-marker[data-freshness='offline']::before {
+    border-style: dashed;
+    border-color: var(--color-ink-muted);
 }
 
 .maplibre-asset-marker__surface {
     position: relative;
     display: flex;
-    width: 32px;
-    height: 32px;
+    width: 30px;
+    height: 30px;
     align-items: center;
     justify-content: center;
-    border: 2px solid var(--color-line-strong);
-    border-radius: 6px;
+    border: 1px solid var(--color-line-strong);
+    border-radius: 8px;
     background: var(--color-ink-soft);
     color: white;
     box-shadow: 0 4px 10px rgb(0 0 0 / 0.18);
@@ -394,56 +406,9 @@ textarea {
 }
 
 .maplibre-asset-marker__surface svg {
-    width: 15px;
-    height: 15px;
+    width: 20px;
+    height: 20px;
     flex: none;
-}
-
-.maplibre-asset-marker[data-kind='truck'] .maplibre-asset-marker__surface {
-    border-radius: 10px;
-}
-
-.maplibre-asset-marker[data-kind='crane'] .maplibre-asset-marker__surface {
-    border-radius: 8px;
-    transform: rotate(45deg);
-}
-
-.maplibre-asset-marker[data-kind='crane'] .maplibre-asset-marker__surface svg {
-    transform: rotate(-45deg);
-}
-
-.maplibre-asset-marker[data-kind='personnel'] .maplibre-asset-marker__surface {
-    border-radius: 9999px;
-}
-
-.maplibre-asset-marker[data-kind='equipment'] .maplibre-asset-marker__surface {
-    border-radius: 6px;
-}
-
-.maplibre-asset-marker[data-freshness='fresh'] .maplibre-asset-marker__surface,
-.maplibre-asset-marker[data-freshness='live'] .maplibre-asset-marker__surface {
-    border-color: var(--color-success);
-    background: var(--color-success-strong);
-}
-
-.maplibre-asset-marker[data-freshness='delayed']
-    .maplibre-asset-marker__surface {
-    border-color: var(--color-warning);
-    background: var(--color-warning-strong);
-}
-
-.maplibre-asset-marker[data-freshness='stale'] .maplibre-asset-marker__surface {
-    border-style: dashed;
-    border-color: var(--color-line-strong);
-    background: var(--color-surface);
-    color: var(--color-ink-soft);
-}
-
-.maplibre-asset-marker[data-freshness='offline']
-    .maplibre-asset-marker__surface {
-    border-style: dashed;
-    background: var(--color-surface);
-    color: var(--color-ink-soft);
 }
 
 .maplibre-marker-group {

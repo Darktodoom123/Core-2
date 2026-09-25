@@ -143,16 +143,24 @@ test.describe('Safety & Response Hub E2E Workflow', () => {
         }
     });
 
-    test('Scenario 6: Top-right Industrial Header displays live stream pill and user profile dropdown', async ({
+    test('Scenario 6: Header shows profile controls and only shows Active SOS when an incident is active', async ({
         page,
     }) => {
         await page.goto('/');
 
-        // Verify Live Stream or Active SOS pill exists in header
+        // Active SOS is a state-driven shortcut and should not appear for an empty queue.
         const streamPill = page.getByRole('button', {
-            name: /Live Stream|Active SOS/i,
+            name: /Active SOS/i,
         });
-        await expect(streamPill).toBeVisible();
+        const activeEmergency = page.getByRole('region', {
+            name: 'Active emergency response',
+        });
+
+        if (await activeEmergency.isVisible()) {
+            await expect(streamPill).toBeVisible();
+        } else {
+            await expect(streamPill).toHaveCount(0);
+        }
 
         // Check user account menu button in header
         const userMenuButton = page.getByRole('button', {
@@ -166,7 +174,10 @@ test.describe('Safety & Response Hub E2E Workflow', () => {
             page.getByRole('menu', { name: 'User account options' }),
         ).toBeVisible();
         await expect(
-            page.getByRole('menuitem', { name: /Test station audio/i }),
+            page.getByRole('menuitem', { name: 'My Account', exact: true }),
+        ).toBeVisible();
+        await expect(
+            page.getByRole('radiogroup', { name: 'Theme selection' }),
         ).toBeVisible();
         await expect(
             page.getByRole('menuitem', { name: /Sign out/i }),

@@ -29,7 +29,7 @@ it('exports DOLE WAIR accident and incident records for Operations Managers', fu
         'project_site' => 'Makati Skysuites Tower',
         'reporter_id' => $manager->id,
         'category' => 'rigging_tackle',
-        'severity' => 'imminent_danger',
+        'severity' => 'critical',
         'description' => 'Damaged 30T wire rope sling strand parted during pre-lift inspection.',
         'location_detail' => 'Bay 4 Heavy Rigging Yard',
         'corrective_action_required' => 'Condemn and tag out defective sling immediately.',
@@ -46,7 +46,7 @@ it('exports DOLE WAIR accident and incident records for Operations Managers', fu
     $rows = iterator_to_array($dataset->rows($manager, []));
     expect($rows)->toHaveCount(1);
     expect($rows[0][0])->toBe('HAZ-2026-901');
-    expect($rows[0][3])->toBe('IMMINENT DANGER');
+    expect($rows[0][3])->toBe('CRITICAL');
     expect($rows[0][6])->toBe('YES (RA 11058)');
 });
 
