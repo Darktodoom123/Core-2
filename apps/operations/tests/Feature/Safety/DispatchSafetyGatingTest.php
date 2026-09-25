@@ -3,11 +3,13 @@
 use App\Modules\Assignment\Models\DispatchAssetAssignment;
 use App\Modules\Assignment\Models\DispatchPersonnelAssignment;
 use App\Modules\Dispatch\Actions\ActivateDispatchJob;
+use App\Modules\Dispatch\Actions\TransitionDispatchJob;
 use App\Modules\Dispatch\Enums\ApprovalStatus;
 use App\Modules\Dispatch\Enums\DispatchPriority;
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\ApprovalRequest;
 use App\Modules\Dispatch\Models\DispatchJob;
+use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\PersonnelCredential;
 use App\Platform\Identity\Models\User;
@@ -101,7 +103,7 @@ it('blocks dispatch activation when an active statutory Work Stoppage Order is i
     WorkStoppageNotice::query()->create([
         'notice_number' => 'WSO-2026-001',
         'project_site' => 'Makati Sky Tower 2',
-        'safety_officer_id' => $safetyOfficer->id,
+        'issued_by' => $safetyOfficer->id,
         'dole_regulation_reference' => 'DOLE D.O. 13 Section 8',
         'reason' => 'Ground settlement observed near outrigger pad.',
         'affected_area' => 'Grid B-4',
@@ -126,7 +128,7 @@ it('allows dispatch activation once the Safety Officer lifts the Work Stoppage O
     $wso = WorkStoppageNotice::query()->create([
         'notice_number' => 'WSO-2026-001',
         'project_site' => 'Makati Sky Tower 2',
-        'safety_officer_id' => $safetyOfficer->id,
+        'issued_by' => $safetyOfficer->id,
         'dole_regulation_reference' => 'DOLE D.O. 13 Section 8',
         'reason' => 'Ground settlement observed near outrigger pad.',
         'affected_area' => 'Grid B-4',
@@ -145,6 +147,34 @@ it('allows dispatch activation once the Safety Officer lifts the Work Stoppage O
     $activated = $action->handle($manager, $job, 1);
 
     expect($activated->status)->toBe(DispatchStatus::Dispatched);
+});
+
+it('blocks field status progression on an active site work stoppage order', function (): void {
+    [$manager, $job, $operator] = createReadyDispatchJob('Makati Sky Tower 2');
+    $job->update(['status' => DispatchStatus::Working]);
+
+    WorkStoppageNotice::query()->create([
+        'notice_number' => 'WSO-2026-002',
+        'project_site' => $job->site,
+        'issued_by' => $operator->id,
+        'dole_regulation_reference' => 'DOLE D.O. 13 Section 8',
+        'reason' => 'Movement observed under an unstable outrigger pad.',
+        'affected_area' => 'Grid B-4',
+        'is_active' => true,
+    ]);
+
+    $action = app(TransitionDispatchJob::class);
+
+    try {
+        $action->handle($operator, $job, DispatchStatus::Completed, $job->version);
+        test()->fail('The active stop-work order should block field progression.');
+    } catch (ValidationException $exception) {
+        expect($exception->errors()['safety'][0])->toContain('WSO-2026-002');
+    }
+
+    expect($job->fresh()->status)->toBe(DispatchStatus::Working)
+        ->and($job->fresh()->version)->toBe($job->version)
+        ->and($manager->can(PermissionName::SafetyWorkStoppageLift->value))->toBeTrue();
 });
 
 it('blocks dispatch activation if a Critical Lift Plan is pending Safety Officer authorization', function (): void {
@@ -180,7 +210,7 @@ it('blocks dispatch activation if a Critical Lift Plan is pending Safety Officer
 
     $liftPlan->update([
         'status' => 'approved',
-        'safety_officer_id' => $safetyOfficer->id,
+        'issued_by' => $safetyOfficer->id,
         'safety_officer_signed_at' => now(),
     ]);
 

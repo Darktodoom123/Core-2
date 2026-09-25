@@ -39,6 +39,16 @@ class UploadAttachmentRequest extends FormRequest
                 }
             }
 
+            if ($this->input('owner_type') === 'site_hazard_ticket') {
+                if ($this->input('kind') !== 'hazard_photo') {
+                    $validator->errors()->add('kind', 'Hazard evidence must use the hazard photo attachment type.');
+                }
+
+                if ($file && $file->isValid() && ! str_starts_with((string) $file->getMimeType(), 'image/')) {
+                    $validator->errors()->add('file', 'Hazard evidence must be a JPEG, PNG, or HEIC image.');
+                }
+            }
+
             // Check owner attachment count limit (max 10)
             $ownerType = $this->input('owner_type');
             $ownerId = $this->input('owner_id');
@@ -60,6 +70,18 @@ class UploadAttachmentRequest extends FormRequest
                     ->where('owner_type', $morphClass)
                     ->where('owner_id', $ownerId)
                     ->count();
+
+                if ($ownerType === 'site_hazard_ticket' && $this->input('kind') === 'hazard_photo') {
+                    $hazardPhotoCount = Attachment::query()
+                        ->where('owner_type', $morphClass)
+                        ->where('owner_id', $ownerId)
+                        ->where('kind', 'hazard_photo')
+                        ->count();
+
+                    if ($hazardPhotoCount >= 4) {
+                        $validator->errors()->add('file', 'A hazard report can have up to four photo evidence files.');
+                    }
+                }
 
                 if ($existingCount >= (int) config('attachments.max_count_per_owner')) {
                     $validator->errors()->add('file', 'Maximum attachment limit reached for this item.');

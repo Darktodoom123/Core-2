@@ -103,7 +103,7 @@ export interface CriticalLiftPlan {
     };
 }
 
-export type HazardSeverity = 'minor' | 'moderate' | 'high' | 'imminent_danger';
+export type HazardSeverity = 'low' | 'medium' | 'high' | 'critical';
 export type HazardCategory =
     | 'rigging_tackle'
     | 'ground_soil_instability'

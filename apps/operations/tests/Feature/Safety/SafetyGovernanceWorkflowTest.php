@@ -1,5 +1,7 @@
 <?php
 
+use App\Platform\Attachments\Models\Attachment;
+use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
 use App\Platform\Safety\Models\CriticalLiftPlan;
@@ -8,11 +10,15 @@ use App\Platform\Safety\Models\ToolboxMeeting;
 use App\Platform\Safety\Models\WorkStoppageNotice;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
     $this->seed(RolePermissionSeeder::class);
+    Storage::fake('private');
 });
 
 it('allows Crane Operator to submit a daily DOLE Toolbox Meeting with attendee roster', function (): void {
@@ -31,7 +37,7 @@ it('allows Crane Operator to submit a daily DOLE Toolbox Meeting with attendee r
     ];
 
     $response = $this->withToken($token)
-        ->postJson('/api/v1/safety/toolbox-meetings', $payload)
+        ->withHeader('Idempotency-Key', (string) Str::uuid())->postJson('/api/v1/safety/toolbox-meetings', $payload)
         ->assertCreated();
 
     $meeting = ToolboxMeeting::query()->sole();
@@ -62,7 +68,7 @@ it('allows Operations Manager to co-sign a submitted Toolbox Meeting', function 
     ]);
 
     $this->withToken($soToken)
-        ->postJson("/api/v1/safety/toolbox-meetings/{$meeting->id}/cosign")
+        ->withHeader('Idempotency-Key', (string) Str::uuid())->postJson("/api/v1/safety/toolbox-meetings/{$meeting->id}/cosign")
         ->assertOk();
 
     expect($meeting->fresh()->safety_officer_id)->toBe($safetyOfficer->id)
@@ -91,7 +97,7 @@ it('allows Crane Operator to create a Critical Lift Plan and Operations Manager 
 
     // 1. Foreman submits Critical Lift Plan
     $this->withToken($foremanToken)
-        ->postJson('/api/v1/safety/lift-plans', $payload)
+        ->withHeader('Idempotency-Key', (string) Str::uuid())->postJson('/api/v1/safety/lift-plans', $payload)
         ->assertCreated();
 
     $plan = CriticalLiftPlan::query()->sole();
@@ -102,7 +108,7 @@ it('allows Crane Operator to create a Critical Lift Plan and Operations Manager 
     // 2. Safety Officer authorizes permit
     $this->app['auth']->forgetGuards();
     $this->withToken($soToken)
-        ->postJson("/api/v1/safety/lift-plans/{$plan->id}/authorize", ['decision' => 'approve'])
+        ->withHeader('Idempotency-Key', (string) Str::uuid())->postJson("/api/v1/safety/lift-plans/{$plan->id}/authorize", ['decision' => 'approve'])
         ->assertOk();
 
     expect($plan->fresh()->status)->toBe('approved')
@@ -122,16 +128,16 @@ it('allows Operations Manager to issue and lift a statutory Work Stoppage Order'
     ];
 
     $this->withToken($soToken)
-        ->postJson('/api/v1/safety/work-stoppages', $wsoPayload)
+        ->withHeader('Idempotency-Key', (string) Str::uuid())->postJson('/api/v1/safety/work-stoppages', $wsoPayload)
         ->assertCreated();
 
     $notice = WorkStoppageNotice::query()->sole();
     expect($notice->is_active)->toBeTrue()
-        ->and($notice->safety_officer_id)->toBe($safetyOfficer->id);
+        ->and($notice->issued_by)->toBe($safetyOfficer->id);
 
     // 2. Lift Work Stoppage after rectification
     $this->withToken($soToken)
-        ->postJson("/api/v1/safety/work-stoppages/{$notice->id}/lift", [
+        ->withHeader('Idempotency-Key', (string) Str::uuid())->postJson("/api/v1/safety/work-stoppages/{$notice->id}/lift", [
             'lift_reason' => 'Hydraulic line replaced and pressure-tested up to 350 bar. Verified safe by master mechanic.',
         ])
         ->assertOk();
@@ -152,14 +158,14 @@ it('logs site hazard tickets and tracks rectification', function (): void {
     $hazardPayload = [
         'project_site' => 'Makati Sky Tower 2',
         'category' => 'rigging_tackle',
-        'severity' => 'moderate',
+        'severity' => 'medium',
         'description' => 'Damaged synthetic web sling found near rigging locker.',
         'location_detail' => 'Ground Floor Rigging Bay',
         'corrective_action_required' => 'Destroy and tag out damaged sling.',
     ];
 
     $this->withToken($foremanToken)
-        ->postJson('/api/v1/safety/hazards', $hazardPayload)
+        ->withHeader('Idempotency-Key', (string) Str::uuid())->postJson('/api/v1/safety/hazards', $hazardPayload)
         ->assertCreated();
 
     $ticket = SiteHazardTicket::query()->sole();
@@ -168,11 +174,17 @@ it('logs site hazard tickets and tracks rectification', function (): void {
     // Rectify ticket
     $this->app['auth']->forgetGuards();
     $this->withToken($soToken)
-        ->postJson("/api/v1/safety/hazards/{$ticket->id}/rectify")
+        ->withHeader('Idempotency-Key', (string) Str::uuid())->postJson("/api/v1/safety/hazards/{$ticket->id}/rectify", [
+            'rectification_notes' => 'Damaged sling destroyed and replacement inspected before return to service.',
+        ])
         ->assertOk();
 
     expect($ticket->fresh()->status)->toBe('rectified')
+        ->and($ticket->fresh()->rectification_notes)->toBe('Damaged sling destroyed and replacement inspected before return to service.')
         ->and($ticket->fresh()->rectified_by)->toBe($safetyOfficer->id);
+
+    expect(AuditEvent::query()->where('action', 'safety.hazard_reported')->exists())->toBeTrue()
+        ->and(AuditEvent::query()->where('action', 'safety.hazard_rectified')->exists())->toBeTrue();
 });
 
 it('allows Operations Manager to reject an unsafe Critical Lift Plan with a mandatory condition note', function (): void {
@@ -199,7 +211,7 @@ it('allows Operations Manager to reject an unsafe Critical Lift Plan with a mand
     ]);
 
     $this->withToken($soToken)
-        ->postJson("/api/v1/safety/lift-plans/{$plan->id}/authorize", [
+        ->withHeader('Idempotency-Key', (string) Str::uuid())->postJson("/api/v1/safety/lift-plans/{$plan->id}/authorize", [
             'decision' => 'reject',
             'reason' => 'Ground bearing capacity unverified; exceeds 85% safety threshold without engineered steel plates.',
         ])
@@ -210,7 +222,7 @@ it('allows Operations Manager to reject an unsafe Critical Lift Plan with a mand
         ->and($plan->fresh()->safety_officer_id)->toBe($safetyOfficer->id);
 });
 
-it('enforces RBAC preventing Crane Operators from approving lift plans or issuing work stoppages', function (): void {
+it('lets any field worker stop unsafe work while limiting plan approval and stoppage release to managers', function (): void {
     $operator = User::factory()->create(['name' => 'Crane Operator Mike', 'is_active' => true]);
     $operator->syncRoles([RoleName::CraneOperator->value]);
     $opToken = $operator->createToken('Mobile')->plainTextToken;
@@ -231,16 +243,43 @@ it('enforces RBAC preventing Crane Operators from approving lift plans or issuin
 
     // Operator cannot authorize lift plan (403 Forbidden)
     $this->withToken($opToken)
-        ->postJson("/api/v1/safety/lift-plans/{$plan->id}/authorize", ['decision' => 'approve'])
+        ->withHeader('Idempotency-Key', (string) Str::uuid())->postJson("/api/v1/safety/lift-plans/{$plan->id}/authorize", ['decision' => 'approve'])
         ->assertForbidden();
 
-    // Operator cannot issue statutory work stoppage (403 Forbidden)
+    // Any field worker can stop work when they identify an immediate safety risk.
     $this->withToken($opToken)
-        ->postJson('/api/v1/safety/work-stoppages', [
+        ->withHeader('Idempotency-Key', (string) Str::uuid())->postJson('/api/v1/safety/work-stoppages', [
             'project_site' => 'Makati Sky Tower 2',
-            'reason' => 'Unauthorized halt',
-            'affected_area' => 'All',
-        ])
+            'reason' => 'Unstable outrigger pad observed under the active crane setup.',
+            'affected_area' => 'Grid B-4',
+        ])->assertCreated();
+
+    $notice = WorkStoppageNotice::query()->sole();
+    expect($notice->issued_by)->toBe($operator->id)
+        ->and($notice->is_active)->toBeTrue();
+
+    // Field staff cannot release a stoppage after issuing it.
+    $this->withToken($opToken)
+        ->withHeader('Idempotency-Key', (string) Str::uuid())->postJson("/api/v1/safety/work-stoppages/{$notice->id}/lift", [
+            'lift_reason' => 'The outrigger pad was replaced and checked by the supervisor.',
+        ])->assertForbidden();
+
+    $manager = User::factory()->create(['name' => 'Operations Manager', 'is_active' => true]);
+    $manager->syncRoles([RoleName::OperationsManager->value]);
+    $managerToken = $manager->createToken('SafetyDesk')->plainTextToken;
+    $this->app['auth']->forgetGuards();
+    $this->withToken($managerToken)
+        ->withHeader('Idempotency-Key', (string) Str::uuid())->postJson("/api/v1/safety/work-stoppages/{$notice->id}/lift", [
+            'lift_reason' => 'The outrigger pad was replaced and checked by the supervisor.',
+        ])->assertOk();
+
+    expect($notice->fresh()->is_active)->toBeFalse()
+        ->and($notice->fresh()->lifted_by)->toBe($manager->id);
+
+    // Operators may submit reports but cannot read the organization-wide safety register.
+    $this->app['auth']->forgetGuards();
+    $this->withToken($opToken)
+        ->getJson('/api/v1/safety/hazards')
         ->assertForbidden();
 });
 
@@ -254,7 +293,7 @@ it('provides index endpoints for hazards and critical lift plans', function (): 
         'project_site' => 'Site Alpha',
         'reporter_id' => $safetyOfficer->id,
         'category' => 'rigging_tackle',
-        'severity' => 'moderate',
+        'severity' => 'medium',
         'description' => 'Damaged shackle',
         'location_detail' => 'Bay 1',
         'corrective_action_required' => 'Replace shackle',
@@ -278,7 +317,9 @@ it('provides index endpoints for hazards and critical lift plans', function (): 
         ->getJson('/api/v1/safety/hazards')
         ->assertOk()
         ->assertJsonCount(1, 'data')
-        ->assertJsonPath('data.0.ticket_code', 'HAZ-TEST-001');
+        ->assertJsonPath('data.0.ticket_code', 'HAZ-TEST-001')
+        ->assertJsonMissingPath('data.0.reporter_id')
+        ->assertJsonMissingPath('data.0.reporter');
 
     $this->withToken($soToken)
         ->getJson('/api/v1/safety/lift-plans')
@@ -287,7 +328,41 @@ it('provides index endpoints for hazards and critical lift plans', function (): 
         ->assertJsonPath('data.0.lift_reference', 'LIFT-TEST-999');
 });
 
-it('computes dynamic safety metrics aggregating TBM attendees and stoppage state', function (): void {
+it('replays a safety command without creating duplicate records and rejects reused keys for changed input', function (): void {
+    $operator = User::factory()->create(['is_active' => true]);
+    $operator->syncRoles([RoleName::CraneOperator->value]);
+    $token = $operator->createToken('Mobile')->plainTextToken;
+    $commandId = (string) Str::uuid();
+    $payload = [
+        'project_site' => 'Makati Sky Tower 2',
+        'category' => 'equipment',
+        'severity' => 'medium',
+        'description' => 'A cracked guard was found on the mobile crane access platform.',
+        'location_detail' => 'Crane 1 access ladder',
+        'corrective_action_required' => 'Remove crane from service and replace the guard.',
+    ];
+
+    $first = $this->withToken($token)
+        ->withHeader('Idempotency-Key', $commandId)
+        ->postJson('/api/v1/safety/hazards', $payload)
+        ->assertCreated();
+    $replay = $this->withToken($token)
+        ->withHeader('Idempotency-Key', $commandId)
+        ->postJson('/api/v1/safety/hazards', $payload)
+        ->assertCreated();
+
+    expect(SiteHazardTicket::query()->count())->toBe(1)
+        ->and($replay->json('data.id'))->toBe($first->json('data.id'))
+        ->and(AuditEvent::query()->where('action', 'safety.hazard_reported')->count())->toBe(1);
+
+    $this->withToken($token)
+        ->withHeader('Idempotency-Key', $commandId)
+        ->postJson('/api/v1/safety/hazards', array_merge($payload, ['description' => 'Changed payload with the same command id.']))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('command_id');
+});
+
+it('reports supported safety counts without fabricating safe-hours or incident-day metrics', function (): void {
     $safetyOfficer = User::factory()->create(['name' => 'Operations Manager']);
     $safetyOfficer->syncRoles([RoleName::OperationsManager->value]);
     $soToken = $safetyOfficer->createToken('SafetyDesk')->plainTextToken;
@@ -307,7 +382,159 @@ it('computes dynamic safety metrics aggregating TBM attendees and stoppage state
     $this->withToken($soToken)
         ->getJson('/api/v1/safety/metrics')
         ->assertOk()
-        ->assertJsonPath('data.safe_man_hours_without_lti', 140040)
-        ->assertJsonPath('data.days_without_lti', 384)
+        ->assertJsonPath('data.safe_man_hours_without_lti', null)
+        ->assertJsonPath('data.days_without_lti', null)
+        ->assertJsonPath('data.metric_availability.safe_man_hours_without_lti', 'unavailable')
+        ->assertJsonPath('data.metric_availability.days_without_lti', 'unavailable')
         ->assertJsonPath('data.toolbox_meetings_today', 1);
+});
+
+it('uploads private hazard photos idempotently and restricts evidence access to the reporter and managers', function (): void {
+    $reporter = User::factory()->create(['is_active' => true]);
+    $reporter->syncRoles([RoleName::CraneOperator->value]);
+    $reporterToken = $reporter->createToken('FieldClient')->plainTextToken;
+
+    $manager = User::factory()->create(['is_active' => true]);
+    $manager->syncRoles([RoleName::OperationsManager->value]);
+    $managerToken = $manager->createToken('SafetyDesk')->plainTextToken;
+
+    $otherOperator = User::factory()->create(['is_active' => true]);
+    $otherOperator->syncRoles([RoleName::CraneOperator->value]);
+    $otherToken = $otherOperator->createToken('FieldClient')->plainTextToken;
+
+    $ticketResponse = $this->withToken($reporterToken)
+        ->withHeader('Idempotency-Key', (string) Str::uuid())
+        ->postJson('/api/v1/safety/hazards', [
+            'project_site' => 'Pier 7',
+            'category' => 'equipment',
+            'severity' => 'high',
+            'description' => 'A damaged sling was found at the south rigging area.',
+            'location_detail' => 'South rigging area',
+            'corrective_action_required' => 'Tag it out and replace it before the next lift.',
+        ])
+        ->assertCreated();
+    $ticketId = $ticketResponse->json('data.id');
+    $photoCommandId = (string) Str::uuid();
+    $photo = UploadedFile::fake()->image('hazard-evidence.png');
+    $uploadPayload = [
+        'file' => $photo,
+        'owner_type' => 'site_hazard_ticket',
+        'owner_id' => $ticketId,
+        'kind' => 'hazard_photo',
+    ];
+
+    $firstUpload = $this->withToken($reporterToken)
+        ->withHeader('Accept', 'application/json')
+        ->withHeader('Idempotency-Key', $photoCommandId)
+        ->post('/api/v1/attachments', $uploadPayload)
+        ->assertCreated()
+        ->assertJsonPath('data.kind', 'hazard_photo')
+        ->assertJsonPath('data.owner_id', $ticketId)
+        ->assertJsonMissingPath('data.path')
+        ->assertJsonMissingPath('data.checksum_sha256');
+    $attachmentId = $firstUpload->json('data.id');
+
+    $replay = $this->withToken($reporterToken)
+        ->withHeader('Accept', 'application/json')
+        ->withHeader('Idempotency-Key', $photoCommandId)
+        ->post('/api/v1/attachments', $uploadPayload)
+        ->assertCreated();
+
+    expect(Attachment::query()->count())->toBe(1)
+        ->and($replay->json('data.id'))->toBe($attachmentId)
+        ->and(Attachment::query()->sole()->disk)->toBe('private');
+
+    $this->app['auth']->forgetGuards();
+    $this->withToken($otherToken)
+        ->withHeader('Accept', 'application/json')
+        ->withHeader('Idempotency-Key', (string) Str::uuid())
+        ->post('/api/v1/attachments', [
+            'file' => UploadedFile::fake()->image('unauthorized-evidence.png'),
+            'owner_type' => 'site_hazard_ticket',
+            'owner_id' => $ticketId,
+            'kind' => 'hazard_photo',
+        ])
+        ->assertForbidden();
+
+    $this->app['auth']->forgetGuards();
+    $this->withToken($reporterToken)
+        ->withHeader('Accept', 'application/json')
+        ->withHeader('Idempotency-Key', (string) Str::uuid())
+        ->post('/api/v1/attachments', [
+            'file' => UploadedFile::fake()->create('hazard.pdf', 20, 'application/pdf'),
+            'owner_type' => 'site_hazard_ticket',
+            'owner_id' => $ticketId,
+            'kind' => 'hazard_photo',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['file']);
+
+    expect(Attachment::query()->count())->toBe(1);
+
+    $this->app['auth']->forgetGuards();
+    $this->withToken($otherToken)
+        ->get('/api/v1/attachments/'.$attachmentId.'/download')
+        ->assertForbidden();
+
+    $this->app['auth']->forgetGuards();
+    $this->withToken($managerToken)
+        ->get('/api/v1/attachments/'.$attachmentId.'/download')
+        ->assertOk();
+
+    $this->app['auth']->forgetGuards();
+    $this->withToken($managerToken)
+        ->getJson('/api/v1/safety/hazards')
+        ->assertOk()
+        ->assertJsonPath('data.0.id', $ticketId)
+        ->assertJsonPath('data.0.photo_attachments.0.id', $attachmentId)
+        ->assertJsonPath('data.0.photo_attachments.0.original_filename', 'hazard-evidence.png');
+
+    foreach (range(2, 4) as $index) {
+        $this->withToken($reporterToken)
+            ->withHeader('Accept', 'application/json')
+            ->withHeader('Idempotency-Key', (string) Str::uuid())
+            ->post('/api/v1/attachments', [
+                'file' => UploadedFile::fake()->image("hazard-evidence-{$index}.png"),
+                'owner_type' => 'site_hazard_ticket',
+                'owner_id' => $ticketId,
+                'kind' => 'hazard_photo',
+            ])
+            ->assertCreated();
+    }
+
+    $this->withToken($reporterToken)
+        ->withHeader('Accept', 'application/json')
+        ->withHeader('Idempotency-Key', (string) Str::uuid())
+        ->post('/api/v1/attachments', [
+            'file' => UploadedFile::fake()->image('hazard-evidence-5.png'),
+            'owner_type' => 'site_hazard_ticket',
+            'owner_id' => $ticketId,
+            'kind' => 'hazard_photo',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('file');
+
+    expect(Attachment::query()->where('owner_id', $ticketId)->where('kind', 'hazard_photo')->count())->toBe(4);
+});
+
+it('loads the complete safety manager workspace from one authorized read request', function (): void {
+    $manager = User::factory()->create(['is_active' => true]);
+    $manager->syncRoles([RoleName::OperationsManager->value]);
+
+    $this->actingAs($manager)
+        ->getJson('/operations/safety/overview')
+        ->assertOk()
+        ->assertJsonPath('data.metrics.metric_availability.safe_man_hours_without_lti', 'unavailable')
+        ->assertJsonPath('data.hazards', [])
+        ->assertJsonPath('data.liftPlans', [])
+        ->assertJsonPath('data.toolboxMeetings', [])
+        ->assertJsonPath('data.workStoppages', []);
+
+    $fieldWorker = User::factory()->create(['is_active' => true]);
+    $fieldWorker->syncRoles([RoleName::CraneOperator->value]);
+
+    $this->app['auth']->forgetGuards();
+    $this->actingAs($fieldWorker)
+        ->getJson('/operations/safety/overview')
+        ->assertForbidden();
 });

@@ -2,9 +2,11 @@
 
 namespace App\Platform\Safety\Models;
 
+use App\Platform\Attachments\Models\Attachment;
 use App\Platform\Identity\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -20,6 +22,11 @@ use Illuminate\Support\Carbon;
  * @property string $corrective_action_required
  * @property string $status
  * @property bool $work_stoppage_issued
+ * @property string|null $rectification_notes
+ * @property float|null $location_latitude
+ * @property float|null $location_longitude
+ * @property float|null $location_accuracy_metres
+ * @property Carbon|null $location_observed_at
  * @property int|null $rectified_by
  * @property Carbon|null $rectified_at
  * @property Carbon $created_at
@@ -41,6 +48,11 @@ final class SiteHazardTicket extends Model
         'corrective_action_required',
         'status',
         'work_stoppage_issued',
+        'rectification_notes',
+        'location_latitude',
+        'location_longitude',
+        'location_accuracy_metres',
+        'location_observed_at',
         'rectified_by',
         'rectified_at',
     ];
@@ -51,6 +63,10 @@ final class SiteHazardTicket extends Model
         return [
             'work_stoppage_issued' => 'boolean',
             'rectified_at' => 'datetime',
+            'location_latitude' => 'float',
+            'location_longitude' => 'float',
+            'location_accuracy_metres' => 'float',
+            'location_observed_at' => 'datetime',
         ];
     }
 
@@ -64,5 +80,11 @@ final class SiteHazardTicket extends Model
     public function rectifiedByUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'rectified_by');
+    }
+
+    /** @return MorphMany<Attachment, $this> */
+    public function attachments(): MorphMany
+    {
+        return $this->morphMany(Attachment::class, 'owner');
     }
 }

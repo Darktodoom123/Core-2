@@ -10,7 +10,7 @@ use App\Modules\Dispatch\Planning\Services\ProjectShiftReadiness;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Models\User;
 use App\Platform\Safety\Models\CriticalLiftPlan;
-use App\Platform\Safety\Models\WorkStoppageNotice;
+use App\Platform\Safety\Services\WorkStoppageGate;
 use App\Shared\Assets\Models\OperationalAsset;
 use App\Shared\Assets\Services\OperationalAssetAvailability;
 use Illuminate\Support\Facades\DB;
@@ -23,6 +23,7 @@ final class ActivateDispatchJob
         private RecordAuditEvent $audit,
         private DispatchResourceEligibility $eligibility,
         private OperationalAssetAvailability $availability,
+        private WorkStoppageGate $workStoppageGate,
     ) {}
 
     public function handle(User $actor, DispatchJob $job, int $version): DispatchJob
@@ -55,16 +56,7 @@ final class ActivateDispatchJob
             }
 
             // 1. Statutory DOLE Work Stoppage Gate
-            $activeWso = WorkStoppageNotice::query()
-                ->where('is_active', true)
-                ->where('project_site', $job->site)
-                ->exists();
-
-            if ($activeWso) {
-                throw ValidationException::withMessages([
-                    'safety' => 'Dispatch activation blocked: A statutory DOLE Work Stoppage Order is currently active for this site.',
-                ]);
-            }
+            $this->workStoppageGate->assertDispatchMayProgress($job);
 
             // 2. Critical Lift Safety Officer Authorization Gate
             $criticalLift = CriticalLiftPlan::query()

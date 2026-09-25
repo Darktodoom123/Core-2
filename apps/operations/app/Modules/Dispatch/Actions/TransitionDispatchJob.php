@@ -6,13 +6,17 @@ use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Models\User;
+use App\Platform\Safety\Services\WorkStoppageGate;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 final class TransitionDispatchJob
 {
-    public function __construct(private RecordAuditEvent $audit) {}
+    public function __construct(
+        private RecordAuditEvent $audit,
+        private WorkStoppageGate $workStoppageGate,
+    ) {}
 
     public function handle(User $actor, DispatchJob $job, DispatchStatus $next, int $version): DispatchJob
     {
@@ -36,6 +40,8 @@ final class TransitionDispatchJob
                     'status' => 'That step is not available from the current dispatch status. Refresh and use the next action shown.',
                 ]);
             }
+
+            $this->workStoppageGate->assertDispatchMayProgress($job);
 
             $before = $job->only(['status', 'version']);
             $job->update(['status' => $next, 'version' => $job->version + 1]);

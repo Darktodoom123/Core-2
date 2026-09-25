@@ -8,6 +8,7 @@ use App\Platform\Attachments\Http\Requests\UploadAttachmentRequest;
 use App\Platform\Attachments\Models\Attachment;
 use App\Platform\Attachments\Services\AttachmentOwnerResolver;
 use App\Platform\Audit\Models\AuditEvent;
+use App\Platform\Idempotency\Services\IdempotentCommandService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,7 +21,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AttachmentController extends Controller
 {
-    public function store(UploadAttachmentRequest $request, UploadAttachmentAction $action, AttachmentOwnerResolver $owners): RedirectResponse|JsonResponse
+    public function store(UploadAttachmentRequest $request, UploadAttachmentAction $action, AttachmentOwnerResolver $owners, IdempotentCommandService $idempotency): RedirectResponse|JsonResponse
     {
         $ownerType = $request->input('owner_type');
         $ownerId = (int) $request->input('owner_id');
@@ -28,28 +29,79 @@ class AttachmentController extends Controller
         $owner = $owners->resolve((string) $ownerType, $ownerId);
         Gate::forUser($request->user())->authorize('view', $owner);
 
-        try {
-            $attachment = $action->execute(
-                $request->user(),
-                $owner,
-                $request->file('file'),
-                $request->input('kind', 'document'),
-                null,
-            );
-        } catch (InvalidArgumentException $exception) {
-            throw ValidationException::withMessages([
-                'file' => $exception->getMessage(),
-            ]);
-        }
+        $upload = function () use ($request, $action, $owner): Attachment {
+            try {
+                return $action->execute(
+                    $request->user(),
+                    $owner,
+                    $request->file('file'),
+                    $request->input('kind', 'document'),
+                    null,
+                );
+            } catch (InvalidArgumentException $exception) {
+                throw ValidationException::withMessages([
+                    'file' => $exception->getMessage(),
+                ]);
+            }
+        };
 
         if ($request->wantsJson()) {
-            return response()->json(['data' => $attachment], 201);
+            $isApi = $request->is('api/*');
+            $commandId = $idempotency->resolveCommandId($request, required: $isApi);
+
+            if ($commandId !== null) {
+                $file = $request->file('file');
+                $fileHash = hash_file('sha256', (string) $file->getRealPath());
+                $response = $idempotency->process(
+                    $request->user(),
+                    $commandId,
+                    'attachments.upload',
+                    null,
+                    fn (): JsonResponse => response()->json([
+                        'data' => $this->attachmentData($upload(), $isApi),
+                    ], 201),
+                    [
+                        'owner_type' => $owner->getMorphClass(),
+                        'owner_id' => $owner->getKey(),
+                        'kind' => $request->input('kind', 'document'),
+                        'file_sha256' => $fileHash,
+                    ],
+                    wrapInTransaction: false,
+                );
+
+                if (! $response instanceof JsonResponse) {
+                    throw new \LogicException('Attachment uploads must return JSON.');
+                }
+
+                return $response;
+            }
+
+            return response()->json(['data' => $this->attachmentData($upload(), $isApi)], 201);
         }
+
+        $upload();
 
         return redirect()->back()->with('flash', [
             'type' => 'success',
             'message' => 'Attachment uploaded successfully.',
         ]);
+    }
+
+    /** @return array<string, mixed> */
+    private function attachmentData(Attachment $attachment, bool $api): array
+    {
+        return [
+            'id' => $attachment->id,
+            'owner_type' => $attachment->owner_type,
+            'owner_id' => $attachment->owner_id,
+            'kind' => $attachment->kind,
+            'original_filename' => $attachment->original_filename,
+            'mime_type' => $attachment->mime_type,
+            'size_bytes' => $attachment->size_bytes,
+            'download_url' => $api
+                ? url("/api/v1/attachments/{$attachment->id}/download")
+                : url("/operations/attachments/{$attachment->id}/download"),
+        ];
     }
 
     public function download(Attachment $attachment, Request $request): StreamedResponse|RedirectResponse

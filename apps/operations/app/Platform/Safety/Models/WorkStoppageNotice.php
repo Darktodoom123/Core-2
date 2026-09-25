@@ -11,7 +11,7 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property string $notice_number
  * @property string $project_site
- * @property int $safety_officer_id
+ * @property int $issued_by
  * @property string $dole_regulation_reference
  * @property string $reason
  * @property array<int>|null $affected_asset_ids
@@ -32,7 +32,7 @@ final class WorkStoppageNotice extends Model
     protected $fillable = [
         'notice_number',
         'project_site',
-        'safety_officer_id',
+        'issued_by',
         'dole_regulation_reference',
         'reason',
         'affected_asset_ids',
@@ -57,9 +57,9 @@ final class WorkStoppageNotice extends Model
     }
 
     /** @return BelongsTo<User, $this> */
-    public function safetyOfficer(): BelongsTo
+    public function issuer(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'safety_officer_id');
+        return $this->belongsTo(User::class, 'issued_by');
     }
 
     /** @return BelongsTo<User, $this> */

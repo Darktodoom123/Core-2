@@ -25,12 +25,12 @@ final class PhilippineSafetyOperationsSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Safety Officer (DOLE Certified SO-3)
+        // 1. Safety Officer (Dev Operations Manager)
         $safetyOfficer = User::query()->firstOrCreate(
-            ['email' => 'so.morales@core2.ph'],
+            ['email' => 'manager@example.com'],
             [
-                'name' => 'Engr. Jonathan Morales (SO-3)',
-                'username' => Username::fromEmail('so.morales@core2.ph'),
+                'name' => 'Dev Operations Manager',
+                'username' => Username::fromEmail('manager@example.com'),
                 'password' => Hash::make('password'),
                 'is_active' => true,
                 'email_verified_at' => Carbon::now(),
@@ -38,7 +38,7 @@ final class PhilippineSafetyOperationsSeeder extends Seeder
         );
         $safetyOfficer->syncRoles([RoleName::OperationsManager->value]);
 
-        PersonnelCredential::query()->firstOrCreate(
+        PersonnelCredential::query()->updateOrCreate(
             ['credential_number' => 'DOLE-BWC-SO3-2023-4412'],
             [
                 'user_id' => $safetyOfficer->id,
@@ -50,12 +50,12 @@ final class PhilippineSafetyOperationsSeeder extends Seeder
             ]
         );
 
-        // 2. Field Foreman (TESDA NC-II Crane Supervisor)
+        // 2. Field Foreman (Dev Crane Operator)
         $foreman = User::query()->firstOrCreate(
-            ['email' => 'foreman.delacruz@core2.ph'],
+            ['email' => 'operator@example.com'],
             [
-                'name' => 'Carlo Dela Cruz',
-                'username' => Username::fromEmail('foreman.delacruz@core2.ph'),
+                'name' => 'Dev Crane Operator',
+                'username' => Username::fromEmail('operator@example.com'),
                 'password' => Hash::make('password'),
                 'is_active' => true,
                 'email_verified_at' => Carbon::now(),
@@ -63,7 +63,7 @@ final class PhilippineSafetyOperationsSeeder extends Seeder
         );
         $foreman->syncRoles([RoleName::CraneOperator->value]);
 
-        PersonnelCredential::query()->firstOrCreate(
+        PersonnelCredential::query()->updateOrCreate(
             ['credential_number' => 'TESDA-RIG-2024-9912'],
             [
                 'user_id' => $foreman->id,
@@ -75,19 +75,54 @@ final class PhilippineSafetyOperationsSeeder extends Seeder
             ]
         );
 
-        // 3. Operational Asset (50T Crawler Crane)
-        $crane = OperationalAsset::query()->firstOrCreate(
-            ['code' => 'CR-501'],
-            [
-                'name' => 'SANY SCC500TB (50T Crawler Crane)',
-                'kind' => 'crane',
-                'subtype' => 'telescopic_crawler',
-                'status' => AssetStatus::Available,
-                'location' => 'Makati Skysuites Tower Staging Yard',
-                'rated_capacity' => 50.00,
-                'capacity_unit' => 'metric_tons',
-            ]
-        );
+        // Purge legacy fixture accounts if present
+        $legacyUsers = User::query()->whereIn('email', [
+            'so.morales@core2.ph',
+            'foreman.delacruz@core2.ph',
+        ])->get();
+
+        foreach ($legacyUsers as $legacyUser) {
+            $replacementId = $legacyUser->email === 'so.morales@core2.ph'
+                ? $safetyOfficer->id
+                : $foreman->id;
+
+            DispatchJob::query()->where('created_by', $legacyUser->id)->update(['created_by' => $replacementId]);
+            DispatchPersonnelAssignment::query()->where('assigned_by', $legacyUser->id)->update(['assigned_by' => $replacementId]);
+            DispatchPersonnelAssignment::query()->where('user_id', $legacyUser->id)->update(['user_id' => $replacementId]);
+            DispatchAssetAssignment::query()->where('assigned_by', $legacyUser->id)->update(['assigned_by' => $replacementId]);
+            ToolboxMeeting::query()->where('safety_officer_id', $legacyUser->id)->update(['safety_officer_id' => $replacementId]);
+            ToolboxMeeting::query()->where('conductor_id', $legacyUser->id)->update(['conductor_id' => $replacementId]);
+            CriticalLiftPlan::query()->where('foreman_id', $legacyUser->id)->update(['foreman_id' => $replacementId]);
+            SiteHazardTicket::query()->where('reporter_id', $legacyUser->id)->update(['reporter_id' => $replacementId]);
+            WorkStoppageNotice::query()->where('issued_by', $legacyUser->id)->update(['issued_by' => $replacementId]);
+            WorkStoppageNotice::query()->where('lifted_by', $legacyUser->id)->update(['lifted_by' => $replacementId]);
+            PersonnelCredential::query()->where('user_id', $legacyUser->id)->update(['user_id' => $replacementId]);
+            $legacyUser->roles()->detach();
+            $legacyUser->delete();
+        }
+
+        // 3. Operational Asset. Local development uses the Alibaton/XCMG reference fleet;
+        // the original CR-501 fixture remains available to the testing environment.
+        $usingAlibatonFleet = app()->environment('local');
+
+        if ($usingAlibatonFleet && ! OperationalAsset::query()->where('code', 'MOB-CRN-402')->exists()) {
+            $this->call(AlibatonCraneFleetSeeder::class);
+        }
+
+        $crane = $usingAlibatonFleet
+            ? OperationalAsset::query()->where('code', 'MOB-CRN-402')->firstOrFail()
+            : OperationalAsset::query()->firstOrCreate(
+                ['code' => 'CR-501'],
+                [
+                    'name' => 'SANY SCC500TB (50T Crawler Crane)',
+                    'kind' => 'crane',
+                    'subtype' => 'telescopic_crawler',
+                    'status' => AssetStatus::Available,
+                    'location' => 'Makati Skysuites Tower Staging Yard',
+                    'rated_capacity' => 50.00,
+                    'capacity_unit' => 'metric_tons',
+                ]
+            );
 
         // 4. Philippine Dispatch Jobs
         $makatiJob = DispatchJob::query()->firstOrCreate(
@@ -145,7 +180,7 @@ final class PhilippineSafetyOperationsSeeder extends Seeder
         );
 
         // 6. Critical Lift Plan
-        CriticalLiftPlan::query()->firstOrCreate(
+        CriticalLiftPlan::query()->updateOrCreate(
             ['lift_reference' => 'CR-LIFT-2026-089'],
             [
                 'dispatch_job_id' => $makatiJob->id,
@@ -155,9 +190,9 @@ final class PhilippineSafetyOperationsSeeder extends Seeder
                 'rigger_tesda_nc_number' => 'TESDA-RIG-2024-9912',
                 'risk_level' => 'critical',
                 'gross_load_weight_tons' => 28.50,
-                'crane_rated_capacity_tons' => 34.00,
-                'load_percentage_of_capacity' => 83.82,
-                'boom_length_meters' => 38.00,
+                'crane_rated_capacity_tons' => $usingAlibatonFleet ? 55.00 : 34.00,
+                'load_percentage_of_capacity' => $usingAlibatonFleet ? 51.82 : 83.82,
+                'boom_length_meters' => $usingAlibatonFleet ? 36.50 : 38.00,
                 'working_radius_meters' => 14.50,
                 'ground_bearing_condition' => 'Engineered Timber Pads (4 Layers Hardwood)',
                 'weather_wind_speed_kph' => 14.00,
@@ -172,7 +207,7 @@ final class PhilippineSafetyOperationsSeeder extends Seeder
                 'project_site' => 'Makati Skysuites Tower (Site Grid B-4)',
                 'reporter_id' => $safetyOfficer->id,
                 'category' => 'rigging_tackle',
-                'severity' => 'moderate',
+                'severity' => 'medium',
                 'description' => 'Webbing sling with 5mm edge tear found in secondary rigger staging box.',
                 'location_detail' => 'Rigging Staging Area, Bay 2',
                 'corrective_action_required' => 'Tag out and cut destroyed sling immediately. Replace with certified stock.',
@@ -187,7 +222,7 @@ final class PhilippineSafetyOperationsSeeder extends Seeder
                 'project_site' => 'BGC Corporate Center Phase 3',
                 'reporter_id' => $foreman->id,
                 'category' => 'housekeeping_fire',
-                'severity' => 'minor',
+                'severity' => 'low',
                 'description' => 'Empty hydraulic fluid containers left unbundled near diesel generator shed.',
                 'location_detail' => 'North Gate Generator Shed',
                 'corrective_action_required' => 'Transfer to designated hazardous waste bunded palette.',
@@ -201,7 +236,7 @@ final class PhilippineSafetyOperationsSeeder extends Seeder
             ['notice_number' => 'WSO-20260829-MKT1'],
             [
                 'project_site' => 'Makati Skysuites Tower (Site Grid B-4)',
-                'safety_officer_id' => $safetyOfficer->id,
+                'issued_by' => $safetyOfficer->id,
                 'dole_regulation_reference' => 'DOLE D.O. 13 s. 1998 Section 8 & RA 11058 Section 20',
                 'reason' => 'Ground settlement observed on outrigger pad following heavy overnight monsoon rains.',
                 'affected_area' => 'Site Grid B-4 Heavy Lift Zone',

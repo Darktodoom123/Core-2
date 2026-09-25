@@ -6,6 +6,7 @@ use App\Platform\Attachments\Models\Attachment;
 use App\Platform\Attachments\Services\AttachmentFilePolicy;
 use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Identity\Models\User;
+use App\Platform\Safety\Models\SiteHazardTicket;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
@@ -71,6 +72,18 @@ final class UploadAttachmentAction
 
                 if ($existingCount >= (int) config('attachments.max_count_per_owner')) {
                     throw new InvalidArgumentException('Maximum attachment limit reached for this item.');
+                }
+
+                if ($owner instanceof SiteHazardTicket && $kind === 'hazard_photo') {
+                    $hazardPhotoCount = Attachment::query()
+                        ->where('owner_type', $owner->getMorphClass())
+                        ->where('owner_id', $owner->getKey())
+                        ->where('kind', 'hazard_photo')
+                        ->count();
+
+                    if ($hazardPhotoCount >= 4) {
+                        throw new InvalidArgumentException('A hazard report can have up to four photo evidence files.');
+                    }
                 }
 
                 $attachment = Attachment::query()->create([

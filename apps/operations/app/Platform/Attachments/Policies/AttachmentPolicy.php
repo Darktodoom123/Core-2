@@ -11,6 +11,7 @@ use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\PersonnelCredential;
 use App\Platform\Identity\Models\User;
 use App\Platform\Reporting\Models\JobReport;
+use App\Platform\Safety\Models\SiteHazardTicket;
 use App\Shared\Assets\Models\OperationalAsset;
 
 class AttachmentPolicy
@@ -65,6 +66,7 @@ class AttachmentPolicy
             $owner instanceof FuelLog => $user->can('view', $owner),
             $owner instanceof PersonnelCredential => $user->can('view', $owner),
             $owner instanceof AssetDocument => $user->can('view', $owner),
+            $owner instanceof SiteHazardTicket => $user->can('view', $owner),
             default => false,
         };
     }

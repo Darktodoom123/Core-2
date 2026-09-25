@@ -18,6 +18,7 @@ Route::middleware(['auth', 'active', 'verified', 'throttle:120,1'])->prefix('ope
     Route::delete('/sos-configuration/contacts/{sosEmergencyContact}', [SosConfigurationController::class, 'deactivate'])->name('sos-configuration.contacts.deactivate');
 
     Route::prefix('safety')->name('safety.')->group(function (): void {
+        Route::get('/overview', [SafetyGovernanceApiController::class, 'overview'])->name('overview');
         Route::get('/metrics', [SafetyGovernanceApiController::class, 'metrics'])->name('metrics');
         Route::get('/hazards', [SafetyGovernanceApiController::class, 'indexHazards'])->name('hazards.index');
         Route::get('/lift-plans', [SafetyGovernanceApiController::class, 'indexCriticalLiftPlans'])->name('lift-plans.index');

@@ -1,10 +1,18 @@
 <?php
 
+use App\Platform\Attachments\Http\Controllers\AttachmentController;
 use App\Platform\Safety\Http\Controllers\Api\V1\SafetyGovernanceApiController;
 use App\Platform\Safety\Http\Controllers\Api\V1\SosIncidentController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('api.v1.')->middleware(['auth:sanctum', 'active', 'api-token'])->group(function (): void {
+    Route::post('/attachments', [AttachmentController::class, 'store'])
+        ->middleware('throttle:uploads')
+        ->name('attachments.store');
+    Route::get('/attachments/{attachment}/download', [AttachmentController::class, 'download'])
+        ->middleware('throttle:downloads')
+        ->name('attachments.download');
+
     Route::middleware(['throttle:sos'])->group(function (): void {
         Route::post('/sos-incidents', [SosIncidentController::class, 'store'])->name('sos-incidents.store');
         Route::get('/sos-incidents/active', [SosIncidentController::class, 'active'])->name('sos-incidents.active');

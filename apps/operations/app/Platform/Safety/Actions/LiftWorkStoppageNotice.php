@@ -2,6 +2,7 @@
 
 namespace App\Platform\Safety\Actions;
 
+use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Models\User;
 use App\Platform\Safety\Events\WorkStoppageChanged;
 use App\Platform\Safety\Models\WorkStoppageNotice;
@@ -11,15 +12,17 @@ use Illuminate\Validation\ValidationException;
 
 final class LiftWorkStoppageNotice
 {
-    public function handle(User $safetyOfficer, WorkStoppageNotice $notice, string $liftReason): WorkStoppageNotice
+    public function __construct(private readonly RecordAuditEvent $audit) {}
+
+    public function handle(User $manager, WorkStoppageNotice $notice, string $liftReason): WorkStoppageNotice
     {
-        if (trim($liftReason) === '') {
+        if (mb_strlen(trim($liftReason)) < 5) {
             throw ValidationException::withMessages([
-                'lift_reason' => 'A formal justification and verification note is required to lift a statutory Work Stoppage Order.',
+                'lift_reason' => 'Enter at least five characters describing the correction and verification before lifting this stop-work order.',
             ]);
         }
 
-        return DB::transaction(function () use ($safetyOfficer, $notice, $liftReason): WorkStoppageNotice {
+        return DB::transaction(function () use ($manager, $notice, $liftReason): WorkStoppageNotice {
             /** @var WorkStoppageNotice $lockedNotice */
             $lockedNotice = WorkStoppageNotice::query()->where('id', $notice->id)->lockForUpdate()->firstOrFail();
 
@@ -27,14 +30,16 @@ final class LiftWorkStoppageNotice
                 return $lockedNotice;
             }
 
+            $before = $lockedNotice->only(['is_active', 'lifted_by', 'lifted_at', 'lift_reason']);
             $lockedNotice->update([
                 'is_active' => false,
-                'lifted_by' => $safetyOfficer->id,
+                'lifted_by' => $manager->id,
                 'lifted_at' => Carbon::now(),
                 'lift_reason' => $liftReason,
             ]);
 
             $refreshed = $lockedNotice->fresh();
+            $this->audit->handle($manager, $refreshed, 'safety.work_stoppage_lifted', $before, $refreshed->only(['is_active', 'lifted_by', 'lifted_at', 'lift_reason']), $liftReason);
             event(new WorkStoppageChanged($refreshed, 'lifted'));
 
             return $refreshed;
