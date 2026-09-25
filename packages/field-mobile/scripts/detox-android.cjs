@@ -1,6 +1,7 @@
 'use strict';
 
 const { spawnSync } = require('node:child_process');
+const fs = require('node:fs');
 const path = require('node:path');
 const { configureAndroidSdk } = require('./android-sdk.cjs');
 
@@ -34,4 +35,13 @@ if (result.error) {
     throw result.error;
 }
 
-process.exitCode = result.status ?? 1;
+const exitCode = result.status ?? 1;
+
+if (process.env.DETOX_EXIT_CODE_FILE) {
+    fs.writeFileSync(process.env.DETOX_EXIT_CODE_FILE, `${exitCode}\n`, {
+        encoding: 'utf8',
+        flag: 'wx',
+    });
+}
+
+process.exitCode = exitCode;

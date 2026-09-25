@@ -54,6 +54,11 @@ describe('NativeLocationAdapter duty snapshots', () => {
             observedAt: new Date(observedAt).toISOString(),
             source: 'gps',
         });
+        expect(currentPosition).toHaveBeenCalledWith(
+            expect.objectContaining({
+                mayShowUserSettingsDialog: false,
+            }),
+        );
     });
 
     it('labels an older cached observation as last known', async () => {

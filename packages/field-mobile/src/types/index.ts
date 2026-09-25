@@ -275,8 +275,37 @@ export type OutboxCommandType =
     | 'change_hos_duty_status'
     | 'certify_hos_shift'
     | 'report_delay'
+    | 'report_safety_hazard'
+    | 'issue_work_stoppage'
     | 'submit_fuel_request'
     | 'record_fuel_log';
+
+export interface SafetyHazardCommandPayload {
+    project_site: string;
+    category: string;
+    severity: 'low' | 'medium' | 'high' | 'critical';
+    description: string;
+    location_detail: string;
+    corrective_action_required: string;
+    location_latitude?: number | null;
+    location_longitude?: number | null;
+    location_accuracy_metres?: number | null;
+    location_observed_at?: string | null;
+    photos?: Array<{
+        uri: string;
+        fileName?: string;
+        fileSize?: number;
+    }>;
+    photo_command_ids?: string[];
+}
+
+export interface WorkStoppageCommandPayload {
+    project_site: string;
+    reason: string;
+    affected_area: string;
+    affected_asset_ids?: number[] | null;
+    dole_regulation_reference?: string | null;
+}
 
 export interface HosStartCommandPayload {
     operational_asset_id?: number | null;

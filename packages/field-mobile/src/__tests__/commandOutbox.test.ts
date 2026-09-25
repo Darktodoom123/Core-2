@@ -884,7 +884,10 @@ describe('CommandOutboxManager', () => {
         );
 
         const apiClient = {
-            createFuelRequest: async (_payload: unknown, commandId?: string) => {
+            createFuelRequest: async (
+                _payload: unknown,
+                commandId?: string,
+            ) => {
                 createdRequestCommandId = commandId;
 
                 return { id: 9, status: 'submitted' };
@@ -1417,5 +1420,97 @@ describe('CommandOutboxManager', () => {
 
         const completedCmd = restartedOutbox.getCommand(cmd.id);
         assert.equal(completedCmd?.state, 'completed');
+    });
+
+    test('reuses an existing pending hazard command and photo upload ids on duplicate submission', async () => {
+        const repository = new MemoryOutboxRepository();
+        const outbox = await createOutbox(24, { repository });
+        const payload = {
+            project_site: 'Pier 7',
+            category: 'equipment',
+            severity: 'high' as const,
+            description: 'A loose guard was found beside the access platform.',
+            location_detail: 'North access platform',
+            corrective_action_required:
+                'Secure the guard and check the nearby anchor points.',
+            photos: [
+                {
+                    uri: 'file:///private/hazard-1.jpg',
+                    fileName: 'hazard-1.jpg',
+                    fileSize: 1024,
+                },
+            ],
+        };
+
+        const first = await outbox.enqueueReportSafetyHazard(payload);
+        const duplicate = await outbox.enqueueReportSafetyHazard(payload);
+
+        assert.equal(duplicate.id, first.id);
+        assert.deepEqual(
+            duplicate.payload.photo_command_ids,
+            first.payload.photo_command_ids,
+        );
+        assert.deepEqual(duplicate.payload.photos, payload.photos);
+    });
+
+    test('keeps safety reports durable, sends them with their command ids, and protects stop-work orders from discard', async () => {
+        const repository = new MemoryOutboxRepository();
+        const outbox = await createOutbox(21, { repository });
+        const hazardPayload = {
+            project_site: 'Pier 7',
+            category: 'equipment',
+            severity: 'critical' as const,
+            description: 'A damaged sling was found during inspection.',
+            location_detail: 'North rigging zone',
+            corrective_action_required:
+                'Remove it from service and inspect the replacement.',
+        };
+        const stopPayload = {
+            project_site: 'Pier 7',
+            affected_area: 'North rigging zone',
+            reason: 'A suspended load is moving over an unprotected work area.',
+        };
+        const hazard = await outbox.enqueueReportSafetyHazard(hazardPayload);
+        const stop = await outbox.enqueueIssueWorkStoppage(stopPayload);
+
+        assert.equal(stop.priority, 'emergency');
+        await assert.rejects(
+            () => outbox.discardCommand(stop.id),
+            /stop-work order cannot be discarded locally/i,
+        );
+
+        const calls: Array<{
+            type: string;
+            commandId?: string;
+            payload: unknown;
+        }> = [];
+        const apiClient = {
+            reportSafetyHazard: async (
+                payload: unknown,
+                commandId?: string,
+            ) => {
+                calls.push({ type: 'hazard', commandId, payload });
+
+                return { data: { id: 1 } };
+            },
+            issueWorkStoppage: async (payload: unknown, commandId?: string) => {
+                calls.push({ type: 'stop', commandId, payload });
+
+                return { data: { id: 2 } };
+            },
+        } as unknown as FieldApiClient;
+
+        const result = await outbox.processQueue(apiClient);
+        assert.equal(result.completed, 2);
+        assert.deepEqual(calls.map((call) => call.type).sort(), [
+            'hazard',
+            'stop',
+        ]);
+        assert.deepEqual(
+            calls.map((call) => call.commandId).sort(),
+            [hazard.id, stop.id].sort(),
+        );
+        assert.equal(outbox.getCommand(hazard.id)?.state, 'completed');
+        assert.equal(outbox.getCommand(stop.id)?.state, 'completed');
     });
 });

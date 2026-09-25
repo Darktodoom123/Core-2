@@ -182,6 +182,7 @@ export const DispatchOrdersScreen: React.FC<DispatchOrdersScreenProps> = ({
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
                 style={styles.scrollView}
+                testID="dispatch-orders-list"
             >
                 {displayedJobs.length === 0 ? (
                     <View
@@ -246,38 +247,48 @@ export const DispatchOrdersScreen: React.FC<DispatchOrdersScreenProps> = ({
                                 style={styles.jobCardWrapper}
                                 testID={`dispatch-intake-job-${job.id}`}
                             >
-                                {/* High-priority response card for pending orders */}
+                                {/* Full Job Detail Card */}
+                                <View testID={`dispatch-job-context-${job.id}`}>
+                                    <JobListItemCard
+                                        conflictedCommands={
+                                            jobConflictedCommands
+                                        }
+                                        job={job}
+                                        onAcceptAssignment={
+                                            isPending
+                                                ? undefined
+                                                : onAcceptAssignment
+                                        }
+                                        onAcceptServerState={
+                                            onAcceptServerState
+                                        }
+                                        onOpenDriveRoutes={onOpenRoutes}
+                                        onRejectAssignment={
+                                            isPending
+                                                ? undefined
+                                                : onRejectAssignment
+                                        }
+                                        onReportDelay={onReportDelay}
+                                        onRetryNewVersion={onRetryNewVersion}
+                                        onSelectJob={onSelectJob}
+                                        onTransitionStatus={onTransitionStatus}
+                                    />
+                                </View>
+
+                                {/* Keep response controls adjacent to their job context. */}
                                 {isPending &&
                                 onAcceptAssignment &&
                                 onRejectAssignment ? (
-                                    <AssignmentResponseCard
-                                        job={job}
-                                        onAccept={onAcceptAssignment}
-                                        onReject={onRejectAssignment}
-                                    />
+                                    <View
+                                        testID={`dispatch-job-response-${job.id}`}
+                                    >
+                                        <AssignmentResponseCard
+                                            job={job}
+                                            onAccept={onAcceptAssignment}
+                                            onReject={onRejectAssignment}
+                                        />
+                                    </View>
                                 ) : null}
-
-                                {/* Full Job Detail Card */}
-                                <JobListItemCard
-                                    conflictedCommands={jobConflictedCommands}
-                                    job={job}
-                                    onAcceptAssignment={
-                                        isPending
-                                            ? undefined
-                                            : onAcceptAssignment
-                                    }
-                                    onAcceptServerState={onAcceptServerState}
-                                    onOpenDriveRoutes={onOpenRoutes}
-                                    onRejectAssignment={
-                                        isPending
-                                            ? undefined
-                                            : onRejectAssignment
-                                    }
-                                    onReportDelay={onReportDelay}
-                                    onRetryNewVersion={onRetryNewVersion}
-                                    onSelectJob={onSelectJob}
-                                    onTransitionStatus={onTransitionStatus}
-                                />
                             </View>
                         );
                     })

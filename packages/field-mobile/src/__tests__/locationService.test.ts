@@ -69,6 +69,72 @@ describe('LocationSharingService Unit Tests', () => {
         }
     });
 
+    test('includes the selected assigned asset in automatic location updates', async () => {
+        const captured: { payload: Record<string, unknown> | null } = {
+            payload: null,
+        };
+        const outbox = {
+            enqueueShareLocation: async (payload: Record<string, unknown>) => {
+                captured.payload = payload;
+
+                return { id: 'test-command-id' };
+            },
+        } as unknown as CommandOutboxManager;
+        const service = new LocationSharingService(outbox);
+
+        try {
+            service.startAutoTracking(
+                activeUser,
+                activeJob,
+                async () => ({ latitude: 14.5995, longitude: 120.9842 }),
+                501,
+            );
+            await Promise.resolve();
+            const queuedPayload = captured.payload;
+            assert.ok(queuedPayload);
+
+            assert.equal(
+                queuedPayload.operational_asset_id,
+                501,
+                'automatic telemetry should remain linked to its dispatched unit',
+            );
+            assert.equal(queuedPayload.dispatch_job_id, activeJob.id);
+        } finally {
+            service.stopAutoTracking();
+        }
+    });
+
+    test('reports location capture failures so the field UI can explain why tracking is unavailable', async () => {
+        let captureIssue: unknown | null = null;
+        const outbox = {
+            enqueueShareLocation: async () => ({ id: 'test-command-id' }),
+        } as unknown as CommandOutboxManager;
+        const service = new LocationSharingService(outbox);
+
+        try {
+            service.startAutoTracking(
+                activeUser,
+                activeJob,
+                async () => {
+                    throw new Error(
+                        'Location permission is not granted in device settings.',
+                    );
+                },
+                501,
+                15_000,
+                (error) => {
+                    captureIssue = error;
+                },
+            );
+            await Promise.resolve();
+
+            assert.ok(captureIssue instanceof Error);
+            assert.match(captureIssue.message, /permission/i);
+        } finally {
+            service.stopAutoTracking();
+        }
+    });
+
     test('authorizes location sharing for active user with valid job capabilities', () => {
         const repo = new MemoryOutboxRepository();
         const outbox = new CommandOutboxManager({

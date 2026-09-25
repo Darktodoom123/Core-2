@@ -156,6 +156,12 @@ describe('Emergency SOS sheet', () => {
         expect(navView.getByTestId('bottom-nav-bar')).toBeVisible();
         expect(navView.getByTestId('open-emergency-sos')).toBeVisible();
         expect(navView.queryByTestId('cradle-cutout')).toBeNull();
+
+        const dock = navView.getByTestId('field-bottom-nav-dock');
+        const dockStyle = Array.isArray(dock.props.style)
+            ? Object.assign({}, ...dock.props.style.filter(Boolean))
+            : dock.props.style;
+        expect(dockStyle.position).not.toBe('absolute');
     });
 
     it('opens emergency SOS immediately on a simple tap without any hold state or delay', async () => {

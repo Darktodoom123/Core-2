@@ -6,10 +6,11 @@ import { Icon } from '../common/Icon';
 import { colors } from '../nativeStyles';
 import { EmergencySosButton } from '../sos/emergency-sos-button';
 
-export type FieldNavItem = 'today' | 'route' | 'documents' | 'profile';
+export type FieldNavItem = 'safety' | 'route' | 'documents' | 'profile';
+export type FieldScreen = FieldNavItem | 'today';
 
 export interface FieldBottomNavProps {
-    activeItem: FieldNavItem;
+    activeItem: FieldScreen;
     onSelect: (item: FieldNavItem) => void;
     onSosHoldComplete: () => void;
     sosDisabled?: boolean;
@@ -28,6 +29,7 @@ export const FieldBottomNav: React.FC<FieldBottomNavProps> = ({
     return (
         <View
             pointerEvents="box-none"
+            testID="field-bottom-nav-dock"
             style={[
                 styles.floatingWrapper,
                 { paddingBottom: Math.max(16, bottomInset + 4) },
@@ -38,53 +40,50 @@ export const FieldBottomNav: React.FC<FieldBottomNavProps> = ({
                 style={[styles.container, isDarkHud && styles.darkContainer]}
                 testID="bottom-nav-bar"
             >
-                {/* Today Tab */}
+                {/* Safety actions stay one tap from every field screen. */}
                 <Pressable
-                    accessibilityLabel="Today"
+                    accessibilityLabel="Safety"
                     accessibilityRole="tab"
-                    accessibilityState={{ selected: activeItem === 'today' }}
-                    onPress={() => onSelect('today')}
+                    accessibilityState={{ selected: activeItem === 'safety' }}
+                    onPress={() => onSelect('safety')}
                     style={({ pressed }) => [
                         styles.item,
-                        activeItem === 'today' && styles.itemSelected,
-                        isDarkHud &&
-                            activeItem === 'today' &&
-                            styles.darkItemSelected,
+                        activeItem === 'safety' && styles.itemSelected,
                         pressed && styles.pressed,
                     ]}
-                    testID="bottom-nav-today"
+                    testID="bottom-nav-safety"
                 >
                     <View style={styles.indicator}>
                         <Icon
                             color={
-                                activeItem === 'today'
-                                    ? isDarkHud
-                                        ? '#FFBF00'
-                                        : '#806000'
+                                activeItem === 'safety'
+                                    ? colors.redDark
                                     : isDarkHud
                                       ? '#94A3B8'
                                       : '#64748B'
                             }
-                            name="home"
+                            name="shield"
                             size={20}
                         />
                     </View>
                     <Text
                         style={[
                             styles.label,
-                            activeItem === 'today' && styles.labelSelected,
+                            activeItem === 'safety' && {
+                                color: colors.redDark,
+                                fontWeight: '700',
+                            },
                             isDarkHud &&
-                                (activeItem === 'today'
-                                    ? styles.darkLabelSelected
-                                    : styles.darkLabel),
+                                activeItem !== 'safety' &&
+                                styles.darkLabel,
                         ]}
                     >
-                        Today
+                        Safety
                     </Text>
                 </Pressable>
 
                 {/* Central Floating SOS Control */}
-                <View style={styles.sosItem}>
+                <View style={styles.sosItem} testID="bottom-nav-sos-slot">
                     <EmergencySosButton
                         disabled={sosDisabled}
                         onHoldComplete={onSosHoldComplete}
@@ -145,14 +144,8 @@ export const FieldBottomNav: React.FC<FieldBottomNavProps> = ({
 const styles = StyleSheet.create({
     floatingWrapper: {
         alignItems: 'center',
-        bottom: 0,
-        left: 0,
         paddingHorizontal: 16,
-        paddingTop: 24,
-        pointerEvents: 'box-none',
-        position: 'absolute',
-        right: 0,
-        zIndex: 100,
+        paddingTop: 8,
     },
     container: {
         alignItems: 'center',

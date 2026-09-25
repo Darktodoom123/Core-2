@@ -110,7 +110,9 @@ export class LocationSharingService {
         user: User,
         job: DispatchJob | null,
         getLocationCoords: () => Promise<LocationCoordinates>,
+        assetId: number | null = null,
         intervalMs: number = 15_000, // Target 15s cadence for active work
+        onCaptureIssue?: (error: unknown | null) => void,
     ): void {
         this.stopAutoTracking();
 
@@ -132,10 +134,11 @@ export class LocationSharingService {
                 await this.shareLocation(
                     user,
                     job,
-                    null,
+                    assetId,
                     coords,
                     'Periodic field telemetry',
                 );
+                onCaptureIssue?.(null);
             } catch (error: unknown) {
                 // If location permissions were revoked mid-shift, halt auto-tracking immediately
                 if (
@@ -144,6 +147,8 @@ export class LocationSharingService {
                 ) {
                     this.stopAutoTracking();
                 }
+
+                onCaptureIssue?.(error);
             }
         };
 

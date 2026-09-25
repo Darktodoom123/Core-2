@@ -130,7 +130,10 @@ export class NativeLocationAdapter {
                 accuracy: isStationary
                     ? Location.Accuracy.Low
                     : Location.Accuracy.Balanced,
-                mayShowUserSettingsDialog: true,
+                // GPS capture starts as part of an active work flow. Keep
+                // Android's location-accuracy prompt from stealing the app;
+                // callers surface a clear in-app recovery message instead.
+                mayShowUserSettingsDialog: false,
             });
 
             const timeoutPromise = new Promise<never>((_, reject) =>

@@ -3,7 +3,6 @@ import React from 'react';
 import { HeavyCraneDriveModeModal } from '../components/cards/HeavyCraneDriveModeModal';
 import { JobListItemCard } from '../components/cards/JobListItemCard';
 import {
-    FuelReceiptTab,
     HandoverTab,
     InspectionChecklistTab,
     MaintenanceWorkOrderTab,
@@ -495,43 +494,6 @@ describe('Native Field Workflows Component Tests', () => {
             );
         });
 
-        it('records fuel receipts and consumption', async () => {
-            const onFuel = jest.fn();
-            const view = await render(
-                <FuelReceiptTab
-                    assetCode="CRN-07"
-                    fuelLogs={[]}
-                    onLogFuelReceipt={onFuel}
-                />,
-            );
-
-            expect(
-                view.getByText('Fuel Receipt & Dispense Logging'),
-            ).toBeTruthy();
-            await fireEvent.changeText(
-                view.getByTestId('fuel-liters-input'),
-                '220',
-            );
-            await fireEvent.changeText(
-                view.getByTestId('fuel-cost-input'),
-                '440.00',
-            );
-            await fireEvent.changeText(
-                view.getByTestId('fuel-receipt-input'),
-                'RCPT-8812',
-            );
-            await fireEvent.press(view.getByTestId('log-fuel-btn'));
-
-            expect(onFuel).toHaveBeenCalledTimes(1);
-            expect(onFuel).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    quantityLiters: 220,
-                    fuelCost: 440,
-                    receiptNumber: 'RCPT-8812',
-                }),
-            );
-        });
-
         it('completes technician to operator handover', async () => {
             const onHandover = jest.fn();
             const view = await render(
@@ -584,9 +546,11 @@ describe('Native Field Workflows Component Tests', () => {
 
             // Switch to Fuel tab
             await fireEvent.press(view.getByTestId('tab-fuel'));
+            expect(view.getByTestId('fuel-management-link')).toBeTruthy();
+            expect(view.queryByTestId('fuel-liters-input')).toBeNull();
             expect(
-                view.getByText('Fuel Receipt & Dispense Logging'),
-            ).toBeTruthy();
+                view.queryByText('Fuel Receipt & Dispense Logging'),
+            ).toBeNull();
 
             // Switch to Handover tab
             await fireEvent.press(view.getByTestId('tab-handover'));

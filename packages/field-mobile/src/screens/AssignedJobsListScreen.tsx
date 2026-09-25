@@ -17,6 +17,7 @@ import { Icon } from '../components/common/Icon';
 import type { IconName } from '../components/common/Icon';
 import { FieldBottomNav } from '../components/layout/field-bottom-nav';
 import type { FieldNavItem } from '../components/layout/field-bottom-nav';
+import type { FieldScreen } from '../components/layout/field-bottom-nav';
 import { FieldHeader } from '../components/layout/field-header';
 import type { SyncTone } from '../components/layout/field-header';
 import { colors, shadows, sharedStyles } from '../components/nativeStyles';
@@ -58,6 +59,7 @@ export interface AssignedJobsListScreenProps {
     userRole?: string | null;
     shiftInfo?: ShiftInfo;
     locationSharingActive?: boolean;
+    locationTrackingError?: string | null;
     error?: string | null;
     onSosHoldComplete: () => void;
     sosDisabled?: boolean;
@@ -87,6 +89,7 @@ export interface AssignedJobsListScreenProps {
     ) => void;
     onOpenDvir?: () => void;
     onOpenHos?: () => void;
+    onOpenSafety?: () => void;
     onOpenDocuments?: () => void;
     onOpenRoutes?: () => void;
     onOpenVehicle?: () => void;
@@ -165,6 +168,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
         hoursElapsed: 4,
     },
     locationSharingActive = true,
+    locationTrackingError = null,
     error,
     onSosHoldComplete,
     sosDisabled = false,
@@ -177,6 +181,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     onChangeDutyStatus,
     onOpenDvir,
     onOpenHos,
+    onOpenSafety,
     onOpenDocuments,
     onOpenRoutes,
     onOpenVehicle,
@@ -243,7 +248,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     const [localDefectLockout, setLocalDefectLockout] = useState<
         boolean | null
     >(null);
-    const [activeNavItem, setActiveNavItem] = useState<FieldNavItem>('today');
+    const [activeNavItem, setActiveNavItem] = useState<FieldScreen>('today');
 
     const [prevProps, setPrevProps] = useState({
         isUnitLinked,
@@ -668,7 +673,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
         setActiveNavItem('profile');
     };
 
-    const handleCloseProfile = (nextItem: FieldNavItem = 'today') => {
+    const handleCloseProfile = (nextItem: FieldScreen = 'today') => {
         setProfileSheetOpen(false);
         setSignOutConfirmationOpen(false);
         setActiveNavItem(nextItem);
@@ -707,6 +712,12 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
             return;
         }
 
+        if (item === 'safety') {
+            onOpenSafety?.();
+
+            return;
+        }
+
         handleCloseProfile(item);
     };
 
@@ -740,6 +751,31 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                     userRole={userRole}
                 />
 
+                {locationTrackingError ? (
+                    <View
+                        accessibilityRole="alert"
+                        style={[
+                            styles.errorBox,
+                            isDarkHud && styles.darkErrorBox,
+                        ]}
+                        testID="location-tracking-error"
+                    >
+                        <Icon
+                            color={isDarkHud ? '#FCA5A5' : colors.red}
+                            name="alert"
+                            size={16}
+                        />
+                        <Text
+                            style={[
+                                styles.errorText,
+                                isDarkHud && styles.darkErrorText,
+                            ]}
+                        >
+                            {locationTrackingError}
+                        </Text>
+                    </View>
+                ) : null}
+
                 {/* DOLE 10-Hour Shift Limit Compliance Warning / Hard Stop Banner */}
                 {isDoleWarning || isDoleCapExceeded ? (
                     <View
@@ -754,7 +790,9 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                         <View style={styles.doleWarningContent}>
                             <Icon
                                 color={
-                                isDoleCapExceeded ? '#EF4444' : colors.warning
+                                    isDoleCapExceeded
+                                        ? '#EF4444'
+                                        : colors.warning
                                 }
                                 name="alert"
                                 size={18}
@@ -790,6 +828,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
 
                 {/* Real-time Location Weather Telemetry Card */}
                 <LocationWeatherCard
+                    canUseCurrentLocation={Boolean(isUnitLinked)}
                     error={weatherError}
                     isLoading={isLoadingWeather}
                     onRefresh={onRefreshWeather}
@@ -1722,7 +1761,7 @@ const styles = StyleSheet.create({
         alignSelf: 'center',
         maxWidth: 720,
         padding: 16,
-        paddingBottom: 150,
+        paddingBottom: 20,
         width: '100%',
     },
     dutyStatusBar: {
@@ -1931,6 +1970,13 @@ const styles = StyleSheet.create({
         flex: 1,
         fontSize: 14,
         lineHeight: 20,
+    },
+    darkErrorBox: {
+        backgroundColor: 'rgba(127, 29, 29, 0.28)',
+        borderColor: '#7F1D1D',
+    },
+    darkErrorText: {
+        color: '#FCA5A5',
     },
     loadingBox: {
         alignItems: 'center',

@@ -5,29 +5,52 @@ import { ThemeProvider } from '../theme';
 import type { WeatherTelemetry } from '../types/index';
 
 describe('LocationWeatherCard Component', () => {
-    it('renders error state with retry affordance when weather prop is undefined or null', async () => {
+    it('keeps current-location weather unavailable until the unit is linked on site', async () => {
         const onRefresh = jest.fn();
         const view = await render(
             <LocationWeatherCard onRefresh={onRefresh} />,
+        );
+
+        expect(view.getByText('Site Weather Locked')).toBeTruthy();
+        expect(
+            view.getByText(
+                'Link your assigned unit on site to check local wind and lifting conditions.',
+            ),
+        ).toBeTruthy();
+        expect(view.queryByTestId('weather-refresh-btn')).toBeNull();
+        expect(view.queryByText('Retry')).toBeNull();
+        expect(onRefresh).not.toHaveBeenCalled();
+    });
+
+    it('renders an error state with retry after the unit is linked on site', async () => {
+        const onRefresh = jest.fn();
+        const view = await render(
+            <LocationWeatherCard canUseCurrentLocation onRefresh={onRefresh} />,
         );
 
         expect(view.getByTestId('location-weather-card')).toBeTruthy();
         expect(view.getByText('Weather Unavailable')).toBeTruthy();
         expect(
             view.getByText(
-                'Tap retry to check live wind speed and site conditions.',
+                'Use your current location to check live wind and site conditions.',
             ),
         ).toBeTruthy();
         expect(view.getByText('Retry')).toBeTruthy();
 
         const retryBtn = view.getByTestId('weather-refresh-btn');
+        expect(retryBtn.props.accessibilityLabel).toBe(
+            'Use current location to check weather',
+        );
         fireEvent.press(retryBtn);
         expect(onRefresh).toHaveBeenCalledTimes(1);
     });
 
     it('renders explicit error message when error prop is provided', async () => {
         const view = await render(
-            <LocationWeatherCard error="GPS permission denied. Please enable in Settings." />,
+            <LocationWeatherCard
+                canUseCurrentLocation
+                error="GPS permission denied. Please enable in Settings."
+            />,
         );
 
         expect(view.getByTestId('location-weather-card')).toBeTruthy();
@@ -152,7 +175,11 @@ describe('LocationWeatherCard Component', () => {
         };
         const onRefresh = jest.fn();
         const view = await render(
-            <LocationWeatherCard onRefresh={onRefresh} weather={mockWeather} />,
+            <LocationWeatherCard
+                canUseCurrentLocation
+                onRefresh={onRefresh}
+                weather={mockWeather}
+            />,
         );
 
         const refreshBtn = view.getByTestId('weather-refresh-btn');
@@ -181,6 +208,7 @@ describe('LocationWeatherCard Component', () => {
         const onRefresh = jest.fn();
         const view = await render(
             <LocationWeatherCard
+                canUseCurrentLocation
                 isLoading={true}
                 onRefresh={onRefresh}
                 weather={mockWeather}

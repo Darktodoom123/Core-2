@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render } from '@testing-library/react-native/pure';
 import React, { act } from 'react';
+import { colors } from '../components/nativeStyles';
 import { RentalHandoverScreen } from '../screens/RentalHandoverScreen';
 import { ThemeProvider } from '../theme';
 
@@ -183,7 +184,7 @@ describe('RentalHandoverScreen', () => {
         const categoryText = lightView.getByText('Rental Handover');
         expect(categoryText.props.style).toEqual(
             expect.arrayContaining([
-                expect.objectContaining({ color: '#806000' }),
+                expect.objectContaining({ color: colors.amberDark }),
             ]),
         );
 

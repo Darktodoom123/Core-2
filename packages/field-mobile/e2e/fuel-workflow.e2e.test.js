@@ -154,9 +154,11 @@ async function signInOnWeb(page, username, password) {
 
     if (new URL(page.url()).pathname === '/login/challenge') {
         const trustDevice = page.getByLabel(/Trust this device for 30 days/i);
+
         if (await trustDevice.isVisible()) {
             await trustDevice.check();
         }
+
         await page.getByPlaceholder('000000').fill(readOtp(username));
         await page.getByRole('button', { name: 'Verify and sign in' }).click();
         await page.waitForURL((url) => url.pathname === '/', {

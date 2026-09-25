@@ -5,21 +5,21 @@ import {
     render,
     waitFor,
 } from '@testing-library/react-native/pure';
-import React from 'react';
 import * as ImagePicker from 'expo-image-picker';
+import React from 'react';
+import type { FuelCommandQueue } from '../hooks/useFuelManagement';
 import { EquipmentInspectionScreen } from '../screens/EquipmentInspectionScreen';
 import { FuelScreen } from '../screens/FuelScreen';
 import { ApiClientError } from '../services/apiClient';
 import { durableAttachmentStorage } from '../services/durableAttachmentStorage';
 import { emptyFuelDraft } from '../storage/fuelDraftStore';
 import type { FuelDraft, FuelDraftStore } from '../storage/fuelDraftStore';
-import type { FuelCommandQueue } from '../hooks/useFuelManagement';
-import type { OutboxCommand } from '../types/index';
 import type {
     FuelApi,
     FuelOfflineSnapshot,
     MobileFuelRequest,
 } from '../types/fuel';
+import type { OutboxCommand } from '../types/index';
 
 jest.mock('expo-image-picker', () => ({
     requestCameraPermissionsAsync: jest
@@ -73,8 +73,9 @@ function setup(initial: MobileFuelRequest[] = []) {
             items: [...serverRequests],
             nextPage: null,
         })),
-        fetchFuelRequest: jest.fn(async (id) =>
-            serverRequests.find((item) => item.id === id) ?? request,
+        fetchFuelRequest: jest.fn(
+            async (id) =>
+                serverRequests.find((item) => item.id === id) ?? request,
         ),
         createFuelRequest: jest.fn(async (payload) => {
             const created = {
@@ -122,16 +123,17 @@ function setup(initial: MobileFuelRequest[] = []) {
         remove: jest.fn(async (id) => {
             drafts.delete(id);
         }),
-        readOfflineSnapshot: jest.fn(async (id) =>
-            offlineCache.get(id) ?? {
-                options: {
-                    can_request: true,
-                    assets: [request.asset!],
-                    jobs: [],
+        readOfflineSnapshot: jest.fn(
+            async (id) =>
+                offlineCache.get(id) ?? {
+                    options: {
+                        can_request: true,
+                        assets: [request.asset!],
+                        jobs: [],
+                    },
+                    requests: [...initial],
+                    nextPage: null,
                 },
-                requests: [...initial],
-                nextPage: null,
-            },
         ),
         writeOfflineSnapshot: jest.fn(async (id, snapshot) => {
             offlineCache.set(id, structuredClone(snapshot));
@@ -156,6 +158,7 @@ function setup(initial: MobileFuelRequest[] = []) {
                 item.state !== 'completed' &&
                 JSON.stringify(item.payload) === JSON.stringify(payload),
         );
+
         if (existing) {
             return existing;
         }
@@ -180,10 +183,16 @@ function setup(initial: MobileFuelRequest[] = []) {
     };
     const commandOutbox: FuelCommandQueue = {
         enqueueSubmitFuelRequest: jest.fn((payload) =>
-            addCommand('submit_fuel_request', payload as unknown as Record<string, unknown>),
+            addCommand(
+                'submit_fuel_request',
+                payload as unknown as Record<string, unknown>,
+            ),
         ),
         enqueueRecordFuelLog: jest.fn((payload) =>
-            addCommand('record_fuel_log', payload as unknown as Record<string, unknown>),
+            addCommand(
+                'record_fuel_log',
+                payload as unknown as Record<string, unknown>,
+            ),
         ),
         getCommand: jest.fn((id) => commands.find((item) => item.id === id)),
         getCommands: jest.fn(() => [...commands]),
@@ -199,6 +208,7 @@ function setup(initial: MobileFuelRequest[] = []) {
             if (command.state !== 'queued' && command.state !== 'failed') {
                 continue;
             }
+
             command.state = 'syncing';
             command.attempts += 1;
             publish();
@@ -206,7 +216,9 @@ function setup(initial: MobileFuelRequest[] = []) {
             try {
                 if (command.type === 'submit_fuel_request') {
                     await api.createFuelRequest(
-                        command.payload as unknown as Parameters<FuelApi['createFuelRequest']>[0],
+                        command.payload as unknown as Parameters<
+                            FuelApi['createFuelRequest']
+                        >[0],
                         command.id,
                     );
                 } else {
@@ -222,6 +234,7 @@ function setup(initial: MobileFuelRequest[] = []) {
                         command.id,
                     );
                 }
+
                 command.state = 'completed';
                 command.completedAt = new Date().toISOString();
                 command.error = null;
@@ -243,6 +256,7 @@ function setup(initial: MobileFuelRequest[] = []) {
                     retryable: true,
                 };
             }
+
             command.updatedAt = new Date().toISOString();
             publish();
         }
@@ -540,9 +554,9 @@ it('uploads a selected receipt from the canonical Fuel Management screen', async
             expect.any(String),
         ),
     );
-    const logCommand = commandOutbox.getCommands().find(
-        (item) => item.type === 'record_fuel_log',
-    );
+    const logCommand = commandOutbox
+        .getCommands()
+        .find((item) => item.type === 'record_fuel_log');
     expect(logCommand?.state).toBe('completed');
     expect(
         durableAttachmentStorage.isDurableUri(
@@ -563,7 +577,9 @@ it('keeps an offline fuel log and its receipt in the durable outbox', async () =
         isOnline: false,
     });
     await waitFor(() =>
-        expect(screen.getByRole('button', { name: 'View FUEL-10' })).toBeTruthy(),
+        expect(
+            screen.getByRole('button', { name: 'View FUEL-10' }),
+        ).toBeTruthy(),
     );
     await fireEvent.press(screen.getByRole('button', { name: 'View FUEL-10' }));
     await fireEvent.press(
@@ -589,9 +605,9 @@ it('keeps an offline fuel log and its receipt in the durable outbox', async () =
         ).toBeTruthy(),
     );
 
-    const command = commandOutbox.getCommands().find(
-        (item) => item.type === 'record_fuel_log',
-    );
+    const command = commandOutbox
+        .getCommands()
+        .find((item) => item.type === 'record_fuel_log');
     expect(command?.state).toBe('queued');
     expect(
         durableAttachmentStorage.isDurableUri(

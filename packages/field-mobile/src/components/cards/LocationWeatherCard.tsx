@@ -16,6 +16,7 @@ export interface LocationWeatherCardProps {
     weather?: WeatherTelemetry | null;
     isLoading?: boolean;
     error?: string | null;
+    canUseCurrentLocation?: boolean;
     onRefresh?: () => void;
 }
 
@@ -25,11 +26,24 @@ interface FriendlyErrorInfo {
     icon: IconName;
 }
 
-function resolveFriendlyError(error?: string | null): FriendlyErrorInfo {
+function resolveFriendlyError(
+    error: string | null | undefined,
+    canUseCurrentLocation: boolean,
+): FriendlyErrorInfo {
+    if (!canUseCurrentLocation) {
+        return {
+            title: 'Site Weather Locked',
+            message:
+                'Link your assigned unit on site to check local wind and lifting conditions.',
+            icon: 'location',
+        };
+    }
+
     if (!error) {
         return {
             title: 'Weather Unavailable',
-            message: 'Tap retry to check live wind speed and site conditions.',
+            message:
+                'Use your current location to check live wind and site conditions.',
             icon: 'alert',
         };
     }
@@ -90,6 +104,7 @@ export const LocationWeatherCard: React.FC<LocationWeatherCardProps> = ({
     weather,
     isLoading = false,
     error,
+    canUseCurrentLocation = false,
     onRefresh,
 }) => {
     const { isDarkHud } = useTheme();
@@ -148,7 +163,7 @@ export const LocationWeatherCard: React.FC<LocationWeatherCardProps> = ({
 
     // 2. Error / Unavailable State (no valid live weather telemetry)
     if (!weather || error) {
-        const friendly = resolveFriendlyError(error);
+        const friendly = resolveFriendlyError(error, canUseCurrentLocation);
 
         return (
             <View
@@ -178,9 +193,9 @@ export const LocationWeatherCard: React.FC<LocationWeatherCardProps> = ({
                         </Text>
                     </View>
 
-                    {onRefresh ? (
+                    {onRefresh && canUseCurrentLocation ? (
                         <Pressable
-                            accessibilityLabel="Retry fetching weather telemetry"
+                            accessibilityLabel="Use current location to check weather"
                             accessibilityRole="button"
                             disabled={isLoading}
                             hitSlop={8}
@@ -340,7 +355,7 @@ export const LocationWeatherCard: React.FC<LocationWeatherCardProps> = ({
                         </Text>
                     </View>
 
-                    {onRefresh ? (
+                    {onRefresh && canUseCurrentLocation ? (
                         <Pressable
                             accessibilityLabel="Refresh current location weather telemetry"
                             accessibilityRole="button"

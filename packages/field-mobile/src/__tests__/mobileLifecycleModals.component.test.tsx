@@ -365,6 +365,24 @@ describe('Mobile Lifecycle Modals & Operational Safeguards', () => {
             expect(view.getByTestId('on-site-confirmation-modal')).toBeTruthy();
         });
 
+        it('shows an accessible tracking message when the device cannot provide a location fix', async () => {
+            const view = await render(
+                <AssignedJobsListScreen
+                    isLoading={false}
+                    isUnitLinked
+                    jobs={[mockAcceptedJob]}
+                    locationTrackingError="No GPS fix is available yet. Check device Location Services; telemetry will retry automatically."
+                    onRefresh={jest.fn()}
+                    onSelectJob={jest.fn()}
+                    onSosHoldComplete={jest.fn()}
+                    outboxCommands={[]}
+                />,
+            );
+
+            expect(view.getByTestId('location-tracking-error')).toBeTruthy();
+            expect(view.getByText(/No GPS fix is available yet/)).toBeTruthy();
+        });
+
         it('transitions from "I\'m On Site" button to "Start Pre-Trip DVIR Inspection" CTA after confirming link', async () => {
             const onLinkUnit = jest.fn();
             const onOpenDvir = jest.fn();

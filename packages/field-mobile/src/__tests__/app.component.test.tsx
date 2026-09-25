@@ -8,10 +8,12 @@ import {
 } from '@testing-library/react-native/pure';
 import '@testing-library/react-native/matchers';
 import React from 'react';
+import { AppState } from 'react-native';
 import { App } from '../../App';
 import type { TokenStorageProvider } from '../auth/tokenStorage';
 import { isFetchError } from '../connectivity/networkMonitor';
 import type { NetworkMonitor } from '../connectivity/networkMonitor';
+import { nativeLocationAdapter } from '../native/locationAdapter';
 import { AssignedJobsListScreen } from '../screens/AssignedJobsListScreen';
 import { MemoryOutboxRepository } from '../storage/outboxRepository';
 import type { PayloadHasher } from '../storage/outboxRepository';
@@ -1328,21 +1330,43 @@ describe('native application component tree', () => {
         expect(screen.getByText(/1 active assignment/)).toBeVisible();
         expect(screen.getByText('Synced')).toBeVisible();
         expect(screen.getByTestId('bottom-nav-bar')).toBeVisible();
-        expect(
-            screen.getByTestId('bottom-nav-today').props.accessibilityState
-                .selected,
-        ).toBe(true);
+        expect(screen.queryByTestId('bottom-nav-today')).toBeNull();
         const navigation = within(screen.getByTestId('bottom-nav-bar'));
         expect(navigation.getAllByRole('tab')).toHaveLength(2);
+        expect(navigation.getByLabelText('Safety')).toBeVisible();
+        expect(navigation.getByLabelText('Profile')).toBeVisible();
         expect(navigation.getAllByRole('button')).toHaveLength(1);
         expect(
             navigation.getByLabelText('Activate Emergency SOS'),
         ).toBeVisible();
+        expect(navigation.getByTestId('bottom-nav-sos-slot')).toBeVisible();
         expect(screen.getAllByTestId('open-emergency-sos')).toHaveLength(1);
         expect(screen.queryByTestId('bottom-nav-route')).toBeNull();
         expect(screen.queryByTestId('bottom-nav-documents')).toBeNull();
         expect(screen.queryByText(/synced 2 min ago/i)).toBeNull();
         expect(screen.queryByText('Inspection')).toBeNull();
+    });
+
+    it('opens the native safety flow from the persistent field navigation', async () => {
+        const { fetchFn } = createApi({ assignedJobs: [driverJob] });
+
+        await renderScreen(
+            <App
+                baseUrl={apiBaseUrl}
+                fetchFn={fetchFn}
+                tokenStorage={new TestTokenStorage(rawToken)}
+            />,
+        );
+
+        await screen.findByText(driverJob.reference);
+        await fireEvent.press(screen.getByTestId('bottom-nav-safety'));
+
+        expect(await screen.findByText('Safety and hazards')).toBeVisible();
+        expect(screen.getByTestId('open-stop-work-form')).toBeVisible();
+        expect(screen.getByTestId('open-hazard-form')).toBeVisible();
+
+        await fireEvent.press(screen.getByLabelText('Back'));
+        expect(await screen.findByText(driverJob.reference)).toBeVisible();
     });
 
     it('keeps healthy sync details hidden until an attention state exists', async () => {
@@ -1384,10 +1408,8 @@ describe('native application component tree', () => {
 
         await fireEvent.press(screen.getByTestId('profile-screen-back'));
         expect(screen.queryByTestId('profile-screen')).toBeNull();
-        expect(
-            screen.getByTestId('bottom-nav-today').props.accessibilityState
-                .selected,
-        ).toBe(true);
+        expect(screen.queryByTestId('bottom-nav-today')).toBeNull();
+        expect(screen.getByText(driverJob.reference)).toBeVisible();
     });
 
     it('keeps offline status compact when no actions are waiting to sync', async () => {
@@ -1452,6 +1474,72 @@ describe('native application component tree', () => {
         expect(screen.getByText(fieldJob.site)).toBeVisible();
         expect(screen.queryByText(/Lift and set HVAC/i)).toBeNull();
         expect(screen.queryByText(/ETA 7:28/i)).toBeNull();
+    });
+
+    it('does not request device location automatically for an unlinked assignment', async () => {
+        const previousAppState = AppState.currentState;
+        AppState.currentState = 'active';
+        const assignedJob: DispatchJob = {
+            ...driverJob,
+            status: { value: 'accepted', label: 'Accepted' },
+            my_assignment: {
+                id: 501,
+                response_status: 'accepted',
+                response_status_label: 'Accepted',
+            },
+            asset_assignments: [
+                {
+                    id: 601,
+                    dispatch_job_id: driverJob.id,
+                    operational_asset_id: 701,
+                    asset_code: 'CRN-101',
+                    asset_name: 'Mobile Crane',
+                    asset_kind: 'crane',
+                },
+            ],
+            capabilities: {
+                ...driverJob.capabilities,
+                can_share_location: true,
+            },
+        };
+        const locationSpy = jest
+            .spyOn(nativeLocationAdapter, 'getCurrentLocation')
+            .mockResolvedValue({ latitude: 14.6, longitude: 120.98 });
+        const { fetchFn } = createApi({ assignedJobs: [assignedJob] });
+
+        try {
+            await renderScreen(
+                <App
+                    baseUrl={apiBaseUrl}
+                    fetchFn={fetchFn}
+                    tokenStorage={new TestTokenStorage(rawToken)}
+                />,
+            );
+
+            expect(
+                await screen.findByTestId(`job-card-${assignedJob.id}`),
+            ).toBeVisible();
+            expect(locationSpy).not.toHaveBeenCalled();
+            expect(screen.queryByTestId('weather-refresh-btn')).toBeNull();
+
+            const refreshControl =
+                screen.getByTestId('refresh-control').props.refreshControl;
+            await act(async () => {
+                refreshControl.props.onRefresh();
+                await new Promise((resolve) => setTimeout(resolve, 20));
+            });
+            expect(locationSpy).not.toHaveBeenCalled();
+
+            await fireEvent.press(screen.getByTestId('start-unit-on-site-btn'));
+            await fireEvent.press(screen.getByTestId('confirm-on-site-btn'));
+
+            await waitFor(() => {
+                expect(locationSpy).toHaveBeenCalled();
+            });
+        } finally {
+            AppState.currentState = previousAppState;
+            locationSpy.mockRestore();
+        }
     });
 
     it('redirects to Heavy Crane Drive Mode when clicking Routes tile and returns to main on back', async () => {

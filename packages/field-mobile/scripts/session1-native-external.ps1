@@ -5,7 +5,10 @@ param(
     [ValidateSet('core2_api_30_phone', 'core2_api_36')]
     [string] $AndroidAvd = 'core2_api_36',
     [string] $DetoxTestPath = '',
-    [ValidateSet('session1', 'sprint2')]
+    [string] $DetoxTestNamePattern = '',
+    [ValidateRange(1, 60)]
+    [int] $DetoxTimeoutMinutes = 15,
+    [ValidateSet('session1', 'sprint2', 'web-mobile-roundtrip')]
     [string] $EvidenceScope = 'session1'
 )
 
@@ -21,22 +24,29 @@ $operationsTarget = if (Test-Path -LiteralPath $operationsRoot -PathType Contain
 } else {
     $repositoryRoot
 }
+$trackingRoot = Join-Path $repositoryRoot 'apps\tracking'
 $mobileRoot = Join-Path $repositoryRoot 'packages\field-mobile'
 $runtimeRoot = Join-Path $operationsTarget 'storage\framework\testing'
 $publicRoot = Join-Path $operationsTarget 'public'
 $operationsArtisan = Join-Path $operationsTarget 'artisan'
+$trackingArtisan = Join-Path $trackingRoot 'artisan'
 $runId = (Get-Date).ToString('yyyyMMdd-HHmmss-fff')
 $database = Join-Path $runtimeRoot 'session1-native.sqlite'
-$evidenceTitle = if ($EvidenceScope -eq 'sprint2') {
-    'Core 2 Sprint 2 native evidence'
-} else {
-    'Core 2 Session 1 native evidence'
+$trackingDatabase = Join-Path $runtimeRoot "web-mobile-roundtrip-$runId-tracking.sqlite"
+$evidenceTitle = switch ($EvidenceScope) {
+    'sprint2' { 'Core 2 Sprint 2 native evidence' }
+    'web-mobile-roundtrip' { 'Core 2 Web to mobile round-trip evidence' }
+    default { 'Core 2 Session 1 native evidence' }
 }
-$evidencePrefix = if ($EvidenceScope -eq 'sprint2') {
-    'sprint2'
-} else {
-    'session1'
+$evidencePrefix = switch ($EvidenceScope) {
+    'sprint2' { 'sprint2' }
+    'web-mobile-roundtrip' { 'web-mobile-roundtrip' }
+    default { 'session1' }
 }
+$crossClientRoundTrip = (
+    $EvidenceScope -eq 'web-mobile-roundtrip' -and
+    [System.IO.Path]::GetFileName($DetoxTestPath) -eq 'web-mobile-roundtrip.e2e.test.js'
+)
 $evidence = Join-Path $runtimeRoot "$evidencePrefix-native-evidence.txt"
 $nativeBuildMode = if ($SkipNativeBuild) {
     'existing-artifacts-reused'
@@ -48,6 +58,8 @@ $targetEvidence = Join-Path $runtimeRoot (
 )
 $apiOutput = Join-Path $runtimeRoot "$evidencePrefix-$runId-api.stdout.log"
 $apiError = Join-Path $runtimeRoot "$evidencePrefix-$runId-api.stderr.log"
+$trackingOutput = Join-Path $runtimeRoot "$evidencePrefix-$runId-tracking.stdout.log"
+$trackingError = Join-Path $runtimeRoot "$evidencePrefix-$runId-tracking.stderr.log"
 $metroOutput = Join-Path $runtimeRoot "$evidencePrefix-$runId-metro.stdout.log"
 $metroError = Join-Path $runtimeRoot "$evidencePrefix-$runId-metro.stderr.log"
 $emulatorOutput = Join-Path $runtimeRoot "$evidencePrefix-$runId-emulator.stdout.log"
@@ -56,6 +68,9 @@ $deviceOutput = Join-Path $runtimeRoot "$evidencePrefix-$runId-device.log"
 $deviceError = Join-Path $runtimeRoot "$evidencePrefix-$runId-device.stderr.log"
 $detoxOutput = Join-Path $runtimeRoot "$evidencePrefix-$runId-detox.stdout.log"
 $detoxError = Join-Path $runtimeRoot "$evidencePrefix-$runId-detox.stderr.log"
+$detoxExitCodePath = Join-Path $runtimeRoot (
+    "$evidencePrefix-$runId-detox.exit-code.txt"
+)
 $apk = Join-Path $mobileRoot 'android\app\build\outputs\apk\debug\app-debug.apk'
 $testApk = Join-Path $mobileRoot (
     'android\app\build\outputs\apk\androidTest\debug\' +
@@ -70,16 +85,27 @@ if (-not (Test-Path -LiteralPath $laravelServer -PathType Leaf)) {
         'vendor\laravel\framework\src\Illuminate\Foundation\resources\server.php'
     )
 }
+$trackingLaravelServer = Join-Path $trackingRoot (
+    'vendor\laravel\framework\src\Illuminate\Foundation\resources\server.php'
+)
+if (-not (Test-Path -LiteralPath $trackingLaravelServer -PathType Leaf)) {
+    $trackingLaravelServer = Join-Path $repositoryRoot (
+        'vendor\laravel\framework\src\Illuminate\Foundation\resources\server.php'
+    )
+}
 $androidSdk = Join-Path $env:LOCALAPPDATA 'Android\Sdk'
 $javaHome = 'C:\Program Files\Android\Android Studio\jbr'
 $sourceAvdHome = Join-Path $env:USERPROFILE '.android\avd'
 $runtimeAvdHome = Join-Path $runtimeRoot 'android-avd'
 $apiPort = 18000
+$trackingPort = 18001
 $metroPort = 18081
 $apiProcess = $null
+$trackingProcess = $null
 $metroProcess = $null
 $emulatorProcess = $null
 $deviceLogProcess = $null
+$detoxProcess = $null
 $emulatorSerial = 'emulator-5554'
 $startedAt = (Get-Date).ToString('o')
 $stage = 'environment validation'
@@ -523,7 +549,8 @@ function Stop-AndroidEmulatorConsole {
 function Prepare-AndroidDevice {
     param(
         [Parameter(Mandatory)][string] $AdbPath,
-        [Parameter(Mandatory)][string] $Serial
+        [Parameter(Mandatory)][string] $Serial,
+        [switch] $EnableLocationSimulation
     )
 
     $commands = [System.Collections.Generic.List[System.String[]]]::new()
@@ -598,10 +625,124 @@ function Prepare-AndroidDevice {
     )
     $commands.Add([string[]] @('shell', 'input', 'keyevent', 'KEYCODE_HOME'))
 
+    if ($EnableLocationSimulation) {
+        $commands.Add(
+            [string[]] @(
+                'shell',
+                'settings',
+                'put',
+                'secure',
+                'location_mode',
+                '3'
+            )
+        )
+        $commands.Add(
+            [string[]] @(
+                'shell',
+                'settings',
+                'put',
+                'secure',
+                'location_providers_allowed',
+                'gps,network'
+            )
+        )
+    }
+
     foreach ($arguments in $commands) {
         Invoke-Checked -FilePath $AdbPath `
             -Arguments (@('-s', $Serial) + $arguments) `
             -FailureMessage 'Android device wake and focus preparation failed'
+    }
+
+    if ($EnableLocationSimulation) {
+        $enabledProviders = (& $AdbPath -s $Serial shell settings get secure `
+            location_providers_allowed | Select-Object -Last 1).Trim()
+
+        if ($enabledProviders -notmatch '(^|,)network(,|$)') {
+            throw (
+                'Android emulator network location provider did not enable; ' +
+                "reported providers: $enabledProviders"
+            )
+        }
+
+        # API 36's emulator console geo fix does not update LocationManager's
+        # fused provider. Use Android's test-provider API for an app-visible fix.
+        & $AdbPath -s $Serial shell cmd location providers `
+            remove-test-provider gps *> $null
+        & $AdbPath -s $Serial shell appops set --uid 2000 `
+            android:mock_location allow *> $null
+        Invoke-Checked -FilePath $AdbPath `
+            -Arguments @(
+                '-s',
+                $Serial,
+                'shell',
+                'cmd',
+                'location',
+                'providers',
+                'add-test-provider',
+                'gps'
+            ) `
+            -FailureMessage 'Android emulator GPS test-provider setup failed'
+        Invoke-Checked -FilePath $AdbPath `
+            -Arguments @(
+                '-s',
+                $Serial,
+                'shell',
+                'cmd',
+                'location',
+                'providers',
+                'set-test-provider-enabled',
+                'gps',
+                'true'
+            ) `
+            -FailureMessage 'Android emulator GPS test-provider enable failed'
+        Invoke-Checked -FilePath $AdbPath `
+            -Arguments @(
+                '-s',
+                $Serial,
+                'shell',
+                'cmd',
+                'location',
+                'providers',
+                'set-test-provider-location',
+                'gps',
+                '--location',
+                '14.5995,120.9842',
+                '--accuracy',
+                '5'
+            ) `
+            -FailureMessage 'Android emulator GPS test fix injection failed'
+
+        $locationState = @(
+            & $AdbPath -s $Serial shell dumpsys location |
+                ForEach-Object { $_.Trim() }
+        )
+        $mockFix = @(
+            $locationState | Where-Object {
+                $_ -match 'Location\[gps 14\.599500,120\.984200.*mock'
+            }
+        )
+
+        if ($mockFix.Count -eq 0) {
+            throw 'Android LocationManager did not expose the deterministic GPS test fix.'
+        }
+
+        $locationEvidence = @(
+            $locationState |
+                Where-Object {
+                    $_ -match '(?i)(location providers|last location|gps|14\.5995|120\.9842)'
+                } |
+                Select-Object -First 18
+        )
+
+        if ($locationEvidence.Count -gt 0) {
+            Write-Host (
+                'Android location providers/fix: ' +
+                ($locationEvidence -join ' | ')
+            )
+        } else {
+            Write-Host 'Android location providers/fix: no location evidence returned.'
+        }
     }
 }
 
@@ -839,7 +980,7 @@ try {
     }
 
     Set-NativeStage -Name 'Android virtual-device validation'
-    $requiredAvds = @('core2_api_30_phone', 'core2_api_36')
+    $requiredAvds = @($AndroidAvd)
     $installedAvds = & (Join-Path $androidSdk 'emulator\emulator.exe') -list-avds
 
     foreach ($avd in $requiredAvds) {
@@ -853,6 +994,9 @@ try {
     $env:ANDROID_AVD_HOME = $runtimeAvdHome
 
     Assert-LocalPortAvailable -Port $apiPort -Name 'Laravel API'
+    if ($crossClientRoundTrip) {
+        Assert-LocalPortAvailable -Port $trackingPort -Name 'Tracking microservice'
+    }
     Assert-LocalPortAvailable -Port $metroPort -Name 'Expo Metro'
     Assert-LocalPortAvailable -Port 5554 -Name 'Android emulator console'
     Assert-LocalPortAvailable -Port 5555 -Name 'Android emulator bridge'
@@ -890,7 +1034,8 @@ try {
             "expected API $expectedApiLevel."
         )
     }
-    Prepare-AndroidDevice -AdbPath $adb -Serial $emulatorSerial
+    Prepare-AndroidDevice -AdbPath $adb -Serial $emulatorSerial `
+        -EnableLocationSimulation:$crossClientRoundTrip
     Invoke-Checked -FilePath $adb -Arguments @(
         '-s',
         $emulatorSerial,
@@ -923,18 +1068,89 @@ try {
 
     New-Item -ItemType File -Path $database | Out-Null
 
-    $env:APP_ENV = 'local'
+    $env:APP_ENV = 'testing'
     $env:APP_DEBUG = 'false'
     $env:APP_URL = "http://127.0.0.1:$apiPort"
     $env:DB_CONNECTION = 'sqlite'
     $env:DB_DATABASE = $database
     $env:CACHE_STORE = 'array'
-    $env:SESSION_DRIVER = 'array'
+    $env:SESSION_DRIVER = if ($crossClientRoundTrip) { 'file' } else { 'array' }
     $env:QUEUE_CONNECTION = 'sync'
+    $env:MAIL_MAILER = 'array'
+    $env:BROADCAST_CONNECTION = 'null'
+    $env:BROADCAST_DRIVER = 'null'
+    if ($crossClientRoundTrip) {
+        $env:CORE2_E2E_DB_DATABASE = $database
+        $env:CORE2_E2E_TRACKING_DB_DATABASE = $trackingDatabase
+        $env:CROSS_CLIENT_JOB_REFERENCE = 'SESSION1-DRIVER-001'
+        $env:CROSS_CLIENT_FIELD_USERNAME = 'operator'
+        $env:CROSS_CLIENT_MANAGER_USERNAME = 'manager'
+        $env:PLAYWRIGHT_BROWSERS_PATH = Join-Path $env:LOCALAPPDATA 'ms-playwright'
+
+        $appKeyBytes = New-Object byte[] 32
+        $trackingSecretBytes = New-Object byte[] 32
+        $randomNumberGenerator = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+        $randomNumberGenerator.GetBytes($appKeyBytes)
+        $randomNumberGenerator.GetBytes($trackingSecretBytes)
+        $randomNumberGenerator.Dispose()
+        $env:APP_KEY = "base64:$([Convert]::ToBase64String($appKeyBytes))"
+        $env:TRACKING_SERVICE_SECRET = [Convert]::ToBase64String($trackingSecretBytes)
+        $env:TRACKING_ALLOWED_SERVICES = 'operations'
+        $env:APP_CONFIG_CACHE = Join-Path $runtimeRoot "web-mobile-roundtrip-$runId-tracking-config.php"
+        $env:APP_URL = "http://127.0.0.1:$trackingPort"
+        $env:DB_DATABASE = $trackingDatabase
+        $env:DB_FOREIGN_KEYS = 'true'
+        New-Item -ItemType File -Path $trackingDatabase | Out-Null
+
+        Invoke-Checked -FilePath $php -Arguments @(
+            $trackingArtisan,
+            'migrate:fresh',
+            '--force',
+            '--no-interaction'
+        ) -WorkingDirectory $trackingRoot `
+            -FailureMessage 'Isolated Tracking microservice migration failed'
+
+        $trackingProcess = Start-Process -FilePath $php -ArgumentList @(
+            '-S',
+            "127.0.0.1:$trackingPort",
+            '-t',
+            '.',
+            $trackingLaravelServer
+        ) -WorkingDirectory (Join-Path $trackingRoot 'public') `
+            -WindowStyle Hidden -PassThru `
+            -RedirectStandardOutput $trackingOutput `
+            -RedirectStandardError $trackingError
+        Wait-LocalPort -Port $trackingPort -Process $trackingProcess `
+            -Name 'Tracking microservice'
+
+        $trackingReady = $false
+        for ($attempt = 0; $attempt -lt 30; $attempt++) {
+            try {
+                $readyResponse = Invoke-WebRequest `
+                    -Uri "http://127.0.0.1:$trackingPort/ready" `
+                    -TimeoutSec 3 -UseBasicParsing
+                if ($readyResponse.StatusCode -eq 200) {
+                    $trackingReady = $true
+                    break
+                }
+            } catch {
+                Start-Sleep -Seconds 1
+            }
+        }
+        if (-not $trackingReady) {
+            throw 'Tracking microservice did not pass its readiness check.'
+        }
+
+        $env:APP_CONFIG_CACHE = Join-Path $runtimeRoot "web-mobile-roundtrip-$runId-operations-config.php"
+        $env:APP_URL = "http://127.0.0.1:$apiPort"
+        $env:DB_DATABASE = $database
+        $env:TRACKING_SERVICE_DRIVER = 'http'
+        $env:TRACKING_SERVICE_URL = "http://127.0.0.1:$trackingPort"
+    }
     $env:EXPO_PUBLIC_API_BASE_URL = "http://10.0.2.2:$apiPort"
     $env:EXPO_DEV_CLIENT_METRO_URL = "http://127.0.0.1:$metroPort"
     $env:RUN_NATIVE_ACCEPTANCE = '1'
-    $env:FIELD_TEST_USERNAME = 'driver'
+    $env:FIELD_TEST_USERNAME = 'operator'
     $fixturePasswordBytes = New-Object byte[] 32
     $randomNumberGenerator = [System.Security.Cryptography.RandomNumberGenerator]::Create()
     $randomNumberGenerator.GetBytes($fixturePasswordBytes)
@@ -943,8 +1159,8 @@ try {
     $env:SESSION1_NATIVE_PASSWORD = $env:FIELD_TEST_PASSWORD
     $env:FORBIDDEN_JOB_REFERENCE = 'SESSION1-FORBIDDEN-002'
     $env:ASSIGNED_JOB_REFERENCE = 'SESSION1-DRIVER-001'
-    $env:NON_FIELD_TEST_USERNAME = 'dispatcher'
-    $env:SECOND_FIELD_TEST_USERNAME = 'operator'
+    $env:NON_FIELD_TEST_USERNAME = 'manager'
+    $env:SECOND_FIELD_TEST_USERNAME = 'operator-secondary'
     $env:CI = '1'
 
     if ($SmokeOnly) {
@@ -954,6 +1170,11 @@ try {
         $env:DETOX_TEST_PATH = $DetoxTestPath
     } else {
         Remove-Item Env:DETOX_TEST_PATH -ErrorAction SilentlyContinue
+    }
+    if (-not [string]::IsNullOrWhiteSpace($DetoxTestNamePattern)) {
+        $env:DETOX_TEST_NAME_PATTERN = $DetoxTestNamePattern
+    } else {
+        Remove-Item Env:DETOX_TEST_NAME_PATTERN -ErrorAction SilentlyContinue
     }
 
     Set-NativeStage -Name 'isolated fixture preparation'
@@ -1012,17 +1233,68 @@ try {
         Set-NativeStage -Name 'Detox native sign-in smoke'
     } elseif ($EvidenceScope -eq 'sprint2') {
         Set-NativeStage -Name 'Detox durable outbox acceptance'
+    } elseif ($crossClientRoundTrip) {
+        Set-NativeStage -Name 'Detox web-to-mobile-to-web round trip'
     } else {
         Set-NativeStage -Name 'Detox authenticated native acceptance'
     }
-    Prepare-AndroidDevice -AdbPath $adb -Serial $emulatorSerial
-    $detoxProcess = Start-Process -FilePath $npm -ArgumentList @(
-        'run',
-        'mobile:e2e:test:android'
-    ) -WorkingDirectory $repositoryRoot -WindowStyle Hidden -Wait -PassThru -RedirectStandardOutput $detoxOutput -RedirectStandardError $detoxError
+    Prepare-AndroidDevice -AdbPath $adb -Serial $emulatorSerial `
+        -EnableLocationSimulation:$crossClientRoundTrip
+    $detoxEntryPoint = Join-Path $mobileRoot 'scripts\detox-android.cjs'
+    $originalPath = $env:PATH
 
-    if ($detoxProcess.ExitCode -ne 0) {
-        throw "Detox native acceptance failed (exit code $($detoxProcess.ExitCode))."
+    try {
+        $env:PATH = @(
+            (Join-Path $mobileRoot 'node_modules\.bin'),
+            (Join-Path $repositoryRoot 'node_modules\.bin'),
+            $originalPath
+        ) -join [System.IO.Path]::PathSeparator
+        $env:DETOX_EXIT_CODE_FILE = $detoxExitCodePath
+        $detoxProcess = Start-Process -FilePath $node -ArgumentList @(
+            $detoxEntryPoint
+        ) -WorkingDirectory $mobileRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput $detoxOutput -RedirectStandardError $detoxError
+    } finally {
+        $env:PATH = $originalPath
+        Remove-Item Env:DETOX_EXIT_CODE_FILE -ErrorAction SilentlyContinue
+    }
+
+    $detoxTimeoutMilliseconds = [int](
+        [TimeSpan]::FromMinutes($DetoxTimeoutMinutes).TotalMilliseconds
+    )
+    $detoxCompleted = $detoxProcess.WaitForExit($detoxTimeoutMilliseconds)
+
+    if (-not $detoxCompleted) {
+        Stop-ProcessTree -Process $detoxProcess
+        throw "Detox native acceptance exceeded its $DetoxTimeoutMinutes minute runner timeout."
+    }
+
+    $detoxProcess.Refresh()
+    $processExitCode = $detoxProcess.ExitCode
+    $detoxExitCode = $null
+
+    if (Test-Path -LiteralPath $detoxExitCodePath -PathType Leaf) {
+        $reportedExitCode = [System.IO.File]::ReadAllText(
+            $detoxExitCodePath
+        ).Trim()
+
+        if ($reportedExitCode -match '^\d+$') {
+            $detoxExitCode = [int]$reportedExitCode
+        }
+    }
+
+    if ($null -eq $detoxExitCode) {
+        throw 'Detox native acceptance did not record a valid child exit code.'
+    }
+
+    if (
+        $null -ne $processExitCode -and
+        $processExitCode -ne $detoxExitCode
+    ) {
+        throw 'Detox native acceptance recorded inconsistent child exit codes.'
+    }
+
+    if ($detoxExitCode -ne 0) {
+        throw "Detox native acceptance failed (exit code $detoxExitCode)."
     }
 
     Set-NativeStage -Name 'redacted secret-leak validation'
@@ -1044,7 +1316,19 @@ try {
     ) -FixtureSecrets @($env:FIELD_TEST_PASSWORD)
 
     $apkItem = Get-Item -LiteralPath $apk
-    $apkHash = Get-FileHash -LiteralPath $apk -Algorithm SHA256
+    $apkHashAlgorithm = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $apkStream = [System.IO.File]::OpenRead($apk)
+        try {
+            $apkHash = [System.BitConverter]::ToString(
+                $apkHashAlgorithm.ComputeHash($apkStream)
+            ).Replace('-', '').ToLowerInvariant()
+        } finally {
+            $apkStream.Dispose()
+        }
+    } finally {
+        $apkHashAlgorithm.Dispose()
+    }
 
     $passedEvidence = @(
         $evidenceTitle
@@ -1061,11 +1345,13 @@ try {
         "NDK: $ndkEvidence"
         "APK: $($apkItem.FullName)"
         "APK bytes: $($apkItem.Length)"
-        "APK SHA-256: $($apkHash.Hash)"
+        "APK SHA-256: $apkHash"
         if ($SmokeOnly) {
             'Detox native sign-in smoke: passed'
         } elseif ($EvidenceScope -eq 'sprint2') {
             'Detox durable outbox acceptance: passed'
+        } elseif ($crossClientRoundTrip) {
+            'Detox web-to-mobile-to-web round trip: passed'
         } else {
             'Detox authenticated acceptance: passed'
         }
@@ -1087,6 +1373,9 @@ try {
 
     if ($SmokeOnly) {
         Write-Host "Session 1 emulator smoke passed." -ForegroundColor Green
+    } elseif ($crossClientRoundTrip) {
+        Write-Host "Web-to-mobile-to-web emulator round trip passed." `
+            -ForegroundColor Green
     } else {
         Write-Host "Session 1 emulator acceptance passed." `
             -ForegroundColor Green
@@ -1101,6 +1390,7 @@ try {
     Write-Host "Device log: $deviceOutput"
     exit 1
 } finally {
+    Stop-ProcessTree -Process $detoxProcess
     Stop-ProcessTree -Process $deviceLogProcess
 
     if ($null -ne $emulatorProcess) {
@@ -1132,8 +1422,23 @@ try {
     Stop-ProcessTree -Process $emulatorProcess
     Stop-ProcessTree -Process $metroProcess
     Stop-ProcessTree -Process $apiProcess
+    Stop-ProcessTree -Process $trackingProcess
 
     Remove-Item Env:FIELD_TEST_PASSWORD -ErrorAction SilentlyContinue
     Remove-Item Env:SESSION1_NATIVE_PASSWORD -ErrorAction SilentlyContinue
     Remove-Item Env:DETOX_TEST_PATH -ErrorAction SilentlyContinue
+    Remove-Item Env:DETOX_TEST_NAME_PATTERN -ErrorAction SilentlyContinue
+    Remove-Item Env:DETOX_EXIT_CODE_FILE -ErrorAction SilentlyContinue
+    Remove-Item Env:CORE2_E2E_DB_DATABASE -ErrorAction SilentlyContinue
+    Remove-Item Env:CORE2_E2E_TRACKING_DB_DATABASE -ErrorAction SilentlyContinue
+    Remove-Item Env:CROSS_CLIENT_JOB_REFERENCE -ErrorAction SilentlyContinue
+    Remove-Item Env:CROSS_CLIENT_FIELD_USERNAME -ErrorAction SilentlyContinue
+    Remove-Item Env:CROSS_CLIENT_MANAGER_USERNAME -ErrorAction SilentlyContinue
+    Remove-Item Env:PLAYWRIGHT_BROWSERS_PATH -ErrorAction SilentlyContinue
+    Remove-Item Env:TRACKING_SERVICE_DRIVER -ErrorAction SilentlyContinue
+    Remove-Item Env:TRACKING_SERVICE_URL -ErrorAction SilentlyContinue
+    Remove-Item Env:TRACKING_SERVICE_SECRET -ErrorAction SilentlyContinue
+    Remove-Item Env:TRACKING_ALLOWED_SERVICES -ErrorAction SilentlyContinue
+    Remove-Item Env:APP_CONFIG_CACHE -ErrorAction SilentlyContinue
+    Remove-Item Env:APP_KEY -ErrorAction SilentlyContinue
 }

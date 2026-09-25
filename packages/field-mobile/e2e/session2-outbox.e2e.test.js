@@ -216,7 +216,7 @@ describe('Sprint 2 durable outbox acceptance', () => {
                 .withTimeout(30000);
 
             setAirplaneMode(false);
-            await waitFor(element(by.text('Active Field Assignments')))
+            await waitFor(element(by.text(assignedJobReference)))
                 .toBeVisible()
                 .withTimeout(60000);
             await waitForAssignmentResponseCommandCount(1);
@@ -231,7 +231,7 @@ describe('Sprint 2 durable outbox acceptance', () => {
                 .withTimeout(30000);
             await device.terminateApp();
             await device.launchApp(createDevClientLaunchOptions());
-            await waitFor(element(by.text('Active Field Assignments')))
+            await waitFor(element(by.text(assignedJobReference)))
                 .toBeVisible()
                 .withTimeout(30000);
             assertAssignmentResponseCommandCount(1);

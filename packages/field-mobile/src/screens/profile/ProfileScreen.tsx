@@ -527,6 +527,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         />
                     }
                     showsVerticalScrollIndicator={false}
+                    testID="profile-screen-content"
                 >
                     {activeTab === 'profile' ? (
                         <ProfileInfoTab

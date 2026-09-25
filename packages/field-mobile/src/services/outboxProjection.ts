@@ -173,6 +173,30 @@ export function getHumanReadableActionType(cmd: OutboxCommand): {
             break;
         }
 
+        case 'issue_work_stoppage': {
+            isEmergency = true;
+            title = 'Stop-Work Order';
+            reference =
+                typeof payload.project_site === 'string'
+                    ? payload.project_site
+                    : 'Work site';
+            subtitle = 'Work remains stopped until a manager lifts the order';
+            break;
+        }
+
+        case 'report_safety_hazard': {
+            title = 'Safety Hazard Report';
+            reference =
+                typeof payload.project_site === 'string'
+                    ? payload.project_site
+                    : 'Work site';
+            subtitle =
+                typeof payload.severity === 'string'
+                    ? `${payload.severity} hazard`
+                    : 'Hazard or near-miss';
+            break;
+        }
+
         case 'submit_dvir': {
             const inspType =
                 payload.inspection_type === 'post_trip'
@@ -422,6 +446,13 @@ export function isCommandDiscardable(
         return {
             canDiscard: false,
             reason: 'Active emergency SOS cannot be discarded.',
+        };
+    }
+
+    if (command.type === 'issue_work_stoppage') {
+        return {
+            canDiscard: false,
+            reason: 'A stop-work order must be delivered or reported directly to the Operations Manager.',
         };
     }
 

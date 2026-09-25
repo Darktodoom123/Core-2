@@ -15,6 +15,7 @@ node_modules/
 /.expo-sprint2/
 /packages/field-mobile/.expo-export
 /packages/field-mobile/.detox-runtime
+/packages/field-mobile/artifacts
 /packages/field-mobile/dist
 /packages/field-mobile/core2_api_*.log
 /packages/field-mobile/android
@@ -63,6 +64,7 @@ Homestead.yaml
 /.vscode
 /.zed
 AGENTS.md
+CLAUDE.md
 .agents
 .impeccable
 .codex

@@ -143,6 +143,22 @@ describe('DispatchOrdersScreen', () => {
         expect(view.getByTestId('dispatch-intake-job-102')).toBeTruthy();
     });
 
+    it('shows job context before the response actions for a pending assignment', async () => {
+        const view = await render(
+            <DispatchOrdersScreen
+                jobs={[mockPendingJob]}
+                onAcceptAssignment={jest.fn()}
+                onRejectAssignment={jest.fn()}
+            />,
+        );
+
+        expect(
+            view
+                .getAllByTestId(/^dispatch-job-(context|response)-101$/)
+                .map((node) => node.props.testID),
+        ).toEqual(['dispatch-job-context-101', 'dispatch-job-response-101']);
+    });
+
     it('accepts pending assignment directly from the response card', async () => {
         const onAccept = jest.fn();
 

@@ -26,6 +26,8 @@ import type {
     AccountDetailsResponse,
     OtpChallengeResponse,
     SecurityActivityResponse,
+    SafetyHazardCommandPayload,
+    WorkStoppageCommandPayload,
 } from '../types/index';
 
 export class ApiClientError extends Error {
@@ -992,6 +994,115 @@ export class FieldApiClient {
         });
 
         return this.handleResponse<SosIncident>(response);
+    }
+
+    public async reportSafetyHazard(
+        payload: SafetyHazardCommandPayload,
+        commandId: string,
+    ): Promise<Record<string, unknown>> {
+        const {
+            photos = [],
+            photo_command_ids = [],
+            ...hazardPayload
+        } = payload;
+        const response = await this.fetchFn(
+            `${this.baseUrl}/api/v1/safety/hazards`,
+            {
+                method: 'POST',
+                headers: this.getHeaders(commandId),
+                body: JSON.stringify({
+                    ...hazardPayload,
+                    command_id: commandId,
+                }),
+            },
+        );
+
+        const hazard =
+            await this.handleResponse<Record<string, unknown>>(response);
+        const hazardId = hazard.id;
+
+        if (photos.length > 0) {
+            if (typeof hazardId !== 'number') {
+                throw new ApiClientError(
+                    'The hazard was saved, but its photo evidence could not be linked. Retry sync before reporting again.',
+                    502,
+                    { errorCode: 'HAZARD_PHOTO_OWNER_MISSING' },
+                );
+            }
+
+            if (photo_command_ids.length !== photos.length) {
+                throw new ApiClientError(
+                    'Photo evidence is missing a stable upload id. Keep this report and contact Operations before changing it.',
+                    422,
+                    { errorCode: 'HAZARD_PHOTO_COMMAND_MISSING' },
+                );
+            }
+
+            for (let index = 0; index < photos.length; index += 1) {
+                await this.uploadSafetyHazardPhoto(
+                    hazardId,
+                    photos[index],
+                    photo_command_ids[index],
+                );
+            }
+        }
+
+        return hazard;
+    }
+
+    private async uploadSafetyHazardPhoto(
+        hazardId: number,
+        photo: NonNullable<SafetyHazardCommandPayload['photos']>[number],
+        commandId: string,
+    ): Promise<void> {
+        const body = new FormData();
+        const filename = photo.fileName || `hazard-${Date.now()}.jpg`;
+        const extension = filename.split('.').pop()?.toLowerCase();
+        const mimeType =
+            extension === 'png'
+                ? 'image/png'
+                : extension === 'heic' || extension === 'heif'
+                  ? 'image/heic'
+                  : 'image/jpeg';
+        const fileDescriptor = {
+            uri: photo.uri,
+            name: filename,
+            type: mimeType,
+        };
+
+        body.append('file', fileDescriptor as unknown as Blob);
+        body.append('owner_type', 'site_hazard_ticket');
+        body.append('owner_id', String(hazardId));
+        body.append('kind', 'hazard_photo');
+
+        const headers = this.getHeaders(commandId);
+        delete headers['Content-Type'];
+        const response = await this.fetchFn(
+            `${this.baseUrl}/api/v1/attachments`,
+            {
+                method: 'POST',
+                headers,
+                body,
+            },
+        );
+
+        await this.handleResponse<Record<string, unknown>>(response);
+    }
+
+    public async issueWorkStoppage(
+        payload: WorkStoppageCommandPayload,
+        commandId: string,
+    ): Promise<Record<string, unknown>> {
+        const response = await this.fetchFn(
+            `${this.baseUrl}/api/v1/safety/work-stoppages`,
+            {
+                method: 'POST',
+                headers: this.getHeaders(commandId),
+                body: JSON.stringify({ ...payload, command_id: commandId }),
+            },
+        );
+
+        return this.handleResponse<Record<string, unknown>>(response);
     }
 
     public async fetchActiveSosIncident(): Promise<SosIncident | null> {

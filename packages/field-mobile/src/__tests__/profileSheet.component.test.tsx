@@ -3,6 +3,7 @@ import {
     cleanup,
     fireEvent,
     render,
+    within,
 } from '@testing-library/react-native/pure';
 import React from 'react';
 import { ProfileSheet } from '../components/sheets/profile-sheet';
@@ -11,6 +12,29 @@ import { ThemeProvider } from '../theme';
 describe('ProfileSheet component tests', () => {
     afterEach(() => {
         cleanup();
+    });
+
+    it('keeps lower profile actions reachable in a scrollable sheet', async () => {
+        const view = await render(
+            <ThemeProvider initialMode="light">
+                <ProfileSheet
+                    onCancelSignOut={jest.fn()}
+                    onClose={jest.fn()}
+                    onLogout={jest.fn()}
+                    onStartSignOut={jest.fn()}
+                    signOutConfirmationOpen={false}
+                    userName="Alex Reyes"
+                    userRole="crane_operator"
+                    visible={true}
+                />
+            </ThemeProvider>,
+        );
+
+        expect(
+            within(view.getByTestId('profile-sheet-content')).getByTestId(
+                'account-sign-out-button',
+            ),
+        ).toBeTruthy();
     });
 
     it('renders certified operator identity card with initials, role, asset badge, and online status', async () => {

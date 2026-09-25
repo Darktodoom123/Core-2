@@ -44,6 +44,7 @@ import { DispatchOrdersScreen } from '../screens/DispatchOrdersScreen';
 import { DocumentsWalletScreen } from '../screens/DocumentsWalletScreen';
 import { DvirScreen } from '../screens/DvirScreen';
 import { EquipmentInspectionScreen } from '../screens/EquipmentInspectionScreen';
+import { FieldSafetyScreen } from '../screens/FieldSafetyScreen';
 import { FuelScreen } from '../screens/FuelScreen';
 import { HeavyCraneDriveModeScreen } from '../screens/HeavyCraneDriveModeScreen';
 import { HosScreen } from '../screens/HosScreen';
@@ -103,6 +104,8 @@ import type {
     MaintenanceWorkOrder,
     DelayReasonCode,
     ReportDelayPayload,
+    SafetyHazardCommandPayload,
+    WorkStoppageCommandPayload,
 } from '../types/index';
 
 export { isAuthorizedFieldRole } from '../auth/fieldRoles';
@@ -539,7 +542,10 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     const [isOnline, setIsOnline] = useState<boolean | null>(null);
     const [isOutboxReady, setIsOutboxReady] = useState(false);
     const [profileOutboxSheetOpen, setProfileOutboxSheetOpen] = useState(false);
-    const [locationSharingActive, setLocationSharingActive] = useState(true);
+    const [locationSharingActive, setLocationSharingActive] = useState(false);
+    const [locationTrackingError, setLocationTrackingError] = useState<
+        string | null
+    >(null);
     const [sosSheetOpen, setSosSheetOpen] = useState(false);
     const [activeSosIncident, setActiveSosIncident] =
         useState<SosIncident | null>(null);
@@ -550,6 +556,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     const [isSosActivating, setIsSosActivating] = useState(false);
     const [activeAppView, setActiveAppView] = useState<
         | 'main'
+        | 'safety'
         | 'dvir'
         | 'documents'
         | 'inspection'
@@ -1105,6 +1112,10 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     }, [apiClient]);
 
     const refreshWeather = useCallback(async () => {
+        if (!isUnitLinked) {
+            return;
+        }
+
         setIsLoadingWeather(true);
         setWeatherError(null);
 
@@ -1181,7 +1192,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         } finally {
             setIsLoadingWeather(false);
         }
-    }, [apiClient, getCurrentLocation]);
+    }, [apiClient, getCurrentLocation, isUnitLinked]);
 
     const refreshHosClocks = useCallback(async () => {
         if (status !== 'authenticated' || isOnline !== true) {
@@ -1440,8 +1451,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
 
     useEffect(() => {
         if (status === 'authenticated') {
-            queueMicrotask(() => void refreshWeather());
-
             if (isOnline === true) {
                 queueMicrotask(() => void fetchJobs());
                 queueMicrotask(() => void refreshHosClocks());
@@ -1711,8 +1720,44 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
 
     const activeJob = jobs.find((job) => job.id === selectedJobId) || null;
     const activeTrackingJob = activeJob || jobs[0] || null;
+    const activeTrackingAssetId =
+        activeTrackingJob?.asset_assignments?.find(
+            (assignment) => assignment.operational_asset_id === selectedAssetId,
+        )?.operational_asset_id ??
+        (activeTrackingJob?.asset_assignments?.length === 1
+            ? activeTrackingJob.asset_assignments[0].operational_asset_id
+            : null);
+
+    const handleLocationCaptureIssue = useCallback(
+        (error: unknown | null) => {
+            if (error === null) {
+                setLocationTrackingError(null);
+                void syncQueue(false);
+
+                return;
+            }
+
+            const errorMessage =
+                error instanceof Error ? error.message.toLowerCase() : '';
+            const permissionUnavailable = /permission|denied|revoked/.test(
+                errorMessage,
+            );
+
+            setLocationTrackingError(
+                permissionUnavailable
+                    ? 'Location access is off. Allow location access in device settings, then resume telemetry.'
+                    : 'No GPS fix is available yet. Check device Location Services; telemetry will retry automatically.',
+            );
+
+            if (permissionUnavailable) {
+                setLocationSharingActive(false);
+            }
+        },
+        [syncQueue],
+    );
 
     const handleToggleLocationSharing = useCallback(() => {
+        setLocationTrackingError(null);
         setLocationSharingActive((prev) => {
             const next = !prev;
 
@@ -1862,6 +1907,34 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
             }
         },
         [activeJob, commandOutbox, handleRequestFailure, jobs, syncQueue],
+    );
+
+    const handleReportSafetyHazard = useCallback(
+        async (payload: SafetyHazardCommandPayload): Promise<string> => {
+            const command =
+                await commandOutbox.enqueueReportSafetyHazard(payload);
+
+            if (isOnline === true) {
+                void syncQueue();
+            }
+
+            return command.id;
+        },
+        [commandOutbox, isOnline, syncQueue],
+    );
+
+    const handleIssueWorkStoppage = useCallback(
+        async (payload: WorkStoppageCommandPayload): Promise<string> => {
+            const command =
+                await commandOutbox.enqueueIssueWorkStoppage(payload);
+
+            if (isOnline === true) {
+                void syncQueue();
+            }
+
+            return command.id;
+        },
+        [commandOutbox, isOnline, syncQueue],
     );
 
     const handleAcceptServerState = useCallback(
@@ -2485,6 +2558,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         if (
             !activeTrackingJob ||
             !user ||
+            !isUnitLinked ||
             !getCurrentLocation ||
             !locationSharingActive ||
             !locationService.canShareLocation(user, activeTrackingJob)
@@ -2503,6 +2577,9 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                     user,
                     activeTrackingJob,
                     getCurrentLocation,
+                    activeTrackingAssetId,
+                    15_000,
+                    handleLocationCaptureIssue,
                 );
             }
         };
@@ -2541,9 +2618,12 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         };
     }, [
         activeTrackingJob,
+        activeTrackingAssetId,
         getCurrentLocation,
+        handleLocationCaptureIssue,
         locationService,
         locationSharingActive,
+        isUnitLinked,
         user,
     ]);
 
@@ -2753,7 +2833,27 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 </Text>
                             </View>
                         ) : null}
-                        {activeAppView === 'hos' ? (
+                        {activeAppView === 'safety' ? (
+                            <FieldSafetyScreen
+                                actorId={user?.id}
+                                activeSite={
+                                    activeJob?.site ?? jobs[0]?.site ?? null
+                                }
+                                commands={outboxCommands.filter(
+                                    (command) =>
+                                        command.type ===
+                                            'report_safety_hazard' ||
+                                        command.type === 'issue_work_stoppage',
+                                )}
+                                isOnline={isOnline}
+                                onBack={() => setActiveAppView('main')}
+                                onIssueWorkStoppage={handleIssueWorkStoppage}
+                                onReportHazard={handleReportSafetyHazard}
+                                onRetryCommand={(commandId) =>
+                                    void handleRetryCommand(commandId)
+                                }
+                            />
+                        ) : activeAppView === 'hos' ? (
                             <HosScreen
                                 activeJobId={activeJob?.id || jobs[0]?.id}
                                 apiClient={apiClient}
@@ -3193,7 +3293,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                     isUnitLinked={isUnitLinked}
                                     onLinkUnit={() => {
                                         setIsUnitLinked(true);
-                                        setLocationSharingActive(true);
                                     }}
                                     dvirStatus={dvirStatus}
                                     preTripDefectLockout={
@@ -3208,6 +3307,9 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                     locationSharingActive={
                                         locationSharingActive
                                     }
+                                    locationTrackingError={
+                                        locationTrackingError
+                                    }
                                     onChangeDutyStatus={handleChangeDutyStatus}
                                     onDiscardCommand={handleDiscardCommand}
                                     onLogout={() => void handleLogout()}
@@ -3215,6 +3317,9 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                         setActiveAppView('documents')
                                     }
                                     onOpenDvir={() => setActiveAppView('dvir')}
+                                    onOpenSafety={() =>
+                                        setActiveAppView('safety')
+                                    }
                                     onOpenForms={() =>
                                         setActiveAppView('dispatch')
                                     }
@@ -3260,6 +3365,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                     onReleaseUnit={() => {
                                         setIsUnitLinked(false);
                                         setLocationSharingActive(false);
+                                        setLocationTrackingError(null);
                                         locationService.stopAutoTracking();
                                         void stopBackgroundLocationUpdates().catch(
                                             () => undefined,

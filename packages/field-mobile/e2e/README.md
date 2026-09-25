@@ -19,6 +19,22 @@ npm run mobile:session1:native:api30
 npm run mobile:session1:native:api36
 ```
 
+For a single web → native field → web assignment-response round trip, run:
+
+```powershell
+npm run mobile:web-mobile:roundtrip:api36
+# Or on the Android 11 / API 30 device profile:
+npm run mobile:web-mobile:roundtrip:api30
+```
+
+The round-trip runner creates an isolated SQLite fixture, opens the dispatch as
+the seeded operations manager in Chromium and verifies `Pending response`,
+accepts the same assignment in the Android field app, then reopens the same
+dispatch in Chromium and verifies the server-received `Accepted` response. It
+uses generated process-only credentials and the seeded OTP challenge. Redacted
+status evidence is written to
+`apps/operations/storage/framework/testing/web-mobile-roundtrip-native-evidence.txt`.
+
 The runner uses Android Studio's external SDK and JBR, creates a dedicated
 ignored SQLite database, seeds local-only fixtures, starts the Laravel API and
 Metro, builds the Detox APKs, and runs the authenticated emulator journey.

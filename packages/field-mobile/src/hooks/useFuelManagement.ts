@@ -5,7 +5,6 @@ import { createCommandId } from '../services/commandOutbox';
 import { durableAttachmentStorage } from '../services/durableAttachmentStorage';
 import { emptyFuelDraft, fuelDraftStore } from '../storage/fuelDraftStore';
 import type { FuelDraft, FuelDraftStore } from '../storage/fuelDraftStore';
-import type { OutboxCommand } from '../types/index';
 import type {
     FuelApi,
     FuelLogCommandPayload,
@@ -15,6 +14,7 @@ import type {
     MobileFuelRequest,
     RecordFuelPayload,
 } from '../types/fuel';
+import type { OutboxCommand } from '../types/index';
 
 export interface FuelCommandQueue {
     enqueueSubmitFuelRequest(payload: {

@@ -12,7 +12,9 @@ import { AssetVehicleCard } from '../components/cards/AssetVehicleCard';
 import { Icon } from '../components/common/Icon';
 import type { IconName } from '../components/common/Icon';
 import { FieldBottomNav } from '../components/layout/field-bottom-nav';
-import type { FieldNavItem } from '../components/layout/field-bottom-nav';
+import type {
+    FieldScreen,
+} from '../components/layout/field-bottom-nav';
 import { colors, shadows } from '../components/nativeStyles';
 import { DispatchIntakeSheet } from '../components/sheets/DispatchIntakeSheet';
 import { DutyStatusSelectorModal } from '../components/sheets/DutyStatusSelectorModal';
@@ -46,6 +48,7 @@ export interface OperatorDashboardScreenProps {
     onRefresh: () => void;
     onSelectJob: (jobId: number) => void;
     onOpenDvir: () => void;
+    onOpenSafety?: () => void;
     onOpenHos?: () => void;
     onOpenDocuments: () => void;
     onOpenRoutes: () => void;
@@ -131,6 +134,7 @@ export const OperatorDashboardScreen: React.FC<
     onRefresh,
     onSelectJob,
     onOpenDvir,
+    onOpenSafety,
     onOpenHos,
     onOpenDocuments,
     onOpenRoutes,
@@ -165,7 +169,7 @@ export const OperatorDashboardScreen: React.FC<
     const [pendingOffDutyRemarks, setPendingOffDutyRemarks] = useState<
         string | undefined
     >(undefined);
-    const [activeNavItem, setActiveNavItem] = useState<FieldNavItem>('today');
+    const [activeNavItem, setActiveNavItem] = useState<FieldScreen>('today');
 
     const [overriddenDutyStatus, setOverriddenDutyStatus] = useState<{
         propStatus?: DutyStatus;
@@ -442,7 +446,7 @@ export const OperatorDashboardScreen: React.FC<
         setActiveNavItem('profile');
     };
 
-    const handleCloseProfile = (nextItem: FieldNavItem = 'today') => {
+    const handleCloseProfile = (nextItem: FieldScreen = 'today') => {
         setProfileSheetOpen(false);
         setSignOutConfirmationOpen(false);
         setActiveNavItem(nextItem);
@@ -767,6 +771,8 @@ export const OperatorDashboardScreen: React.FC<
                 onSelect={(item) => {
                     if (item === 'route') {
                         onOpenRoutes();
+                    } else if (item === 'safety') {
+                        onOpenSafety?.();
                     } else if (item === 'profile') {
                         handleOpenProfile();
                     } else {
@@ -918,7 +924,7 @@ const styles = StyleSheet.create({
         alignSelf: 'center',
         maxWidth: 720,
         padding: 14,
-        paddingBottom: 110,
+        paddingBottom: 20,
         width: '100%',
     },
     topIdentityBar: {
