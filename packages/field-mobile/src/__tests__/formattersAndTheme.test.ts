@@ -151,6 +151,113 @@ test('Warning tokens stay distinct from brand gold and meet WCAG AA in both mode
     }
 });
 
+// CIEDE2000 colour difference. Contrast ratio only compares lightness, so two
+// hues of similar lightness (teal and emerald) pass contrast yet look the same
+// as small graph dots; this measures what the eye actually separates.
+const toLab = (hex: string): [number, number, number] => {
+    const [r, g, b] = [1, 3, 5].map((start) => {
+        const value = parseInt(hex.slice(start, start + 2), 16) / 255;
+
+        return value <= 0.04045
+            ? value / 12.92
+            : ((value + 0.055) / 1.055) ** 2.4;
+    });
+    const pivot = (value: number) =>
+        value > 0.008856 ? Math.cbrt(value) : 7.787 * value + 16 / 116;
+    const x = pivot((r * 0.4124 + g * 0.3576 + b * 0.1805) / 0.95047);
+    const y = pivot(r * 0.2126 + g * 0.7152 + b * 0.0722);
+    const z = pivot((r * 0.0193 + g * 0.1192 + b * 0.9505) / 1.08883);
+
+    return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
+};
+
+const deltaE2000 = (first: string, second: string): number => {
+    const rad = Math.PI / 180;
+    const [l1, a1, b1] = toLab(first);
+    const [l2, a2, b2] = toLab(second);
+    const cBar = (Math.hypot(a1, b1) + Math.hypot(a2, b2)) / 2;
+    const g = 0.5 * (1 - Math.sqrt(cBar ** 7 / (cBar ** 7 + 25 ** 7)));
+    const c1 = Math.hypot(a1 * (1 + g), b1);
+    const c2 = Math.hypot(a2 * (1 + g), b2);
+    const h1 = (Math.atan2(b1, a1 * (1 + g)) / rad + 360) % 360;
+    const h2 = (Math.atan2(b2, a2 * (1 + g)) / rad + 360) % 360;
+    let dh = h2 - h1;
+
+    if (c1 * c2 === 0) {
+        dh = 0;
+    } else if (dh > 180) {
+        dh -= 360;
+    } else if (dh < -180) {
+        dh += 360;
+    }
+
+    const dL = l2 - l1;
+    const dC = c2 - c1;
+    const dH = 2 * Math.sqrt(c1 * c2) * Math.sin((dh / 2) * rad);
+    const lBar = (l1 + l2) / 2;
+    const cBarPrime = (c1 + c2) / 2;
+    const hBar = Math.abs(h1 - h2) <= 180 ? (h1 + h2) / 2 : (h1 + h2 + 360) / 2;
+    const t =
+        1 -
+        0.17 * Math.cos((hBar - 30) * rad) +
+        0.24 * Math.cos(2 * hBar * rad) +
+        0.32 * Math.cos((3 * hBar + 6) * rad) -
+        0.2 * Math.cos((4 * hBar - 63) * rad);
+    const sL =
+        1 + (0.015 * (lBar - 50) ** 2) / Math.sqrt(20 + (lBar - 50) ** 2);
+    const sC = 1 + 0.045 * cBarPrime;
+    const sH = 1 + 0.015 * cBarPrime * t;
+    const dTheta = 30 * Math.exp(-(((hBar - 275) / 25) ** 2));
+    const rT =
+        -Math.sin(2 * dTheta * rad) *
+        2 *
+        Math.sqrt(cBarPrime ** 7 / (cBarPrime ** 7 + 25 ** 7));
+
+    return Math.sqrt(
+        (dL / sL) ** 2 +
+            (dC / sC) ** 2 +
+            (dH / sH) ** 2 +
+            rT * (dC / sC) * (dH / sH),
+    );
+};
+
+// Below this CIEDE2000 distance two ELD graph dots read as the same colour.
+const MIN_DUTY_COLOR_DISTANCE = 17;
+
+test('Duty graph colors stay visually distinct from each other and from warnings', () => {
+    for (const theme of [lightThemeColors, darkHudThemeColors]) {
+        const categories = {
+            break: theme.successEmerald,
+            driving: theme.dutyDriving,
+            onDuty: theme.dutyOnDuty,
+            standby: theme.dutyStandby,
+        };
+        const entries = Object.entries(categories);
+
+        for (const [index, [name, color]] of entries.entries()) {
+            for (const [otherName, other] of entries.slice(index + 1)) {
+                const distance = deltaE2000(color, other);
+
+                assert.ok(
+                    distance >= MIN_DUTY_COLOR_DISTANCE,
+                    `${theme.mode}: ${name} and ${otherName} look alike (dE ${distance.toFixed(1)})`,
+                );
+            }
+
+            for (const reserved of [
+                theme.brandAmber,
+                theme.warningOrange,
+                theme.hazardRed,
+            ]) {
+                assert.ok(
+                    deltaE2000(color, reserved) >= MIN_DUTY_COLOR_DISTANCE,
+                    `${theme.mode}: ${name} looks like reserved ${reserved}`,
+                );
+            }
+        }
+    }
+});
+
 test('Duty category tokens are distinct from action and state colors and readable in both modes', () => {
     for (const theme of [lightThemeColors, darkHudThemeColors]) {
         const duty = [theme.dutyOnDuty, theme.dutyDriving, theme.dutyStandby];

@@ -127,8 +127,13 @@ Rules for new and touched code:
 - A migrated screen is added to `src/__tests__/designTokenAdoption.test.ts`,
   which fails on any hex or `rgba()` literal or `nativeStyles` import in it.
   Migrated so far: `DvirScreen.tsx` and `src/screens/dvir/`, `HosScreen.tsx`
-  and `src/screens/hos/`, and the home header (`field-header.tsx`,
-  `profile-summary.tsx`, `sync-status-pill.tsx`).
+  and `src/screens/hos/`, the home header (`field-header.tsx`,
+  `profile-summary.tsx`, `sync-status-pill.tsx`), the shared
+  `tile-screen-header.tsx`, and the Dispatch shell (`DispatchOrdersScreen.tsx`,
+  `AssignmentResponseCard.tsx`). Dispatch's `JobListItemCard.tsx` and
+  `ReportDelayModal.tsx` are not migrated yet.
+- The tile screen header's category eyebrow is a label, so it uses
+  `textSecondary`, not gold or a per-screen accent.
 
 ### Roles
 
@@ -150,7 +155,7 @@ duty badges, and the shift log show duty type by color, always with its label
 
 | Duty status | Token | Light | Dark HUD |
 | :--- | :--- | :--- | :--- |
-| Operating / On duty | `dutyOnDuty` | `#0F766E` | `#2DD4BF` |
+| Operating / On duty | `dutyOnDuty` | `#134E4A` | `#67E8F9` |
 | Driving | `dutyDriving` | `#2563EB` | `#60A5FA` |
 | Standby | `dutyStandby` | `#6D28D9` | `#A78BFA` |
 | On break | `successEmerald` | | |
@@ -158,8 +163,12 @@ duty badges, and the shift log show duty type by color, always with its label
 
 Duty colors are never gold, orange, or red, so they cannot be read as an
 action, a warning, or a violation. They reach 3:1 on `surface`, and text on a
-duty fill uses `textInverse` (tested in `formattersAndTheme.test.ts`). Use
-them only for duty type, not elsewhere.
+duty fill uses `textInverse`. Every pair of graph colors (break, driving, on
+duty, standby), and each against gold, orange, and red, is at least 17 apart
+in CIEDE2000, so the small graph dots stay tellable. Contrast alone does not
+catch this: the earlier teal On Duty passed 3:1 but looked like Break green.
+Both checks live in `formattersAndTheme.test.ts`. Use duty colors only for
+duty type, not elsewhere.
 
 Put dark text (`#0F172A`) on gold fills.
 
