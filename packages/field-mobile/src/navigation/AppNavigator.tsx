@@ -2474,15 +2474,18 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     const resolvedClientName =
         activeJob?.client || jobs[0]?.client || 'Client Account';
 
+    // Placeholder labels are for display only; never look up documents by them.
+    const walletAssetCode =
+        resolvedAssetCode === 'UNASSIGNED' ||
+        resolvedAssetCode === 'Assigned Unit'
+            ? ''
+            : resolvedAssetCode;
+
     const availableAssets = useMemo(() => {
         const map = new Map<string, string>();
 
-        if (
-            resolvedAssetCode &&
-            resolvedAssetCode !== 'UNASSIGNED' &&
-            resolvedAssetCode !== 'Assigned Unit'
-        ) {
-            map.set(resolvedAssetCode, resolvedAssetName || resolvedAssetCode);
+        if (walletAssetCode) {
+            map.set(walletAssetCode, resolvedAssetName || walletAssetCode);
         }
 
         jobs.forEach((j) => {
@@ -2497,7 +2500,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
             assetCode: code,
             assetName: name,
         }));
-    }, [jobs, resolvedAssetCode, resolvedAssetName]);
+    }, [jobs, walletAssetCode, resolvedAssetName]);
 
     useEffect(() => {
         if (
@@ -2898,7 +2901,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                             />
                         ) : activeAppView === 'documents' ? (
                             <DocumentsWalletScreen
-                                assetCode={resolvedAssetCode}
+                                assetCode={walletAssetCode}
                                 assignedAssets={availableAssets}
                                 onBack={() => setActiveAppView('main')}
                                 operatorName={resolvedOperatorName}

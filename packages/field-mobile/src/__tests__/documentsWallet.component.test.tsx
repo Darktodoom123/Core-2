@@ -281,6 +281,90 @@ describe('DocumentsWalletScreen Component & Offline Access Engine', () => {
         ).toBeTruthy();
     });
 
+    it('selects the first assigned unit when the requested asset code is not assigned', async () => {
+        const view = await render(
+            <DocumentsWalletScreen
+                assetCode="Assigned Unit"
+                assignedAssets={[
+                    { assetCode: 'ALB-CRN-050' },
+                    { assetCode: 'ALB-TRK-012' },
+                ]}
+                operatorName="Alex Rivera"
+            />,
+        );
+
+        expect(
+            await view.findByText(
+                'DPWH Special Heavy-Load Road Transit Permit',
+            ),
+        ).toBeTruthy();
+        expect(view.getByTestId('asset-selector-ALB-CRN-050')).toHaveProp(
+            'accessibilityState',
+            expect.objectContaining({ selected: true }),
+        );
+        expect(view.getByTestId('asset-selector-ALB-TRK-012')).toHaveProp(
+            'accessibilityState',
+            expect.objectContaining({ selected: false }),
+        );
+        expect(WalletService.getDocuments).not.toHaveBeenCalledWith(
+            mockApiClient,
+            mockUser.id,
+            'Assigned Unit',
+        );
+
+        await fireEvent.press(view.getByTestId('asset-selector-ALB-TRK-012'));
+
+        expect(
+            await view.findByText(
+                'LTO Motor Vehicle Special Freight Registration',
+            ),
+        ).toBeTruthy();
+        expect(view.getByTestId('asset-selector-ALB-TRK-012')).toHaveProp(
+            'accessibilityState',
+            expect.objectContaining({ selected: true }),
+        );
+        expect(view.getByTestId('asset-selector-ALB-CRN-050')).toHaveProp(
+            'accessibilityState',
+            expect.objectContaining({ selected: false }),
+        );
+    });
+
+    it('selects the first assigned unit when assignments arrive after the wallet opens', async () => {
+        const view = await render(
+            <DocumentsWalletScreen
+                assetCode=""
+                assignedAssets={[]}
+                operatorName="Alex Rivera"
+            />,
+        );
+
+        expect(
+            await view.findByText('TESDA Heavy Equipment Operator NC-III'),
+        ).toBeTruthy();
+        expect(WalletService.getDocuments).toHaveBeenCalledTimes(1);
+
+        await view.rerender(
+            <DocumentsWalletScreen
+                assetCode=""
+                assignedAssets={[
+                    { assetCode: 'ALB-CRN-050' },
+                    { assetCode: 'ALB-TRK-012' },
+                ]}
+                operatorName="Alex Rivera"
+            />,
+        );
+
+        expect(
+            await view.findByText(
+                'DPWH Special Heavy-Load Road Transit Permit',
+            ),
+        ).toBeTruthy();
+        expect(view.getByTestId('asset-selector-ALB-CRN-050')).toHaveProp(
+            'accessibilityState',
+            expect.objectContaining({ selected: true }),
+        );
+    });
+
     it('allows making a document available offline and removing the local copy', async () => {
         const view = await render(
             <DocumentsWalletScreen

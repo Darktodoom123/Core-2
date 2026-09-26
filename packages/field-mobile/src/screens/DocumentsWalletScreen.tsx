@@ -49,6 +49,23 @@ const DOCUMENT_CATEGORY_LABELS: Record<DocumentCategory, string> = {
     delivery_receipts: 'Delivery Receipt',
 };
 
+// Assigned units can load after the wallet opens, and the caller's code may
+// not be one of them, so fall back to the first assigned unit.
+const resolveActiveAssetCode = (
+    requestedAssetCode: string,
+    assignedAssets: DocumentsWalletScreenProps['assignedAssets'],
+): string => {
+    if (!assignedAssets || assignedAssets.length === 0) {
+        return requestedAssetCode;
+    }
+
+    return assignedAssets.some(
+        (asset) => asset.assetCode === requestedAssetCode,
+    )
+        ? requestedAssetCode
+        : assignedAssets[0].assetCode;
+};
+
 export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
     onBack,
     assetCode = 'ALB-CRN-050',
@@ -56,11 +73,11 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
     assignedAssets,
 }) => {
     const { isDarkHud, theme } = useTheme();
-    const [activeAssetCode, setActiveAssetCode] = useState<string>(
-        assetCode ||
-            (assignedAssets && assignedAssets.length > 0
-                ? assignedAssets[0].assetCode
-                : ''),
+    const [requestedAssetCode, setRequestedAssetCode] =
+        useState<string>(assetCode);
+    const activeAssetCode = resolveActiveAssetCode(
+        requestedAssetCode,
+        assignedAssets,
     );
     const [selectedCategory, setSelectedCategory] = useState<
         DocumentCategory | 'all'
@@ -336,7 +353,7 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                     }}
                                     key={asset.assetCode}
                                     onPress={() =>
-                                        setActiveAssetCode(asset.assetCode)
+                                        setRequestedAssetCode(asset.assetCode)
                                     }
                                     style={[
                                         styles.assetChip,
