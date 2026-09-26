@@ -1,17 +1,17 @@
 # Graph Report - Core-2  (2026-09-26)
 
 ## Corpus Check
-- 1411 files · ~2,444,125 words
+- 1411 files · ~2,444,417 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 50 file(s) not represented in the graph (top: (none) 30, .xml 4, .excalidraw 3)
 
 ## Summary
-- 8871 nodes · 26690 edges · 379 communities (221 shown, 158 thin omitted)
+- 8871 nodes · 26692 edges · 379 communities (221 shown, 158 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 726 edges (avg confidence: 0.92)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `35d9621d`
+- Built from commit: `e25fc7f1`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -26,7 +26,7 @@
 - dispatch-detail.tsx
 - lucide-react
 - SosIncident
-- workspace.ts
+- workspace.tsx
 - DispatchV2Mutation
 - OutboxCommand
 - backgroundLocationTask.ts
@@ -103,7 +103,7 @@
 - live-workspace-shell.tsx
 - run-lighthouse.cjs
 - 1. Authoritative repository verification & documentation discrepancy
-- canonical-status-badge.tsx
+- workspace.ts
 - fuel-workflow.e2e.test.js
 - apps_operations_bootstrap_ssr_assets_canonical_status_badge_d9jpjjoh_t
 - Decisions
@@ -390,9 +390,9 @@ Nodes (150): Mobile action → backend record → authorized web destination, Ap
 Cohesion: 0.05
 Nodes (10): EscalateUnacknowledgedSosIncident, PruneSosIncidentCoordinates, SosEscalationDelivery, SosTriggerResult, SosResolutionCode, SosIncidentChanged, SosIncident, SosIncidentNotification (+2 more)
 
-### Community 10 - "workspace.ts"
-Cohesion: 0.03
-Nodes (109): ActiveSosBanner(), ActiveSosBannerProps, SosAcknowledgeControlProps, formatSosAge(), formatSosTimestamp(), humanizeSosValue(), sosCategoryLabel(), sosStatusLabel() (+101 more)
+### Community 10 - "workspace.tsx"
+Cohesion: 0.07
+Nodes (48): ActiveSosBanner(), ActiveSosBannerProps, SosAcknowledgeControlProps, formatSosAge(), formatSosTimestamp(), humanizeSosValue(), sosCategoryLabel(), sosStatusLabel() (+40 more)
 
 ### Community 11 - "DispatchV2Mutation"
 Cohesion: 0.08
@@ -440,7 +440,7 @@ Nodes (32): ActivityTab(), ActivityTabProps, getSessionIcon(), styles, ConfirmPa
 
 ### Community 22 - "live-tracking-map.tsx"
 Cohesion: 0.03
-Nodes (122): SiteEvidenceMarker(), SiteEvidenceViewport(), averagePosition(), averageSosPosition(), DEFAULT_CENTER, EMPTY_SOS_INCIDENTS, findSosIncidentForLocation(), freshnessColor() (+114 more)
+Nodes (121): SiteEvidenceMarker(), SiteEvidenceViewport(), averagePosition(), averageSosPosition(), DEFAULT_CENTER, EMPTY_SOS_INCIDENTS, findSosIncidentForLocation(), freshnessColor() (+113 more)
 
 ### Community 23 - "Illuminate\Foundation\Http\FormRequest"
 Cohesion: 0.05
@@ -471,8 +471,8 @@ Cohesion: 0.02
 Nodes (96): Business-logic observations not changed for polish, Completion verdict, Evidence and gaps, Focused closure review outcome, Integration verification questions, Milestone 7 — Field Mobile UI/UX Polish & Web Consistency, Phase checkpoints, Prioritized implementation checklist (+88 more)
 
 ### Community 33 - "AssetViewModel"
-Cohesion: 0.03
-Nodes (79): ArchiveSurface(), ExportsSurface(), DvirStatusBadge(), DvirStatusBadgeProps, DvirWalkaroundModalProps, FleetAssetCard(), FleetAssetCardProps, isFleetAssetCategory() (+71 more)
+Cohesion: 0.06
+Nodes (51): DvirStatusBadge(), DvirStatusBadgeProps, DvirWalkaroundModalProps, FleetAssetCard(), FleetAssetCardProps, isFleetAssetCategory(), FleetDetailPaneProps, FleetDispatchabilityState (+43 more)
 
 ### Community 35 - "GenerateGptRecommendationJob"
 Cohesion: 0.13
@@ -484,7 +484,7 @@ Nodes (36): formatScheduleValue(), PRIORITY_LABELS, projectDirectDispatchSummary
 
 ### Community 37 - "manager-dashboard-model.ts"
 Cohesion: 0.02
-Nodes (192): ApprovalCardProps, ApprovalResourceDeltaProps, FleetBreakdownPanel(), LiveCountdown(), LiveElapsed(), LiveProgress(), ManagerActionQueue(), ManagerActionQueueProps (+184 more)
+Nodes (193): ApprovalCardProps, ApprovalResourceDeltaProps, FleetBreakdownPanel(), LiveCountdown(), LiveElapsed(), LiveProgress(), ManagerActionQueue(), ManagerActionQueueProps (+185 more)
 
 ### Community 38 - "PersonnelCredential"
 Cohesion: 0.05
@@ -643,8 +643,8 @@ Cohesion: 0.08
 Nodes (26): devDependencies, @axe-core/playwright, babel-plugin-react-compiler, eslint, eslint-config-prettier, eslint-import-resolver-typescript, @eslint/js, eslint-plugin-import (+18 more)
 
 ### Community 85 - "live-workspace-shell.tsx"
-Cohesion: 0.05
-Nodes (47): ErrorBoundary, apps_operations_resources_js_components_ui_label, getFocusableElements(), LiveWorkspaceShell(), localDateFormatter, localTimeFormatter, NAV_GROUPS, NavGroupDefinition (+39 more)
+Cohesion: 0.04
+Nodes (53): ErrorBoundary, apps_operations_resources_js_components_ui_label, getFocusableElements(), LiveWorkspaceShell(), localDateFormatter, localTimeFormatter, NAV_GROUPS, NavGroupDefinition (+45 more)
 
 ### Community 86 - "run-lighthouse.cjs"
 Cohesion: 0.10
@@ -654,9 +654,9 @@ Nodes (26): ref_node_http, args, customUrl, ensureProductionBuild(), ensureServe
 Cohesion: 0.17
 Nodes (10): CertifyAndCompleteShiftAction, RecordDutyStatusTransitionAction, StartOperatorShiftAction, DutyLocationSnapshotService, 1. Authoritative repository verification & documentation discrepancy, 5. Prioritized gap list, 6. Smallest ordered implementation tasks (Proposed Changes), 7. Next concrete implementation task (+2 more)
 
-### Community 88 - "canonical-status-badge.tsx"
-Cohesion: 0.10
-Nodes (22): BadgeSize, BadgeVariant, CanonicalStatusBadgeProps, liveStatuses, sizeClasses, statusIcons, StatusPresentation, StatusTone (+14 more)
+### Community 88 - "workspace.ts"
+Cohesion: 0.02
+Nodes (105): ArchiveSurface(), BadgeSize, BadgeVariant, CanonicalStatusBadgeProps, liveStatuses, sizeClasses, statusIcons, StatusPresentation (+97 more)
 
 ### Community 89 - "fuel-workflow.e2e.test.js"
 Cohesion: 0.16
@@ -1255,11 +1255,11 @@ Nodes (3): Branch semantics, Dispatch intake source graph, Gate contract
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Architecture` connect `AuditEvent` to `user-management-workspace-section.tsx`, `Illuminate\Support\Collection`, `lucide-react`, `OperatorDutyLog`, `OperationalAsset`, `DispatchJob`?**
-  _High betweenness centrality (0.156) - this node is a cross-community bridge._
+  _High betweenness centrality (0.153) - this node is a cross-community bridge._
 - **Why does `FieldApiClient` connect `FieldApiClient` to `AppNavigator.tsx`, `DvirScreen.tsx`, `ref_react`, `Microservice restructuring progress`, `useTheme`, `DispatchJob`, `OutboxCommand`, `test-integration-services.ts`, `ProfileScreen.tsx`, `durableAttachmentStorage.ts`?**
-  _High betweenness centrality (0.132) - this node is a cross-community bridge._
+  _High betweenness centrality (0.127) - this node is a cross-community bridge._
 - **Why does `OperationalAsset` connect `OperationalAsset` to `AuditEvent`, `DispatchPlanVersion`, `Illuminate\Database\Eloquent\Relations\BelongsTo`, `AlibatonCraneFleetSeeder`, `Illuminate\Database\Eloquent\Builder`, `Illuminate\Bus\Queueable`, `LatestLocationDto`, `AssetCategory`, `Table catalog`, `UploadAttachmentAction`, `DispatchJob`, `GenerateGptRecommendationJob`, `PersonnelCredential`, `User`, `RentalAssetUsageConcurrencyTest.php`, `Illuminate\Support\Collection`, `DispatchReadinessBlockerCode`, `OperatorShift`, `StandbyReason`, `Phase7DistributedResilienceTest.php`, `Illuminate\Http\JsonResponse`, `Illuminate\Support\Facades\Route`, `Decisions`, `RoleName`, `LocationUpdate`, `Target architecture and shared invariants (Plan A: 2-Service Model)`, `ListDispatchCandidatesRequest`, `Illuminate\Support\Facades\DB`, `GptRecommendation`, `4. Detailed Tier Descriptions`, `RecordAuditEvent`, `.carbon`?**
-  _High betweenness centrality (0.117) - this node is a cross-community bridge._
+  _High betweenness centrality (0.115) - this node is a cross-community bridge._
 - **Are the 2 inferred relationships involving `RecordAuditEvent` (e.g. with `Tier 1: Dual-Custody Administrator Recovery (Web UI)` and `3.2 Automated Offboarding & Emergency Kill-Switch`) actually correct?**
   _`RecordAuditEvent` has 2 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `$schema`, `project`, `version` to the rest of the system?**

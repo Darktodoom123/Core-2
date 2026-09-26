@@ -1102,7 +1102,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "activesosbannerprops",
       "source_file": "apps/operations/resources/js/components/sos/active-sos-banner.tsx",
@@ -1115,7 +1115,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "sosacknowledgecontrolprops",
       "source_file": "apps/operations/resources/js/components/sos/sos-acknowledge-control.tsx",
@@ -1128,7 +1128,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "sosincidentdetailprops",
       "source_file": "apps/operations/resources/js/components/sos/sos-incident-detail.tsx",
@@ -1141,7 +1141,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "soslocationsummaryprops",
       "source_file": "apps/operations/resources/js/components/sos/sos-location-summary.tsx",
@@ -1154,7 +1154,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "sosresolutionformprops",
       "source_file": "apps/operations/resources/js/components/sos/sos-resolution-form.tsx",
@@ -1167,24 +1167,11 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "sosresponsequeueprops",
       "source_file": "apps/operations/resources/js/components/sos/sos-response-queue.tsx",
       "source_location": "L12"
-    },
-    {
-      "id": "apps_operations_resources_js_components_workspace_live_dispatch_intake_incomingqueuepage",
-      "label": "IncomingQueuePage",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "incomingqueuepage",
-      "source_file": "apps/operations/resources/js/components/workspace/live-dispatch-intake.tsx",
-      "source_location": "L48"
     },
     {
       "id": "apps_operations_resources_js_lib_outbox_outboxitem",
@@ -1193,505 +1180,11 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "outboxitem",
       "source_file": "apps/operations/resources/js/lib/outbox.ts",
       "source_location": "L1"
-    },
-    {
-      "id": "apps_operations_resources_js_types_auth_auth",
-      "label": "Auth",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "auth",
-      "source_file": "apps/operations/resources/js/types/auth.ts",
-      "source_location": "L13"
-    },
-    {
-      "id": "apps_operations_resources_js_types_global_d_inertiaconfig",
-      "label": "InertiaConfig",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "inertiaconfig",
-      "source_file": "apps/operations/resources/js/types/global.d.ts",
-      "source_location": "L12"
-    },
-    {
-      "id": "apps_operations_resources_js_types_global_d_inputhtmlattributes",
-      "label": "InputHTMLAttributes",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "inputhtmlattributes",
-      "source_file": "apps/operations/resources/js/types/global.d.ts",
-      "source_location": "L6"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_approvalstatusvalue",
-      "label": "ApprovalStatusValue",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "approvalstatusvalue",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L45"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_assetdispatchabilityblockerviewmodel",
-      "label": "AssetDispatchabilityBlockerViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "assetdispatchabilityblockerviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L450"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_assetdispatchabilityviewmodel",
-      "label": "AssetDispatchabilityViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "assetdispatchabilityviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L456"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_assetdocumentviewmodel",
-      "label": "AssetDocumentViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "assetdocumentviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L517"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_assetlockoutviewmodel",
-      "label": "AssetLockoutViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "assetlockoutviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L440"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_assetstatuschangeviewmodel",
-      "label": "AssetStatusChangeViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "assetstatuschangeviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L461"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_assignmentscheduleconflictviewmodel",
-      "label": "AssignmentScheduleConflictViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "assignmentscheduleconflictviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L1304"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_commercialdispatchhandoffviewmodel",
-      "label": "CommercialDispatchHandoffViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "commercialdispatchhandoffviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L230"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_dispatchassignmentviewmodel",
-      "label": "DispatchAssignmentViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "dispatchassignmentviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L76"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_dispatchexecutiondelayviewmodel",
-      "label": "DispatchExecutionDelayViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "dispatchexecutiondelayviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L1437"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_dispatchexecutionlocationviewmodel",
-      "label": "DispatchExecutionLocationViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "dispatchexecutionlocationviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L1378"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_dispatchexecutionmilestoneviewmodel",
-      "label": "DispatchExecutionMilestoneViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "dispatchexecutionmilestoneviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L1372"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_dispatchexecutionreportviewmodel",
-      "label": "DispatchExecutionReportViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "dispatchexecutionreportviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L1390"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_dispatchexecutionviewmodel",
-      "label": "DispatchExecutionViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "dispatchexecutionviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L1461"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_dispatchhandoffevidenceviewmodel",
-      "label": "DispatchHandoffEvidenceViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "dispatchhandoffevidenceviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L1401"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_dispatchrequirementitem",
-      "label": "DispatchRequirementItem",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "dispatchrequirementitem",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L116"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_dispatchsourcetype",
-      "label": "DispatchSourceType",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "dispatchsourcetype",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L113"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_dispatchstatusvalue",
-      "label": "DispatchStatusValue",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "dispatchstatusvalue",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_dvirinspectiondefectviewmodel",
-      "label": "DvirInspectionDefectViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "dvirinspectiondefectviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L399"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_dvirinspectionsummaryviewmodel",
-      "label": "DvirInspectionSummaryViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "dvirinspectionsummaryviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L427"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_dviroverallstatusvalue",
-      "label": "DvirOverallStatusValue",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "dviroverallstatusvalue",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L380"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_dvirphotoviewmodel",
-      "label": "DvirPhotoViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "dvirphotoviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L387"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_equipmenthosviewmodel",
-      "label": "EquipmentHosViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "equipmenthosviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L315"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_fatiguestatusvalue",
-      "label": "FatigueStatusValue",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "fatiguestatusvalue",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L312"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_fuellogviewmodel",
-      "label": "FuelLogViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "fuellogviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L548"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_fuelnoreceiptreasonvalue",
-      "label": "FuelNoReceiptReasonValue",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "fuelnoreceiptreasonvalue",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L28"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_fuelrequeststatusvalue",
-      "label": "FuelRequestStatusValue",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "fuelrequeststatusvalue",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L17"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_fuelurgencyvalue",
-      "label": "FuelUrgencyValue",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "fuelurgencyvalue",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L26"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_geocoordinates",
-      "label": "GeoCoordinates",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "geocoordinates",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L130"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_hosdutystatusvalue",
-      "label": "HosDutyStatusValue",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "hosdutystatusvalue",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L309"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_inspectionviewmodel",
-      "label": "InspectionViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "inspectionviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L267"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_maintenanceworkorderviewmodel",
-      "label": "MaintenanceWorkOrderViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "maintenanceworkorderviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L276"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_operatorbindingviewmodel",
-      "label": "OperatorBindingViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "operatorbindingviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L294"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_personnelcredentialviewmodel",
-      "label": "PersonnelCredentialViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "personnelcredentialviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L681"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_personnelprofileviewmodel",
-      "label": "PersonnelProfileViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "personnelprofileviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L714"
     },
     {
       "id": "apps_operations_resources_js_types_workspace_refreshmode",
@@ -1700,7 +1193,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "refreshmode",
       "source_file": "apps/operations/resources/js/types/workspace.ts",
@@ -1713,89 +1206,11 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "refreshscope",
       "source_file": "apps/operations/resources/js/types/workspace.ts",
       "source_location": "L1067"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_refreshstatus",
-      "label": "RefreshStatus",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "refreshstatus",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L1071"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_rentaldispatchhandoffviewmodel",
-      "label": "RentalDispatchHandoffViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "rentaldispatchhandoffviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L245"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_rentalitemcontext",
-      "label": "RentalItemContext",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "rentalitemcontext",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L123"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_reportexportstatusvalue",
-      "label": "ReportExportStatusValue",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "reportexportstatusvalue",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L59"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_servicerequeststatusvalue",
-      "label": "ServiceRequestStatusValue",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "servicerequeststatusvalue",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L15"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_sosdeliveryattemptviewmodel",
-      "label": "SosDeliveryAttemptViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "sosdeliveryattemptviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L1016"
     },
     {
       "id": "apps_operations_resources_js_types_workspace_sosincidentcategoryvalue",
@@ -1804,24 +1219,11 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "sosincidentcategoryvalue",
       "source_file": "apps/operations/resources/js/types/workspace.ts",
       "source_location": "L47"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_sosincidentlocationviewmodel",
-      "label": "SosIncidentLocationViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "sosincidentlocationviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L1007"
     },
     {
       "id": "apps_operations_resources_js_types_workspace_sosincidentstatusvalue",
@@ -1830,7 +1232,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "sosincidentstatusvalue",
       "source_file": "apps/operations/resources/js/types/workspace.ts",
@@ -1843,63 +1245,11 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "sosincidentviewmodel",
       "source_file": "apps/operations/resources/js/types/workspace.ts",
       "source_location": "L1025"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_soslocationfreshness",
-      "label": "SosLocationFreshness",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "soslocationfreshness",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L57"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_sospersonviewmodel",
-      "label": "SosPersonViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "sospersonviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L1001"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_telemetryfreshnessstatus",
-      "label": "TelemetryFreshnessStatus",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "telemetryfreshnessstatus",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L291"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_workspaceflash",
-      "label": "WorkspaceFlash",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "workspaceflash",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L1100"
     },
     {
       "id": "apps_operations_resources_js_types_workspace_workspacefreshness",
@@ -1908,7 +1258,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "workspacefreshness",
       "source_file": "apps/operations/resources/js/types/workspace.ts",
@@ -1921,7 +1271,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "workspacepageprops",
       "source_file": "apps/operations/resources/js/types/workspace.ts",
@@ -1934,37 +1284,11 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "workspacerefreshstate",
       "source_file": "apps/operations/resources/js/types/workspace.ts",
       "source_location": "L1095"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_workspacescopefreshness",
-      "label": "WorkspaceScopeFreshness",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "workspacescopefreshness",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L1073"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_workspacetrackingfreshness",
-      "label": "WorkspaceTrackingFreshness",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "workspacetrackingfreshness",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L1078"
     },
     {
       "id": "apps_operations_app_modules_dispatch_planning_models_projectphase_projectphase",
@@ -10430,58 +9754,6 @@
       "source_location": "L47"
     },
     {
-      "id": "apps_operations_resources_js_components_workspace_reports_job_report_cross_references_crossreferences",
-      "label": "CrossReferences",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "crossreferences",
-      "source_file": "apps/operations/resources/js/components/workspace/reports/job-report-cross-references.tsx",
-      "source_location": "L10"
-    },
-    {
-      "id": "apps_operations_resources_js_components_workspace_reports_job_report_cross_references_jobreportcrossreferencesprops",
-      "label": "JobReportCrossReferencesProps",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "jobreportcrossreferencesprops",
-      "source_file": "apps/operations/resources/js/components/workspace/reports/job-report-cross-references.tsx",
-      "source_location": "L24"
-    },
-    {
-      "id": "apps_operations_resources_js_components_workspace_reports_workspace_section_reportfilterstatus",
-      "label": "ReportFilterStatus",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "reportfilterstatus",
-      "source_file": "apps/operations/resources/js/components/workspace/reports-workspace-section.tsx",
-      "source_location": "L51"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_archivedjobviewmodel",
-      "label": "ArchivedJobViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "archivedjobviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L896"
-    },
-    {
       "id": "apps_operations_resources_js_types_workspace_assetstatusvalue",
       "label": "AssetStatusValue",
       "_callable": true,
@@ -10508,58 +9780,6 @@
       "source_location": "L472"
     },
     {
-      "id": "apps_operations_resources_js_types_workspace_attachmentviewmodel",
-      "label": "AttachmentViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "attachmentviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L819"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_fuelrequeststatsviewmodel",
-      "label": "FuelRequestStatsViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "fuelrequeststatsviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L1170"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_jobreportstatsviewmodel",
-      "label": "JobReportStatsViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "jobreportstatsviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L1180"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_jobreportviewmodel",
-      "label": "JobReportViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "jobreportviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L829"
-    },
-    {
       "id": "apps_operations_resources_js_types_workspace_locationupdateviewmodel",
       "label": "LocationUpdateViewModel",
       "_callable": true,
@@ -10584,19 +9804,6 @@
       "norm_label": "paginationmeta",
       "source_file": "apps/operations/resources/js/types/workspace.ts",
       "source_location": "L1161"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace_reportexportviewmodel",
-      "label": "ReportExportViewModel",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "reportexportviewmodel",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L909"
     },
     {
       "id": "apps_operations_app_platform_workspace_http_requests_dispatchdeskincomingrequest_dispatchdeskincomingrequest",
@@ -11532,7 +10739,7 @@
       "file_type": "code",
       "norm_label": "managerschedulepanelprops",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L102"
+      "source_location": "L103"
     },
     {
       "id": "apps_operations_resources_js_components_dashboards_manager_manager_ui_segment",
@@ -15903,6 +15110,19 @@
       "source_location": "L66"
     },
     {
+      "id": "apps_operations_resources_js_types_auth_auth",
+      "label": "Auth",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 85,
+      "community_name": "live-workspace-shell.tsx",
+      "file_type": "code",
+      "norm_label": "auth",
+      "source_file": "apps/operations/resources/js/types/auth.ts",
+      "source_location": "L13"
+    },
+    {
       "id": "apps_operations_resources_js_types_auth_user",
       "label": "User",
       "_callable": true,
@@ -15916,6 +15136,32 @@
       "source_location": "L1"
     },
     {
+      "id": "apps_operations_resources_js_types_global_d_inertiaconfig",
+      "label": "InertiaConfig",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 85,
+      "community_name": "live-workspace-shell.tsx",
+      "file_type": "code",
+      "norm_label": "inertiaconfig",
+      "source_file": "apps/operations/resources/js/types/global.d.ts",
+      "source_location": "L12"
+    },
+    {
+      "id": "apps_operations_resources_js_types_global_d_inputhtmlattributes",
+      "label": "InputHTMLAttributes",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 85,
+      "community_name": "live-workspace-shell.tsx",
+      "file_type": "code",
+      "norm_label": "inputhtmlattributes",
+      "source_file": "apps/operations/resources/js/types/global.d.ts",
+      "source_location": "L6"
+    },
+    {
       "id": "apps_operations_resources_js_types_workspace_notificationviewmodel",
       "label": "NotificationViewModel",
       "_callable": true,
@@ -15927,6 +15173,19 @@
       "norm_label": "notificationviewmodel",
       "source_file": "apps/operations/resources/js/types/workspace.ts",
       "source_location": "L882"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_workspaceflash",
+      "label": "WorkspaceFlash",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 85,
+      "community_name": "live-workspace-shell.tsx",
+      "file_type": "code",
+      "norm_label": "workspaceflash",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L1100"
     },
     {
       "id": "apps_operations_resources_js_types_workspace_workspacenavigationitem",
@@ -16000,7 +15259,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 88,
-      "community_name": "canonical-status-badge.tsx",
+      "community_name": "workspace.ts",
       "file_type": "code",
       "norm_label": "badgesize",
       "source_file": "apps/operations/resources/js/components/workspace/canonical-status-badge.tsx",
@@ -16013,7 +15272,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 88,
-      "community_name": "canonical-status-badge.tsx",
+      "community_name": "workspace.ts",
       "file_type": "code",
       "norm_label": "badgevariant",
       "source_file": "apps/operations/resources/js/components/workspace/canonical-status-badge.tsx",
@@ -16026,7 +15285,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 88,
-      "community_name": "canonical-status-badge.tsx",
+      "community_name": "workspace.ts",
       "file_type": "code",
       "norm_label": "canonicalstatusbadgeprops",
       "source_file": "apps/operations/resources/js/components/workspace/canonical-status-badge.tsx",
@@ -16039,7 +15298,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 88,
-      "community_name": "canonical-status-badge.tsx",
+      "community_name": "workspace.ts",
       "file_type": "code",
       "norm_label": "statuspresentation",
       "source_file": "apps/operations/resources/js/components/workspace/canonical-status-badge.tsx",
@@ -16052,11 +15311,63 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 88,
-      "community_name": "canonical-status-badge.tsx",
+      "community_name": "workspace.ts",
       "file_type": "code",
       "norm_label": "statustone",
       "source_file": "apps/operations/resources/js/components/workspace/canonical-status-badge.tsx",
       "source_location": "L15"
+    },
+    {
+      "id": "apps_operations_resources_js_components_workspace_live_dispatch_intake_incomingqueuepage",
+      "label": "IncomingQueuePage",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "incomingqueuepage",
+      "source_file": "apps/operations/resources/js/components/workspace/live-dispatch-intake.tsx",
+      "source_location": "L48"
+    },
+    {
+      "id": "apps_operations_resources_js_components_workspace_reports_job_report_cross_references_crossreferences",
+      "label": "CrossReferences",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "crossreferences",
+      "source_file": "apps/operations/resources/js/components/workspace/reports/job-report-cross-references.tsx",
+      "source_location": "L10"
+    },
+    {
+      "id": "apps_operations_resources_js_components_workspace_reports_job_report_cross_references_jobreportcrossreferencesprops",
+      "label": "JobReportCrossReferencesProps",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "jobreportcrossreferencesprops",
+      "source_file": "apps/operations/resources/js/components/workspace/reports/job-report-cross-references.tsx",
+      "source_location": "L24"
+    },
+    {
+      "id": "apps_operations_resources_js_components_workspace_reports_workspace_section_reportfilterstatus",
+      "label": "ReportFilterStatus",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "reportfilterstatus",
+      "source_file": "apps/operations/resources/js/components/workspace/reports-workspace-section.tsx",
+      "source_location": "L51"
     },
     {
       "id": "apps_operations_resources_js_types_dispatch_dispatchrequirementitem",
@@ -16065,7 +15376,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 88,
-      "community_name": "canonical-status-badge.tsx",
+      "community_name": "workspace.ts",
       "file_type": "code",
       "norm_label": "dispatchrequirementitem",
       "source_file": "apps/operations/resources/js/types/dispatch.ts",
@@ -16078,7 +15389,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 88,
-      "community_name": "canonical-status-badge.tsx",
+      "community_name": "workspace.ts",
       "file_type": "code",
       "norm_label": "dispatchsourcetype",
       "source_file": "apps/operations/resources/js/types/dispatch.ts",
@@ -16091,7 +15402,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 88,
-      "community_name": "canonical-status-badge.tsx",
+      "community_name": "workspace.ts",
       "file_type": "code",
       "norm_label": "dispatchsourceviewmodel",
       "source_file": "apps/operations/resources/js/types/dispatch.ts",
@@ -16104,7 +15415,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 88,
-      "community_name": "canonical-status-badge.tsx",
+      "community_name": "workspace.ts",
       "file_type": "code",
       "norm_label": "geocoordinates",
       "source_file": "apps/operations/resources/js/types/dispatch.ts",
@@ -16117,7 +15428,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 88,
-      "community_name": "canonical-status-badge.tsx",
+      "community_name": "workspace.ts",
       "file_type": "code",
       "norm_label": "rentalitemcontext",
       "source_file": "apps/operations/resources/js/types/dispatch.ts",
@@ -16130,7 +15441,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 88,
-      "community_name": "canonical-status-badge.tsx",
+      "community_name": "workspace.ts",
       "file_type": "code",
       "norm_label": "sourceawareintakeformdata",
       "source_file": "apps/operations/resources/js/types/dispatch.ts",
@@ -16143,11 +15454,128 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 88,
-      "community_name": "canonical-status-badge.tsx",
+      "community_name": "workspace.ts",
       "file_type": "code",
       "norm_label": "unlinkedhandoffitem",
       "source_file": "apps/operations/resources/js/types/dispatch.ts",
       "source_location": "L46"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_approvalstatusvalue",
+      "label": "ApprovalStatusValue",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "approvalstatusvalue",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L45"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_archivedjobviewmodel",
+      "label": "ArchivedJobViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "archivedjobviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L896"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_assetdispatchabilityblockerviewmodel",
+      "label": "AssetDispatchabilityBlockerViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "assetdispatchabilityblockerviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L450"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_assetdispatchabilityviewmodel",
+      "label": "AssetDispatchabilityViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "assetdispatchabilityviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L456"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_assetdocumentviewmodel",
+      "label": "AssetDocumentViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "assetdocumentviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L517"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_assetlockoutviewmodel",
+      "label": "AssetLockoutViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "assetlockoutviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L440"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_assetstatuschangeviewmodel",
+      "label": "AssetStatusChangeViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "assetstatuschangeviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L461"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_assignmentscheduleconflictviewmodel",
+      "label": "AssignmentScheduleConflictViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "assignmentscheduleconflictviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L1304"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_attachmentviewmodel",
+      "label": "AttachmentViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "attachmentviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L819"
     },
     {
       "id": "apps_operations_resources_js_types_workspace_canonicalstatusvalue",
@@ -16156,11 +15584,115 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 88,
-      "community_name": "canonical-status-badge.tsx",
+      "community_name": "workspace.ts",
       "file_type": "code",
       "norm_label": "canonicalstatusvalue",
       "source_file": "apps/operations/resources/js/types/workspace.ts",
       "source_location": "L62"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_commercialdispatchhandoffviewmodel",
+      "label": "CommercialDispatchHandoffViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "commercialdispatchhandoffviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L230"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_dispatchassignmentviewmodel",
+      "label": "DispatchAssignmentViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "dispatchassignmentviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L76"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_dispatchexecutiondelayviewmodel",
+      "label": "DispatchExecutionDelayViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "dispatchexecutiondelayviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L1437"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_dispatchexecutionlocationviewmodel",
+      "label": "DispatchExecutionLocationViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "dispatchexecutionlocationviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L1378"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_dispatchexecutionmilestoneviewmodel",
+      "label": "DispatchExecutionMilestoneViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "dispatchexecutionmilestoneviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L1372"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_dispatchexecutionreportviewmodel",
+      "label": "DispatchExecutionReportViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "dispatchexecutionreportviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L1390"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_dispatchexecutionviewmodel",
+      "label": "DispatchExecutionViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "dispatchexecutionviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L1461"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_dispatchhandoffevidenceviewmodel",
+      "label": "DispatchHandoffEvidenceViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "dispatchhandoffevidenceviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L1401"
     },
     {
       "id": "apps_operations_resources_js_types_workspace_dispatchpriorityvalue",
@@ -16169,11 +15701,440 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 88,
-      "community_name": "canonical-status-badge.tsx",
+      "community_name": "workspace.ts",
       "file_type": "code",
       "norm_label": "dispatchpriorityvalue",
       "source_file": "apps/operations/resources/js/types/workspace.ts",
       "source_location": "L13"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_dispatchrequirementitem",
+      "label": "DispatchRequirementItem",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "dispatchrequirementitem",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L116"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_dispatchsourcetype",
+      "label": "DispatchSourceType",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "dispatchsourcetype",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L113"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_dispatchstatusvalue",
+      "label": "DispatchStatusValue",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "dispatchstatusvalue",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_dvirinspectiondefectviewmodel",
+      "label": "DvirInspectionDefectViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "dvirinspectiondefectviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L399"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_dvirinspectionsummaryviewmodel",
+      "label": "DvirInspectionSummaryViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "dvirinspectionsummaryviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L427"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_dviroverallstatusvalue",
+      "label": "DvirOverallStatusValue",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "dviroverallstatusvalue",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L380"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_dvirphotoviewmodel",
+      "label": "DvirPhotoViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "dvirphotoviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L387"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_equipmenthosviewmodel",
+      "label": "EquipmentHosViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "equipmenthosviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L315"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_fatiguestatusvalue",
+      "label": "FatigueStatusValue",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "fatiguestatusvalue",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L312"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_fuellogviewmodel",
+      "label": "FuelLogViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "fuellogviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L548"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_fuelnoreceiptreasonvalue",
+      "label": "FuelNoReceiptReasonValue",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "fuelnoreceiptreasonvalue",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L28"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_fuelrequeststatsviewmodel",
+      "label": "FuelRequestStatsViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "fuelrequeststatsviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L1170"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_fuelrequeststatusvalue",
+      "label": "FuelRequestStatusValue",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "fuelrequeststatusvalue",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L17"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_fuelurgencyvalue",
+      "label": "FuelUrgencyValue",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "fuelurgencyvalue",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L26"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_geocoordinates",
+      "label": "GeoCoordinates",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "geocoordinates",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L130"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_hosdutystatusvalue",
+      "label": "HosDutyStatusValue",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "hosdutystatusvalue",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L309"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_inspectionviewmodel",
+      "label": "InspectionViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "inspectionviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L267"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_jobreportstatsviewmodel",
+      "label": "JobReportStatsViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "jobreportstatsviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L1180"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_jobreportviewmodel",
+      "label": "JobReportViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "jobreportviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L829"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_maintenanceworkorderviewmodel",
+      "label": "MaintenanceWorkOrderViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "maintenanceworkorderviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L276"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_operatorbindingviewmodel",
+      "label": "OperatorBindingViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "operatorbindingviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L294"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_personnelcredentialviewmodel",
+      "label": "PersonnelCredentialViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "personnelcredentialviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L681"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_personnelprofileviewmodel",
+      "label": "PersonnelProfileViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "personnelprofileviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L714"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_refreshstatus",
+      "label": "RefreshStatus",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "refreshstatus",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L1071"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_rentaldispatchhandoffviewmodel",
+      "label": "RentalDispatchHandoffViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "rentaldispatchhandoffviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L245"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_rentalitemcontext",
+      "label": "RentalItemContext",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "rentalitemcontext",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L123"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_reportexportstatusvalue",
+      "label": "ReportExportStatusValue",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "reportexportstatusvalue",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L59"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_reportexportviewmodel",
+      "label": "ReportExportViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "reportexportviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L909"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_servicerequeststatusvalue",
+      "label": "ServiceRequestStatusValue",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "servicerequeststatusvalue",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L15"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_sosdeliveryattemptviewmodel",
+      "label": "SosDeliveryAttemptViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "sosdeliveryattemptviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L1016"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_sosincidentlocationviewmodel",
+      "label": "SosIncidentLocationViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "sosincidentlocationviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L1007"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_soslocationfreshness",
+      "label": "SosLocationFreshness",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "soslocationfreshness",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L57"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_sospersonviewmodel",
+      "label": "SosPersonViewModel",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "sospersonviewmodel",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L1001"
     },
     {
       "id": "apps_operations_resources_js_types_workspace_statusviewmodel",
@@ -16182,11 +16143,50 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 88,
-      "community_name": "canonical-status-badge.tsx",
+      "community_name": "workspace.ts",
       "file_type": "code",
       "norm_label": "statusviewmodel",
       "source_file": "apps/operations/resources/js/types/workspace.ts",
       "source_location": "L71"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_telemetryfreshnessstatus",
+      "label": "TelemetryFreshnessStatus",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "telemetryfreshnessstatus",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L291"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_workspacescopefreshness",
+      "label": "WorkspaceScopeFreshness",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "workspacescopefreshness",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L1073"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace_workspacetrackingfreshness",
+      "label": "WorkspaceTrackingFreshness",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "workspacetrackingfreshness",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
+      "source_location": "L1078"
     },
     {
       "id": "apps_operations_app_platform_safety_actions_escalateunacknowledgedsosincident_escalateunacknowledgedsosincident",
@@ -16990,7 +16990,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "activesosbanner()",
       "source_file": "apps/operations/resources/js/components/sos/active-sos-banner.tsx",
@@ -17002,7 +17002,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "formatsosage()",
       "source_file": "apps/operations/resources/js/components/sos/sos-helpers.ts",
@@ -17014,7 +17014,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "formatsostimestamp()",
       "source_file": "apps/operations/resources/js/components/sos/sos-helpers.ts",
@@ -17026,7 +17026,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "humanizesosvalue()",
       "source_file": "apps/operations/resources/js/components/sos/sos-helpers.ts",
@@ -17038,7 +17038,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "isunresolvedsosstatus()",
       "source_file": "apps/operations/resources/js/components/sos/sos-helpers.ts",
@@ -17050,7 +17050,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "soscategorylabel()",
       "source_file": "apps/operations/resources/js/components/sos/sos-helpers.ts",
@@ -17062,7 +17062,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "sosstatuslabel()",
       "source_file": "apps/operations/resources/js/components/sos/sos-helpers.ts",
@@ -17074,7 +17074,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "detailpair()",
       "source_file": "apps/operations/resources/js/components/sos/sos-incident-detail.tsx",
@@ -17086,7 +17086,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "sosincidentdetail()",
       "source_file": "apps/operations/resources/js/components/sos/sos-incident-detail.tsx",
@@ -17098,7 +17098,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "soslocationsummary()",
       "source_file": "apps/operations/resources/js/components/sos/sos-location-summary.tsx",
@@ -17110,7 +17110,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "tomaplocation()",
       "source_file": "apps/operations/resources/js/components/sos/sos-location-summary.tsx",
@@ -17122,7 +17122,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "sosresolutionform()",
       "source_file": "apps/operations/resources/js/components/sos/sos-resolution-form.tsx",
@@ -17134,7 +17134,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "sosresponsequeue()",
       "source_file": "apps/operations/resources/js/components/sos/sos-response-queue.tsx",
@@ -17146,7 +17146,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "outboxqueuepanel()",
       "source_file": "apps/operations/resources/js/components/workspace/tracking-workspace-section.tsx",
@@ -17158,7 +17158,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "getoutboxqueue()",
       "source_file": "apps/operations/resources/js/lib/outbox.ts",
@@ -17170,7 +17170,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "queuecommand()",
       "source_file": "apps/operations/resources/js/lib/outbox.ts",
@@ -17182,7 +17182,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "removeoutboxitem()",
       "source_file": "apps/operations/resources/js/lib/outbox.ts",
@@ -17194,7 +17194,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "saveoutboxqueue()",
       "source_file": "apps/operations/resources/js/lib/outbox.ts",
@@ -17206,7 +17206,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "syncoutbox()",
       "source_file": "apps/operations/resources/js/lib/outbox.ts",
@@ -17218,7 +17218,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "syncoutboxqueue()",
       "source_file": "apps/operations/resources/js/lib/outbox.ts",
@@ -17230,7 +17230,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "updateoutboxitemstatus()",
       "source_file": "apps/operations/resources/js/lib/outbox.ts",
@@ -17242,7 +17242,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "applyfullrefreshfreshness()",
       "source_file": "apps/operations/resources/js/pages/workspace.tsx",
@@ -17254,7 +17254,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "createinitialrefreshstate()",
       "source_file": "apps/operations/resources/js/pages/workspace.tsx",
@@ -17266,7 +17266,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "createinitialscoperefreshstate()",
       "source_file": "apps/operations/resources/js/pages/workspace.tsx",
@@ -17278,7 +17278,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "flashnotice()",
       "source_file": "apps/operations/resources/js/pages/workspace.tsx",
@@ -17290,7 +17290,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "getinitialwsstate()",
       "source_file": "apps/operations/resources/js/pages/workspace.tsx",
@@ -17302,7 +17302,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "getpageworkspacefreshness()",
       "source_file": "apps/operations/resources/js/pages/workspace.tsx",
@@ -17314,7 +17314,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "hassectionprops()",
       "source_file": "apps/operations/resources/js/pages/workspace.tsx",
@@ -17326,7 +17326,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "isstale()",
       "source_file": "apps/operations/resources/js/pages/workspace.tsx",
@@ -17338,7 +17338,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "locationerrormessage()",
       "source_file": "apps/operations/resources/js/pages/workspace.tsx",
@@ -17350,7 +17350,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "scopefreshness()",
       "source_file": "apps/operations/resources/js/pages/workspace.tsx",
@@ -17362,7 +17362,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "statenotice()",
       "source_file": "apps/operations/resources/js/pages/workspace.tsx",
@@ -17374,7 +17374,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "successfulrefreshstate()",
       "source_file": "apps/operations/resources/js/pages/workspace.tsx",
@@ -17386,7 +17386,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "successtoast()",
       "source_file": "apps/operations/resources/js/pages/workspace.tsx",
@@ -17398,7 +17398,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "workspace()",
       "source_file": "apps/operations/resources/js/pages/workspace.tsx",
@@ -17410,7 +17410,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "workspacesectionloading()",
       "source_file": "apps/operations/resources/js/pages/workspace.tsx",
@@ -44849,30 +44849,6 @@
       "source_location": "L9"
     },
     {
-      "id": "apps_operations_resources_js_components_workspace_archive_workspace_section_archivesurface",
-      "label": "ArchiveSurface()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "archivesurface()",
-      "source_file": "apps/operations/resources/js/components/workspace/archive-workspace-section.tsx",
-      "source_location": "L24"
-    },
-    {
-      "id": "apps_operations_resources_js_components_workspace_exports_workspace_section_exportssurface",
-      "label": "ExportsSurface()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "exportssurface()",
-      "source_file": "apps/operations/resources/js/components/workspace/exports-workspace-section.tsx",
-      "source_location": "L34"
-    },
-    {
       "id": "apps_operations_resources_js_components_workspace_fleet_dvir_status_badge_dvirstatusbadge",
       "label": "DvirStatusBadge()",
       "_callable": true,
@@ -45089,150 +45065,6 @@
       "source_location": "L41"
     },
     {
-      "id": "apps_operations_resources_js_components_workspace_live_workspace_sections_assetlistskeleton",
-      "label": "AssetListSkeleton()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "assetlistskeleton()",
-      "source_file": "apps/operations/resources/js/components/workspace/live-workspace-sections.tsx",
-      "source_location": "L1681"
-    },
-    {
-      "id": "apps_operations_resources_js_components_workspace_live_workspace_sections_auditsurface",
-      "label": "AuditSurface()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "auditsurface()",
-      "source_file": "apps/operations/resources/js/components/workspace/live-workspace-sections.tsx",
-      "source_location": "L217"
-    },
-    {
-      "id": "apps_operations_resources_js_components_workspace_live_workspace_sections_fueltableskeleton",
-      "label": "FuelTableSkeleton()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "fueltableskeleton()",
-      "source_file": "apps/operations/resources/js/components/workspace/live-workspace-sections.tsx",
-      "source_location": "L1698"
-    },
-    {
-      "id": "apps_operations_resources_js_components_workspace_live_workspace_sections_liveworkspacesection",
-      "label": "LiveWorkspaceSection()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "liveworkspacesection()",
-      "source_file": "apps/operations/resources/js/components/workspace/live-workspace-sections.tsx",
-      "source_location": "L53"
-    },
-    {
-      "id": "apps_operations_resources_js_components_workspace_live_workspace_sections_responsivetable",
-      "label": "ResponsiveTable()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "responsivetable()",
-      "source_file": "apps/operations/resources/js/components/workspace/live-workspace-sections.tsx",
-      "source_location": "L1613"
-    },
-    {
-      "id": "apps_operations_resources_js_components_workspace_reports_job_report_cross_references_jobreportcrossreferences",
-      "label": "JobReportCrossReferences()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "jobreportcrossreferences()",
-      "source_file": "apps/operations/resources/js/components/workspace/reports/job-report-cross-references.tsx",
-      "source_location": "L29"
-    },
-    {
-      "id": "apps_operations_resources_js_components_workspace_reports_job_report_delay_logs_table_jobreportdelaylogstable",
-      "label": "JobReportDelayLogsTable()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "jobreportdelaylogstable()",
-      "source_file": "apps/operations/resources/js/components/workspace/reports/job-report-delay-logs-table.tsx",
-      "source_location": "L20"
-    },
-    {
-      "id": "apps_operations_resources_js_components_workspace_reports_job_report_signature_card_jobreportsignaturecard",
-      "label": "JobReportSignatureCard()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "jobreportsignaturecard()",
-      "source_file": "apps/operations/resources/js/components/workspace/reports/job-report-signature-card.tsx",
-      "source_location": "L14"
-    },
-    {
-      "id": "apps_operations_resources_js_components_workspace_reports_workspace_section_reportdetailpane",
-      "label": "ReportDetailPane()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "reportdetailpane()",
-      "source_file": "apps/operations/resources/js/components/workspace/reports-workspace-section.tsx",
-      "source_location": "L1488"
-    },
-    {
-      "id": "apps_operations_resources_js_components_workspace_reports_workspace_section_reportssurface",
-      "label": "ReportsSurface()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "reportssurface()",
-      "source_file": "apps/operations/resources/js/components/workspace/reports-workspace-section.tsx",
-      "source_location": "L54"
-    },
-    {
-      "id": "apps_operations_resources_js_components_workspace_reports_workspace_section_resubmitjobreportmodal",
-      "label": "ResubmitJobReportModal()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "resubmitjobreportmodal()",
-      "source_file": "apps/operations/resources/js/components/workspace/reports-workspace-section.tsx",
-      "source_location": "L1184"
-    },
-    {
-      "id": "apps_operations_resources_js_components_workspace_reports_workspace_section_submitjobreportform",
-      "label": "SubmitJobReportForm()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "submitjobreportform()",
-      "source_file": "apps/operations/resources/js/components/workspace/reports-workspace-section.tsx",
-      "source_location": "L634"
-    },
-    {
       "id": "apps_operations_tests_react_components_fleetsurface_test_createasset",
       "label": "createAsset()",
       "_callable": true,
@@ -45267,138 +45099,6 @@
       "norm_label": "createlocation()",
       "source_file": "apps/operations/tests/React/Components/FleetSurface.test.tsx",
       "source_location": "L230"
-    },
-    {
-      "id": "apps_operations_tests_react_components_phase1factualandsemanticverifications_test_createasset",
-      "label": "createAsset()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "createasset()",
-      "source_file": "apps/operations/tests/React/Components/Phase1FactualAndSemanticVerifications.test.tsx",
-      "source_location": "L140"
-    },
-    {
-      "id": "apps_operations_tests_react_components_phase1factualandsemanticverifications_test_createcapabilities",
-      "label": "createCapabilities()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "createcapabilities()",
-      "source_file": "apps/operations/tests/React/Components/Phase1FactualAndSemanticVerifications.test.tsx",
-      "source_location": "L96"
-    },
-    {
-      "id": "apps_operations_tests_react_components_phase1factualandsemanticverifications_test_createlocation",
-      "label": "createLocation()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "createlocation()",
-      "source_file": "apps/operations/tests/React/Components/Phase1FactualAndSemanticVerifications.test.tsx",
-      "source_location": "L179"
-    },
-    {
-      "id": "apps_operations_tests_react_components_phase1selectionandstateisolation_test_createasset",
-      "label": "createAsset()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "createasset()",
-      "source_file": "apps/operations/tests/React/Components/Phase1SelectionAndStateIsolation.test.tsx",
-      "source_location": "L134"
-    },
-    {
-      "id": "apps_operations_tests_react_components_phase1selectionandstateisolation_test_createcapabilities",
-      "label": "createCapabilities()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "createcapabilities()",
-      "source_file": "apps/operations/tests/React/Components/Phase1SelectionAndStateIsolation.test.tsx",
-      "source_location": "L90"
-    },
-    {
-      "id": "apps_operations_tests_react_components_phase1selectionandstateisolation_test_createreport",
-      "label": "createReport()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "createreport()",
-      "source_file": "apps/operations/tests/React/Components/Phase1SelectionAndStateIsolation.test.tsx",
-      "source_location": "L179"
-    },
-    {
-      "id": "apps_operations_tests_react_components_phase2leadintegration_test_createasset",
-      "label": "createAsset()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "createasset()",
-      "source_file": "apps/operations/tests/React/Components/Phase2LeadIntegration.test.tsx",
-      "source_location": "L154"
-    },
-    {
-      "id": "apps_operations_tests_react_components_phase2leadintegration_test_createcapabilities",
-      "label": "createCapabilities()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "createcapabilities()",
-      "source_file": "apps/operations/tests/React/Components/Phase2LeadIntegration.test.tsx",
-      "source_location": "L110"
-    },
-    {
-      "id": "apps_operations_tests_react_components_phase2leadintegration_test_createfuelrequest",
-      "label": "createFuelRequest()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "createfuelrequest()",
-      "source_file": "apps/operations/tests/React/Components/Phase2LeadIntegration.test.tsx",
-      "source_location": "L222"
-    },
-    {
-      "id": "apps_operations_tests_react_components_phase2leadintegration_test_createjobreport",
-      "label": "createJobReport()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "createjobreport()",
-      "source_file": "apps/operations/tests/React/Components/Phase2LeadIntegration.test.tsx",
-      "source_location": "L256"
-    },
-    {
-      "id": "apps_operations_tests_react_components_phase2leadintegration_test_createlocation",
-      "label": "createLocation()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "createlocation()",
-      "source_file": "apps/operations/tests/React/Components/Phase2LeadIntegration.test.tsx",
-      "source_location": "L193"
     },
     {
       "id": "apps_operations_tests_react_components_phase2selectionstateadversarialharness_test_createasset",
@@ -45459,30 +45159,6 @@
       "norm_label": "createreport()",
       "source_file": "apps/operations/tests/React/Components/Phase2SelectionStateAdversarialHarness.test.tsx",
       "source_location": "L271"
-    },
-    {
-      "id": "apps_operations_tests_react_components_reportssurface_test_createcapabilities",
-      "label": "createCapabilities()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "createcapabilities()",
-      "source_file": "apps/operations/tests/React/Components/ReportsSurface.test.tsx",
-      "source_location": "L92"
-    },
-    {
-      "id": "apps_operations_tests_react_components_reportssurface_test_createreport",
-      "label": "createReport()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "createreport()",
-      "source_file": "apps/operations/tests/React/Components/ReportsSurface.test.tsx",
-      "source_location": "L136"
     },
     {
       "id": "apps_operations_app_platform_workspace_http_requests_dispatchdeskincomingrequest_dispatchdeskincomingrequest_authorize",
@@ -47366,7 +47042,7 @@
       "file_type": "code",
       "norm_label": "datafreshness()",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-dashboard-header.tsx",
-      "source_location": "L67"
+      "source_location": "L72"
     },
     {
       "id": "apps_operations_resources_js_components_dashboards_manager_manager_dashboard_header_managerdashboardheader",
@@ -47870,7 +47546,7 @@
       "file_type": "code",
       "norm_label": "metriccell()",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-metric-strip.tsx",
-      "source_location": "L270"
+      "source_location": "L279"
     },
     {
       "id": "apps_operations_resources_js_components_dashboards_manager_manager_metric_strip_metriclegend",
@@ -47882,7 +47558,7 @@
       "file_type": "code",
       "norm_label": "metriclegend()",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-metric-strip.tsx",
-      "source_location": "L348"
+      "source_location": "L359"
     },
     {
       "id": "apps_operations_resources_js_components_dashboards_manager_manager_metric_strip_metricloading",
@@ -47894,7 +47570,7 @@
       "file_type": "code",
       "norm_label": "metricloading()",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-metric-strip.tsx",
-      "source_location": "L426"
+      "source_location": "L437"
     },
     {
       "id": "apps_operations_resources_js_components_dashboards_manager_manager_metric_strip_metricnote",
@@ -47906,7 +47582,7 @@
       "file_type": "code",
       "norm_label": "metricnote()",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-metric-strip.tsx",
-      "source_location": "L370"
+      "source_location": "L381"
     },
     {
       "id": "apps_operations_resources_js_components_dashboards_manager_manager_metric_strip_metricvalue",
@@ -47918,7 +47594,7 @@
       "file_type": "code",
       "norm_label": "metricvalue()",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-metric-strip.tsx",
-      "source_location": "L318"
+      "source_location": "L329"
     },
     {
       "id": "apps_operations_resources_js_components_dashboards_manager_manager_metric_strip_queuechip",
@@ -47930,7 +47606,7 @@
       "file_type": "code",
       "norm_label": "queuechip()",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-metric-strip.tsx",
-      "source_location": "L394"
+      "source_location": "L405"
     },
     {
       "id": "apps_operations_resources_js_components_dashboards_manager_manager_schedule_panel_formattimerange",
@@ -47942,7 +47618,7 @@
       "file_type": "code",
       "norm_label": "formattimerange()",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L575"
+      "source_location": "L580"
     },
     {
       "id": "apps_operations_resources_js_components_dashboards_manager_manager_schedule_panel_formatupcomingstart",
@@ -47954,7 +47630,7 @@
       "file_type": "code",
       "norm_label": "formatupcomingstart()",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L635"
+      "source_location": "L640"
     },
     {
       "id": "apps_operations_resources_js_components_dashboards_manager_manager_schedule_panel_hourlabel",
@@ -47966,7 +47642,7 @@
       "file_type": "code",
       "norm_label": "hourlabel()",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L359"
+      "source_location": "L361"
     },
     {
       "id": "apps_operations_resources_js_components_dashboards_manager_manager_schedule_panel_managerschedulepanel",
@@ -47978,7 +47654,7 @@
       "file_type": "code",
       "norm_label": "managerschedulepanel()",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L114"
+      "source_location": "L115"
     },
     {
       "id": "apps_operations_resources_js_components_dashboards_manager_manager_schedule_panel_scheduleerror",
@@ -47990,7 +47666,7 @@
       "file_type": "code",
       "norm_label": "scheduleerror()",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L647"
+      "source_location": "L652"
     },
     {
       "id": "apps_operations_resources_js_components_dashboards_manager_manager_schedule_panel_schedulerow",
@@ -48002,7 +47678,7 @@
       "file_type": "code",
       "norm_label": "schedulerow()",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L441"
+      "source_location": "L446"
     },
     {
       "id": "apps_operations_resources_js_components_dashboards_manager_manager_schedule_panel_scheduleskeleton",
@@ -48014,7 +47690,7 @@
       "file_type": "code",
       "norm_label": "scheduleskeleton()",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L676"
+      "source_location": "L681"
     },
     {
       "id": "apps_operations_resources_js_components_dashboards_manager_manager_schedule_panel_scheduletimeline",
@@ -48026,7 +47702,7 @@
       "file_type": "code",
       "norm_label": "scheduletimeline()",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L366"
+      "source_location": "L368"
     },
     {
       "id": "apps_operations_resources_js_components_dashboards_manager_manager_schedule_panel_upnextlist",
@@ -48038,7 +47714,7 @@
       "file_type": "code",
       "norm_label": "upnextlist()",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L595"
+      "source_location": "L600"
     },
     {
       "id": "apps_operations_resources_js_components_dashboards_manager_manager_ui_filterbutton",
@@ -61049,6 +60725,330 @@
       "source_location": "L39"
     },
     {
+      "id": "apps_operations_resources_js_components_workspace_archive_workspace_section_archivesurface",
+      "label": "ArchiveSurface()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "archivesurface()",
+      "source_file": "apps/operations/resources/js/components/workspace/archive-workspace-section.tsx",
+      "source_location": "L24"
+    },
+    {
+      "id": "apps_operations_resources_js_components_workspace_exports_workspace_section_exportssurface",
+      "label": "ExportsSurface()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "exportssurface()",
+      "source_file": "apps/operations/resources/js/components/workspace/exports-workspace-section.tsx",
+      "source_location": "L34"
+    },
+    {
+      "id": "apps_operations_resources_js_components_workspace_live_workspace_sections_assetlistskeleton",
+      "label": "AssetListSkeleton()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "assetlistskeleton()",
+      "source_file": "apps/operations/resources/js/components/workspace/live-workspace-sections.tsx",
+      "source_location": "L1681"
+    },
+    {
+      "id": "apps_operations_resources_js_components_workspace_live_workspace_sections_auditsurface",
+      "label": "AuditSurface()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "auditsurface()",
+      "source_file": "apps/operations/resources/js/components/workspace/live-workspace-sections.tsx",
+      "source_location": "L217"
+    },
+    {
+      "id": "apps_operations_resources_js_components_workspace_live_workspace_sections_fueltableskeleton",
+      "label": "FuelTableSkeleton()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "fueltableskeleton()",
+      "source_file": "apps/operations/resources/js/components/workspace/live-workspace-sections.tsx",
+      "source_location": "L1698"
+    },
+    {
+      "id": "apps_operations_resources_js_components_workspace_live_workspace_sections_liveworkspacesection",
+      "label": "LiveWorkspaceSection()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "liveworkspacesection()",
+      "source_file": "apps/operations/resources/js/components/workspace/live-workspace-sections.tsx",
+      "source_location": "L53"
+    },
+    {
+      "id": "apps_operations_resources_js_components_workspace_live_workspace_sections_responsivetable",
+      "label": "ResponsiveTable()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "responsivetable()",
+      "source_file": "apps/operations/resources/js/components/workspace/live-workspace-sections.tsx",
+      "source_location": "L1613"
+    },
+    {
+      "id": "apps_operations_resources_js_components_workspace_reports_job_report_cross_references_jobreportcrossreferences",
+      "label": "JobReportCrossReferences()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "jobreportcrossreferences()",
+      "source_file": "apps/operations/resources/js/components/workspace/reports/job-report-cross-references.tsx",
+      "source_location": "L29"
+    },
+    {
+      "id": "apps_operations_resources_js_components_workspace_reports_job_report_delay_logs_table_jobreportdelaylogstable",
+      "label": "JobReportDelayLogsTable()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "jobreportdelaylogstable()",
+      "source_file": "apps/operations/resources/js/components/workspace/reports/job-report-delay-logs-table.tsx",
+      "source_location": "L20"
+    },
+    {
+      "id": "apps_operations_resources_js_components_workspace_reports_job_report_signature_card_jobreportsignaturecard",
+      "label": "JobReportSignatureCard()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "jobreportsignaturecard()",
+      "source_file": "apps/operations/resources/js/components/workspace/reports/job-report-signature-card.tsx",
+      "source_location": "L14"
+    },
+    {
+      "id": "apps_operations_resources_js_components_workspace_reports_workspace_section_reportdetailpane",
+      "label": "ReportDetailPane()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "reportdetailpane()",
+      "source_file": "apps/operations/resources/js/components/workspace/reports-workspace-section.tsx",
+      "source_location": "L1488"
+    },
+    {
+      "id": "apps_operations_resources_js_components_workspace_reports_workspace_section_reportssurface",
+      "label": "ReportsSurface()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "reportssurface()",
+      "source_file": "apps/operations/resources/js/components/workspace/reports-workspace-section.tsx",
+      "source_location": "L54"
+    },
+    {
+      "id": "apps_operations_resources_js_components_workspace_reports_workspace_section_resubmitjobreportmodal",
+      "label": "ResubmitJobReportModal()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "resubmitjobreportmodal()",
+      "source_file": "apps/operations/resources/js/components/workspace/reports-workspace-section.tsx",
+      "source_location": "L1184"
+    },
+    {
+      "id": "apps_operations_resources_js_components_workspace_reports_workspace_section_submitjobreportform",
+      "label": "SubmitJobReportForm()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "submitjobreportform()",
+      "source_file": "apps/operations/resources/js/components/workspace/reports-workspace-section.tsx",
+      "source_location": "L634"
+    },
+    {
+      "id": "apps_operations_tests_react_components_phase1factualandsemanticverifications_test_createasset",
+      "label": "createAsset()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "createasset()",
+      "source_file": "apps/operations/tests/React/Components/Phase1FactualAndSemanticVerifications.test.tsx",
+      "source_location": "L140"
+    },
+    {
+      "id": "apps_operations_tests_react_components_phase1factualandsemanticverifications_test_createcapabilities",
+      "label": "createCapabilities()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "createcapabilities()",
+      "source_file": "apps/operations/tests/React/Components/Phase1FactualAndSemanticVerifications.test.tsx",
+      "source_location": "L96"
+    },
+    {
+      "id": "apps_operations_tests_react_components_phase1factualandsemanticverifications_test_createlocation",
+      "label": "createLocation()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "createlocation()",
+      "source_file": "apps/operations/tests/React/Components/Phase1FactualAndSemanticVerifications.test.tsx",
+      "source_location": "L179"
+    },
+    {
+      "id": "apps_operations_tests_react_components_phase1selectionandstateisolation_test_createasset",
+      "label": "createAsset()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "createasset()",
+      "source_file": "apps/operations/tests/React/Components/Phase1SelectionAndStateIsolation.test.tsx",
+      "source_location": "L134"
+    },
+    {
+      "id": "apps_operations_tests_react_components_phase1selectionandstateisolation_test_createcapabilities",
+      "label": "createCapabilities()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "createcapabilities()",
+      "source_file": "apps/operations/tests/React/Components/Phase1SelectionAndStateIsolation.test.tsx",
+      "source_location": "L90"
+    },
+    {
+      "id": "apps_operations_tests_react_components_phase1selectionandstateisolation_test_createreport",
+      "label": "createReport()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "createreport()",
+      "source_file": "apps/operations/tests/React/Components/Phase1SelectionAndStateIsolation.test.tsx",
+      "source_location": "L179"
+    },
+    {
+      "id": "apps_operations_tests_react_components_phase2leadintegration_test_createasset",
+      "label": "createAsset()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "createasset()",
+      "source_file": "apps/operations/tests/React/Components/Phase2LeadIntegration.test.tsx",
+      "source_location": "L154"
+    },
+    {
+      "id": "apps_operations_tests_react_components_phase2leadintegration_test_createcapabilities",
+      "label": "createCapabilities()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "createcapabilities()",
+      "source_file": "apps/operations/tests/React/Components/Phase2LeadIntegration.test.tsx",
+      "source_location": "L110"
+    },
+    {
+      "id": "apps_operations_tests_react_components_phase2leadintegration_test_createfuelrequest",
+      "label": "createFuelRequest()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "createfuelrequest()",
+      "source_file": "apps/operations/tests/React/Components/Phase2LeadIntegration.test.tsx",
+      "source_location": "L222"
+    },
+    {
+      "id": "apps_operations_tests_react_components_phase2leadintegration_test_createjobreport",
+      "label": "createJobReport()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "createjobreport()",
+      "source_file": "apps/operations/tests/React/Components/Phase2LeadIntegration.test.tsx",
+      "source_location": "L256"
+    },
+    {
+      "id": "apps_operations_tests_react_components_phase2leadintegration_test_createlocation",
+      "label": "createLocation()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "createlocation()",
+      "source_file": "apps/operations/tests/React/Components/Phase2LeadIntegration.test.tsx",
+      "source_location": "L193"
+    },
+    {
+      "id": "apps_operations_tests_react_components_reportssurface_test_createcapabilities",
+      "label": "createCapabilities()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "createcapabilities()",
+      "source_file": "apps/operations/tests/React/Components/ReportsSurface.test.tsx",
+      "source_location": "L92"
+    },
+    {
+      "id": "apps_operations_tests_react_components_reportssurface_test_createreport",
+      "label": "createReport()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "createreport()",
+      "source_file": "apps/operations/tests/React/Components/ReportsSurface.test.tsx",
+      "source_location": "L136"
+    },
+    {
       "id": "packages_field_mobile_e2e_fuel_workflow_e2e_test_advancefuelrequestonweb",
       "label": "advanceFuelRequestOnWeb()",
       "_callable": true,
@@ -63940,7 +63940,7 @@
       "label": "active-sos-banner.tsx",
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "active-sos-banner.tsx",
       "source_file": "apps/operations/resources/js/components/sos/active-sos-banner.tsx",
@@ -63951,7 +63951,7 @@
       "label": "sos-helpers.ts",
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "sos-helpers.ts",
       "source_file": "apps/operations/resources/js/components/sos/sos-helpers.ts",
@@ -63962,7 +63962,7 @@
       "label": "sos-incident-detail.tsx",
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "sos-incident-detail.tsx",
       "source_file": "apps/operations/resources/js/components/sos/sos-incident-detail.tsx",
@@ -63973,7 +63973,7 @@
       "label": "sos-location-summary.tsx",
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "sos-location-summary.tsx",
       "source_file": "apps/operations/resources/js/components/sos/sos-location-summary.tsx",
@@ -63984,7 +63984,7 @@
       "label": "LiveTrackingMap",
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "livetrackingmap",
       "source_file": "apps/operations/resources/js/components/sos/sos-location-summary.tsx",
@@ -63995,7 +63995,7 @@
       "label": "sos-response-queue.tsx",
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "sos-response-queue.tsx",
       "source_file": "apps/operations/resources/js/components/sos/sos-response-queue.tsx",
@@ -64006,7 +64006,7 @@
       "label": "outbox.ts",
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "outbox.ts",
       "source_file": "apps/operations/resources/js/lib/outbox.ts",
@@ -64017,7 +64017,7 @@
       "label": "workspace.tsx",
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "workspace.tsx",
       "source_file": "apps/operations/resources/js/pages/workspace.tsx",
@@ -64028,143 +64028,11 @@
       "label": "SECTION_PROPS",
       "_origin": "ast",
       "community": 10,
-      "community_name": "workspace.ts",
+      "community_name": "workspace.tsx",
       "file_type": "code",
       "norm_label": "section_props",
       "source_file": "apps/operations/resources/js/pages/workspace.tsx",
       "source_location": "L33"
-    },
-    {
-      "id": "apps_operations_resources_js_types_global_d",
-      "label": "global.d.ts",
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "global.d.ts",
-      "source_file": "apps/operations/resources/js/types/global.d.ts",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_operations_resources_js_types_global_d_inertiajs_core",
-      "label": "@inertiajs/core",
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "@inertiajs/core",
-      "source_file": "apps/operations/resources/js/types/global.d.ts",
-      "source_location": "L11"
-    },
-    {
-      "id": "apps_operations_resources_js_types_global_d_react",
-      "label": "react",
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "react",
-      "source_file": "apps/operations/resources/js/types/global.d.ts",
-      "source_location": "L4"
-    },
-    {
-      "id": "apps_operations_resources_js_types_workspace",
-      "label": "workspace.ts",
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "workspace.ts",
-      "source_file": "apps/operations/resources/js/types/workspace.ts",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_operations_tests_react_components_compliancedocumentmanagement_test",
-      "label": "ComplianceDocumentManagement.test.tsx",
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "compliancedocumentmanagement.test.tsx",
-      "source_file": "apps/operations/tests/React/Components/ComplianceDocumentManagement.test.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_operations_tests_react_components_compliancedocumentmanagement_test_defaultcapabilities",
-      "label": "defaultCapabilities",
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "defaultcapabilities",
-      "source_file": "apps/operations/tests/React/Components/ComplianceDocumentManagement.test.tsx",
-      "source_location": "L67"
-    },
-    {
-      "id": "apps_operations_tests_react_components_compliancedocumentmanagement_test_mockpatch",
-      "label": "mockPatch",
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "mockpatch",
-      "source_file": "apps/operations/tests/React/Components/ComplianceDocumentManagement.test.tsx",
-      "source_location": "L14"
-    },
-    {
-      "id": "apps_operations_tests_react_components_compliancedocumentmanagement_test_mockpost",
-      "label": "mockPost",
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "mockpost",
-      "source_file": "apps/operations/tests/React/Components/ComplianceDocumentManagement.test.tsx",
-      "source_location": "L13"
-    },
-    {
-      "id": "apps_operations_tests_react_components_compliancedocumentmanagement_test_mockrouterdelete",
-      "label": "mockRouterDelete",
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "mockrouterdelete",
-      "source_file": "apps/operations/tests/React/Components/ComplianceDocumentManagement.test.tsx",
-      "source_location": "L15"
-    },
-    {
-      "id": "apps_operations_tests_react_components_compliancedocumentmanagement_test_sampleasset",
-      "label": "sampleAsset",
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "sampleasset",
-      "source_file": "apps/operations/tests/React/Components/ComplianceDocumentManagement.test.tsx",
-      "source_location": "L135"
-    },
-    {
-      "id": "apps_operations_tests_react_components_compliancedocumentmanagement_test_samplecredential",
-      "label": "sampleCredential",
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "samplecredential",
-      "source_file": "apps/operations/tests/React/Components/ComplianceDocumentManagement.test.tsx",
-      "source_location": "L106"
-    },
-    {
-      "id": "apps_operations_tests_react_components_compliancedocumentmanagement_test_sampleuser",
-      "label": "sampleUser",
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "workspace.ts",
-      "file_type": "code",
-      "norm_label": "sampleuser",
-      "source_file": "apps/operations/tests/React/Components/ComplianceDocumentManagement.test.tsx",
-      "source_location": "L125"
     },
     {
       "id": "apps_operations_app_modules_dispatch_planning_http_planningrequest",
@@ -79918,28 +79786,6 @@
       "source_location": "L1"
     },
     {
-      "id": "apps_operations_tests_react_components_livetrackingmapselection_test",
-      "label": "LiveTrackingMapSelection.test.tsx",
-      "_origin": "ast",
-      "community": 22,
-      "community_name": "live-tracking-map.tsx",
-      "file_type": "code",
-      "norm_label": "livetrackingmapselection.test.tsx",
-      "source_file": "apps/operations/tests/React/Components/LiveTrackingMapSelection.test.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_operations_tests_react_components_livetrackingmapselection_test_location",
-      "label": "location",
-      "_origin": "ast",
-      "community": 22,
-      "community_name": "live-tracking-map.tsx",
-      "file_type": "code",
-      "norm_label": "location",
-      "source_file": "apps/operations/tests/React/Components/LiveTrackingMapSelection.test.tsx",
-      "source_location": "L10"
-    },
-    {
       "id": "apps_operations_tests_react_components_reversegeocoder_test",
       "label": "ReverseGeocoder.test.ts",
       "_origin": "ast",
@@ -85712,50 +85558,6 @@
       "source_location": "L15"
     },
     {
-      "id": "apps_operations_resources_js_components_workspace_live_workspace_sections",
-      "label": "live-workspace-sections.tsx",
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "live-workspace-sections.tsx",
-      "source_file": "apps/operations/resources/js/components/workspace/live-workspace-sections.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_operations_resources_js_components_workspace_reports_index",
-      "label": "reports/index.ts",
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "reports/index.ts",
-      "source_file": "apps/operations/resources/js/components/workspace/reports/index.ts",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_operations_resources_js_components_workspace_reports_job_report_cross_references",
-      "label": "job-report-cross-references.tsx",
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "job-report-cross-references.tsx",
-      "source_file": "apps/operations/resources/js/components/workspace/reports/job-report-cross-references.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_operations_resources_js_components_workspace_reports_workspace_section",
-      "label": "reports-workspace-section.tsx",
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "reports-workspace-section.tsx",
-      "source_file": "apps/operations/resources/js/components/workspace/reports-workspace-section.tsx",
-      "source_location": "L1"
-    },
-    {
       "id": "apps_operations_tests_react_components_fleetsurface_test",
       "label": "FleetSurface.test.tsx",
       "_origin": "ast",
@@ -85776,72 +85578,6 @@
       "norm_label": "mockpost",
       "source_file": "apps/operations/tests/React/Components/FleetSurface.test.tsx",
       "source_location": "L26"
-    },
-    {
-      "id": "apps_operations_tests_react_components_phase1factualandsemanticverifications_test",
-      "label": "Phase1FactualAndSemanticVerifications.test.tsx",
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "phase1factualandsemanticverifications.test.tsx",
-      "source_file": "apps/operations/tests/React/Components/Phase1FactualAndSemanticVerifications.test.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_operations_tests_react_components_phase1factualandsemanticverifications_test_mockpageerrors",
-      "label": "mockPageErrors",
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "mockpageerrors",
-      "source_file": "apps/operations/tests/React/Components/Phase1FactualAndSemanticVerifications.test.tsx",
-      "source_location": "L18"
-    },
-    {
-      "id": "apps_operations_tests_react_components_phase1selectionandstateisolation_test",
-      "label": "Phase1SelectionAndStateIsolation.test.tsx",
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "phase1selectionandstateisolation.test.tsx",
-      "source_file": "apps/operations/tests/React/Components/Phase1SelectionAndStateIsolation.test.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_operations_tests_react_components_phase1selectionandstateisolation_test_mockpageerrors",
-      "label": "mockPageErrors",
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "mockpageerrors",
-      "source_file": "apps/operations/tests/React/Components/Phase1SelectionAndStateIsolation.test.tsx",
-      "source_location": "L12"
-    },
-    {
-      "id": "apps_operations_tests_react_components_phase2leadintegration_test",
-      "label": "Phase2LeadIntegration.test.tsx",
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "phase2leadintegration.test.tsx",
-      "source_file": "apps/operations/tests/React/Components/Phase2LeadIntegration.test.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_operations_tests_react_components_phase2leadintegration_test_mockpost",
-      "label": "mockPost",
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "mockpost",
-      "source_file": "apps/operations/tests/React/Components/Phase2LeadIntegration.test.tsx",
-      "source_location": "L19"
     },
     {
       "id": "apps_operations_tests_react_components_phase2selectionstateadversarialharness_test",
@@ -85888,28 +85624,6 @@
       "source_location": "L18"
     },
     {
-      "id": "apps_operations_tests_react_components_reportssurface_test",
-      "label": "ReportsSurface.test.tsx",
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "reportssurface.test.tsx",
-      "source_file": "apps/operations/tests/React/Components/ReportsSurface.test.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_operations_tests_react_components_reportssurface_test_mockpageerrors",
-      "label": "mockPageErrors",
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "code",
-      "norm_label": "mockpageerrors",
-      "source_file": "apps/operations/tests/React/Components/ReportsSurface.test.tsx",
-      "source_location": "L13"
-    },
-    {
       "id": "docs_plans_fleet_fuel_reports_ux_plan_fleet_management",
       "label": "Fleet management",
       "_origin": "ast",
@@ -85919,42 +85633,6 @@
       "node_kind": "heading",
       "norm_label": "fleet management",
       "source_file": "Docs/plans/fleet-fuel-reports-ux-plan.md",
-      "source_location": "L101"
-    },
-    {
-      "id": "project_asset_viewmodel_contract_assetviewmodel",
-      "label": "Asset ViewModel Contract (`AssetViewModel`)",
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "asset viewmodel contract (`assetviewmodel`)",
-      "source_file": "PROJECT.md",
-      "source_location": "L58"
-    },
-    {
-      "id": "project_interface_contracts",
-      "label": "Interface Contracts",
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "interface contracts",
-      "source_file": "PROJECT.md",
-      "source_location": "L57"
-    },
-    {
-      "id": "project_job_report_viewmodel_contract_jobreportviewmodel",
-      "label": "Job Report ViewModel Contract (`JobReportViewModel`)",
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "AssetViewModel",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "job report viewmodel contract (`jobreportviewmodel`)",
-      "source_file": "PROJECT.md",
       "source_location": "L101"
     },
     {
@@ -87284,7 +86962,7 @@
       "file_type": "code",
       "norm_label": "bar_styles",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L64"
+      "source_location": "L65"
     },
     {
       "id": "apps_operations_resources_js_components_dashboards_manager_manager_schedule_panel_datetimeformatter",
@@ -87295,7 +86973,7 @@
       "file_type": "code",
       "norm_label": "datetimeformatter",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L88"
+      "source_location": "L89"
     },
     {
       "id": "apps_operations_resources_js_components_dashboards_manager_manager_schedule_panel_hourformatter",
@@ -87306,7 +86984,7 @@
       "file_type": "code",
       "norm_label": "hourformatter",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L87"
+      "source_location": "L88"
     },
     {
       "id": "apps_operations_resources_js_components_dashboards_manager_manager_schedule_panel_source_filters",
@@ -87317,7 +86995,7 @@
       "file_type": "code",
       "norm_label": "source_filters",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L57"
+      "source_location": "L58"
     },
     {
       "id": "apps_operations_resources_js_components_dashboards_manager_manager_schedule_panel_upcomingformatter",
@@ -87328,7 +87006,7 @@
       "file_type": "code",
       "norm_label": "upcomingformatter",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L94"
+      "source_location": "L95"
     },
     {
       "id": "apps_operations_resources_js_components_dashboards_manager_manager_ui",
@@ -87482,6 +87160,28 @@
       "file_type": "code",
       "norm_label": "telemetry",
       "source_file": "apps/operations/tests/React/Components/GptRecommendationsSurface.test.tsx",
+      "source_location": "L10"
+    },
+    {
+      "id": "apps_operations_tests_react_components_livetrackingmapselection_test",
+      "label": "LiveTrackingMapSelection.test.tsx",
+      "_origin": "ast",
+      "community": 37,
+      "community_name": "manager-dashboard-model.ts",
+      "file_type": "code",
+      "norm_label": "livetrackingmapselection.test.tsx",
+      "source_file": "apps/operations/tests/React/Components/LiveTrackingMapSelection.test.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_operations_tests_react_components_livetrackingmapselection_test_location",
+      "label": "location",
+      "_origin": "ast",
+      "community": 37,
+      "community_name": "manager-dashboard-model.ts",
+      "file_type": "code",
+      "norm_label": "location",
+      "source_file": "apps/operations/tests/React/Components/LiveTrackingMapSelection.test.tsx",
       "source_location": "L10"
     },
     {
@@ -100470,6 +100170,39 @@
       "source_location": "L1"
     },
     {
+      "id": "apps_operations_resources_js_types_global_d",
+      "label": "global.d.ts",
+      "_origin": "ast",
+      "community": 85,
+      "community_name": "live-workspace-shell.tsx",
+      "file_type": "code",
+      "norm_label": "global.d.ts",
+      "source_file": "apps/operations/resources/js/types/global.d.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_operations_resources_js_types_global_d_inertiajs_core",
+      "label": "@inertiajs/core",
+      "_origin": "ast",
+      "community": 85,
+      "community_name": "live-workspace-shell.tsx",
+      "file_type": "code",
+      "norm_label": "@inertiajs/core",
+      "source_file": "apps/operations/resources/js/types/global.d.ts",
+      "source_location": "L11"
+    },
+    {
+      "id": "apps_operations_resources_js_types_global_d_react",
+      "label": "react",
+      "_origin": "ast",
+      "community": 85,
+      "community_name": "live-workspace-shell.tsx",
+      "file_type": "code",
+      "norm_label": "react",
+      "source_file": "apps/operations/resources/js/types/global.d.ts",
+      "source_location": "L4"
+    },
+    {
       "id": "apps_operations_resources_js_types_index",
       "label": "js/types/index.ts",
       "_origin": "ast",
@@ -100865,7 +100598,7 @@
       "label": "canonical-status-badge.tsx",
       "_origin": "ast",
       "community": 88,
-      "community_name": "canonical-status-badge.tsx",
+      "community_name": "workspace.ts",
       "file_type": "code",
       "norm_label": "canonical-status-badge.tsx",
       "source_file": "apps/operations/resources/js/components/workspace/canonical-status-badge.tsx",
@@ -100876,7 +100609,7 @@
       "label": "liveStatuses",
       "_origin": "ast",
       "community": 88,
-      "community_name": "canonical-status-badge.tsx",
+      "community_name": "workspace.ts",
       "file_type": "code",
       "norm_label": "livestatuses",
       "source_file": "apps/operations/resources/js/components/workspace/canonical-status-badge.tsx",
@@ -100887,7 +100620,7 @@
       "label": "sizeClasses",
       "_origin": "ast",
       "community": 88,
-      "community_name": "canonical-status-badge.tsx",
+      "community_name": "workspace.ts",
       "file_type": "code",
       "norm_label": "sizeclasses",
       "source_file": "apps/operations/resources/js/components/workspace/canonical-status-badge.tsx",
@@ -100898,7 +100631,7 @@
       "label": "statusIcons",
       "_origin": "ast",
       "community": 88,
-      "community_name": "canonical-status-badge.tsx",
+      "community_name": "workspace.ts",
       "file_type": "code",
       "norm_label": "statusicons",
       "source_file": "apps/operations/resources/js/components/workspace/canonical-status-badge.tsx",
@@ -100909,7 +100642,7 @@
       "label": "statusTones",
       "_origin": "ast",
       "community": 88,
-      "community_name": "canonical-status-badge.tsx",
+      "community_name": "workspace.ts",
       "file_type": "code",
       "norm_label": "statustones",
       "source_file": "apps/operations/resources/js/components/workspace/canonical-status-badge.tsx",
@@ -100920,7 +100653,7 @@
       "label": "toneClasses",
       "_origin": "ast",
       "community": 88,
-      "community_name": "canonical-status-badge.tsx",
+      "community_name": "workspace.ts",
       "file_type": "code",
       "norm_label": "toneclasses",
       "source_file": "apps/operations/resources/js/components/workspace/canonical-status-badge.tsx",
@@ -100931,7 +100664,7 @@
       "label": "toneDotClasses",
       "_origin": "ast",
       "community": 88,
-      "community_name": "canonical-status-badge.tsx",
+      "community_name": "workspace.ts",
       "file_type": "code",
       "norm_label": "tonedotclasses",
       "source_file": "apps/operations/resources/js/components/workspace/canonical-status-badge.tsx",
@@ -100942,21 +100675,76 @@
       "label": "variantToneClasses",
       "_origin": "ast",
       "community": 88,
-      "community_name": "canonical-status-badge.tsx",
+      "community_name": "workspace.ts",
       "file_type": "code",
       "norm_label": "varianttoneclasses",
       "source_file": "apps/operations/resources/js/components/workspace/canonical-status-badge.tsx",
       "source_location": "L111"
     },
     {
+      "id": "apps_operations_resources_js_components_workspace_live_workspace_sections",
+      "label": "live-workspace-sections.tsx",
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "live-workspace-sections.tsx",
+      "source_file": "apps/operations/resources/js/components/workspace/live-workspace-sections.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_operations_resources_js_components_workspace_reports_index",
+      "label": "reports/index.ts",
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "reports/index.ts",
+      "source_file": "apps/operations/resources/js/components/workspace/reports/index.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_operations_resources_js_components_workspace_reports_job_report_cross_references",
+      "label": "job-report-cross-references.tsx",
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "job-report-cross-references.tsx",
+      "source_file": "apps/operations/resources/js/components/workspace/reports/job-report-cross-references.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_operations_resources_js_components_workspace_reports_workspace_section",
+      "label": "reports-workspace-section.tsx",
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "reports-workspace-section.tsx",
+      "source_file": "apps/operations/resources/js/components/workspace/reports-workspace-section.tsx",
+      "source_location": "L1"
+    },
+    {
       "id": "apps_operations_resources_js_types_dispatch",
       "label": "dispatch.ts",
       "_origin": "ast",
       "community": 88,
-      "community_name": "canonical-status-badge.tsx",
+      "community_name": "workspace.ts",
       "file_type": "code",
       "norm_label": "dispatch.ts",
       "source_file": "apps/operations/resources/js/types/dispatch.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_operations_resources_js_types_workspace",
+      "label": "workspace.ts",
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "workspace.ts",
+      "source_file": "apps/operations/resources/js/types/workspace.ts",
       "source_location": "L1"
     },
     {
@@ -100964,11 +100752,223 @@
       "label": "CanonicalStatusBadge.test.tsx",
       "_origin": "ast",
       "community": 88,
-      "community_name": "canonical-status-badge.tsx",
+      "community_name": "workspace.ts",
       "file_type": "code",
       "norm_label": "canonicalstatusbadge.test.tsx",
       "source_file": "apps/operations/tests/React/Components/CanonicalStatusBadge.test.tsx",
       "source_location": "L1"
+    },
+    {
+      "id": "apps_operations_tests_react_components_compliancedocumentmanagement_test",
+      "label": "ComplianceDocumentManagement.test.tsx",
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "compliancedocumentmanagement.test.tsx",
+      "source_file": "apps/operations/tests/React/Components/ComplianceDocumentManagement.test.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_operations_tests_react_components_compliancedocumentmanagement_test_defaultcapabilities",
+      "label": "defaultCapabilities",
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "defaultcapabilities",
+      "source_file": "apps/operations/tests/React/Components/ComplianceDocumentManagement.test.tsx",
+      "source_location": "L67"
+    },
+    {
+      "id": "apps_operations_tests_react_components_compliancedocumentmanagement_test_mockpatch",
+      "label": "mockPatch",
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "mockpatch",
+      "source_file": "apps/operations/tests/React/Components/ComplianceDocumentManagement.test.tsx",
+      "source_location": "L14"
+    },
+    {
+      "id": "apps_operations_tests_react_components_compliancedocumentmanagement_test_mockpost",
+      "label": "mockPost",
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "mockpost",
+      "source_file": "apps/operations/tests/React/Components/ComplianceDocumentManagement.test.tsx",
+      "source_location": "L13"
+    },
+    {
+      "id": "apps_operations_tests_react_components_compliancedocumentmanagement_test_mockrouterdelete",
+      "label": "mockRouterDelete",
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "mockrouterdelete",
+      "source_file": "apps/operations/tests/React/Components/ComplianceDocumentManagement.test.tsx",
+      "source_location": "L15"
+    },
+    {
+      "id": "apps_operations_tests_react_components_compliancedocumentmanagement_test_sampleasset",
+      "label": "sampleAsset",
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "sampleasset",
+      "source_file": "apps/operations/tests/React/Components/ComplianceDocumentManagement.test.tsx",
+      "source_location": "L135"
+    },
+    {
+      "id": "apps_operations_tests_react_components_compliancedocumentmanagement_test_samplecredential",
+      "label": "sampleCredential",
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "samplecredential",
+      "source_file": "apps/operations/tests/React/Components/ComplianceDocumentManagement.test.tsx",
+      "source_location": "L106"
+    },
+    {
+      "id": "apps_operations_tests_react_components_compliancedocumentmanagement_test_sampleuser",
+      "label": "sampleUser",
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "sampleuser",
+      "source_file": "apps/operations/tests/React/Components/ComplianceDocumentManagement.test.tsx",
+      "source_location": "L125"
+    },
+    {
+      "id": "apps_operations_tests_react_components_phase1factualandsemanticverifications_test",
+      "label": "Phase1FactualAndSemanticVerifications.test.tsx",
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "phase1factualandsemanticverifications.test.tsx",
+      "source_file": "apps/operations/tests/React/Components/Phase1FactualAndSemanticVerifications.test.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_operations_tests_react_components_phase1factualandsemanticverifications_test_mockpageerrors",
+      "label": "mockPageErrors",
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "mockpageerrors",
+      "source_file": "apps/operations/tests/React/Components/Phase1FactualAndSemanticVerifications.test.tsx",
+      "source_location": "L18"
+    },
+    {
+      "id": "apps_operations_tests_react_components_phase1selectionandstateisolation_test",
+      "label": "Phase1SelectionAndStateIsolation.test.tsx",
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "phase1selectionandstateisolation.test.tsx",
+      "source_file": "apps/operations/tests/React/Components/Phase1SelectionAndStateIsolation.test.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_operations_tests_react_components_phase1selectionandstateisolation_test_mockpageerrors",
+      "label": "mockPageErrors",
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "mockpageerrors",
+      "source_file": "apps/operations/tests/React/Components/Phase1SelectionAndStateIsolation.test.tsx",
+      "source_location": "L12"
+    },
+    {
+      "id": "apps_operations_tests_react_components_phase2leadintegration_test",
+      "label": "Phase2LeadIntegration.test.tsx",
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "phase2leadintegration.test.tsx",
+      "source_file": "apps/operations/tests/React/Components/Phase2LeadIntegration.test.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_operations_tests_react_components_phase2leadintegration_test_mockpost",
+      "label": "mockPost",
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "mockpost",
+      "source_file": "apps/operations/tests/React/Components/Phase2LeadIntegration.test.tsx",
+      "source_location": "L19"
+    },
+    {
+      "id": "apps_operations_tests_react_components_reportssurface_test",
+      "label": "ReportsSurface.test.tsx",
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "reportssurface.test.tsx",
+      "source_file": "apps/operations/tests/React/Components/ReportsSurface.test.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_operations_tests_react_components_reportssurface_test_mockpageerrors",
+      "label": "mockPageErrors",
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "code",
+      "norm_label": "mockpageerrors",
+      "source_file": "apps/operations/tests/React/Components/ReportsSurface.test.tsx",
+      "source_location": "L13"
+    },
+    {
+      "id": "project_asset_viewmodel_contract_assetviewmodel",
+      "label": "Asset ViewModel Contract (`AssetViewModel`)",
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "asset viewmodel contract (`assetviewmodel`)",
+      "source_file": "PROJECT.md",
+      "source_location": "L58"
+    },
+    {
+      "id": "project_interface_contracts",
+      "label": "Interface Contracts",
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "interface contracts",
+      "source_file": "PROJECT.md",
+      "source_location": "L57"
+    },
+    {
+      "id": "project_job_report_viewmodel_contract_jobreportviewmodel",
+      "label": "Job Report ViewModel Contract (`JobReportViewModel`)",
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "workspace.ts",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "job report viewmodel contract (`jobreportviewmodel`)",
+      "source_file": "PROJECT.md",
+      "source_location": "L101"
     },
     {
       "id": "packages_field_mobile_e2e_fuel_workflow_e2e_test",
@@ -104326,6 +104326,18 @@
       "type": "external"
     },
     {
+      "id": "apps_operations_resources_js_components_ui_buttonvariants",
+      "label": "apps_operations_resources_js_components_ui_buttonvariants",
+      "_origin": "semantic",
+      "community": 37,
+      "community_name": "manager-dashboard-model.ts",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "apps_operations_resources_js_components_ui_buttonvariants",
+      "source_file": "",
+      "type": "external"
+    },
+    {
       "id": "ref_testing_library_jest_dom",
       "label": "ref_testing_library_jest_dom",
       "_origin": "semantic",
@@ -105114,17 +105126,6 @@
       "external": true,
       "file_type": "concept",
       "norm_label": "apps_operations_resources_js_components_approvals_index_approvalssurface",
-      "source_file": "",
-      "type": "external"
-    },
-    {
-      "id": "apps_operations_resources_js_components_ui_buttonvariants",
-      "label": "apps_operations_resources_js_components_ui_buttonvariants",
-      "community": 37,
-      "community_name": "manager-dashboard-model.ts",
-      "external": true,
-      "file_type": "concept",
-      "norm_label": "apps_operations_resources_js_components_ui_buttonvariants",
       "source_file": "",
       "type": "external"
     }
@@ -123751,7 +123752,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-dashboard-header.tsx",
-      "source_location": "L116",
+      "source_location": "L121",
       "weight": 1.0
     },
     {
@@ -123763,7 +123764,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-dashboard-header.tsx",
-      "source_location": "L79",
+      "source_location": "L84",
       "weight": 1.0
     },
     {
@@ -123775,7 +123776,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-dashboard-header.tsx",
-      "source_location": "L87",
+      "source_location": "L92",
       "weight": 1.0
     },
     {
@@ -124399,7 +124400,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-metric-strip.tsx",
-      "source_location": "L85",
+      "source_location": "L88",
       "weight": 1.0
     },
     {
@@ -124411,7 +124412,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-metric-strip.tsx",
-      "source_location": "L86",
+      "source_location": "L89",
       "weight": 1.0
     },
     {
@@ -124423,7 +124424,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-metric-strip.tsx",
-      "source_location": "L287",
+      "source_location": "L296",
       "weight": 1.0
     },
     {
@@ -124435,7 +124436,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-metric-strip.tsx",
-      "source_location": "L381",
+      "source_location": "L392",
       "weight": 1.0
     },
     {
@@ -124447,7 +124448,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-metric-strip.tsx",
-      "source_location": "L330",
+      "source_location": "L341",
       "weight": 1.0
     },
     {
@@ -124459,7 +124460,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-metric-strip.tsx",
-      "source_location": "L410",
+      "source_location": "L421",
       "weight": 1.0
     },
     {
@@ -124471,7 +124472,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L576",
+      "source_location": "L581",
       "weight": 1.0
     },
     {
@@ -124483,7 +124484,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L582",
+      "source_location": "L587",
       "weight": 1.0
     },
     {
@@ -124495,7 +124496,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L586",
+      "source_location": "L591",
       "weight": 1.0
     },
     {
@@ -124507,7 +124508,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L125",
+      "source_location": "L126",
       "weight": 1.0
     },
     {
@@ -124519,7 +124520,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L126",
+      "source_location": "L127",
       "weight": 1.0
     },
     {
@@ -124531,7 +124532,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L127",
+      "source_location": "L128",
       "weight": 1.0
     },
     {
@@ -124543,7 +124544,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L128",
+      "source_location": "L129",
       "weight": 1.0
     },
     {
@@ -124555,7 +124556,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L130",
+      "source_location": "L131",
       "weight": 1.0
     },
     {
@@ -124567,7 +124568,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L131",
+      "source_location": "L132",
       "weight": 1.0
     },
     {
@@ -124579,7 +124580,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L135",
+      "source_location": "L136",
       "weight": 1.0
     },
     {
@@ -124591,7 +124592,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L162",
+      "source_location": "L163",
       "weight": 1.0
     },
     {
@@ -124603,7 +124604,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L659",
+      "source_location": "L664",
       "weight": 1.0
     },
     {
@@ -124615,7 +124616,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L454",
+      "source_location": "L459",
       "weight": 1.0
     },
     {
@@ -124627,7 +124628,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L455",
+      "source_location": "L460",
       "weight": 1.0
     },
     {
@@ -124639,7 +124640,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L460",
+      "source_location": "L465",
       "weight": 1.0
     },
     {
@@ -124651,7 +124652,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L467",
+      "source_location": "L472",
       "weight": 1.0
     },
     {
@@ -124663,24 +124664,12 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L469",
+      "source_location": "L474",
       "weight": 1.0
     },
     {
       "source": "apps_operations_resources_js_components_dashboards_manager_manager_schedule_panel_schedulerow",
       "target": "apps_operations_resources_js_components_dashboards_manager_manager_dashboard_model_dispatchdetailhref",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L488",
-      "weight": 1.0
-    },
-    {
-      "source": "apps_operations_resources_js_components_dashboards_manager_manager_schedule_panel_schedulerow",
-      "target": "apps_operations_resources_js_components_dashboards_manager_manager_dashboard_model_sourcelabel",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -124692,6 +124681,18 @@
     },
     {
       "source": "apps_operations_resources_js_components_dashboards_manager_manager_schedule_panel_schedulerow",
+      "target": "apps_operations_resources_js_components_dashboards_manager_manager_dashboard_model_sourcelabel",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
+      "source_location": "L498",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_operations_resources_js_components_dashboards_manager_manager_schedule_panel_schedulerow",
       "target": "apps_operations_resources_js_lib_utils_cn",
       "relation": "calls",
       "_origin": "ast",
@@ -124699,7 +124700,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L504",
+      "source_location": "L509",
       "weight": 1.0
     },
     {
@@ -124711,7 +124712,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L377",
+      "source_location": "L379",
       "weight": 1.0
     },
     {
@@ -124723,7 +124724,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L405",
+      "source_location": "L407",
       "weight": 1.0
     },
     {
@@ -124735,7 +124736,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L420",
+      "source_location": "L422",
       "weight": 1.0
     },
     {
@@ -124747,7 +124748,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L610",
+      "source_location": "L615",
       "weight": 1.0
     },
     {
@@ -124759,7 +124760,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L615",
+      "source_location": "L620",
       "weight": 1.0
     },
     {
@@ -124771,7 +124772,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L624",
+      "source_location": "L629",
       "weight": 1.0
     },
     {
@@ -149088,7 +149089,7 @@
       "confidence_score": 1.0,
       "context": "field",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L103",
+      "source_location": "L104",
       "weight": 1.0
     },
     {
@@ -149100,7 +149101,7 @@
       "confidence_score": 1.0,
       "context": "field",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L105",
+      "source_location": "L106",
       "weight": 1.0
     },
     {
@@ -149112,7 +149113,7 @@
       "confidence_score": 1.0,
       "context": "field",
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L108",
+      "source_location": "L109",
       "weight": 1.0
     },
     {
@@ -246670,6 +246671,30 @@
     },
     {
       "source": "apps_operations_tests_react_components_managerdashboardmodel_test",
+      "target": "apps_operations_resources_js_types_workspace_assetviewmodel",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/operations/tests/React/Components/ManagerDashboardModel.test.ts",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_operations_tests_react_components_managerdashboardmodel_test",
+      "target": "apps_operations_resources_js_types_workspace_dispatchjobviewmodel",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/operations/tests/React/Components/ManagerDashboardModel.test.ts",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_operations_tests_react_components_managerdashboardmodel_test",
       "target": "apps_operations_resources_js_types_workspace_fuellogviewmodel",
       "relation": "imports",
       "_origin": "ast",
@@ -246701,7 +246726,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/operations/tests/React/Components/ManagerDashboardModel.test.ts",
-      "source_location": "L28",
+      "source_location": "L30",
       "weight": 1.0
     },
     {
@@ -246713,7 +246738,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/operations/tests/React/Components/ManagerDashboardModel.test.ts",
-      "source_location": "L28",
+      "source_location": "L30",
       "weight": 1.0
     },
     {
@@ -246725,7 +246750,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/operations/tests/React/Components/ManagerDashboardModel.test.ts",
-      "source_location": "L28",
+      "source_location": "L30",
       "weight": 1.0
     },
     {
@@ -246737,7 +246762,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/operations/tests/React/Components/ManagerDashboardModel.test.ts",
-      "source_location": "L28",
+      "source_location": "L30",
       "weight": 1.0
     },
     {
@@ -246749,7 +246774,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/operations/tests/React/Components/ManagerDashboardModel.test.ts",
-      "source_location": "L28",
+      "source_location": "L30",
       "weight": 1.0
     },
     {
@@ -246761,7 +246786,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/operations/tests/React/Components/ManagerDashboardModel.test.ts",
-      "source_location": "L28",
+      "source_location": "L30",
       "weight": 1.0
     },
     {
@@ -246773,7 +246798,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/operations/tests/React/Components/ManagerDashboardModel.test.ts",
-      "source_location": "L28",
+      "source_location": "L30",
       "weight": 1.0
     },
     {
@@ -246785,7 +246810,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/operations/tests/React/Components/ManagerDashboardModel.test.ts",
-      "source_location": "L28",
+      "source_location": "L30",
       "weight": 1.0
     },
     {
@@ -246797,7 +246822,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/operations/tests/React/Components/ManagerDashboardModel.test.ts",
-      "source_location": "L28",
+      "source_location": "L30",
       "weight": 1.0
     },
     {
@@ -275524,7 +275549,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/operations/tests/React/Components/ManagerDashboardModel.test.ts",
-      "source_location": "L28",
+      "source_location": "L30",
       "weight": 1.0
     },
     {
@@ -336980,7 +337005,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-dashboard-header.tsx",
-      "source_location": "L67",
+      "source_location": "L72",
       "weight": 1.0
     },
     {
@@ -337783,7 +337808,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-metric-strip.tsx",
-      "source_location": "L270",
+      "source_location": "L279",
       "weight": 1.0
     },
     {
@@ -337794,7 +337819,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-metric-strip.tsx",
-      "source_location": "L318",
+      "source_location": "L329",
       "weight": 1.0
     },
     {
@@ -337805,7 +337830,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-metric-strip.tsx",
-      "source_location": "L348",
+      "source_location": "L359",
       "weight": 1.0
     },
     {
@@ -337827,7 +337852,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-metric-strip.tsx",
-      "source_location": "L370",
+      "source_location": "L381",
       "weight": 1.0
     },
     {
@@ -337838,7 +337863,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-metric-strip.tsx",
-      "source_location": "L394",
+      "source_location": "L405",
       "weight": 1.0
     },
     {
@@ -337849,7 +337874,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-metric-strip.tsx",
-      "source_location": "L426",
+      "source_location": "L437",
       "weight": 1.0
     },
     {
@@ -337882,7 +337907,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L102",
+      "source_location": "L103",
       "weight": 1.0
     },
     {
@@ -337893,7 +337918,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L114",
+      "source_location": "L115",
       "weight": 1.0
     },
     {
@@ -337904,7 +337929,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L359",
+      "source_location": "L361",
       "weight": 1.0
     },
     {
@@ -337915,7 +337940,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L366",
+      "source_location": "L368",
       "weight": 1.0
     },
     {
@@ -337926,7 +337951,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L441",
+      "source_location": "L446",
       "weight": 1.0
     },
     {
@@ -337937,7 +337962,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L57",
+      "source_location": "L58",
       "weight": 1.0
     },
     {
@@ -337948,7 +337973,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L575",
+      "source_location": "L580",
       "weight": 1.0
     },
     {
@@ -337959,7 +337984,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L595",
+      "source_location": "L600",
       "weight": 1.0
     },
     {
@@ -337970,7 +337995,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L635",
+      "source_location": "L640",
       "weight": 1.0
     },
     {
@@ -337981,7 +338006,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L64",
+      "source_location": "L65",
       "weight": 1.0
     },
     {
@@ -337992,7 +338017,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L647",
+      "source_location": "L652",
       "weight": 1.0
     },
     {
@@ -338003,7 +338028,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L676",
+      "source_location": "L681",
       "weight": 1.0
     },
     {
@@ -338014,7 +338039,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L87",
+      "source_location": "L88",
       "weight": 1.0
     },
     {
@@ -338025,7 +338050,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L88",
+      "source_location": "L89",
       "weight": 1.0
     },
     {
@@ -338036,7 +338061,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/operations/resources/js/components/dashboards/manager/manager-schedule-panel.tsx",
-      "source_location": "L94",
+      "source_location": "L95",
       "weight": 1.0
     },
     {
@@ -418285,5 +418310,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "35d9621d4964890476556488ebe7ba7eeb3bd037"
+  "built_at_commit": "e25fc7f143d778c4bb298ed37f8c13a73475ef85"
 }
