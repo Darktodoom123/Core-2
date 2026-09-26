@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     },
     categoryText: {
         color: colors.amberDark,
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.8,
         marginBottom: 1,

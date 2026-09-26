@@ -1011,7 +1011,7 @@ const styles = StyleSheet.create({
     },
     badgeText: {
         color: colors.warningDark,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '800',
     },
     darkBadgeText: {
@@ -1085,7 +1085,7 @@ const styles = StyleSheet.create({
     },
     sectionLabel: {
         color: colors.muted,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.6,
         textTransform: 'uppercase',
@@ -1278,12 +1278,12 @@ const styles = StyleSheet.create({
     },
     bluePillBadgeText: {
         color: '#1D4ED8',
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '800',
     },
     darkBluePillBadgeText: {
         color: '#93C5FD',
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '800',
     },
     redPillBadge: {
@@ -1294,12 +1294,12 @@ const styles = StyleSheet.create({
     },
     redPillBadgeText: {
         color: '#B91C1C',
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '800',
     },
     darkRedPillBadgeText: {
         color: '#FCA5A5',
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '800',
     },
     cardActionsRow: {

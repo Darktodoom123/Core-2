@@ -110,10 +110,10 @@ const styles = StyleSheet.create({
     },
     label: {
         color: colors.white,
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '900',
         letterSpacing: 0.6,
-        lineHeight: 12,
+        lineHeight: 16,
     },
     pressed: {
         opacity: 0.82,

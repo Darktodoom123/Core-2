@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
     },
     certBadge: {
         color: colors.warningDark,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.5,
     },
@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
     },
     certNumberStamp: {
         color: colors.muted,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '600',
         marginTop: 4,
     },

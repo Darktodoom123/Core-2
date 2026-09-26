@@ -484,13 +484,13 @@ const styles = StyleSheet.create({
     },
     liveBadgeText: {
         color: '#93C5FD',
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.5,
     },
     coordText: {
         color: '#94A3B8',
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '600',
     },
     corridorCanvas: {
@@ -543,7 +543,7 @@ const styles = StyleSheet.create({
     },
     nodeLabel: {
         color: '#FFFFFF',
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '700',
         marginTop: 4,
         textAlign: 'center',
@@ -563,7 +563,7 @@ const styles = StyleSheet.create({
     },
     selectedBannerText: {
         color: '#FFFFFF',
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '600',
     },
 });

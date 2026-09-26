@@ -614,7 +614,7 @@ const styles = StyleSheet.create({
     },
     categoryPillText: {
         color: colors.muted,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '700',
     },
     darkCategoryPillText: {
@@ -774,7 +774,7 @@ const styles = StyleSheet.create({
     },
     rockerText: {
         color: colors.muted,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '800',
     },
     rockerTextPass: {
@@ -847,8 +847,8 @@ const styles = StyleSheet.create({
     },
     canonicalDvirSubtitle: {
         color: colors.muted,
-        fontSize: 11,
-        lineHeight: 15,
+        fontSize: 12,
+        lineHeight: 16,
         marginTop: 2,
     },
     darkCanonicalDvirSubtitle: {
@@ -896,7 +896,7 @@ const styles = StyleSheet.create({
     },
     linkedWoTag: {
         color: colors.blueDark,
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.5,
     },
@@ -914,7 +914,7 @@ const styles = StyleSheet.create({
     },
     linkedWoSubtitle: {
         color: colors.secondary,
-        fontSize: 11,
+        fontSize: 12,
         marginTop: 2,
     },
     darkLinkedWoSubtitle: {
@@ -934,7 +934,7 @@ const styles = StyleSheet.create({
     },
     changeWoBtnText: {
         color: colors.text,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '700',
     },
     darkChangeWoBtnText: {
@@ -969,7 +969,7 @@ const styles = StyleSheet.create({
     },
     noWoSubtitle: {
         color: '#806000',
-        fontSize: 11,
+        fontSize: 12,
         marginTop: 2,
     },
     darkNoWoSubtitle: {
@@ -986,7 +986,7 @@ const styles = StyleSheet.create({
     },
     goToWoBtnText: {
         color: '#0F172A',
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '700',
     },
     darkGoToWoBtnText: {

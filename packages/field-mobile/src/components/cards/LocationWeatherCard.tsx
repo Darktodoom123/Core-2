@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
     },
     errorMessageText: {
         color: '#806000',
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '500',
     },
     darkErrorMessageText: {
@@ -511,7 +511,7 @@ const styles = StyleSheet.create({
     },
     retryText: {
         color: '#806000',
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '700',
     },
     darkRetryText: {
@@ -558,7 +558,7 @@ const styles = StyleSheet.create({
         width: 5,
     },
     safetyPillText: {
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.3,
     },
@@ -602,7 +602,7 @@ const styles = StyleSheet.create({
     },
     metricMuted: {
         color: colors.muted,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '500',
     },
     darkMetricMuted: {

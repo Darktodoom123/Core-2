@@ -862,7 +862,7 @@ const styles = StyleSheet.create({
     },
     eyebrow: {
         color: colors.redDark,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 1.1,
     },
@@ -980,7 +980,7 @@ const styles = StyleSheet.create({
     },
     holdButtonEyebrow: {
         color: '#FFFFFF',
-        fontSize: 11.5,
+        fontSize: 12,
         fontWeight: '900',
         letterSpacing: 0.6,
         marginBottom: 3,
@@ -1083,7 +1083,7 @@ const styles = StyleSheet.create({
     },
     beaconEyebrow: {
         color: '#FEE2E2',
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '900',
         letterSpacing: 1.1,
     },
@@ -1262,7 +1262,7 @@ const styles = StyleSheet.create({
     },
     confirmSummaryLabel: {
         color: '#94A3B8',
-        fontSize: 10.5,
+        fontSize: 12,
         fontWeight: '900',
         letterSpacing: 0.6,
     },

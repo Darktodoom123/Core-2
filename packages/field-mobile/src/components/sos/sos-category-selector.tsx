@@ -518,7 +518,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255, 255, 255, 0.07)',
     },
     badgeText: {
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '900',
         letterSpacing: 0.5,
     },
@@ -537,7 +537,7 @@ const styles = StyleSheet.create({
     },
     optionSubtitle: {
         color: colors.secondary,
-        fontSize: 11.5,
+        fontSize: 12,
         lineHeight: 16,
         paddingLeft: 38,
     },
@@ -632,7 +632,7 @@ const styles = StyleSheet.create({
     },
     charCount: {
         color: '#94A3B8',
-        fontSize: 11,
+        fontSize: 12,
         fontVariant: ['tabular-nums'],
     },
     transmitBtn: {

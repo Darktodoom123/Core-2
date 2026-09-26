@@ -2008,7 +2008,7 @@ const styles = StyleSheet.create({
     },
     countTagText: {
         color: colors.muted,
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '800',
     },
     countTagTextDark: {
@@ -2112,12 +2112,12 @@ const styles = StyleSheet.create({
         paddingVertical: 2,
     },
     statusPillText: {
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '800',
     },
     docCategoryLabel: {
         color: colors.amberDark,
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.4,
         marginBottom: 3,
@@ -2171,8 +2171,8 @@ const styles = StyleSheet.create({
     },
     conditionText: {
         color: '#806000',
-        fontSize: 11,
-        lineHeight: 15,
+        fontSize: 12,
+        lineHeight: 16,
     },
     conditionTextDark: {
         color: '#FFBF00',
@@ -2196,7 +2196,7 @@ const styles = StyleSheet.create({
     },
     fileTagText: {
         color: colors.muted,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '700',
     },
     fileTagTextDark: {
@@ -2285,7 +2285,7 @@ const styles = StyleSheet.create({
     },
     pdfBadgeText: {
         color: '#FFFFFF',
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '900',
         letterSpacing: 0.5,
     },
@@ -2303,7 +2303,7 @@ const styles = StyleSheet.create({
     },
     pdfFileMeta: {
         color: colors.muted,
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '600',
     },
     pdfFileMetaDark: {
@@ -2393,20 +2393,20 @@ const styles = StyleSheet.create({
     },
     pdfRepublicText: {
         color: '#1E293B',
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '900',
         letterSpacing: 0.8,
         textAlign: 'center',
     },
     pdfAgencyText: {
         color: '#0F172A',
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '800',
         textAlign: 'center',
     },
     pdfBureauText: {
         color: '#64748B',
-        fontSize: 8,
+        fontSize: 12,
         fontWeight: '700',
         letterSpacing: 0.5,
         textAlign: 'center',
@@ -2448,14 +2448,14 @@ const styles = StyleSheet.create({
     pdfBarcodeNumber: {
         color: '#64748B',
         fontFamily: 'monospace',
-        fontSize: 9,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 1,
     },
     pdfPreambleText: {
         color: '#334155',
-        fontSize: 9.5,
-        lineHeight: 14,
+        fontSize: 12,
+        lineHeight: 16,
         marginBottom: 10,
         textAlign: 'justify',
     },
@@ -2488,13 +2488,13 @@ const styles = StyleSheet.create({
     },
     pdfTableHeadText: {
         color: '#475569',
-        fontSize: 8.5,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.4,
     },
     pdfTableBodyText: {
         color: '#0F172A',
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '700',
     },
     pdfValidHighlight: {
@@ -2511,15 +2511,15 @@ const styles = StyleSheet.create({
     },
     pdfConditionsHeader: {
         color: '#806000',
-        fontSize: 8.5,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.4,
         marginBottom: 2,
     },
     pdfConditionsBody: {
         color: '#806000',
-        fontSize: 9.5,
-        lineHeight: 13,
+        fontSize: 12,
+        lineHeight: 16,
     },
     pdfSignaturesBlock: {
         alignItems: 'center',
@@ -2541,12 +2541,12 @@ const styles = StyleSheet.create({
     },
     pdfSigName: {
         color: '#0F172A',
-        fontSize: 8.5,
+        fontSize: 12,
         fontWeight: '800',
     },
     pdfSigTitle: {
         color: '#64748B',
-        fontSize: 7.5,
+        fontSize: 12,
         fontWeight: '600',
     },
     pdfStampSeal: {
@@ -2565,13 +2565,13 @@ const styles = StyleSheet.create({
     },
     pdfStampTextTop: {
         color: '#DC2626',
-        fontSize: 6.5,
+        fontSize: 12,
         fontWeight: '900',
         letterSpacing: 0.5,
     },
     pdfStampTextBottom: {
         color: '#DC2626',
-        fontSize: 6.5,
+        fontSize: 12,
         fontWeight: '900',
         letterSpacing: 0.5,
     },
@@ -2591,17 +2591,17 @@ const styles = StyleSheet.create({
     },
     pdfVerifyTitle: {
         color: '#047857',
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '800',
     },
     pdfVerifySub: {
         color: '#065F46',
-        fontSize: 8,
+        fontSize: 12,
         marginTop: 1,
     },
     pdfRevocationNotice: {
         color: '#806000',
-        fontSize: 7.5,
+        fontSize: 12,
         fontStyle: 'italic',
         marginTop: 2,
     },
@@ -2618,7 +2618,7 @@ const styles = StyleSheet.create({
     },
     offlineNoticeText: {
         flex: 1,
-        fontSize: 11,
+        fontSize: 12,
         color: '#806000',
         fontWeight: '600',
     },
@@ -2637,7 +2637,7 @@ const styles = StyleSheet.create({
     },
     pdfFooterText: {
         color: '#94A3B8',
-        fontSize: 7,
+        fontSize: 12,
         fontWeight: '700',
         letterSpacing: 0.4,
         textAlign: 'center',
@@ -2718,7 +2718,7 @@ const styles = StyleSheet.create({
     },
     certNumberLabel: {
         color: colors.muted,
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.5,
     },
@@ -2759,7 +2759,7 @@ const styles = StyleSheet.create({
     },
     specLabel: {
         color: colors.muted,
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.5,
     },
@@ -2786,7 +2786,7 @@ const styles = StyleSheet.create({
     },
     notesBoxTitle: {
         color: '#806000',
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.5,
         marginBottom: 4,
@@ -2827,7 +2827,7 @@ const styles = StyleSheet.create({
     },
     verificationSub: {
         color: '#065F46',
-        fontSize: 11,
+        fontSize: 12,
         marginTop: 2,
     },
     verificationSubDark: {
@@ -2922,11 +2922,11 @@ const styles = StyleSheet.create({
         borderColor: colors.hudBorder,
     },
     offlineBadgeText: {
-        fontSize: 9,
+        fontSize: 12,
         fontWeight: '700',
     },
     syncLabelText: {
-        fontSize: 11,
+        fontSize: 12,
         color: colors.muted,
         marginLeft: 4,
     },
@@ -2968,7 +2968,7 @@ const styles = StyleSheet.create({
     },
     removeOfflineActionText: {
         color: '#DC2626',
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '700',
     },
     makeOfflineActionBtn: {

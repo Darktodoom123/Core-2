@@ -780,7 +780,7 @@ const styles = StyleSheet.create({
         borderRadius: 6,
     },
     currentBadgeText: {
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '700',
         color: '#15803D',
     },
@@ -793,7 +793,7 @@ const styles = StyleSheet.create({
         color: '#94A3B8',
     },
     sessionLocation: {
-        fontSize: 11,
+        fontSize: 12,
         color: '#94A3B8',
         marginTop: 2,
     },
@@ -977,7 +977,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#FEE2E2',
     },
     outcomeBadgeText: {
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '700',
         textTransform: 'uppercase',
     },
@@ -993,14 +993,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     activityTime: {
-        fontSize: 11,
+        fontSize: 12,
         color: '#94A3B8',
     },
     darkActivityTime: {
         color: '#64748B',
     },
     activityLocation: {
-        fontSize: 11,
+        fontSize: 12,
         color: '#64748B',
     },
     darkActivityLocation: {

@@ -833,7 +833,7 @@ const styles = StyleSheet.create({
     headerCopy: { flex: 1 },
     eyebrow: {
         color: colors.redDark,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 1.1,
     },
@@ -883,7 +883,7 @@ const styles = StyleSheet.create({
     },
     urgentEyebrow: {
         color: colors.redDark,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 1,
     },
@@ -1030,7 +1030,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.redDark,
         borderRadius: 4,
         color: colors.white,
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.6,
         paddingHorizontal: 6,
@@ -1048,7 +1048,7 @@ const styles = StyleSheet.create({
     },
     statutoryRegulationRef: {
         color: colors.textSecondary,
-        fontSize: 11,
+        fontSize: 12,
         fontStyle: 'italic',
         fontWeight: '600',
     },

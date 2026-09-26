@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
     },
     metricCaption: {
         color: colors.mutedOnDark,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.8,
     },
@@ -478,7 +478,7 @@ const styles = StyleSheet.create({
     },
     destEyebrow: {
         color: colors.mutedOnDark,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.8,
     },
@@ -504,7 +504,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.amberDark,
         borderRadius: 4,
         color: colors.white,
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '900',
         paddingHorizontal: 6,
         paddingVertical: 2,
@@ -581,7 +581,7 @@ const styles = StyleSheet.create({
     },
     cautionIcon: {
         color: '#F87171',
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '900',
         letterSpacing: 0.5,
     },
@@ -688,7 +688,7 @@ const styles = StyleSheet.create({
     },
     arrivedButtonSubtext: {
         color: '#DCFCE7',
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '600',
         marginTop: 2,
     },

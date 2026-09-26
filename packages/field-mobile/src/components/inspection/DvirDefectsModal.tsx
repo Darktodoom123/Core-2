@@ -1496,15 +1496,15 @@ const styles = StyleSheet.create({
     groupSelectedBadge: {
         alignItems: 'center',
         backgroundColor: '#EF4444',
-        borderRadius: 10,
-        height: 20,
+        borderRadius: 11,
+        height: 22,
         justifyContent: 'center',
-        minWidth: 20,
+        minWidth: 22,
         paddingHorizontal: 6,
     },
     groupSelectedBadgeText: {
         color: '#FFFFFF',
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '800',
     },
     itemList: {
@@ -1657,7 +1657,7 @@ const styles = StyleSheet.create({
     },
     designatedBadgeText: {
         color: colors.amberDark,
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.3,
     },

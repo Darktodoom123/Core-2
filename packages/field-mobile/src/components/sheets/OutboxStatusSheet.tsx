@@ -1557,7 +1557,7 @@ const styles = StyleSheet.create({
     },
     chipText: {
         color: colors.secondary,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '500',
     },
     darkChipText: {
@@ -1627,7 +1627,7 @@ const styles = StyleSheet.create({
     },
     filterTabText: {
         color: colors.secondary,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '600',
     },
     darkFilterTabText: {
@@ -1653,7 +1653,7 @@ const styles = StyleSheet.create({
     },
     sectionHeader: {
         color: colors.secondary,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '700',
         letterSpacing: 0.6,
         marginBottom: 8,
@@ -1743,7 +1743,7 @@ const styles = StyleSheet.create({
     },
     itemStateBadgeText: {
         color: colors.secondary,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '600',
     },
     badgeTextSyncing: {
@@ -1809,7 +1809,7 @@ const styles = StyleSheet.create({
     },
     metaText: {
         color: colors.muted,
-        fontSize: 11,
+        fontSize: 12,
     },
     darkMetaText: {
         color: '#64748B',
@@ -1977,7 +1977,7 @@ const styles = StyleSheet.create({
     },
     telemetryBadgeText: {
         color: '#2563EB',
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '600',
     },
     telemetryInfoText: {

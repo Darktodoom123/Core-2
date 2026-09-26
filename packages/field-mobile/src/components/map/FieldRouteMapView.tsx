@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
     },
     metricLabel: {
         color: colors.hudTextDim,
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.8,
     },
@@ -478,7 +478,7 @@ const styles = StyleSheet.create({
     },
     compassText: {
         color: colors.hudAmber,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '900',
     },
     axleBadge: {
@@ -489,7 +489,7 @@ const styles = StyleSheet.create({
     },
     speedRating: {
         color: colors.hudTextDim,
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '700',
     },
     routeRailContainer: {
@@ -564,7 +564,7 @@ const styles = StyleSheet.create({
     },
     passedPillText: {
         color: colors.hudAccent,
-        fontSize: 9,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.5,
     },
@@ -587,10 +587,10 @@ const styles = StyleSheet.create({
     },
     hazardWarning: {
         color: '#FCA5A5',
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '700',
         flex: 1,
-        lineHeight: 15,
+        lineHeight: 16,
     },
     railSegment: {
         backgroundColor: '#334155',

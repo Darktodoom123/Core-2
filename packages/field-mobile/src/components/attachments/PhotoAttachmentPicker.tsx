@@ -338,9 +338,9 @@ const styles = StyleSheet.create({
     },
     removeIcon: {
         color: colors.white,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '900',
-        lineHeight: 12,
+        lineHeight: 16,
     },
     actionRow: {
         flexDirection: 'row',

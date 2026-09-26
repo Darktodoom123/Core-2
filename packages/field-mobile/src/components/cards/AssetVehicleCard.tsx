@@ -711,7 +711,7 @@ const styles = StyleSheet.create({
     },
     tonnagePillText: {
         color: colors.textSecondary,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '700',
     },
     darkTonnagePillText: {
@@ -745,7 +745,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(16, 185, 129, 0.15)',
     },
     dvirBadgeText: {
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '700',
     },
     dvirBadgeTextCleared: {
@@ -787,7 +787,7 @@ const styles = StyleSheet.create({
     darkChangeUnitBtn: {},
     changeUnitText: {
         color: colors.amber,
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '700',
     },
     darkChangeUnitText: {
@@ -806,7 +806,7 @@ const styles = StyleSheet.create({
     },
     sectionLabel: {
         color: colors.muted,
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.6,
         marginBottom: 4,
@@ -846,7 +846,7 @@ const styles = StyleSheet.create({
     },
     dispatchBadgeText: {
         color: colors.amberDark,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '800',
     },
     darkDispatchBadgeText: {
@@ -915,7 +915,7 @@ const styles = StyleSheet.create({
     },
     telemetryText: {
         color: colors.muted,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '600',
     },
     darkTelemetryText: {
@@ -955,7 +955,7 @@ const styles = StyleSheet.create({
     },
     heroCardSubtitle: {
         color: colors.muted,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.6,
         textTransform: 'uppercase',
@@ -1039,7 +1039,7 @@ const styles = StyleSheet.create({
     },
     heroTeleLabel: {
         color: colors.muted,
-        fontSize: 10,
+        fontSize: 12,
     },
     lightHeroTeleLabel: {
         color: colors.muted,
@@ -1073,7 +1073,7 @@ const styles = StyleSheet.create({
     },
     reportedDelayNotes: {
         color: '#806000',
-        fontSize: 11,
+        fontSize: 12,
         marginTop: 4,
     },
     darkReportedDelayNotes: {

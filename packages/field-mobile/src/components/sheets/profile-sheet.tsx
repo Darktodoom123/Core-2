@@ -1199,7 +1199,7 @@ const styles = StyleSheet.create({
     },
     stationLabel: {
         color: '#64748B',
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.6,
         textTransform: 'uppercase',
@@ -1238,7 +1238,7 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255, 191, 0, 0.3)',
     },
     stationBadgeText: {
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.5,
         textTransform: 'uppercase',
@@ -1602,7 +1602,7 @@ const styles = StyleSheet.create({
     },
     themeOptionSublabel: {
         color: colors.muted,
-        fontSize: 11,
+        fontSize: 12,
     },
     themeOptionSublabelActive: {
         color: '#806000',

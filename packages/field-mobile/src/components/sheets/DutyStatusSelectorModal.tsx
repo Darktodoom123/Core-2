@@ -798,7 +798,7 @@ const styles = StyleSheet.create({
         color: '#F8FAFC',
     },
     gaugeStatusLabel: {
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '800',
         textTransform: 'uppercase',
     },
@@ -853,7 +853,7 @@ const styles = StyleSheet.create({
     },
     sectionLabel: {
         color: colors.muted,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.6,
         marginBottom: 8,
@@ -915,8 +915,8 @@ const styles = StyleSheet.create({
     },
     dutySubtitle: {
         color: colors.secondary,
-        fontSize: 11,
-        lineHeight: 15,
+        fontSize: 12,
+        lineHeight: 16,
     },
     darkDutySubtitle: {
         color: '#CBD5E1',
@@ -962,7 +962,7 @@ const styles = StyleSheet.create({
     },
     standbySectionTitle: {
         color: colors.amberDark,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '900',
         letterSpacing: 0.4,
     },
@@ -977,13 +977,13 @@ const styles = StyleSheet.create({
     },
     demurrageBadgeText: {
         color: '#FFFFFF',
-        fontSize: 9,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.5,
     },
     standbyHelper: {
         color: colors.secondary,
-        fontSize: 11,
+        fontSize: 12,
         marginBottom: 8,
     },
     darkStandbyHelper: {

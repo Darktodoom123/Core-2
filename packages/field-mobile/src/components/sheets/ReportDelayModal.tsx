@@ -877,7 +877,7 @@ const styles = StyleSheet.create({
     },
     sectionHeading: {
         color: '#64748B',
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '700',
         letterSpacing: 0.5,
         marginBottom: 8,
@@ -1072,7 +1072,7 @@ const styles = StyleSheet.create({
     },
     dvirNoticeBody: {
         color: '#806000',
-        fontSize: 11,
+        fontSize: 12,
         lineHeight: 16,
     },
     dvirLinkBtn: {

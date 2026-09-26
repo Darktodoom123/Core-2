@@ -597,7 +597,7 @@ const styles = StyleSheet.create({
     },
     legalNotice: {
         color: colors.muted,
-        fontSize: 11,
+        fontSize: 12,
         lineHeight: 16,
         marginBottom: 16,
     },

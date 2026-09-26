@@ -952,10 +952,10 @@ const styles = StyleSheet.create({
     },
     severityText: {
         color: colors.muted,
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '700',
         letterSpacing: 0.2,
-        lineHeight: 12,
+        lineHeight: 16,
         textAlign: 'center',
     },
     darkSeverityText: {
@@ -1111,7 +1111,7 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(5, 150, 105, 0.4)',
     },
     statusPillText: {
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '800',
     },
     statusOpenPillText: {
@@ -1142,7 +1142,7 @@ const styles = StyleSheet.create({
         paddingVertical: 2,
     },
     woSeverityText: {
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '800',
     },
     woMinor: {
@@ -1225,13 +1225,13 @@ const styles = StyleSheet.create({
         color: colors.secondary,
         flex: 1,
         flexShrink: 1,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '600',
     },
     woMetaDate: {
         color: colors.muted,
         flexShrink: 0,
-        fontSize: 11,
+        fontSize: 12,
     },
     darkWoMeta: {
         color: colors.hudTextDim,
@@ -1362,7 +1362,7 @@ const styles = StyleSheet.create({
     },
     postRepairPendingText: {
         color: colors.amberDark,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '700',
     },
     darkPostRepairPendingText: {
@@ -1389,7 +1389,7 @@ const styles = StyleSheet.create({
     },
     postRepairHelperNote: {
         color: colors.muted,
-        fontSize: 11,
+        fontSize: 12,
         fontStyle: 'italic',
     },
     darkPostRepairHelperNote: {

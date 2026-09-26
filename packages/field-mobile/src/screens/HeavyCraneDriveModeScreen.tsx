@@ -1805,13 +1805,13 @@ const styles = StyleSheet.create({
     },
     screenTitle: {
         color: '#FFFFFF',
-        fontSize: 11.5,
+        fontSize: 12,
         fontWeight: '800',
         textAlign: 'center',
     },
     categoryBadgeText: {
         color: '#FFBF00',
-        fontSize: 7.5,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.3,
         textAlign: 'center',
@@ -1838,7 +1838,7 @@ const styles = StyleSheet.create({
     },
     simBtnText: {
         color: '#FFFFFF',
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '800',
     },
     simBtnTextActive: {
@@ -1861,7 +1861,7 @@ const styles = StyleSheet.create({
     },
     liveBadgeText: {
         color: '#34D399',
-        fontSize: 9,
+        fontSize: 12,
         fontWeight: '800',
     },
     maneuverBody: {
@@ -1913,7 +1913,7 @@ const styles = StyleSheet.create({
     },
     turnStepperBadgeText: {
         color: '#FFFFFF',
-        fontSize: 9,
+        fontSize: 12,
         fontWeight: '800',
     },
     roadNameHeader: {
@@ -1924,7 +1924,7 @@ const styles = StyleSheet.create({
     },
     maneuverInstructionText: {
         color: '#E0F2FE',
-        fontSize: 11.5,
+        fontSize: 12,
         fontWeight: '600',
     },
     turnControlsCol: {
@@ -1964,7 +1964,7 @@ const styles = StyleSheet.create({
     },
     lanePillText: {
         color: '#BFDBFE',
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '800',
     },
     lanePillTextActive: {
@@ -1983,9 +1983,9 @@ const styles = StyleSheet.create({
     hazardAlertText: {
         color: '#FFFFFF',
         flex: 1,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '800',
-        lineHeight: 15,
+        lineHeight: 16,
     },
     voiceGuidanceStrip: {
         alignItems: 'center',
@@ -2000,7 +2000,7 @@ const styles = StyleSheet.create({
     voiceGuidanceText: {
         color: '#FFFFFF',
         flex: 1,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '600',
     },
     floatingControlsOverlay: {
@@ -2036,7 +2036,7 @@ const styles = StyleSheet.create({
     },
     speedUnit: {
         color: '#10B981',
-        fontSize: 9,
+        fontSize: 12,
         fontWeight: '800',
     },
     speedDivider: {
@@ -2076,7 +2076,7 @@ const styles = StyleSheet.create({
     },
     compassText: {
         color: '#F8FAFC',
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '800',
     },
     floatingRoundBtn: {
@@ -2116,12 +2116,12 @@ const styles = StyleSheet.create({
     },
     reportedDelayTitle: {
         color: '#FFBF00',
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '800',
     },
     reportedDelayText: {
         color: '#FFBF00',
-        fontSize: 11,
+        fontSize: 12,
     },
     dismissDelayBtn: {
         padding: 4,
@@ -2162,7 +2162,7 @@ const styles = StyleSheet.create({
     },
     metricCaption: {
         color: '#94A3B8',
-        fontSize: 8.5,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.5,
     },
@@ -2183,7 +2183,7 @@ const styles = StyleSheet.create({
     },
     distanceCaption: {
         color: '#64748B',
-        fontSize: 7.5,
+        fontSize: 12,
         fontWeight: '700',
         marginLeft: 4,
     },
@@ -2205,7 +2205,7 @@ const styles = StyleSheet.create({
     },
     stepsToggleBtnText: {
         color: '#38BDF8',
-        fontSize: 11.5,
+        fontSize: 12,
         fontWeight: '800',
     },
     stepsToggleBtnTextActive: {
@@ -2238,12 +2238,12 @@ const styles = StyleSheet.create({
     },
     dockGateBadge: {
         color: '#FFBF00',
-        fontSize: 10.5,
+        fontSize: 12,
         fontWeight: '700',
     },
     dockAssetBadge: {
         color: '#94A3B8',
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '500',
     },
     routeConfigInlineBtn: {
@@ -2260,7 +2260,7 @@ const styles = StyleSheet.create({
     },
     routeConfigInlineBtnText: {
         color: '#38BDF8',
-        fontSize: 10.5,
+        fontSize: 12,
         fontWeight: '800',
     },
     arrivedBtn: {
@@ -2329,7 +2329,7 @@ const styles = StyleSheet.create({
     },
     sectionHeaderLabel: {
         color: '#38BDF8',
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '900',
         letterSpacing: 0.5,
         marginTop: 4,
@@ -2364,7 +2364,7 @@ const styles = StyleSheet.create({
     },
     locationOptionDescription: {
         color: '#94A3B8',
-        fontSize: 10.5,
+        fontSize: 12,
         marginTop: 2,
     },
     destScroll: {
@@ -2397,18 +2397,18 @@ const styles = StyleSheet.create({
     },
     clearanceRatingText: {
         color: '#FFBF00',
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '900',
         letterSpacing: 0.5,
     },
     clearanceDetailsText: {
         color: '#E2E8F0',
-        fontSize: 10.5,
+        fontSize: 12,
         fontWeight: '600',
     },
     clearanceWarningText: {
         color: '#FFBF00',
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '700',
         marginTop: 2,
     },
@@ -2471,7 +2471,7 @@ const styles = StyleSheet.create({
     },
     corridorSheetSubtitle: {
         color: '#94A3B8',
-        fontSize: 11,
+        fontSize: 12,
     },
     closeSheetBtn: {
         minHeight: 48,
@@ -2554,14 +2554,14 @@ const styles = StyleSheet.create({
     },
     cautionTag: {
         color: '#FFBF00',
-        fontSize: 9.5,
+        fontSize: 12,
         fontWeight: '900',
         letterSpacing: 0.5,
     },
     cautionDescription: {
         color: '#FFBF00',
         flex: 1,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '600',
     },
     delayPickerModal: {
@@ -2627,7 +2627,7 @@ const styles = StyleSheet.create({
     },
     sectionLabel: {
         color: '#94A3B8',
-        fontSize: 11.5,
+        fontSize: 12,
         fontWeight: '700',
     },
     assetChipsScroll: {
@@ -2648,7 +2648,7 @@ const styles = StyleSheet.create({
     },
     assetChipText: {
         color: '#94A3B8',
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '600',
     },
     assetChipTextActive: {
@@ -2709,7 +2709,7 @@ const styles = StyleSheet.create({
     dvirNoticeText: {
         color: '#BAE6FD',
         flex: 1,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '600',
     },
     reasonsListScroll: {

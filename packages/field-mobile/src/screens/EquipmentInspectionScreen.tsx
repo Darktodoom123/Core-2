@@ -737,7 +737,7 @@ const styles = StyleSheet.create({
     },
     countBadgeText: {
         color: colors.muted,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '800',
     },
     darkCountBadgeText: {

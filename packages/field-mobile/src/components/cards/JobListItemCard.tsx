@@ -1016,7 +1016,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#FEE2E2',
     },
     priorityText: {
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.5,
         textTransform: 'uppercase',
@@ -1035,7 +1035,7 @@ const styles = StyleSheet.create({
         width: 6,
     },
     statusText: {
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '700',
         letterSpacing: 0.3,
     },
@@ -1095,7 +1095,7 @@ const styles = StyleSheet.create({
     },
     detailLabel: {
         color: '#64748B',
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '600',
         marginBottom: 1,
         textTransform: 'uppercase',
@@ -1141,7 +1141,7 @@ const styles = StyleSheet.create({
     },
     pendingBannerText: {
         color: '#806000',
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '600',
     },
     darkPendingBannerText: {
@@ -1228,7 +1228,7 @@ const styles = StyleSheet.create({
     },
     reportedDelayNotes: {
         color: '#806000',
-        fontSize: 11,
+        fontSize: 12,
         marginTop: 4,
     },
     darkReportedDelayNotes: {

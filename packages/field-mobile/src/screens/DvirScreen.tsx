@@ -2642,7 +2642,7 @@ const styles = StyleSheet.create({
     },
     bannerSwapBtnText: {
         color: '#FFFFFF',
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '700',
     },
     bannerStandbyBtn: {
@@ -2658,7 +2658,7 @@ const styles = StyleSheet.create({
     },
     bannerStandbyBtnText: {
         color: colors.warningDark,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '700',
     },
     freshInspectionBanner: {
@@ -2699,7 +2699,7 @@ const styles = StyleSheet.create({
     },
     telemetryHeading: {
         color: colors.textSecondary,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.5,
         marginBottom: 10,
@@ -2881,7 +2881,7 @@ const styles = StyleSheet.create({
     },
     sectionHeading: {
         color: colors.textSecondary,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.5,
         marginBottom: 0,
@@ -2926,7 +2926,7 @@ const styles = StyleSheet.create({
     },
     historyTypeBadge: {
         color: colors.textSecondary,
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.5,
     },
@@ -2984,7 +2984,7 @@ const styles = StyleSheet.create({
     },
     historyMeta: {
         color: colors.textSecondary,
-        fontSize: 11,
+        fontSize: 12,
         marginTop: 2,
     },
     darkHistoryMeta: {

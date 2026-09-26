@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
         borderColor: '#991B1B',
     },
     statusPillText: {
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '800',
         color: '#DC2626',
         letterSpacing: 0.5,
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
     },
     swapButtonSubtext: {
         color: '#BFDBFE',
-        fontSize: 11,
+        fontSize: 12,
         marginTop: 2,
     },
     standbyButton: {
@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
     },
     standbyButtonSubtext: {
         color: '#806000',
-        fontSize: 11,
+        fontSize: 12,
         marginTop: 2,
     },
     darkStandbyButtonSubtext: {

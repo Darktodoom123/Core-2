@@ -926,7 +926,7 @@ const styles = StyleSheet.create({
         color: '#F8FAFC',
     },
     themeOptionSublabel: {
-        fontSize: 11,
+        fontSize: 12,
         color: '#64748B',
     },
     themeOptionSublabelActive: {

@@ -500,7 +500,7 @@ const styles = StyleSheet.create({
         color: '#F8FAFC',
     },
     footerNotice: {
-        fontSize: 11,
+        fontSize: 12,
         lineHeight: 16,
         color: '#64748B',
         textAlign: 'center',

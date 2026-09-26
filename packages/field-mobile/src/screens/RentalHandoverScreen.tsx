@@ -1080,7 +1080,7 @@ const styles = StyleSheet.create({
     },
     reservationPillText: {
         color: colors.amberDark,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '700',
     },
     reservationPillTextDark: {
@@ -1257,7 +1257,7 @@ const styles = StyleSheet.create({
     },
     assetCodeLabel: {
         color: colors.muted,
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '700',
         letterSpacing: 0.5,
     },
@@ -1289,7 +1289,7 @@ const styles = StyleSheet.create({
     },
     doleBadgeText: {
         color: colors.greenDark,
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '700',
     },
     doleBadgeTextDark: {
@@ -1341,7 +1341,7 @@ const styles = StyleSheet.create({
     },
     sectionTitle: {
         color: colors.muted,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '700',
         letterSpacing: 0.6,
         marginBottom: 12,
@@ -1418,7 +1418,7 @@ const styles = StyleSheet.create({
     },
     damageSubtitle: {
         color: colors.muted,
-        fontSize: 11,
+        fontSize: 12,
         marginTop: 2,
     },
     damageSubtitleDark: {

@@ -712,7 +712,7 @@ const styles = StyleSheet.create({
         color: '#F8FAFC',
     },
     screenSubtitle: {
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '500',
         color: '#64748B',
     },

@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
     },
     slotLabel: {
         color: colors.secondary,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '700',
         marginTop: 6,
         textAlign: 'center',

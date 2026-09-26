@@ -1342,7 +1342,7 @@ const styles = StyleSheet.create({
         paddingBottom: 4,
     },
     stackedInputLabel: {
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '700',
         color: '#64748B',
         textTransform: 'uppercase',
@@ -1527,7 +1527,7 @@ const styles = StyleSheet.create({
         color: '#94A3B8',
     },
     deviceExpiry: {
-        fontSize: 11,
+        fontSize: 12,
         color: '#94A3B8',
     },
     darkDeviceExpiry: {

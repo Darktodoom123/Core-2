@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
         borderColor: colors.amberBorder,
     },
     badgeText: {
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.6,
     },

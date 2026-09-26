@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
     },
     headerBadgeText: {
         color: '#2563EB',
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.4,
     },

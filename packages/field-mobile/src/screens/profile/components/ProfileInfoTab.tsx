@@ -708,7 +708,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#332800',
     },
     roleBadgeText: {
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '700',
         color: '#806000',
         textTransform: 'capitalize',
@@ -734,7 +734,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#7F1D1D',
     },
     statusBadgeText: {
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '700',
     },
     statusBadgeTextActive: {
@@ -784,7 +784,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     stationLabel: {
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '600',
         color: '#64748B',
         textTransform: 'uppercase',
@@ -891,7 +891,7 @@ const styles = StyleSheet.create({
         fontStyle: 'italic',
     },
     verifiedPill: {
-        fontSize: 11,
+        fontSize: 12,
         color: '#059669',
         fontWeight: '700',
         marginTop: 4,
@@ -1033,7 +1033,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#334155',
     },
     permPillText: {
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '600',
         color: '#334155',
     },
