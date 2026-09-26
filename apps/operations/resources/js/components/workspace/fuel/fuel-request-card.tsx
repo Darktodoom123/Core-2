@@ -2,6 +2,7 @@ import { usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
     Camera,
+    Check,
     Clock,
     ExternalLink,
     FileText,
@@ -46,6 +47,22 @@ export interface FuelRequestCardProps {
 const URGENCY_STYLES: Record<string, string> = {
     critical: 'border-danger/50 bg-danger-soft text-danger-strong',
     urgent: 'border-warning/50 bg-warning-soft text-warning-strong',
+};
+
+const REQUEST_STAGES = [
+    'Submitted',
+    'Forwarded',
+    'Approved',
+    'Verified',
+    'Logged',
+] as const;
+
+const STAGE_INDEX: Record<string, number> = {
+    submitted: 0,
+    forwarded: 1,
+    approved: 2,
+    verified: 3,
+    logged: 4,
 };
 
 function formatShortDateTime(value: string): string {
@@ -110,6 +127,36 @@ export function FuelRequestCard({
     const primaryLog =
         request.logs && request.logs.length > 0 ? request.logs[0] : null;
     const hasAnomaly = request.logs?.some((l) => l.is_anomaly);
+    const isRejected = statusVal === 'rejected';
+    const isWithdrawn = statusVal === 'withdrawn';
+    const lastCompletedStage = isRejected
+        ? 1
+        : isWithdrawn
+          ? request.reviewed_at
+              ? 1
+              : 0
+          : STAGE_INDEX[statusVal];
+    const currentStage = isRejected ? 2 : isWithdrawn ? -1 : lastCompletedStage;
+    const stageDates = [
+        request.created_at ?? request.submitted_at,
+        request.reviewed_at,
+        request.approved_at,
+        request.verified_at,
+        primaryLog?.recorded_at,
+    ];
+    const progressSummary = isRejected
+        ? 'Declined after review. No further stages will occur.'
+        : isWithdrawn
+          ? 'Withdrawn by the requester. No further stages will occur.'
+          : statusVal === 'submitted'
+            ? 'Submitted and awaiting review.'
+            : statusVal === 'forwarded'
+              ? 'Forwarded and awaiting a decision.'
+              : statusVal === 'approved'
+                ? 'Approved and awaiting independent verification.'
+                : statusVal === 'verified'
+                  ? 'Verified and ready to refuel.'
+                  : 'Refueling recorded.';
 
     const isPendingThisAction = (actionStatus: string) =>
         pendingActionId === `${request.id}:${actionStatus}`;
@@ -222,26 +269,46 @@ export function FuelRequestCard({
                         )}
                     </div>
 
-                    <p className="text-sm font-semibold text-ink">
-                        <span className="tabular-nums">
-                            Requested: {request.quantity_litres} Litres
-                        </span>
-                        <span className="font-normal text-ink-soft"> · </span>
-                        <span className="font-medium text-ink capitalize">
-                            {humanize(request.fuel_type)}
-                        </span>
-                        {request.purpose && (
-                            <>
-                                <span className="font-normal text-ink-soft">
-                                    {' '}
-                                    ·{' '}
-                                </span>
-                                <span className="font-normal text-ink-soft">
-                                    {request.purpose}
-                                </span>
-                            </>
-                        )}
-                    </p>
+                    {isDetail ? (
+                        <div className="space-y-1 text-sm">
+                            {asset && (
+                                <p className="font-medium text-ink">
+                                    {asset.code} · {asset.name || asset.code}
+                                </p>
+                            )}
+                            {request.job && (
+                                <p className="text-ink-soft">
+                                    Job {request.job.reference} ·{' '}
+                                    {request.job.title}
+                                </p>
+                            )}
+                            <p className="text-ink-soft">{request.purpose}</p>
+                        </div>
+                    ) : (
+                        <p className="text-sm font-semibold text-ink">
+                            <span className="tabular-nums">
+                                Requested: {request.quantity_litres} Litres
+                            </span>
+                            <span className="font-normal text-ink-soft">
+                                {' '}
+                                ·{' '}
+                            </span>
+                            <span className="font-medium text-ink capitalize">
+                                {humanize(request.fuel_type)}
+                            </span>
+                            {request.purpose && (
+                                <>
+                                    <span className="font-normal text-ink-soft">
+                                        {' '}
+                                        ·{' '}
+                                    </span>
+                                    <span className="font-normal text-ink-soft">
+                                        {request.purpose}
+                                    </span>
+                                </>
+                            )}
+                        </p>
+                    )}
                 </div>
 
                 {/* State Transition Actions */}
@@ -329,6 +396,35 @@ export function FuelRequestCard({
                         )}
                 </div>
             </div>
+
+            {isDetail && (
+                <dl className="grid grid-cols-2 gap-4 rounded-xl border border-line bg-surface-subtle p-4 text-xs">
+                    <div>
+                        <dt className="font-medium text-ink-soft">Requested</dt>
+                        <dd className="mt-1 text-xl font-semibold text-ink tabular-nums">
+                            {request.quantity_litres} L
+                        </dd>
+                        <dd className="text-ink-soft capitalize">
+                            {humanize(request.fuel_type)}
+                        </dd>
+                    </div>
+                    <div className="border-l border-line pl-4">
+                        <dt className="font-medium text-ink-soft">
+                            Actual dispensed
+                        </dt>
+                        <dd className="mt-1 text-xl font-semibold text-ink tabular-nums">
+                            {request.logs?.length
+                                ? `${request.logs.reduce((sum, log) => sum + (Number(log.quantity_litres) || 0), 0).toLocaleString()} L`
+                                : 'Not recorded yet'}
+                        </dd>
+                        <dd className="text-ink-soft">
+                            {request.logs?.length
+                                ? 'From recorded fuel logs'
+                                : 'Awaiting a fuel log'}
+                        </dd>
+                    </div>
+                </dl>
+            )}
 
             {/* Withdraw confirmation (requester only, before a decision) */}
             {canWithdraw && showWithdrawInput && (
@@ -590,139 +686,88 @@ export function FuelRequestCard({
                     </p>
                 )}
 
-            {/* Lifecycle Audit Milestones (4 Stages) in Detail View */}
+            {/* Recorded request stages; future stages are not presented as complete. */}
             {isDetail && (
-                <div className="grid grid-cols-2 gap-2 rounded-xl border border-line bg-surface-subtle p-3 text-xs sm:grid-cols-4">
-                    <div>
-                        <span className="block text-xs font-medium text-ink-soft">
-                            1. Submitted
-                        </span>
-                        <p className="mt-0.5 text-xs font-semibold text-ink tabular-nums">
-                            {request.created_at
-                                ? new Date(
-                                      request.created_at,
-                                  ).toLocaleDateString(undefined, {
-                                      month: 'short',
-                                      day: 'numeric',
-                                      hour: '2-digit',
-                                      minute: '2-digit',
-                                  })
-                                : 'Recorded'}
-                        </p>
-                        <p className="truncate text-[11px] text-ink-soft">
-                            {request.requester.name}
-                        </p>
+                <section
+                    className="border-t border-line pt-4"
+                    role="group"
+                    aria-label="Fuel request progress"
+                >
+                    <h3 className="mb-5 text-sm font-semibold text-ink">
+                        Request progress
+                    </h3>
+                    <div className="relative">
+                        <span
+                            aria-hidden="true"
+                            className="absolute top-3.5 right-[10%] left-[10%] h-0.5 bg-line-strong"
+                        />
+                        <span
+                            aria-hidden="true"
+                            className="absolute top-3.5 left-[10%] h-0.5 bg-brand"
+                            style={{ width: `${lastCompletedStage * 20}%` }}
+                        />
+                        <ol className="relative grid grid-cols-5">
+                            {REQUEST_STAGES.map((stage, index) => {
+                                const declined = isRejected && index === 2;
+                                const completed = index <= lastCompletedStage;
+                                const current = index === currentStage;
+                                const label = declined ? 'Declined' : stage;
+                                const date = stageDates[index];
+
+                                return (
+                                    <li
+                                        key={stage}
+                                        aria-current={
+                                            current ? 'step' : undefined
+                                        }
+                                        aria-label={`${label}: ${declined ? 'declined' : completed ? 'complete' : isWithdrawn || isRejected ? 'not reached' : 'upcoming'}${date && (completed || declined) ? `, ${formatShortDateTime(date)}` : ''}`}
+                                        className="flex min-w-0 flex-col items-center text-center"
+                                    >
+                                        <span
+                                            aria-hidden="true"
+                                            className={cn(
+                                                'flex h-7 w-7 items-center justify-center rounded-full border-2 bg-surface',
+                                                declined
+                                                    ? 'border-danger bg-danger text-danger-contrast'
+                                                    : current
+                                                      ? 'border-brand bg-brand text-brand-contrast'
+                                                      : completed
+                                                        ? 'border-brand bg-brand-soft text-brand-strong'
+                                                        : 'border-line-strong text-ink-soft',
+                                            )}
+                                        >
+                                            {declined ? (
+                                                <X className="h-3.5 w-3.5" />
+                                            ) : completed ? (
+                                                <Check className="h-3.5 w-3.5" />
+                                            ) : null}
+                                        </span>
+                                        <span
+                                            className={cn(
+                                                'mt-2 text-[11px] leading-tight font-medium sm:text-xs',
+                                                declined
+                                                    ? 'text-danger'
+                                                    : completed
+                                                      ? 'text-ink'
+                                                      : 'text-ink-soft',
+                                            )}
+                                        >
+                                            {label}
+                                        </span>
+                                        {date && (completed || declined) && (
+                                            <span className="mt-1 hidden text-[10px] text-ink-soft tabular-nums sm:block">
+                                                {formatShortDateTime(date)}
+                                            </span>
+                                        )}
+                                    </li>
+                                );
+                            })}
+                        </ol>
                     </div>
-                    <div>
-                        <span className="block text-xs font-medium text-ink-soft">
-                            2. Forwarded
-                        </span>
-                        <p className="mt-0.5 text-xs font-semibold text-ink tabular-nums">
-                            {request.reviewed_at
-                                ? new Date(
-                                      request.reviewed_at,
-                                  ).toLocaleDateString(undefined, {
-                                      month: 'short',
-                                      day: 'numeric',
-                                      hour: '2-digit',
-                                      minute: '2-digit',
-                                  })
-                                : statusVal === 'submitted'
-                                  ? 'In Queue'
-                                  : '—'}
-                        </p>
-                        <p className="text-[11px] text-ink-soft">
-                            {request.reviewed_at
-                                ? 'Reviewed'
-                                : statusVal === 'submitted'
-                                  ? 'Awaiting review'
-                                  : 'Bypassed'}
-                        </p>
-                    </div>
-                    <div>
-                        <span className="block text-xs font-medium text-ink-soft">
-                            3.{' '}
-                            {statusVal === 'rejected' ? 'Rejected' : 'Approval'}
-                        </span>
-                        <p
-                            className={cn(
-                                'mt-0.5 text-xs font-semibold tabular-nums',
-                                statusVal === 'rejected'
-                                    ? 'text-danger'
-                                    : 'text-ink',
-                            )}
-                        >
-                            {request.approved_at
-                                ? new Date(
-                                      request.approved_at,
-                                  ).toLocaleDateString(undefined, {
-                                      month: 'short',
-                                      day: 'numeric',
-                                      hour: '2-digit',
-                                      minute: '2-digit',
-                                  })
-                                : ['approved', 'verified', 'logged'].includes(
-                                        statusVal,
-                                    )
-                                  ? 'Approved'
-                                  : statusVal === 'rejected'
-                                    ? 'Declined'
-                                    : statusVal === 'withdrawn'
-                                      ? 'Withdrawn'
-                                      : 'Pending'}
-                        </p>
-                        <p className="text-[11px] text-ink-soft">
-                            {statusVal === 'rejected'
-                                ? 'Declined'
-                                : ['approved', 'verified', 'logged'].includes(
-                                        statusVal,
-                                    )
-                                  ? 'Authorized'
-                                  : statusVal === 'withdrawn'
-                                    ? 'Closed by requester'
-                                    : 'Awaiting Review'}
-                        </p>
-                    </div>
-                    <div>
-                        <span className="block text-xs font-medium text-ink-soft">
-                            4. Pump Verification
-                        </span>
-                        <p className="mt-0.5 text-xs font-semibold text-ink tabular-nums">
-                            {primaryLog?.recorded_at
-                                ? new Date(
-                                      primaryLog.recorded_at,
-                                  ).toLocaleDateString(undefined, {
-                                      month: 'short',
-                                      day: 'numeric',
-                                      hour: '2-digit',
-                                      minute: '2-digit',
-                                  })
-                                : statusVal === 'verified'
-                                  ? 'Ready to Dispense'
-                                  : statusVal === 'rejected' ||
-                                      statusVal === 'withdrawn'
-                                    ? 'Closed'
-                                    : 'Awaiting'}
-                        </p>
-                        <p className="text-[11px] text-ink-soft">
-                            {primaryLog ? (
-                                <span>
-                                    <span className="tabular-nums">
-                                        {primaryLog.quantity_litres}
-                                    </span>{' '}
-                                    L Dispensed
-                                </span>
-                            ) : statusVal === 'verified' ? (
-                                'Authorized'
-                            ) : statusVal === 'rejected' ||
-                              statusVal === 'withdrawn' ? (
-                                'No Pump Log'
-                            ) : (
-                                'Pending'
-                            )}
-                        </p>
-                    </div>
-                </div>
+                    <p className="mt-5 rounded-lg bg-surface-subtle px-3 py-2 text-xs text-ink-soft">
+                        {progressSummary}
+                    </p>
+                </section>
             )}
 
             {/* Operational Context Card in Detail View */}

@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { router } from '@inertiajs/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import React, { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FuelLogModal } from '@/components/workspace/fuel/fuel-log-modal';
@@ -320,6 +321,47 @@ describe('FuelSurface & 5-Stage Workflow Verifications', () => {
             expect(screen.getByText('1,320')).toBeInTheDocument();
             expect(screen.getByText('Dispensed Logs:')).toBeInTheDocument();
             expect(screen.getByText('395')).toBeInTheDocument();
+            const queue = screen.getByRole('list', {
+                name: 'Fuel request queue',
+            });
+            expect(
+                within(queue).getByText('Awaiting review'),
+            ).toBeInTheDocument();
+            expect(
+                within(queue).getByText('Awaiting verification'),
+            ).toBeInTheDocument();
+        });
+
+        it('sorts the visible page by urgency and keeps queue context in view', () => {
+            const requests = createSampleRequests();
+            requests[0].needed_by = '2026-09-26T14:30:00+08:00';
+            requests[0].current_fuel_level_percent = 18;
+            requests[1].urgency = { value: 'urgent', label: 'Urgent' };
+            requests[3].urgency = { value: 'critical', label: 'Critical' };
+
+            render(
+                <FuelSurface
+                    requests={requests}
+                    capabilities={createCapabilities()}
+                />,
+            );
+
+            const queue = screen.getByRole('list', {
+                name: 'Fuel request queue',
+            });
+            expect(within(queue).getByText(/Needed by/)).toBeInTheDocument();
+            expect(within(queue).getByText('Tank 18%')).toBeInTheDocument();
+            fireEvent.change(
+                screen.getByRole('combobox', {
+                    name: 'Sort requests on this page',
+                }),
+                { target: { value: 'priority' } },
+            );
+
+            const rows = within(queue).getAllByRole('button');
+            expect(rows[0]).toHaveTextContent('FUEL-REQ-104');
+            expect(rows[1]).toHaveTextContent('FUEL-REQ-102');
+            expect(screen.getByText(/Ref: FUEL-REQ-104/)).toBeInTheDocument();
         });
 
         it('opens on-demand request modal via "New request" button with validation and duplicate-submit protection', () => {
@@ -897,11 +939,93 @@ describe('Fuel Management sections', () => {
         expect(
             screen.getByRole('link', { name: 'View receipt' }),
         ).toHaveAttribute('href', 'https://cdn.example.com/rec-1001.jpg');
+        expect(screen.getByText('Receipt attached')).toBeInTheDocument();
         fireEvent.click(
             screen.getByRole('button', { name: 'View request FUEL-REQ-105' }),
         );
         expect(screen.getByText(/Ref: FUEL-REQ-105/i)).toBeInTheDocument();
         expect(screen.getByRole('searchbox')).toHaveValue('');
+        fireEvent.click(
+            screen.getByRole('button', { name: 'Back to Fuel Logs' }),
+        );
+        expect(
+            screen.getByRole('list', { name: 'Fuel log records' }),
+        ).toBeInTheDocument();
+    });
+
+    it('shows receipt exceptions in the log list and opens the request for review', () => {
+        const logged = createSampleRequests()[4];
+        const baseLog = logged.logs![0];
+        const pending: FuelRequestViewModel = {
+            ...logged,
+            id: 106,
+            reference: 'FUEL-REQ-106',
+            logs: [
+                {
+                    ...baseLog,
+                    id: 1002,
+                    receipt_path: null,
+                    receipt_url: null,
+                    no_receipt_reason: {
+                        value: 'on_site_bowser',
+                        label: 'On-site bowser / fuel truck',
+                    },
+                    requires_receipt_review: true,
+                    receipt_reviewed_at: null,
+                },
+            ],
+        };
+        const reviewed: FuelRequestViewModel = {
+            ...pending,
+            id: 107,
+            reference: 'FUEL-REQ-107',
+            logs: [
+                {
+                    ...pending.logs![0],
+                    id: 1003,
+                    requires_receipt_review: false,
+                    receipt_reviewed_at: '2026-09-06T16:00:00Z',
+                },
+            ],
+        };
+
+        const { rerender } = render(
+            <FuelSurface
+                requests={[logged, pending, reviewed]}
+                capabilities={createCapabilities()}
+            />,
+        );
+        fireEvent.click(screen.getByRole('button', { name: 'Fuel Logs' }));
+        const logs = screen.getByRole('list', { name: 'Fuel log records' });
+        expect(within(logs).getByText('Receipt attached')).toBeInTheDocument();
+        expect(
+            within(logs).getByText('No receipt · needs review'),
+        ).toBeInTheDocument();
+        expect(
+            within(logs).getByText('No receipt · exception reviewed'),
+        ).toBeInTheDocument();
+        fireEvent.click(
+            within(logs).getByRole('button', {
+                name: 'Review receipt exception',
+            }),
+        );
+        expect(screen.getByText(/Ref: FUEL-REQ-106/i)).toBeInTheDocument();
+        expect(screen.getByTestId('receipt-exception')).toBeInTheDocument();
+        fireEvent.click(
+            screen.getByRole('button', { name: 'Back to Fuel Logs' }),
+        );
+        expect(
+            screen.getByRole('list', { name: 'Fuel log records' }),
+        ).toBeInTheDocument();
+        rerender(
+            <FuelSurface
+                requests={[logged, pending, reviewed]}
+                capabilities={createCapabilities({ verify_fuel: false })}
+            />,
+        );
+        expect(
+            screen.getByRole('button', { name: 'View receipt exception' }),
+        ).toBeInTheDocument();
     });
 
     it('labels the page scope and shows missing consumption measurements honestly', () => {
@@ -929,6 +1053,111 @@ describe('Fuel Management sections', () => {
             screen.getByRole('button', { name: 'Previous page' }),
         ).toBeDisabled();
         expect(screen.getByRole('button', { name: 'Next page' })).toBeEnabled();
+    });
+
+    it('shows the five-step request progress and keeps requested and dispensed litres separate', () => {
+        const requests = createSampleRequests();
+        requests[4].verified_at = '2026-09-06T14:00:00Z';
+        render(
+            <FuelSurface
+                requests={requests}
+                capabilities={createCapabilities()}
+            />,
+        );
+
+        fireEvent.click(screen.getByRole('button', { name: /logged \(1\)/i }));
+        const progress = screen.getByRole('group', {
+            name: 'Fuel request progress',
+        });
+        expect(
+            within(progress).getByText('Request progress'),
+        ).toBeInTheDocument();
+        expect(within(progress).getAllByRole('listitem')).toHaveLength(5);
+        expect(
+            within(progress).getByRole('listitem', {
+                name: /Verified: complete/,
+            }),
+        ).toBeInTheDocument();
+        expect(
+            within(progress).getByRole('listitem', {
+                name: /Logged: complete/,
+            }),
+        ).toHaveAttribute('aria-current', 'step');
+        expect(
+            screen.getByText('Actual dispensed').parentElement,
+        ).toHaveTextContent('395 L');
+        expect(screen.getByText('Requested').parentElement).toHaveTextContent(
+            '400 L',
+        );
+    });
+
+    it('keeps future steps uncompleted when a request is submitted or withdrawn', () => {
+        const submitted = createSampleRequests()[0];
+        const { rerender } = render(
+            <FuelSurface
+                requests={[submitted]}
+                capabilities={createCapabilities()}
+            />,
+        );
+        let progress = screen.getByRole('group', {
+            name: 'Fuel request progress',
+        });
+        expect(
+            within(progress).getByRole('listitem', {
+                name: /Submitted: complete/,
+            }),
+        ).toHaveAttribute('aria-current', 'step');
+        expect(
+            within(progress).getByRole('listitem', {
+                name: /Forwarded: upcoming/,
+            }),
+        ).toBeInTheDocument();
+
+        rerender(
+            <FuelSurface
+                requests={[
+                    {
+                        ...submitted,
+                        status: { value: 'withdrawn', label: 'Withdrawn' },
+                        withdrawn_at: '2026-09-06T14:00:00Z',
+                    },
+                ]}
+                capabilities={createCapabilities()}
+            />,
+        );
+        progress = screen.getByRole('group', {
+            name: 'Fuel request progress',
+        });
+        expect(
+            within(progress).getByRole('listitem', {
+                name: /Approved: not reached/,
+            }),
+        ).toBeInTheDocument();
+        expect(
+            within(progress).queryByRole('listitem', { current: 'step' }),
+        ).not.toBeInTheDocument();
+    });
+
+    it('navigates to a numbered fuel request page', () => {
+        render(
+            <FuelSurface
+                requests={createSampleRequests()}
+                capabilities={createCapabilities()}
+                pagination={{
+                    current_page: 3,
+                    last_page: 5,
+                    per_page: 25,
+                    total: 125,
+                }}
+            />,
+        );
+
+        fireEvent.click(screen.getByRole('button', { name: 'Page 4' }));
+        expect(router.get).toHaveBeenCalledWith(
+            '/operations',
+            { section: 'fuel', fuel_page: 4 },
+            { preserveState: true, preserveScroll: true },
+        );
     });
 
     it('shows an honest empty log state without inventing records', () => {
@@ -984,6 +1213,20 @@ describe('Fuel Management sections', () => {
         expect(rejectionCallout).toHaveTextContent(
             'Exceeds authorized weekly allocation quota',
         );
+
+        const progress = screen.getByRole('group', {
+            name: 'Fuel request progress',
+        });
+        expect(
+            within(progress).getByRole('listitem', {
+                name: /Declined: declined/,
+            }),
+        ).toHaveAttribute('aria-current', 'step');
+        expect(
+            within(progress).getByRole('listitem', {
+                name: /Verified: not reached/,
+            }),
+        ).toBeInTheDocument();
 
         // Detail pane should show unlinked asset warning because asset is null
         expect(

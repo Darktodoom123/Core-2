@@ -2,8 +2,10 @@ import { router } from '@inertiajs/react';
 import {
     AlertTriangle,
     ArrowLeft,
+    Clock,
     Droplets,
     Fuel,
+    Gauge,
     Plus,
     ReceiptText,
     Search,
@@ -29,6 +31,28 @@ import { FuelRecordsPanel } from './fuel-records-panel';
 import { FuelRequestCard } from './fuel-request-card';
 import type { FuelReviewDecision } from './fuel-request-card';
 import { FuelVarianceBadge } from './fuel-variance-badge';
+
+type FuelQueueSort = 'newest' | 'priority';
+
+const urgencyRank = { critical: 0, urgent: 1, normal: 2 } as const;
+const queueNextStep: Record<FuelRequestViewModel['status']['value'], string> = {
+    submitted: 'Awaiting review',
+    forwarded: 'Awaiting decision',
+    approved: 'Awaiting verification',
+    verified: 'Ready to refuel',
+    logged: 'Fuel log unavailable',
+    rejected: 'Request rejected',
+    withdrawn: 'Request withdrawn',
+};
+
+function formatNeededBy(value: string): string {
+    return new Date(value).toLocaleString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+}
 
 interface FuelSurfaceProps {
     requests: FuelRequestViewModel[];
@@ -64,10 +88,14 @@ export function FuelSurface({
         | 'receipt_review'
     >('all');
     const [searchQuery, setSearchQuery] = useState('');
+    const [sortMode, setSortMode] = useState<FuelQueueSort>('newest');
     const [selectedRequestId, setSelectedRequestId] = useState<number | null>(
         null,
     );
     const [mobileDetailView, setMobileDetailView] = useState(false);
+    const [returnSection, setReturnSection] = useState<
+        'logs' | 'consumption' | null
+    >(null);
 
     const handleTransition = (
         requestId: number,
@@ -193,7 +221,7 @@ export function FuelSurface({
     const filteredRequests = useMemo(() => {
         const q = searchQuery.trim().toLowerCase();
 
-        return requests.filter((req) => {
+        const matches = requests.filter((req) => {
             const v = req.status.value;
             const hasAnomaly = req.logs?.some((l) => l.is_anomaly);
 
@@ -226,7 +254,18 @@ export function FuelSurface({
 
             return matchesStatus && matchesQuery;
         });
-    }, [requests, filterStatus, searchQuery]);
+
+        if (sortMode === 'priority') {
+            return matches.sort((a, b) => {
+                const aRank = urgencyRank[a.urgency?.value ?? 'normal'];
+                const bRank = urgencyRank[b.urgency?.value ?? 'normal'];
+
+                return aRank - bRank;
+            });
+        }
+
+        return matches;
+    }, [requests, filterStatus, searchQuery, sortMode]);
 
     // Strict Filtered Selection Invariant:
     // Active request is strictly bound to visible filtered results.
@@ -242,10 +281,45 @@ export function FuelSurface({
         );
     }, [filteredRequests, selectedRequestId]);
 
-    const handleSelectRequest = (id: number) => {
+    const handleSelectRequest = (
+        id: number,
+        fromSection: 'logs' | 'consumption' | null = null,
+    ) => {
         setSelectedRequestId(id);
         setMobileDetailView(true);
+        setReturnSection(fromSection);
     };
+
+    const handleBackFromRequest = () => {
+        setMobileDetailView(false);
+
+        if (returnSection) {
+            setSection(returnSection);
+            setReturnSection(null);
+        }
+    };
+
+    const changeFuelPage = (page: number) => {
+        router.get(
+            '/operations',
+            { section: 'fuel', fuel_page: page },
+            { preserveState: true, preserveScroll: true },
+        );
+        setMobileDetailView(false);
+    };
+
+    const pageStart = pagination
+        ? Math.max(
+              1,
+              Math.min(pagination.current_page - 2, pagination.last_page - 4),
+          )
+        : 1;
+    const pageNumbers = pagination
+        ? Array.from(
+              { length: Math.min(5, pagination.last_page) },
+              (_, index) => pageStart + index,
+          )
+        : [];
 
     return (
         <div>
@@ -269,7 +343,7 @@ export function FuelSurface({
                 <div
                     role="group"
                     aria-label="Fuel Management sections"
-                    className="flex flex-wrap gap-2 border-b border-line pb-3"
+                    className="flex gap-4 overflow-x-auto border-b border-line"
                 >
                     {(
                         [
@@ -281,34 +355,45 @@ export function FuelSurface({
                             { value: 'consumption', label: 'Consumption' },
                         ] as const
                     ).map((item) => (
-                        <Button
+                        <button
                             key={item.value}
-                            variant={
-                                section === item.value ? 'primary' : 'quiet'
-                            }
+                            type="button"
                             aria-pressed={section === item.value}
-                            onClick={() => setSection(item.value)}
+                            onClick={() => {
+                                setSection(item.value);
+                                setReturnSection(null);
+                                setMobileDetailView(false);
+                            }}
+                            className={cn(
+                                'min-h-11 shrink-0 border-b-2 px-1 text-sm whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
+                                section === item.value
+                                    ? 'border-brand-strong font-semibold text-ink'
+                                    : 'border-transparent font-medium text-ink-soft hover:text-ink',
+                            )}
                         >
                             {item.label}
-                        </Button>
+                        </button>
                     ))}
                 </div>
-                <p className="text-xs text-ink-soft tabular-nums">
-                    Showing {requests.length} requests
-                    {pagination
-                        ? ` of ${pagination.total} · Page ${pagination.current_page} of ${pagination.last_page}`
-                        : ''}
-                    . Filters, log records, and consumption summaries cover this
-                    page only.
+                <p className="text-xs leading-5 text-ink-soft tabular-nums">
+                    Showing {requests.length} of{' '}
+                    {pagination?.total ?? requests.length} requests
+                    {pagination &&
+                        ` · Page ${pagination.current_page} of ${pagination.last_page}`}
+                    <span className="block">
+                        Filters, search, sorting, log records, and consumption
+                        summaries cover this page only.
+                    </span>
                 </p>
                 {section !== 'requests' && (
                     <FuelRecordsPanel
                         requests={requests}
                         consumption={section === 'consumption'}
+                        canReviewReceipt={capabilities.verify_fuel}
                         onOpenRequest={(id) => {
                             setFilterStatus('all');
                             setSearchQuery('');
-                            handleSelectRequest(id);
+                            handleSelectRequest(id, section);
                             setSection('requests');
                         }}
                     />
@@ -450,7 +535,7 @@ export function FuelSurface({
                             {/* Search Field */}
                             <label className="relative block sm:w-72">
                                 <span className="sr-only">
-                                    Search fuel requests
+                                    Search fuel requests on this page
                                 </span>
                                 <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ink-soft" />
                                 <input
@@ -554,7 +639,7 @@ export function FuelSurface({
                                     compact
                                     icon={SearchX}
                                     title="No matching fuel requests"
-                                    message="Try adjusting your search query or status filter."
+                                    message="Try adjusting your search or filter on this page, or move to another page."
                                     primaryAction={
                                         <Button
                                             variant="secondary"
@@ -581,23 +666,41 @@ export function FuelSurface({
                                             : 'block',
                                     )}
                                 >
-                                    <div className="mb-2 flex items-center justify-between px-1">
-                                        <span className="text-xs font-semibold text-ink">
-                                            Fuel Queue (
-                                            <span className="tabular-nums">
-                                                {filteredRequests.length}
-                                            </span>
-                                            )
-                                        </span>
-                                        {filterStatus !== 'all' && (
-                                            <span className="text-xs font-medium text-brand-strong capitalize">
-                                                {filterStatus}
-                                            </span>
-                                        )}
+                                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
+                                        <div>
+                                            <h2 className="text-base font-semibold text-ink">
+                                                Fuel requests (
+                                                {filteredRequests.length})
+                                            </h2>
+                                            <p className="text-xs text-ink-soft">
+                                                Matching requests on this page
+                                            </p>
+                                        </div>
+                                        <label className="flex items-center gap-2 text-xs text-ink-soft">
+                                            <span>Sort page</span>
+                                            <select
+                                                aria-label="Sort requests on this page"
+                                                value={sortMode}
+                                                onChange={(event) =>
+                                                    setSortMode(
+                                                        event.target
+                                                            .value as FuelQueueSort,
+                                                    )
+                                                }
+                                                className="min-h-9 rounded-lg border border-line bg-surface px-2 text-xs font-medium text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
+                                            >
+                                                <option value="newest">
+                                                    Newest first
+                                                </option>
+                                                <option value="priority">
+                                                    Priority (high to low)
+                                                </option>
+                                            </select>
+                                        </label>
                                     </div>
 
                                     <ul
-                                        className="space-y-2"
+                                        className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface"
                                         role="list"
                                         aria-label="Fuel request queue"
                                     >
@@ -622,12 +725,12 @@ export function FuelSurface({
                                                             )
                                                         }
                                                         className={cn(
-                                                            'w-full rounded-lg border p-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden focus-visible:ring-inset',
+                                                            'min-h-16 w-full p-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden focus-visible:ring-inset',
                                                             isSelected
-                                                                ? 'border-brand-strong bg-brand-soft/25 ring-1 ring-brand-strong'
+                                                                ? 'bg-brand-soft/30 ring-1 ring-brand-strong ring-inset'
                                                                 : hasAnomaly
-                                                                  ? 'border-danger/30 bg-danger-soft/10 hover:border-danger/60'
-                                                                  : 'border-line bg-surface hover:border-line-strong hover:bg-surface-subtle',
+                                                                  ? 'bg-danger-soft/10 hover:bg-danger-soft/20'
+                                                                  : 'bg-surface hover:bg-surface-subtle',
                                                         )}
                                                     >
                                                         {/* Top Row: Reference, Badges */}
@@ -683,7 +786,7 @@ export function FuelSurface({
                                                             )}
                                                         </div>
 
-                                                        {/* Middle: Asset & Requester */}
+                                                        {/* Asset, job, and requester context */}
                                                         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
                                                             <div className="flex items-center gap-1 font-medium text-ink">
                                                                 <Truck className="h-3 w-3 text-brand-strong" />
@@ -691,16 +794,23 @@ export function FuelSurface({
                                                                     {req.asset
                                                                         ? req
                                                                               .asset
-                                                                              .name ||
-                                                                          req
-                                                                              .asset
-                                                                              .code
+                                                                              .name
+                                                                            ? `${req.asset.code} · ${req.asset.name}`
+                                                                            : req
+                                                                                  .asset
+                                                                                  .code
                                                                         : 'No asset linked'}
                                                                 </span>
                                                             </div>
-                                                            <span className="text-ink-soft">
-                                                                ·
-                                                            </span>
+                                                            {req.job && (
+                                                                <span className="text-ink-soft">
+                                                                    Job{' '}
+                                                                    {
+                                                                        req.job
+                                                                            .reference
+                                                                    }
+                                                                </span>
+                                                            )}
                                                             <div className="flex items-center gap-1 text-ink-soft">
                                                                 <User className="h-3 w-3 text-ink-soft" />
                                                                 <span>
@@ -713,10 +823,10 @@ export function FuelSurface({
                                                             </div>
                                                         </div>
 
-                                                        {/* Bottom Row: Quantities Truth */}
-                                                        <div className="mt-2.5 flex items-center justify-between border-t border-line/50 pt-2 text-[11px]">
+                                                        {/* Requested quantity and decision context */}
+                                                        <div className="mt-2.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-line/50 pt-2 text-xs">
                                                             <span className="text-ink-soft">
-                                                                Req:{' '}
+                                                                Requested:{' '}
                                                                 <strong className="font-mono font-semibold text-ink tabular-nums">
                                                                     {
                                                                         req.quantity_litres
@@ -738,20 +848,64 @@ export function FuelSurface({
                                                                     }{' '}
                                                                     L
                                                                 </span>
-                                                            ) : req.status
-                                                                  .value ===
-                                                              'rejected' ? (
-                                                                <span className="font-medium text-danger">
-                                                                    Request
-                                                                    rejected
-                                                                </span>
                                                             ) : (
                                                                 <span className="text-ink-soft">
-                                                                    Awaiting
-                                                                    pump log
+                                                                    {
+                                                                        queueNextStep[
+                                                                            req
+                                                                                .status
+                                                                                .value
+                                                                        ]
+                                                                    }
                                                                 </span>
                                                             )}
                                                         </div>
+                                                        {(req.needed_by ||
+                                                            (req.current_fuel_level_percent !==
+                                                                null &&
+                                                                req.current_fuel_level_percent !==
+                                                                    undefined) ||
+                                                            req.logs?.some(
+                                                                (log) =>
+                                                                    log.requires_receipt_review,
+                                                            )) && (
+                                                            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-soft">
+                                                                {req.needed_by && (
+                                                                    <span className="inline-flex items-center gap-1">
+                                                                        <Clock className="h-3.5 w-3.5" />
+                                                                        Needed
+                                                                        by{' '}
+                                                                        {formatNeededBy(
+                                                                            req.needed_by,
+                                                                        )}
+                                                                    </span>
+                                                                )}
+                                                                {req.current_fuel_level_percent !==
+                                                                    null &&
+                                                                    req.current_fuel_level_percent !==
+                                                                        undefined && (
+                                                                        <span className="inline-flex items-center gap-1 tabular-nums">
+                                                                            <Gauge className="h-3.5 w-3.5" />
+                                                                            Tank{' '}
+                                                                            {
+                                                                                req.current_fuel_level_percent
+                                                                            }
+                                                                            %
+                                                                        </span>
+                                                                    )}
+                                                                {req.logs?.some(
+                                                                    (log) =>
+                                                                        log.requires_receipt_review,
+                                                                ) && (
+                                                                    <span className="inline-flex items-center gap-1 font-medium text-warning-strong">
+                                                                        <ReceiptText className="h-3.5 w-3.5" />
+                                                                        Receipt
+                                                                        review
+                                                                        needed
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        )}
                                                     </button>
                                                 </li>
                                             );
@@ -768,20 +922,30 @@ export function FuelSurface({
                                             : 'block',
                                     )}
                                 >
-                                    {/* Mobile "Back to queue" button */}
-                                    <div className="mb-3 lg:hidden">
-                                        <Button
-                                            variant="quiet"
-                                            size="sm"
-                                            onClick={() =>
-                                                setMobileDetailView(false)
-                                            }
-                                            className="min-h-[44px]"
+                                    {/* Return to the list that opened this request. */}
+                                    {(mobileDetailView || returnSection) && (
+                                        <div
+                                            className={cn(
+                                                'mb-3',
+                                                !returnSection && 'lg:hidden',
+                                            )}
                                         >
-                                            <ArrowLeft className="mr-1.5 h-4 w-4" />
-                                            Back to fuel queue
-                                        </Button>
-                                    </div>
+                                            <Button
+                                                variant="quiet"
+                                                size="sm"
+                                                onClick={handleBackFromRequest}
+                                                className="min-h-[44px]"
+                                            >
+                                                <ArrowLeft className="mr-1.5 h-4 w-4" />
+                                                {returnSection === 'logs'
+                                                    ? 'Back to Fuel Logs'
+                                                    : returnSection ===
+                                                        'consumption'
+                                                      ? 'Back to Consumption'
+                                                      : 'Back to fuel queue'}
+                                            </Button>
+                                        </div>
+                                    )}
 
                                     {selectedRequest ? (
                                         <ul className="list-none p-0">
@@ -820,48 +984,54 @@ export function FuelSurface({
                 {pagination && pagination.last_page > 1 && (
                     <nav
                         aria-label="Fuel request pages"
-                        className="flex items-center justify-between gap-3"
+                        className="flex flex-wrap items-center justify-between gap-3"
                     >
                         <Button
                             variant="secondary"
                             disabled={pagination.current_page <= 1}
                             onClick={() =>
-                                router.get(
-                                    '/operations',
-                                    {
-                                        section: 'fuel',
-                                        fuel_page: pagination.current_page - 1,
-                                    },
-                                    {
-                                        preserveState: true,
-                                        preserveScroll: true,
-                                    },
-                                )
+                                changeFuelPage(pagination.current_page - 1)
                             }
                         >
                             Previous page
                         </Button>
-                        <span className="text-xs text-ink-soft tabular-nums">
+                        <span className="text-xs text-ink-soft tabular-nums sm:hidden">
                             Page {pagination.current_page} of{' '}
                             {pagination.last_page}
                         </span>
+                        <div
+                            className="hidden items-center gap-1 sm:flex"
+                            aria-label="Page numbers"
+                        >
+                            {pageNumbers.map((page) => (
+                                <button
+                                    key={page}
+                                    type="button"
+                                    aria-label={`Page ${page}`}
+                                    aria-current={
+                                        page === pagination.current_page
+                                            ? 'page'
+                                            : undefined
+                                    }
+                                    onClick={() => changeFuelPage(page)}
+                                    className={cn(
+                                        'min-h-9 min-w-9 rounded-lg border px-2 text-xs font-semibold tabular-nums focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
+                                        page === pagination.current_page
+                                            ? 'border-brand-strong bg-brand-soft text-ink'
+                                            : 'border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
+                                    )}
+                                >
+                                    {page}
+                                </button>
+                            ))}
+                        </div>
                         <Button
                             variant="secondary"
                             disabled={
                                 pagination.current_page >= pagination.last_page
                             }
                             onClick={() =>
-                                router.get(
-                                    '/operations',
-                                    {
-                                        section: 'fuel',
-                                        fuel_page: pagination.current_page + 1,
-                                    },
-                                    {
-                                        preserveState: true,
-                                        preserveScroll: true,
-                                    },
-                                )
+                                changeFuelPage(pagination.current_page + 1)
                             }
                         >
                             Next page
