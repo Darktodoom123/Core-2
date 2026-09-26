@@ -1,9 +1,10 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useTheme } from '../../theme';
+import { useTheme, useThemedStyles } from '../../theme';
+import type { ThemeColors } from '../../theme';
 import type { DutyStatus } from '../../types/index';
 import { DUTY_STATUS_OPTIONS } from './hos-constants';
-import { hosSharedStyles } from './hos-shared-styles';
+import { createHosSharedStyles } from './hos-shared-styles';
 
 export interface HosDutyStatusSelectorProps {
     selectedStatus: DutyStatus;
@@ -16,31 +17,22 @@ export const HosDutyStatusSelector: React.FC<HosDutyStatusSelectorProps> = ({
     setIsSaved,
     setSelectedStatus,
 }) => {
-    const { isDarkHud } = useTheme();
+    const { theme } = useTheme();
+    const styles = useThemedStyles(createStyles);
+    const hosSharedStyles = useThemedStyles(createHosSharedStyles);
 
     return (
         <View
-            style={[
-                hosSharedStyles.sectionCard,
-                isDarkHud && hosSharedStyles.darkSectionCard,
-            ]}
+            style={[hosSharedStyles.sectionCard]}
             testID="duty-status-selector"
         >
             <Text
                 accessibilityRole="header"
-                style={[
-                    hosSharedStyles.sectionTitle,
-                    isDarkHud && hosSharedStyles.darkSectionTitle,
-                ]}
+                style={[hosSharedStyles.sectionTitle]}
             >
                 SELECT ACTIVE DUTY STATUS
             </Text>
-            <Text
-                style={[
-                    hosSharedStyles.sectionHelper,
-                    isDarkHud && hosSharedStyles.darkSectionHelper,
-                ]}
-            >
+            <Text style={[hosSharedStyles.sectionHelper]}>
                 Tap to switch duty status. Complies with DOLE-OSHC and DOT ELD
                 mandates.
             </Text>
@@ -60,11 +52,7 @@ export const HosDutyStatusSelector: React.FC<HosDutyStatusSelectorProps> = ({
                             }}
                             style={({ pressed }) => [
                                 styles.dutyOptionCard,
-                                isDarkHud && styles.darkDutyOptionCard,
-                                isSelected &&
-                                    (isDarkHud
-                                        ? styles.darkDutyOptionCardSelected
-                                        : styles.dutyOptionCardSelected),
+                                isSelected && styles.dutyOptionCardSelected,
                                 pressed && styles.dutyOptionCardPressed,
                             ]}
                             testID={`duty-option-${opt.status}`}
@@ -74,22 +62,20 @@ export const HosDutyStatusSelector: React.FC<HosDutyStatusSelectorProps> = ({
                                     style={[
                                         styles.optionBadge,
                                         {
-                                            borderColor: opt.accentColor,
+                                            borderColor: theme[opt.accentToken],
                                         },
                                         isSelected && {
-                                            backgroundColor: opt.accentColor,
+                                            backgroundColor:
+                                                theme[opt.accentToken],
                                         },
                                     ]}
+                                    testID={`duty-badge-${opt.status}`}
                                 >
                                     <Text
                                         style={[
                                             styles.optionBadgeText,
-                                            isDarkHud &&
-                                                styles.darkOptionBadgeText,
                                             isSelected &&
-                                                (isDarkHud
-                                                    ? styles.darkOptionBadgeTextActive
-                                                    : styles.optionBadgeTextActive),
+                                                styles.optionBadgeTextActive,
                                         ]}
                                     >
                                         {opt.badge}
@@ -99,22 +85,13 @@ export const HosDutyStatusSelector: React.FC<HosDutyStatusSelectorProps> = ({
                                     <Text
                                         style={[
                                             styles.optionTitle,
-                                            isDarkHud && styles.darkOptionTitle,
                                             isSelected &&
-                                                (isDarkHud
-                                                    ? styles.darkOptionTitleSelected
-                                                    : styles.optionTitleSelected),
+                                                styles.optionTitleSelected,
                                         ]}
                                     >
                                         {opt.title}
                                     </Text>
-                                    <Text
-                                        style={[
-                                            styles.optionSubtitle,
-                                            isDarkHud &&
-                                                styles.darkOptionSubtitle,
-                                        ]}
-                                    >
+                                    <Text style={[styles.optionSubtitle]}>
                                         {opt.subtitle}
                                     </Text>
                                 </View>
@@ -123,21 +100,11 @@ export const HosDutyStatusSelector: React.FC<HosDutyStatusSelectorProps> = ({
                             <View
                                 style={[
                                     styles.radioButton,
-                                    isDarkHud && styles.darkRadioButton,
-                                    isSelected &&
-                                        (isDarkHud
-                                            ? styles.darkRadioButtonSelected
-                                            : styles.radioButtonSelected),
+                                    isSelected && styles.radioButtonSelected,
                                 ]}
                             >
                                 {isSelected ? (
-                                    <View
-                                        style={[
-                                            styles.radioButtonInner,
-                                            isDarkHud &&
-                                                styles.darkRadioButtonInner,
-                                        ]}
-                                    />
+                                    <View style={[styles.radioButtonInner]} />
                                 ) : null}
                             </View>
                         </Pressable>
@@ -148,126 +115,88 @@ export const HosDutyStatusSelector: React.FC<HosDutyStatusSelectorProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
-    darkDutyOptionCard: {
-        backgroundColor: '#1E293B',
-        borderColor: 'rgba(255, 255, 255, 0.08)',
-        shadowColor: '#000000',
-        shadowOpacity: 0.2,
-    },
-    darkDutyOptionCardSelected: {
-        backgroundColor: 'rgba(255, 191, 0, 0.12)',
-        borderColor: '#FFBF00',
-        borderWidth: 2,
-    },
-    darkOptionBadgeText: {
-        color: '#F8FAFC',
-    },
-    darkOptionBadgeTextActive: {
-        color: '#FFFFFF',
-    },
-    darkOptionSubtitle: {
-        color: '#94A3B8',
-    },
-    darkOptionTitle: {
-        color: '#FFFFFF',
-    },
-    darkOptionTitleSelected: {
-        color: '#FFBF00',
-    },
-    darkRadioButton: {
-        borderColor: '#475569',
-    },
-    darkRadioButtonInner: {
-        backgroundColor: '#FFBF00',
-    },
-    darkRadioButtonSelected: {
-        borderColor: '#FFBF00',
-    },
-    dutyOptionCard: {
-        alignItems: 'center',
-        backgroundColor: '#FFFFFF',
-        borderColor: '#E2E8F0',
-        borderRadius: 14,
-        borderWidth: 1,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        minHeight: 64,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        elevation: 1,
-        shadowColor: '#0F172A',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.04,
-        shadowRadius: 2,
-    },
-    dutyOptionCardPressed: {
-        opacity: 0.88,
-        transform: [{ scale: 0.99 }],
-    },
-    dutyOptionCardSelected: {
-        backgroundColor: '#FFF3C4',
-        borderColor: '#FFBF00',
-        borderWidth: 2,
-    },
-    dutyOptionsList: {
-        gap: 10,
-    },
-    optionBadge: {
-        alignItems: 'center',
-        backgroundColor: 'transparent',
-        borderRadius: 8,
-        borderWidth: 1.5,
-        height: 30,
-        justifyContent: 'center',
-        width: 42,
-    },
-    optionBadgeText: {
-        color: '#0F172A',
-        fontSize: 12,
-        fontWeight: '900',
-    },
-    optionBadgeTextActive: {
-        color: '#FFFFFF',
-    },
-    optionCopy: {
-        flex: 1,
-    },
-    optionLeft: {
-        alignItems: 'center',
-        flex: 1,
-        flexDirection: 'row',
-        gap: 12,
-    },
-    optionSubtitle: {
-        color: '#64748B',
-        fontSize: 12,
-        marginTop: 2,
-    },
-    optionTitle: {
-        color: '#0F172A',
-        fontSize: 14,
-        fontWeight: '700',
-    },
-    optionTitleSelected: {
-        color: '#806000',
-    },
-    radioButton: {
-        alignItems: 'center',
-        borderColor: '#CBD5E1',
-        borderRadius: 11,
-        borderWidth: 2,
-        height: 22,
-        justifyContent: 'center',
-        width: 22,
-    },
-    radioButtonInner: {
-        backgroundColor: '#FFBF00',
-        borderRadius: 5.5,
-        height: 11,
-        width: 11,
-    },
-    radioButtonSelected: {
-        borderColor: '#FFBF00',
-    },
-});
+const createStyles = (theme: ThemeColors) =>
+    StyleSheet.create({
+        dutyOptionCard: {
+            alignItems: 'center',
+            backgroundColor: theme.surface,
+            borderColor: theme.border,
+            borderRadius: 12,
+            borderWidth: 1,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            minHeight: 64,
+            paddingHorizontal: 16,
+            paddingVertical: 12,
+        },
+        dutyOptionCardPressed: {
+            opacity: 0.88,
+            transform: [{ scale: 0.99 }],
+        },
+        dutyOptionCardSelected: {
+            backgroundColor: theme.brandAmberLight,
+            borderColor: theme.brandAmber,
+            borderWidth: 2,
+        },
+        dutyOptionsList: {
+            gap: 10,
+        },
+        optionBadge: {
+            alignItems: 'center',
+            backgroundColor: 'transparent',
+            borderRadius: 8,
+            borderWidth: 1.5,
+            height: 30,
+            justifyContent: 'center',
+            width: 42,
+        },
+        optionBadgeText: {
+            color: theme.textPrimary,
+            fontSize: 12,
+            fontWeight: '700',
+        },
+        // Text on a duty category fill.
+        optionBadgeTextActive: {
+            color: theme.textInverse,
+        },
+        optionCopy: {
+            flex: 1,
+        },
+        optionLeft: {
+            alignItems: 'center',
+            flex: 1,
+            flexDirection: 'row',
+            gap: 12,
+        },
+        optionSubtitle: {
+            color: theme.textSecondary,
+            fontSize: 12,
+            marginTop: 2,
+        },
+        optionTitle: {
+            color: theme.textPrimary,
+            fontSize: 14,
+            fontWeight: '700',
+        },
+        optionTitleSelected: {
+            color: theme.textPrimary,
+        },
+        radioButton: {
+            alignItems: 'center',
+            borderColor: theme.borderStrong,
+            borderRadius: 11,
+            borderWidth: 2,
+            height: 22,
+            justifyContent: 'center',
+            width: 22,
+        },
+        radioButtonInner: {
+            backgroundColor: theme.brandAmberText,
+            borderRadius: 5.5,
+            height: 11,
+            width: 11,
+        },
+        radioButtonSelected: {
+            borderColor: theme.brandAmberText,
+        },
+    });

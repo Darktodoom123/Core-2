@@ -34,6 +34,10 @@ export interface ThemeColors {
     warningOrange: string;
     warningOrangeLight: string;
     warningOrangeText: string;
+    // Duty category colors for HoS graphs and badges only (see mobile.md).
+    dutyOnDuty: string;
+    dutyDriving: string;
+    dutyStandby: string;
     // Cockpit Instrument
     hudBezel: string;
     hudGlowAmber: string;
@@ -69,6 +73,9 @@ export const lightThemeColors: ThemeColors = {
     warningOrange: '#EA580C',
     warningOrangeLight: '#FFF7ED',
     warningOrangeText: '#9A3412',
+    dutyOnDuty: '#0F766E',
+    dutyDriving: '#2563EB',
+    dutyStandby: '#6D28D9',
     hudBezel: '#1E293B',
     hudGlowAmber: '#FFBF00',
     hudGlowEmerald: '#10B981',
@@ -103,6 +110,9 @@ export const darkHudThemeColors: ThemeColors = {
     warningOrange: '#F97316',
     warningOrangeLight: '#7C2D12',
     warningOrangeText: '#FDBA74',
+    dutyOnDuty: '#2DD4BF',
+    dutyDriving: '#60A5FA',
+    dutyStandby: '#A78BFA',
     hudBezel: '#1E293B',
     hudGlowAmber: '#FFBF00',
     hudGlowEmerald: '#34D399',

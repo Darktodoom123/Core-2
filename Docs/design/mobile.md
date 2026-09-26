@@ -126,8 +126,9 @@ Rules for new and touched code:
   duplicates or `isDarkHud &&` style branches.
 - A migrated screen is added to `src/__tests__/designTokenAdoption.test.ts`,
   which fails on any hex or `rgba()` literal or `nativeStyles` import in it.
-  Migrated so far: `DvirScreen.tsx`, `src/screens/dvir/`, and the home
-  header (`field-header.tsx`, `profile-summary.tsx`, `sync-status-pill.tsx`).
+  Migrated so far: `DvirScreen.tsx` and `src/screens/dvir/`, `HosScreen.tsx`
+  and `src/screens/hos/`, and the home header (`field-header.tsx`,
+  `profile-summary.tsx`, `sync-status-pill.tsx`).
 
 ### Roles
 
@@ -140,6 +141,25 @@ Rules for new and touched code:
 | Green | Confirmed, cleared, available, synchronized, fresh telemetry, live sharing active | Navigation or decoration |
 | Cobalt | Informational accents only | Primary actions or brand |
 | Neutral slate | Surfaces, borders, secondary text, offline telemetry | Status that needs attention |
+
+### Duty status colors
+
+Hours of Service is the one place with a categorical palette: the ELD graph,
+duty badges, and the shift log show duty type by color, always with its label
+(`OFF`, `BRK`, `DRV`, `ON`, or the badge text).
+
+| Duty status | Token | Light | Dark HUD |
+| :--- | :--- | :--- | :--- |
+| Operating / On duty | `dutyOnDuty` | `#0F766E` | `#2DD4BF` |
+| Driving | `dutyDriving` | `#2563EB` | `#60A5FA` |
+| Standby | `dutyStandby` | `#6D28D9` | `#A78BFA` |
+| On break | `successEmerald` | | |
+| Off duty | `textSecondary` | | |
+
+Duty colors are never gold, orange, or red, so they cannot be read as an
+action, a warning, or a violation. They reach 3:1 on `surface`, and text on a
+duty fill uses `textInverse` (tested in `formattersAndTheme.test.ts`). Use
+them only for duty type, not elsewhere.
 
 Put dark text (`#0F172A`) on gold fills.
 
@@ -270,8 +290,8 @@ opportunistically in code you touch:
 
 - Two palettes (`theme/tokens.ts` and `components/nativeStyles.ts`). 50
   files still import the light-only `nativeStyles` colors (2026-09-27).
-- 60 component and screen files contain hex literals, and `#FFBF00` appears
-  292 times outside `src/theme` (2026-09-27).
+- 47 component and screen files contain hex literals, and `#FFBF00` appears
+  245 times outside `src/theme` (2026-09-27).
 - Resting panels combine a border with a shadow (`sharedStyles.panel`,
   `shadows.md`).
 - `createMachinedStyles` in `src/theme/index.tsx` (uppercase "pedal" buttons and

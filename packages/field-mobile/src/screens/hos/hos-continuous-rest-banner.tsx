@@ -2,7 +2,8 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Icon } from '../../components/common/Icon';
 import type { HosComplianceResult } from '../../hooks/useHosCompliance';
-import { useTheme } from '../../theme';
+import { useTheme, useThemedStyles } from '../../theme';
+import type { ThemeColors } from '../../theme';
 import type { DutyStatus, ShiftInfo, StandbyReason } from '../../types/index';
 
 export interface HosContinuousRestBannerProps {
@@ -33,7 +34,12 @@ export const HosContinuousRestBanner: React.FC<
     setOverriddenStatus,
     shiftInfo,
 }) => {
-    const { isDarkHud } = useTheme();
+    const { theme } = useTheme();
+    const styles = useThemedStyles(createStyles);
+    // Approaching the 4.5h continuous limit is a warning; reaching it is critical.
+    const toneText = hosCompliance.isContinuousRestRequired
+        ? theme.hazardRedText
+        : theme.warningOrangeText;
 
     return (
         <View
@@ -42,46 +48,25 @@ export const HosContinuousRestBanner: React.FC<
                 styles.doleContinuousRestBanner,
                 hosCompliance.isContinuousRestRequired &&
                     styles.doleContinuousRestRequiredBanner,
-                isDarkHud && styles.darkDoleContinuousRestBanner,
             ]}
             testID="dole-continuous-rest-banner"
         >
             <View style={styles.doleContinuousRestContent}>
                 <View style={styles.doleContinuousRestHeader}>
-                    <Icon
-                        color={
-                            hosCompliance.isContinuousRestRequired
-                                ? isDarkHud
-                                    ? '#F59E0B'
-                                    : '#B45309'
-                                : isDarkHud
-                                  ? '#38BDF8'
-                                  : '#0284C7'
-                        }
-                        name="clock"
-                        size={18}
-                    />
+                    <Icon color={toneText} name="clock" size={18} />
                     <Text
                         style={[
                             styles.doleContinuousRestTitle,
-                            isDarkHud && styles.darkDoleContinuousRestTitle,
+                            { color: toneText },
                         ]}
                     >
                         {breakSuggestion.title}
                     </Text>
                     <View
-                        style={[
-                            styles.continuousPill,
-                            isDarkHud && styles.darkContinuousPill,
-                        ]}
+                        style={[styles.continuousPill]}
                         testID="dole-continuous-counter-pill"
                     >
-                        <Text
-                            style={[
-                                styles.continuousPillText,
-                                isDarkHud && styles.darkContinuousPillText,
-                            ]}
-                        >
+                        <Text style={[styles.continuousPillText]}>
                             {hosCompliance.continuousCounterLabel}
                         </Text>
                     </View>
@@ -89,7 +74,7 @@ export const HosContinuousRestBanner: React.FC<
                 <Text
                     style={[
                         styles.doleContinuousRestMessage,
-                        isDarkHud && styles.darkDoleContinuousRestMessage,
+                        { color: theme.textPrimary },
                     ]}
                 >
                     {breakSuggestion.message}
@@ -108,18 +93,10 @@ export const HosContinuousRestBanner: React.FC<
                         void onUpdateDutyStatus('standby');
                     }
                 }}
-                style={[
-                    styles.doleContinuousRestBtn,
-                    isDarkHud && styles.darkDoleContinuousRestBtn,
-                ]}
+                style={[styles.doleContinuousRestBtn]}
                 testID="dole-continuous-break-btn"
             >
-                <Text
-                    style={[
-                        styles.doleContinuousRestBtnText,
-                        isDarkHud && styles.darkDoleContinuousRestBtnText,
-                    ]}
-                >
+                <Text style={[styles.doleContinuousRestBtnText]}>
                     {breakSuggestion.actionLabel}
                 </Text>
             </Pressable>
@@ -127,92 +104,70 @@ export const HosContinuousRestBanner: React.FC<
     );
 };
 
-const styles = StyleSheet.create({
-    continuousPill: {
-        backgroundColor: '#FDE68A',
-        borderColor: '#F59E0B',
-        borderRadius: 6,
-        borderWidth: 1,
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-    },
-    continuousPillText: {
-        color: '#78350F',
-        fontFamily: 'monospace',
-        fontSize: 12,
-        fontWeight: '800',
-    },
-    darkContinuousPill: {
-        backgroundColor: 'rgba(245, 158, 11, 0.2)',
-        borderColor: '#F59E0B',
-    },
-    darkContinuousPillText: {
-        color: '#FDE68A',
-    },
-    darkDoleContinuousRestBanner: {
-        backgroundColor: '#1E293B',
-        borderColor: '#F59E0B',
-    },
-    darkDoleContinuousRestBtn: {
-        backgroundColor: '#F59E0B',
-    },
-    darkDoleContinuousRestBtnText: {
-        color: '#0F172A',
-    },
-    darkDoleContinuousRestMessage: {
-        color: '#FCD34D',
-    },
-    darkDoleContinuousRestTitle: {
-        color: '#FBBF24',
-    },
-    doleContinuousRestBanner: {
-        alignItems: 'center',
-        backgroundColor: '#FEF3C7',
-        borderColor: '#F59E0B',
-        borderRadius: 12,
-        borderWidth: 1.5,
-        flexDirection: 'row',
-        gap: 10,
-        justifyContent: 'space-between',
-        marginBottom: 14,
-        paddingHorizontal: 14,
-        paddingVertical: 10,
-    },
-    doleContinuousRestBtn: {
-        backgroundColor: '#D97706',
-        borderRadius: 8,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-    },
-    doleContinuousRestBtnText: {
-        color: '#FFFFFF',
-        fontSize: 12,
-        fontWeight: '800',
-    },
-    doleContinuousRestContent: {
-        flex: 1,
-        gap: 4,
-    },
-    doleContinuousRestHeader: {
-        alignItems: 'center',
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 6,
-    },
-    doleContinuousRestMessage: {
-        color: '#92400E',
-        fontSize: 12,
-        fontWeight: '600',
-        lineHeight: 16,
-    },
-    doleContinuousRestRequiredBanner: {
-        backgroundColor: '#FFFBEB',
-        borderColor: '#D97706',
-    },
-    doleContinuousRestTitle: {
-        color: '#92400E',
-        fontSize: 12,
-        fontWeight: '800',
-        letterSpacing: 0.2,
-    },
-});
+const createStyles = (theme: ThemeColors) =>
+    StyleSheet.create({
+        continuousPill: {
+            backgroundColor: theme.surface,
+            borderColor: theme.borderStrong,
+            borderRadius: 6,
+            borderWidth: 1,
+            paddingHorizontal: 6,
+            paddingVertical: 2,
+        },
+        continuousPillText: {
+            color: theme.textPrimary,
+            fontFamily: 'monospace',
+            fontSize: 12,
+            fontWeight: '700',
+        },
+        doleContinuousRestBanner: {
+            alignItems: 'center',
+            backgroundColor: theme.warningOrangeLight,
+            borderColor: theme.warningOrange,
+            borderRadius: 12,
+            borderWidth: 1.5,
+            flexDirection: 'row',
+            gap: 10,
+            justifyContent: 'space-between',
+            marginBottom: 14,
+            paddingHorizontal: 14,
+            paddingVertical: 10,
+        },
+        doleContinuousRestBtn: {
+            alignItems: 'center',
+            backgroundColor: theme.brandAmber,
+            borderRadius: 12,
+            justifyContent: 'center',
+            minHeight: 48,
+            paddingHorizontal: 14,
+        },
+        doleContinuousRestBtnText: {
+            color: theme.surfaceDark,
+            fontSize: 14,
+            fontWeight: '700',
+        },
+        doleContinuousRestContent: {
+            flex: 1,
+            gap: 4,
+        },
+        doleContinuousRestHeader: {
+            alignItems: 'center',
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: 6,
+        },
+        doleContinuousRestMessage: {
+            fontSize: 13,
+            fontWeight: '500',
+            lineHeight: 16,
+        },
+        doleContinuousRestRequiredBanner: {
+            backgroundColor: theme.hazardRedLight,
+            borderColor: theme.hazardRed,
+        },
+        doleContinuousRestTitle: {
+            fontSize: 13,
+            fontWeight: '700',
+            letterSpacing: 0.2,
+        },
+    });

@@ -1,9 +1,10 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Icon } from '../../components/common/Icon';
-import { useTheme } from '../../theme';
+import { useTheme, useThemedStyles } from '../../theme';
+import type { ThemeColors } from '../../theme';
 import type { DutyStatus, ShiftInfo } from '../../types/index';
-import { hosSharedStyles } from './hos-shared-styles';
+import { createHosSharedStyles } from './hos-shared-styles';
 
 export interface HosEndShiftCardProps {
     executeDutyUpdate: (statusToSet?: DutyStatus) => Promise<void>;
@@ -26,47 +27,27 @@ export const HosEndShiftCard: React.FC<HosEndShiftCardProps> = ({
     setSelectedStatus,
     shiftInfo,
 }) => {
-    const { isDarkHud } = useTheme();
+    const { theme } = useTheme();
+    const styles = useThemedStyles(createStyles);
+    const hosSharedStyles = useThemedStyles(createHosSharedStyles);
 
     return (
         <View
-            style={[
-                hosSharedStyles.sectionCard,
-                styles.endShiftCard,
-                isDarkHud && hosSharedStyles.darkSectionCard,
-                isDarkHud && styles.darkEndShiftCard,
-            ]}
+            style={[hosSharedStyles.sectionCard, styles.endShiftCard]}
             testID="hos-end-shift-card"
         >
             <View style={styles.endShiftHeaderRow}>
-                <View
-                    style={[
-                        styles.endShiftIconBadge,
-                        isDarkHud && styles.darkEndShiftIconBadge,
-                    ]}
-                >
-                    <Icon
-                        color={isDarkHud ? '#F87171' : '#DC2626'}
-                        name="power"
-                        size={20}
-                    />
+                <View style={[styles.endShiftIconBadge]}>
+                    <Icon color={theme.textPrimary} name="power" size={20} />
                 </View>
                 <View style={styles.endShiftHeaderCopy}>
                     <Text
                         accessibilityRole="header"
-                        style={[
-                            hosSharedStyles.sectionTitle,
-                            isDarkHud && hosSharedStyles.darkSectionTitle,
-                        ]}
+                        style={[hosSharedStyles.sectionTitle]}
                     >
                         END SHIFT &amp; CLOCK OUT
                     </Text>
-                    <Text
-                        style={[
-                            hosSharedStyles.sectionHelper,
-                            isDarkHud && hosSharedStyles.darkSectionHelper,
-                        ]}
-                    >
+                    <Text style={[hosSharedStyles.sectionHelper]}>
                         Compliant DOLE-OSHC &amp; DOT ELD shift closure.
                         Releases linked equipment proxy and begins mandatory
                         10-hour daily rest period.
@@ -75,23 +56,9 @@ export const HosEndShiftCard: React.FC<HosEndShiftCardProps> = ({
             </View>
 
             {linkedAssetCode ? (
-                <View
-                    style={[
-                        styles.linkedAssetPill,
-                        isDarkHud && styles.darkLinkedAssetPill,
-                    ]}
-                >
-                    <Icon
-                        color={isDarkHud ? '#FFBF00' : '#806000'}
-                        name="crane"
-                        size={14}
-                    />
-                    <Text
-                        style={[
-                            styles.linkedAssetPillText,
-                            isDarkHud && styles.darkLinkedAssetPillText,
-                        ]}
-                    >
+                <View style={[styles.linkedAssetPill]}>
+                    <Icon color={theme.textSecondary} name="crane" size={14} />
+                    <Text style={[styles.linkedAssetPillText]}>
                         Linked Equipment: {linkedAssetCode}
                     </Text>
                 </View>
@@ -100,23 +67,15 @@ export const HosEndShiftCard: React.FC<HosEndShiftCardProps> = ({
             {selectedStatus === 'off_duty' ||
             shiftInfo.status === 'off_shift' ? (
                 <View
-                    style={[
-                        styles.shiftCompletedNotice,
-                        isDarkHud && styles.darkShiftCompletedNotice,
-                    ]}
+                    style={[styles.shiftCompletedNotice]}
                     testID="shift-completed-notice"
                 >
                     <Icon
-                        color={isDarkHud ? '#34D399' : '#059669'}
+                        color={theme.successEmerald}
                         name="check-circle"
                         size={18}
                     />
-                    <Text
-                        style={[
-                            styles.shiftCompletedNoticeText,
-                            isDarkHud && styles.darkShiftCompletedNoticeText,
-                        ]}
-                    >
+                    <Text style={[styles.shiftCompletedNoticeText]}>
                         Shift Closed &amp; Off Duty · 10h Daily Rest Active
                     </Text>
                 </View>
@@ -136,12 +95,11 @@ export const HosEndShiftCard: React.FC<HosEndShiftCardProps> = ({
                     }}
                     style={({ pressed }) => [
                         styles.endShiftBtn,
-                        isDarkHud && styles.darkEndShiftBtn,
                         pressed && hosSharedStyles.actionButtonPressed,
                     ]}
                     testID="hos-end-shift-btn"
                 >
-                    <Icon color="#FFFFFF" name="power" size={18} />
+                    <Icon color={theme.surfaceDark} name="power" size={18} />
                     <Text style={styles.endShiftBtnText}>
                         End Shift &amp; Clock Out
                     </Text>
@@ -151,97 +109,75 @@ export const HosEndShiftCard: React.FC<HosEndShiftCardProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
-    darkEndShiftBtn: {
-        backgroundColor: '#B91C1C',
-    },
-    darkEndShiftCard: {
-        borderColor: 'rgba(239, 68, 68, 0.4)',
-    },
-    darkEndShiftIconBadge: {
-        backgroundColor: 'rgba(239, 68, 68, 0.2)',
-    },
-    darkLinkedAssetPill: {
-        backgroundColor: 'rgba(255, 191, 0, 0.15)',
-        borderColor: 'rgba(255, 191, 0, 0.3)',
-    },
-    darkLinkedAssetPillText: {
-        color: '#FFBF00',
-    },
-    darkShiftCompletedNotice: {
-        backgroundColor: 'rgba(16, 185, 129, 0.15)',
-        borderColor: 'rgba(16, 185, 129, 0.3)',
-    },
-    darkShiftCompletedNoticeText: {
-        color: '#34D399',
-    },
-    endShiftBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        backgroundColor: '#DC2626',
-        borderRadius: 12,
-        paddingVertical: 14,
-    },
-    endShiftBtnText: {
-        color: '#FFFFFF',
-        fontSize: 15,
-        fontWeight: '800',
-        letterSpacing: 0.2,
-    },
-    endShiftCard: {
-        borderColor: '#FECACA',
-        borderWidth: 1.5,
-    },
-    endShiftHeaderCopy: {
-        flex: 1,
-    },
-    endShiftHeaderRow: {
-        flexDirection: 'row',
-        gap: 12,
-        alignItems: 'flex-start',
-        marginBottom: 12,
-    },
-    endShiftIconBadge: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: '#FEE2E2',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    linkedAssetPill: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        alignSelf: 'flex-start',
-        backgroundColor: '#FFF3C4',
-        borderColor: '#FFF3C4',
-        borderWidth: 1,
-        borderRadius: 9999,
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        marginBottom: 14,
-    },
-    linkedAssetPillText: {
-        color: '#806000',
-        fontSize: 12,
-        fontWeight: '700',
-    },
-    shiftCompletedNotice: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        backgroundColor: '#ECFDF5',
-        borderColor: '#A7F3D0',
-        borderWidth: 1,
-        borderRadius: 10,
-        padding: 12,
-    },
-    shiftCompletedNoticeText: {
-        color: '#065F46',
-        fontSize: 13,
-        fontWeight: '700',
-    },
-});
+const createStyles = (theme: ThemeColors) =>
+    StyleSheet.create({
+        endShiftBtn: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            backgroundColor: theme.brandAmber,
+            borderRadius: 12,
+            minHeight: 52,
+        },
+        endShiftBtnText: {
+            color: theme.surfaceDark,
+            fontSize: 15,
+            fontWeight: '700',
+            letterSpacing: 0.2,
+        },
+        endShiftCard: {
+            borderColor: theme.border,
+            borderWidth: 1,
+        },
+        endShiftHeaderCopy: {
+            flex: 1,
+        },
+        endShiftHeaderRow: {
+            flexDirection: 'row',
+            gap: 12,
+            alignItems: 'flex-start',
+            marginBottom: 12,
+        },
+        endShiftIconBadge: {
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: theme.surfaceHighlight,
+            alignItems: 'center',
+            justifyContent: 'center',
+        },
+        linkedAssetPill: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            alignSelf: 'flex-start',
+            backgroundColor: theme.surfaceHighlight,
+            borderColor: theme.border,
+            borderWidth: 1,
+            borderRadius: 9999,
+            paddingHorizontal: 10,
+            paddingVertical: 4,
+            marginBottom: 14,
+        },
+        linkedAssetPillText: {
+            color: theme.textPrimary,
+            fontSize: 12,
+            fontWeight: '700',
+        },
+        shiftCompletedNotice: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+            backgroundColor: theme.successEmeraldLight,
+            borderColor: theme.successEmerald,
+            borderWidth: 1,
+            borderRadius: 12,
+            padding: 12,
+        },
+        shiftCompletedNoticeText: {
+            color: theme.successEmeraldText,
+            fontSize: 13,
+            fontWeight: '700',
+        },
+    });

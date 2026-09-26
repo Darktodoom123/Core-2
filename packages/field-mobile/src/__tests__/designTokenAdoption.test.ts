@@ -16,6 +16,10 @@ const MIGRATED = [
     ...fs
         .readdirSync(path.join(SRC, 'screens', 'dvir'))
         .map((file) => `screens/dvir/${file}`),
+    'screens/HosScreen.tsx',
+    ...fs
+        .readdirSync(path.join(SRC, 'screens', 'hos'))
+        .map((file) => `screens/hos/${file}`),
 ];
 
 const HEX_OR_RGBA = /['"]#[0-9A-Fa-f]{3,8}['"]|rgba?\(/;

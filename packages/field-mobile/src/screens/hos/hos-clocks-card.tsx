@@ -2,7 +2,8 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Icon } from '../../components/common/Icon';
 import type { HosComplianceResult } from '../../hooks/useHosCompliance';
-import { useTheme } from '../../theme';
+import { useTheme, useThemedStyles } from '../../theme';
+import type { ThemeColors } from '../../theme';
 import type { ShiftInfo } from '../../types/index';
 import { formatHoursMinutes } from './hos-constants';
 
@@ -56,7 +57,8 @@ const HosClockDial: React.FC<HosClockDialProps> = ({
     remainingHours,
     sublabel,
 }) => {
-    const { isDarkHud, theme } = useTheme();
+    const { theme } = useTheme();
+    const styles = useThemedStyles(createStyles);
     const tone = getRemainingTone(remainingHours);
     const toneColor = {
         neutral: theme.textPrimary,
@@ -65,15 +67,8 @@ const HosClockDial: React.FC<HosClockDialProps> = ({
     }[tone];
 
     return (
-        <View style={[styles.clockCell, isDarkHud && styles.darkClockCell]}>
-            <Text
-                style={[
-                    styles.clockCellLabel,
-                    isDarkHud && styles.darkClockCellLabel,
-                ]}
-            >
-                {label}
-            </Text>
+        <View style={[styles.clockCell]}>
+            <Text style={[styles.clockCellLabel]}>{label}</Text>
             <View style={styles.clockValueRow}>
                 {tone === 'neutral' ? null : (
                     <View testID={`hos-clock-${id}-alert`}>
@@ -87,14 +82,7 @@ const HosClockDial: React.FC<HosClockDialProps> = ({
                     {formatHoursMinutes(remainingHours)}
                 </Text>
             </View>
-            <Text
-                style={[
-                    styles.clockCellSub,
-                    isDarkHud && styles.darkClockCellSub,
-                ]}
-            >
-                {sublabel}
-            </Text>
+            <Text style={[styles.clockCellSub]}>{sublabel}</Text>
         </View>
     );
 };
@@ -118,7 +106,8 @@ export const HosClocksCard: React.FC<HosClocksCardProps> = ({
     shiftRemainingHours,
     userRole,
 }) => {
-    const { isDarkHud, theme } = useTheme();
+    const { theme } = useTheme();
+    const styles = useThemedStyles(createStyles);
     const shiftProgress = shiftProgressPercent ?? 0;
     // DOLE-OSHC: warn at 9.0h, hard cap at 10.0h (server-backed flags).
     const doleTone: ClockTone = isDoleCapExceeded
@@ -138,34 +127,15 @@ export const HosClocksCard: React.FC<HosClocksCardProps> = ({
     }[doleTone];
 
     return (
-        <View
-            style={[styles.clocksCard, isDarkHud && styles.darkClocksCard]}
-            testID="hos-eld-clocks-card"
-        >
+        <View style={[styles.clocksCard]} testID="hos-eld-clocks-card">
             <View style={styles.cardHeader}>
                 <View style={styles.badgeRow}>
-                    <Icon
-                        color={isDarkHud ? '#34D399' : '#059669'}
-                        name="clock"
-                        size={18}
-                    />
-                    <Text
-                        style={[
-                            styles.clocksCardHeading,
-                            isDarkHud && styles.darkClocksCardHeading,
-                        ]}
-                    >
+                    <Icon color={theme.textSecondary} name="clock" size={18} />
+                    <Text style={[styles.clocksCardHeading]}>
                         LIVE ELD DUTY CLOCKS
                     </Text>
                 </View>
-                <Text
-                    style={[
-                        styles.cycleText,
-                        isDarkHud && styles.darkCycleText,
-                    ]}
-                >
-                    {userRole.toUpperCase()}
-                </Text>
+                <Text style={[styles.cycleText]}>{userRole.toUpperCase()}</Text>
             </View>
 
             {/* 4-Cell Dials Grid */}
@@ -202,17 +172,9 @@ export const HosClocksCard: React.FC<HosClocksCardProps> = ({
 
             <View
                 accessibilityLabel="DOLE operating limit counter"
-                style={[
-                    styles.limitCounterRow,
-                    isDarkHud && styles.darkLimitCounterRow,
-                ]}
+                style={[styles.limitCounterRow]}
             >
-                <Text
-                    style={[
-                        styles.clockCellLabel,
-                        isDarkHud && styles.darkClockCellLabel,
-                    ]}
-                >
+                <Text style={[styles.clockCellLabel]}>
                     {shiftInfo.limitCounterLabel ?? 'Operating + driving'} limit
                     counter
                 </Text>
@@ -234,34 +196,19 @@ export const HosClocksCard: React.FC<HosClocksCardProps> = ({
             {/* Shift Progress Gauge Bar */}
             <View style={styles.gaugeContainer}>
                 <View style={styles.gaugeMetaRow}>
-                    <Text
-                        style={[
-                            styles.gaugeMetaLabel,
-                            isDarkHud && styles.darkGaugeMetaLabel,
-                        ]}
-                    >
+                    <Text style={[styles.gaugeMetaLabel]}>
                         Daily Shift Elapsed:{' '}
                         {hasServerClock && hoursElapsed !== null
                             ? `${hoursElapsed.toFixed(1)} / ${maxShiftHours}h`
                             : 'Unavailable'}
                     </Text>
-                    <Text
-                        style={[
-                            styles.gaugeMetaPercent,
-                            isDarkHud && styles.darkGaugeMetaPercent,
-                        ]}
-                    >
+                    <Text style={[styles.gaugeMetaPercent]}>
                         {shiftProgressPercent === null
                             ? 'Unavailable'
                             : `${shiftProgressPercent}% Used`}
                     </Text>
                 </View>
-                <View
-                    style={[
-                        styles.gaugeTrack,
-                        isDarkHud && styles.darkGaugeTrack,
-                    ]}
-                >
+                <View style={[styles.gaugeTrack]}>
                     <View
                         style={[
                             styles.gaugeFill,
@@ -281,21 +228,8 @@ export const HosClocksCard: React.FC<HosClocksCardProps> = ({
                 testID="hos-duration-breakdown"
             >
                 {durationBreakdown.map(([label, value]) => (
-                    <View
-                        key={label}
-                        style={[
-                            styles.clockCell,
-                            isDarkHud && styles.darkClockCell,
-                        ]}
-                    >
-                        <Text
-                            style={[
-                                styles.clockCellLabel,
-                                isDarkHud && styles.darkClockCellLabel,
-                            ]}
-                        >
-                            {label}
-                        </Text>
+                    <View key={label} style={[styles.clockCell]}>
+                        <Text style={[styles.clockCellLabel]}>{label}</Text>
                         <Text
                             style={[
                                 styles.clockCellValue,
@@ -304,12 +238,7 @@ export const HosClocksCard: React.FC<HosClocksCardProps> = ({
                         >
                             {formatHoursMinutes(value)}
                         </Text>
-                        <Text
-                            style={[
-                                styles.clockCellSub,
-                                isDarkHud && styles.darkClockCellSub,
-                            ]}
-                        >
+                        <Text style={[styles.clockCellSub]}>
                             server accepted
                         </Text>
                     </View>
@@ -319,153 +248,113 @@ export const HosClocksCard: React.FC<HosClocksCardProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
-    badgeRow: {
-        alignItems: 'center',
-        flexDirection: 'row',
-        gap: 6,
-    },
-    cardHeader: {
-        alignItems: 'center',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 12,
-    },
-    clockCell: {
-        backgroundColor: '#F8FAFC',
-        borderColor: '#E2E8F0',
-        borderRadius: 10,
-        borderWidth: 1,
-        flex: 1,
-        minWidth: '45%',
-        padding: 12,
-    },
-    clockCellLabel: {
-        color: '#64748B',
-        fontSize: 12,
-        fontWeight: '700',
-        marginBottom: 4,
-    },
-    clockCellSub: {
-        color: '#94A3B8',
-        fontSize: 12,
-        fontWeight: '600',
-        marginTop: 2,
-    },
-    clockCellValue: {
-        fontSize: 18,
-        fontWeight: '700',
-    },
-    clockValueRow: {
-        alignItems: 'center',
-        flexDirection: 'row',
-        gap: 4,
-    },
-    clocksCard: {
-        backgroundColor: '#FFFFFF',
-        borderColor: '#E2E8F0',
-        borderRadius: 14,
-        borderWidth: 1,
-        elevation: 2,
-        marginBottom: 16,
-        padding: 16,
-        shadowColor: '#0F172A',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 3,
-    },
-    clocksCardHeading: {
-        color: '#059669',
-        fontSize: 13,
-        fontWeight: '900',
-        letterSpacing: 0.5,
-    },
-    clocksGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 10,
-        marginBottom: 14,
-    },
-    cycleText: {
-        color: '#64748B',
-        fontSize: 12,
-        fontWeight: '700',
-    },
-    darkClockCell: {
-        backgroundColor: '#0F172A',
-        borderColor: '#334155',
-    },
-    darkClockCellLabel: {
-        color: '#94A3B8',
-    },
-    darkClockCellSub: {
-        color: '#64748B',
-    },
-    darkClocksCard: {
-        backgroundColor: '#1E293B',
-        borderColor: '#334155',
-        shadowColor: '#000000',
-        shadowOpacity: 0.25,
-        shadowRadius: 6,
-    },
-    darkClocksCardHeading: {
-        color: '#34D399',
-    },
-    darkCycleText: {
-        color: '#94A3B8',
-    },
-    darkGaugeMetaLabel: {
-        color: '#94A3B8',
-    },
-    darkGaugeMetaPercent: {
-        color: '#F8FAFC',
-    },
-    darkGaugeTrack: {
-        backgroundColor: '#0F172A',
-    },
-    darkLimitCounterRow: {
-        backgroundColor: '#172554',
-        borderColor: '#1D4ED8',
-    },
-    gaugeContainer: {
-        marginTop: 2,
-    },
-    gaugeFill: {
-        borderRadius: 6,
-        height: '100%',
-    },
-    gaugeMetaLabel: {
-        color: '#64748B',
-        fontSize: 12,
-        fontWeight: '600',
-    },
-    gaugeMetaPercent: {
-        color: '#0F172A',
-        fontSize: 12,
-        fontWeight: '800',
-    },
-    gaugeMetaRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 6,
-    },
-    gaugeTrack: {
-        backgroundColor: '#E2E8F0',
-        borderRadius: 6,
-        height: 8,
-        overflow: 'hidden',
-        width: '100%',
-    },
-    limitCounterRow: {
-        alignItems: 'center',
-        backgroundColor: '#EFF6FF',
-        borderColor: '#BFDBFE',
-        borderRadius: 10,
-        borderWidth: 1,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 14,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-    },
-});
+const createStyles = (theme: ThemeColors) =>
+    StyleSheet.create({
+        badgeRow: {
+            alignItems: 'center',
+            flexDirection: 'row',
+            gap: 6,
+        },
+        cardHeader: {
+            alignItems: 'center',
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            marginBottom: 12,
+        },
+        clockCell: {
+            backgroundColor: theme.surfaceHighlight,
+            borderColor: theme.border,
+            borderRadius: 10,
+            borderWidth: 1,
+            flex: 1,
+            minWidth: '45%',
+            padding: 12,
+        },
+        clockCellLabel: {
+            color: theme.textSecondary,
+            fontSize: 12,
+            fontWeight: '700',
+            marginBottom: 4,
+        },
+        clockCellSub: {
+            color: theme.textSecondary,
+            fontSize: 12,
+            fontWeight: '500',
+            marginTop: 2,
+        },
+        clockCellValue: {
+            fontSize: 18,
+            fontWeight: '700',
+        },
+        clockValueRow: {
+            alignItems: 'center',
+            flexDirection: 'row',
+            gap: 4,
+        },
+        clocksCard: {
+            backgroundColor: theme.surface,
+            borderColor: theme.border,
+            borderRadius: 16,
+            borderWidth: 1,
+            marginBottom: 16,
+            padding: 16,
+        },
+        clocksCardHeading: {
+            color: theme.textPrimary,
+            fontSize: 13,
+            fontWeight: '700',
+            letterSpacing: 0.5,
+        },
+        clocksGrid: {
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: 10,
+            marginBottom: 14,
+        },
+        cycleText: {
+            color: theme.textSecondary,
+            fontSize: 12,
+            fontWeight: '700',
+        },
+        gaugeContainer: {
+            marginTop: 2,
+        },
+        gaugeFill: {
+            borderRadius: 6,
+            height: '100%',
+        },
+        gaugeMetaLabel: {
+            color: theme.textSecondary,
+            fontSize: 12,
+            fontWeight: '500',
+        },
+        gaugeMetaPercent: {
+            color: theme.textPrimary,
+            fontSize: 12,
+            fontWeight: '700',
+        },
+        gaugeMetaRow: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            marginBottom: 6,
+        },
+        gaugeTrack: {
+            backgroundColor: theme.border,
+            borderRadius: 6,
+            height: 8,
+            overflow: 'hidden',
+            width: '100%',
+        },
+        limitCounterRow: {
+            alignItems: 'center',
+            backgroundColor: theme.surfaceHighlight,
+            borderColor: theme.border,
+            borderRadius: 10,
+            borderWidth: 1,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            marginBottom: 14,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+        },
+    });

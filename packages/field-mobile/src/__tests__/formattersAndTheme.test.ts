@@ -150,3 +150,36 @@ test('Warning tokens stay distinct from brand gold and meet WCAG AA in both mode
         );
     }
 });
+
+test('Duty category tokens are distinct from action and state colors and readable in both modes', () => {
+    for (const theme of [lightThemeColors, darkHudThemeColors]) {
+        const duty = [theme.dutyOnDuty, theme.dutyDriving, theme.dutyStandby];
+        const reserved = [
+            theme.brandAmber,
+            theme.warningOrange,
+            theme.hazardRed,
+            theme.successEmerald,
+        ];
+
+        assert.equal(
+            new Set(duty).size,
+            3,
+            `${theme.mode}: duty colors repeat`,
+        );
+
+        for (const color of duty) {
+            assert.ok(
+                !reserved.includes(color),
+                `${theme.mode}: ${color} reuses an action or state color`,
+            );
+            assert.ok(
+                contrastRatio(color, theme.surface) >= 3,
+                `${theme.mode}: ${color} below 3:1 on surface`,
+            );
+            assert.ok(
+                contrastRatio(theme.textInverse, color) >= 4.5,
+                `${theme.mode}: text on ${color} below 4.5:1`,
+            );
+        }
+    }
+});

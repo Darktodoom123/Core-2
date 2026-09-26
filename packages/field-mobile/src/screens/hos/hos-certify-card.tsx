@@ -7,8 +7,9 @@ import {
     TextInput,
     View,
 } from 'react-native';
-import { useTheme } from '../../theme';
-import { hosSharedStyles } from './hos-shared-styles';
+import { useTheme, useThemedStyles } from '../../theme';
+import type { ThemeColors } from '../../theme';
+import { createHosSharedStyles } from './hos-shared-styles';
 import type { DutyStatusOptionConfig } from './hos-types';
 
 export interface HosCertifyCardProps {
@@ -40,18 +41,32 @@ export const HosCertifyCard: React.FC<HosCertifyCardProps> = ({
     stampOpacity,
     stampScale,
 }) => {
-    const { isDarkHud } = useTheme();
+    const { theme } = useTheme();
+    const styles = useThemedStyles(createStyles);
+    // Only a server-accepted change is green; pending is informational, failed is critical.
+    const stampTone =
+        pendingDutyState === 'failed'
+            ? {
+                  surface: theme.hazardRedLight,
+                  edge: theme.hazardRed,
+                  text: theme.hazardRedText,
+              }
+            : pendingDutyState
+              ? {
+                    surface: theme.actionCobaltLight,
+                    edge: theme.actionCobalt,
+                    text: theme.textPrimary,
+                }
+              : {
+                    surface: theme.successEmeraldLight,
+                    edge: theme.successEmerald,
+                    text: theme.successEmeraldText,
+                };
+    const hosSharedStyles = useThemedStyles(createHosSharedStyles);
 
     return (
-        <View
-            style={[
-                hosSharedStyles.sectionCard,
-                isDarkHud && hosSharedStyles.darkSectionCard,
-            ]}
-        >
-            <Text
-                style={[styles.inputLabel, isDarkHud && styles.darkInputLabel]}
-            >
+        <View style={[hosSharedStyles.sectionCard]}>
+            <Text style={[styles.inputLabel]}>
                 Duty Transition Remarks &amp; Notes
             </Text>
             <TextInput
@@ -63,8 +78,8 @@ export const HosCertifyCard: React.FC<HosCertifyCardProps> = ({
                     setIsSaved(false);
                 }}
                 placeholder="e.g. Lift completed at Taguig site; transitioning to road transit back to yard."
-                placeholderTextColor={isDarkHud ? '#64748B' : '#94A3B8'}
-                style={[styles.input, isDarkHud && styles.darkInput]}
+                placeholderTextColor={theme.textMuted}
+                style={[styles.input]}
                 value={remarks}
                 testID="hos-remarks-input"
             />
@@ -81,31 +96,15 @@ export const HosCertifyCard: React.FC<HosCertifyCardProps> = ({
                 <Animated.View
                     style={[
                         styles.certBox,
-                        isDarkHud && styles.darkCertBox,
-                        isCertified &&
-                            (isDarkHud
-                                ? styles.darkCertBoxChecked
-                                : styles.certBoxChecked),
+                        isCertified && styles.certBoxChecked,
                         { transform: [{ scale: certCheckScale }] },
                     ]}
                 >
                     {isCertified ? (
-                        <Text
-                            style={[
-                                styles.certCheckMark,
-                                isDarkHud && styles.darkCertCheckMark,
-                            ]}
-                        >
-                            ✓
-                        </Text>
+                        <Text style={[styles.certCheckMark]}>✓</Text>
                     ) : null}
                 </Animated.View>
-                <Text
-                    style={[
-                        styles.certCheckLabel,
-                        isDarkHud && styles.darkCertCheckLabel,
-                    ]}
-                >
+                <Text style={[styles.certCheckLabel]}>
                     I certify that these duty status entries and hours of
                     service are true, complete, and accurate for this shift.
                 </Text>
@@ -120,23 +119,12 @@ export const HosCertifyCard: React.FC<HosCertifyCardProps> = ({
                     onPress={handleConfirm}
                     style={({ pressed }) => [
                         styles.actionButton,
-                        isDarkHud && styles.darkActionButton,
-                        !isCertified &&
-                            (isDarkHud
-                                ? styles.darkActionButtonDisabled
-                                : styles.actionButtonDisabled),
+                        !isCertified && styles.actionButtonDisabled,
                         pressed && hosSharedStyles.actionButtonPressed,
                     ]}
                     testID="confirm-hos-btn"
                 >
-                    <Text
-                        style={[
-                            styles.actionBtnText,
-                            isDarkHud &&
-                                isCertified &&
-                                styles.darkActionBtnText,
-                        ]}
-                    >
+                    <Text style={[styles.actionBtnText]}>
                         ✓ Update &amp; Certify Duty Status
                     </Text>
                 </Pressable>
@@ -144,7 +132,10 @@ export const HosCertifyCard: React.FC<HosCertifyCardProps> = ({
                 <Animated.View
                     style={[
                         styles.signedStamp,
-                        isDarkHud && styles.darkSignedStamp,
+                        {
+                            backgroundColor: stampTone.surface,
+                            borderColor: stampTone.edge,
+                        },
                         {
                             opacity: stampOpacity,
                             transform: [{ scale: stampScale }],
@@ -155,7 +146,7 @@ export const HosCertifyCard: React.FC<HosCertifyCardProps> = ({
                     <Text
                         style={[
                             styles.signedStampTitle,
-                            isDarkHud && styles.darkSignedStampTitle,
+                            { color: stampTone.text },
                         ]}
                     >
                         {pendingDutyState === 'failed'
@@ -167,7 +158,7 @@ export const HosCertifyCard: React.FC<HosCertifyCardProps> = ({
                     <Text
                         style={[
                             styles.signedStampSub,
-                            isDarkHud && styles.darkSignedStampSub,
+                            { color: theme.textPrimary },
                         ]}
                     >
                         {pendingDutyState === 'failed'
@@ -182,143 +173,88 @@ export const HosCertifyCard: React.FC<HosCertifyCardProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
-    actionBtnText: {
-        color: '#FFFFFF',
-        fontSize: 15,
-        fontWeight: '800',
-    },
-    actionButton: {
-        alignItems: 'center',
-        backgroundColor: '#FFBF00',
-        borderRadius: 12,
-        elevation: 3,
-        justifyContent: 'center',
-        minHeight: 52,
-        shadowColor: '#FFBF00',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-        width: '100%',
-    },
-    actionButtonDisabled: {
-        backgroundColor: '#94A3B8',
-        elevation: 0,
-        opacity: 0.6,
-        shadowOpacity: 0,
-    },
-    certBox: {
-        alignItems: 'center',
-        borderColor: '#94A3B8',
-        borderRadius: 6,
-        borderWidth: 2,
-        height: 24,
-        justifyContent: 'center',
-        width: 24,
-    },
-    certBoxChecked: {
-        backgroundColor: '#FFBF00',
-        borderColor: '#FFBF00',
-    },
-    certCheckLabel: {
-        color: '#475569',
-        flex: 1,
-        fontSize: 12,
-        lineHeight: 16,
-    },
-    certCheckMark: {
-        color: '#FFFFFF',
-        fontSize: 14,
-        fontWeight: '900',
-    },
-    certCheckRow: {
-        alignItems: 'center',
-        flexDirection: 'row',
-        gap: 10,
-        marginBottom: 14,
-        minHeight: 44,
-        paddingHorizontal: 2,
-    },
-    darkActionBtnText: {
-        color: '#090D16',
-    },
-    darkActionButton: {
-        backgroundColor: '#FFBF00',
-        shadowColor: '#FFBF00',
-    },
-    darkActionButtonDisabled: {
-        backgroundColor: '#334155',
-        elevation: 0,
-        opacity: 0.6,
-        shadowOpacity: 0,
-    },
-    darkCertBox: {
-        borderColor: '#475569',
-    },
-    darkCertBoxChecked: {
-        backgroundColor: '#FFBF00',
-        borderColor: '#FFBF00',
-    },
-    darkCertCheckLabel: {
-        color: '#94A3B8',
-    },
-    darkCertCheckMark: {
-        color: '#090D16',
-    },
-    darkInput: {
-        backgroundColor: '#0F172A',
-        borderColor: '#334155',
-        color: '#FFFFFF',
-    },
-    darkInputLabel: {
-        color: '#CBD5E1',
-    },
-    darkSignedStamp: {
-        backgroundColor: 'rgba(16, 185, 129, 0.12)',
-        borderColor: '#10B981',
-    },
-    darkSignedStampSub: {
-        color: '#A7F3D0',
-    },
-    darkSignedStampTitle: {
-        color: '#34D399',
-    },
-    input: {
-        backgroundColor: '#FFFFFF',
-        borderColor: '#CBD5E1',
-        borderRadius: 10,
-        borderWidth: 1,
-        color: '#0F172A',
-        fontSize: 13.5,
-        marginBottom: 14,
-        minHeight: 68,
-        paddingHorizontal: 14,
-        paddingVertical: 11,
-        textAlignVertical: 'top',
-    },
-    inputLabel: {
-        color: '#334155',
-        fontSize: 13,
-        fontWeight: '800',
-        marginBottom: 8,
-    },
-    signedStamp: {
-        backgroundColor: '#ECFDF5',
-        borderColor: '#059669',
-        borderRadius: 10,
-        borderWidth: 1.5,
-        padding: 14,
-    },
-    signedStampSub: {
-        color: '#047857',
-        fontSize: 12,
-        fontWeight: '600',
-        marginTop: 2,
-    },
-    signedStampTitle: {
-        color: '#065F46',
-        fontSize: 13,
-        fontWeight: '900',
-        letterSpacing: 0.5,
-    },
-});
+const createStyles = (theme: ThemeColors) =>
+    StyleSheet.create({
+        actionBtnText: {
+            color: theme.surfaceDark,
+            fontSize: 15,
+            fontWeight: '700',
+        },
+        actionButton: {
+            alignItems: 'center',
+            backgroundColor: theme.brandAmber,
+            borderRadius: 12,
+            justifyContent: 'center',
+            minHeight: 52,
+            width: '100%',
+        },
+        actionButtonDisabled: {
+            opacity: 0.45,
+        },
+        certBox: {
+            alignItems: 'center',
+            borderColor: theme.borderStrong,
+            borderRadius: 6,
+            borderWidth: 2,
+            height: 24,
+            justifyContent: 'center',
+            width: 24,
+        },
+        certBoxChecked: {
+            backgroundColor: theme.brandAmber,
+            borderColor: theme.brandAmber,
+        },
+        certCheckLabel: {
+            color: theme.textSecondary,
+            flex: 1,
+            fontSize: 13,
+            lineHeight: 16,
+        },
+        certCheckMark: {
+            color: theme.surfaceDark,
+            fontSize: 14,
+            fontWeight: '700',
+        },
+        certCheckRow: {
+            alignItems: 'center',
+            flexDirection: 'row',
+            gap: 10,
+            marginBottom: 14,
+            minHeight: 48,
+            paddingHorizontal: 2,
+        },
+        input: {
+            backgroundColor: theme.surfaceHighlight,
+            borderColor: theme.borderStrong,
+            borderRadius: 12,
+            borderWidth: 1,
+            color: theme.textPrimary,
+            fontSize: 16,
+            marginBottom: 14,
+            minHeight: 68,
+            paddingHorizontal: 14,
+            paddingVertical: 11,
+            textAlignVertical: 'top',
+        },
+        inputLabel: {
+            color: theme.textPrimary,
+            fontSize: 13,
+            fontWeight: '700',
+            marginBottom: 8,
+        },
+        signedStamp: {
+            borderRadius: 12,
+            borderWidth: 1.5,
+            padding: 14,
+        },
+        signedStampSub: {
+            fontSize: 12,
+            fontWeight: '500',
+            marginTop: 2,
+        },
+        signedStampTitle: {
+            fontSize: 13,
+            fontWeight: '700',
+            letterSpacing: 0.5,
+        },
+    });

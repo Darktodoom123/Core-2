@@ -8,7 +8,13 @@ export interface DutyStatusOptionConfig {
     title: string;
     subtitle: string;
     iconName: IconName;
-    accentColor: string;
+    /** Theme key for this status's duty category color. */
+    accentToken:
+        | 'dutyOnDuty'
+        | 'dutyDriving'
+        | 'dutyStandby'
+        | 'successEmerald'
+        | 'textSecondary';
 }
 
 export interface ShiftLogEvent {

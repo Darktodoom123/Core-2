@@ -13,7 +13,8 @@ import { EndShiftSafeguardModal } from '../components/sheets/EndShiftSafeguardMo
 import { ReliefHandoverModal } from '../components/sheets/ReliefHandoverModal';
 import { useHosCompliance } from '../hooks/useHosCompliance';
 import type { FieldApiClient } from '../services/apiClient';
-import { useTheme } from '../theme';
+import { useTheme, useThemedStyles } from '../theme';
+import type { ThemeColors } from '../theme';
 import type { DutyStatus, ShiftInfo, StandbyReason } from '../types/index';
 import { HosCertifyCard } from './hos/hos-certify-card';
 import { HosClocksCard } from './hos/hos-clocks-card';
@@ -91,7 +92,8 @@ export const HosScreen: React.FC<HosScreenProps> = ({
     pendingDutyState = null,
     pendingDutyEvents = [],
 }) => {
-    const { isDarkHud } = useTheme();
+    const { theme } = useTheme();
+    const styles = useThemedStyles(createStyles);
     const [selectedDayIndex, setSelectedDayIndex] = useState(0);
     const historyDays =
         timelineHistory && timelineHistory.length > 0
@@ -317,10 +319,7 @@ export const HosScreen: React.FC<HosScreenProps> = ({
     }, [selectedStatus]);
 
     return (
-        <View
-            style={[styles.screenRoot, isDarkHud && styles.darkScreenRoot]}
-            testID="hos-screen"
-        >
+        <View style={[styles.screenRoot]} testID="hos-screen">
             {/* 1. Unified Minimalist Header Bar matching other tiles */}
             <TileScreenHeader
                 backAccessibilityLabel="Back to dashboard"
@@ -328,24 +327,17 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                 category="Hours of Service"
                 onBack={onBack}
                 rightElement={
-                    <View
-                        style={[
-                            styles.dutyPillBadge,
-                            isDarkHud && styles.darkDutyPillBadge,
-                        ]}
-                    >
+                    <View style={[styles.dutyPillBadge]}>
                         <View
                             style={[
                                 styles.dutyBadgeDot,
-                                { backgroundColor: activeConfig.accentColor },
+                                {
+                                    backgroundColor:
+                                        theme[activeConfig.accentToken],
+                                },
                             ]}
                         />
-                        <Text
-                            style={[
-                                styles.dutyPillBadgeText,
-                                isDarkHud && styles.darkDutyPillBadgeText,
-                            ]}
-                        >
+                        <Text style={[styles.dutyPillBadgeText]}>
                             {activeConfig.badge}
                         </Text>
                     </View>
@@ -367,20 +359,16 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                         }
                         style={[
                             styles.syncStatusBanner,
-                            isDarkHud && styles.darkSyncStatusBanner,
                             pendingDutyState === 'failed' &&
                                 styles.syncStatusBannerFailed,
-                            isDarkHud &&
-                                pendingDutyState === 'failed' &&
-                                styles.darkSyncStatusBannerFailed,
                         ]}
                         testID="hos-duty-sync-status"
                     >
                         <Icon
                             color={
                                 pendingDutyState === 'failed'
-                                    ? '#DC2626'
-                                    : '#2563EB'
+                                    ? theme.hazardRedText
+                                    : theme.actionCobalt
                             }
                             name={
                                 pendingDutyState === 'failed'
@@ -392,7 +380,6 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                         <Text
                             style={[
                                 styles.syncStatusText,
-                                isDarkHud && styles.darkSyncStatusText,
                                 pendingDutyState === 'failed' &&
                                     styles.syncStatusTextFailed,
                             ]}
@@ -407,34 +394,23 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                 {pendingDutyEvents.length > 1 ? (
                     <View
                         accessibilityLabel={`${pendingDutyEvents.length} duty events waiting for synchronization`}
-                        style={[
-                            styles.syncStatusBanner,
-                            isDarkHud && styles.darkSyncStatusBanner,
-                        ]}
+                        style={[styles.syncStatusBanner]}
                         testID="hos-duty-sync-queue"
                     >
                         <Icon
-                            color={isDarkHud ? '#93C5FD' : '#2563EB'}
+                            color={theme.actionCobalt}
                             name="list"
                             size={17}
                         />
                         <View style={{ flex: 1 }}>
-                            <Text
-                                style={[
-                                    styles.syncStatusText,
-                                    isDarkHud && styles.darkSyncStatusText,
-                                ]}
-                            >
+                            <Text style={[styles.syncStatusText]}>
                                 Pending duty events are ordered locally; server
                                 totals remain unchanged.
                             </Text>
                             {pendingDutyEvents.map((event, index) => (
                                 <Text
                                     key={event.id}
-                                    style={[
-                                        styles.syncStatusText,
-                                        isDarkHud && styles.darkSyncStatusText,
-                                    ]}
+                                    style={[styles.syncStatusText]}
                                 >
                                     {index + 1}.{' '}
                                     {event.status.replace('_', ' ')} ·{' '}
@@ -568,88 +544,68 @@ export const HosScreen: React.FC<HosScreenProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
-    screenRoot: {
-        backgroundColor: '#F1F5F9',
-        flex: 1,
-    },
-    darkScreenRoot: {
-        backgroundColor: '#090D16',
-    },
-    dutyPillBadge: {
-        alignItems: 'center',
-        backgroundColor: '#F8FAFC',
-        borderColor: '#E2E8F0',
-        borderRadius: 9999,
-        borderWidth: 1,
-        flexDirection: 'row',
-        gap: 6,
-        paddingHorizontal: 12,
-        paddingVertical: 5,
-    },
-    darkDutyPillBadge: {
-        backgroundColor: '#0F172A',
-        borderColor: '#334155',
-    },
-    dutyBadgeDot: {
-        borderRadius: 4,
-        height: 8,
-        width: 8,
-    },
-    dutyPillBadgeText: {
-        color: '#0F172A',
-        fontSize: 12,
-        fontWeight: '800',
-        letterSpacing: 0.5,
-    },
-    darkDutyPillBadgeText: {
-        color: '#F8FAFC',
-    },
-    scrollView: {
-        flex: 1,
-    },
-    contentContainer: {
-        alignSelf: 'center',
-        maxWidth: 720,
-        padding: 16,
-        paddingBottom: 36,
-        width: '100%',
-    },
-    syncStatusBanner: {
-        alignItems: 'center',
-        backgroundColor: '#EFF6FF',
-        borderColor: '#BFDBFE',
-        borderRadius: 12,
-        borderWidth: 1,
-        flexDirection: 'row',
-        gap: 8,
-        marginBottom: 14,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-    },
-    darkSyncStatusBanner: {
-        backgroundColor: '#172554',
-        borderColor: '#1D4ED8',
-    },
-    syncStatusBannerFailed: {
-        backgroundColor: '#FEF2F2',
-        borderColor: '#FECACA',
-    },
-    darkSyncStatusBannerFailed: {
-        backgroundColor: '#450A0A',
-        borderColor: '#B91C1C',
-    },
-    syncStatusText: {
-        color: '#1D4ED8',
-        flex: 1,
-        fontSize: 12,
-        fontWeight: '700',
-        lineHeight: 16,
-    },
-    darkSyncStatusText: {
-        color: '#BFDBFE',
-    },
-    syncStatusTextFailed: {
-        color: '#B91C1C',
-    },
-});
+const createStyles = (theme: ThemeColors) =>
+    StyleSheet.create({
+        screenRoot: {
+            backgroundColor: theme.canvas,
+            flex: 1,
+        },
+        dutyPillBadge: {
+            alignItems: 'center',
+            backgroundColor: theme.surfaceHighlight,
+            borderColor: theme.border,
+            borderRadius: 9999,
+            borderWidth: 1,
+            flexDirection: 'row',
+            gap: 6,
+            paddingHorizontal: 12,
+            paddingVertical: 5,
+        },
+        dutyBadgeDot: {
+            borderRadius: 4,
+            height: 8,
+            width: 8,
+        },
+        dutyPillBadgeText: {
+            color: theme.textPrimary,
+            fontSize: 12,
+            fontWeight: '700',
+            letterSpacing: 0.5,
+        },
+        scrollView: {
+            flex: 1,
+        },
+        contentContainer: {
+            alignSelf: 'center',
+            maxWidth: 720,
+            padding: 16,
+            paddingBottom: 36,
+            width: '100%',
+        },
+        syncStatusBanner: {
+            alignItems: 'center',
+            backgroundColor: theme.actionCobaltLight,
+            borderColor: theme.actionCobalt,
+            borderRadius: 12,
+            borderWidth: 1,
+            flexDirection: 'row',
+            gap: 8,
+            marginBottom: 14,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+        },
+        syncStatusBannerFailed: {
+            backgroundColor: theme.hazardRedLight,
+            borderColor: theme.hazardRed,
+        },
+        syncStatusText: {
+            color: theme.textPrimary,
+            flex: 1,
+            fontSize: 12,
+            fontWeight: '700',
+            lineHeight: 16,
+        },
+        syncStatusTextFailed: {
+            color: theme.hazardRedText,
+        },
+    });

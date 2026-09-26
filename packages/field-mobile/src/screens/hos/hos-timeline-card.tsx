@@ -1,11 +1,12 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Icon } from '../../components/common/Icon';
-import { useTheme } from '../../theme';
+import { useTheme, useThemedStyles } from '../../theme';
+import type { ThemeColors } from '../../theme';
 import { HosDayNavigator } from './hos-day-navigator';
 import { HosDaySummary } from './hos-day-summary';
 import { HosDutyGraph } from './hos-duty-graph';
-import { hosSharedStyles } from './hos-shared-styles';
+import { createHosSharedStyles } from './hos-shared-styles';
 import type { TimelineDayHistory } from './hos-types';
 
 export interface HosTimelineCardProps {
@@ -25,53 +26,29 @@ export const HosTimelineCard: React.FC<HosTimelineCardProps> = ({
     handlePrevDay,
     handleNextDay,
 }) => {
-    const { isDarkHud } = useTheme();
+    const { theme } = useTheme();
+    const styles = useThemedStyles(createStyles);
+    const hosSharedStyles = useThemedStyles(createHosSharedStyles);
 
     return (
-        <View
-            style={[
-                hosSharedStyles.sectionCard,
-                isDarkHud && hosSharedStyles.darkSectionCard,
-            ]}
-            testID="hos-timeline-graph"
-        >
+        <View style={[hosSharedStyles.sectionCard]} testID="hos-timeline-graph">
             <View style={styles.timelineHeaderRow}>
                 <View style={{ flex: 1 }}>
                     <Text
                         accessibilityRole="header"
-                        style={[
-                            hosSharedStyles.sectionTitle,
-                            isDarkHud && hosSharedStyles.darkSectionTitle,
-                        ]}
+                        style={[hosSharedStyles.sectionTitle]}
                     >
                         {selectedDay.isToday
                             ? '24-HOUR DUTY TIMELINE (TODAY)'
                             : `24-HOUR DUTY TIMELINE — ${selectedDay.dayLabel.toUpperCase()}`}
                     </Text>
-                    <Text
-                        style={[
-                            hosSharedStyles.sectionHelper,
-                            isDarkHud && hosSharedStyles.darkSectionHelper,
-                        ]}
-                    >
+                    <Text style={[hosSharedStyles.sectionHelper]}>
                         Visual ELD graph of 24-hour shift status progression
                         (00:00 to 24:00).
                     </Text>
                 </View>
-                <View
-                    style={[
-                        styles.cycleBadge,
-                        isDarkHud && styles.darkCycleBadge,
-                    ]}
-                >
-                    <Text
-                        style={[
-                            styles.cycleBadgeText,
-                            isDarkHud && styles.darkCycleBadgeText,
-                        ]}
-                    >
-                        8-DAY CYCLE
-                    </Text>
+                <View style={[styles.cycleBadge]}>
+                    <Text style={[styles.cycleBadgeText]}>8-DAY CYCLE</Text>
                 </View>
             </View>
 
@@ -97,12 +74,6 @@ export const HosTimelineCard: React.FC<HosTimelineCardProps> = ({
                         : selectedDay.certificationStatus === 'certified'
                           ? styles.certAuditCertified
                           : styles.certAuditRestart,
-                    isDarkHud &&
-                        (selectedDay.certificationStatus === 'active'
-                            ? styles.darkCertAuditActive
-                            : selectedDay.certificationStatus === 'certified'
-                              ? styles.darkCertAuditCertified
-                              : styles.darkCertAuditRestart),
                 ]}
             >
                 <View style={styles.certAuditCardInner}>
@@ -115,13 +86,6 @@ export const HosTimelineCard: React.FC<HosTimelineCardProps> = ({
                                     'certified'
                                   ? styles.certAuditIconCircleCertified
                                   : styles.certAuditIconCircleRestart,
-                            isDarkHud &&
-                                (selectedDay.certificationStatus === 'active'
-                                    ? styles.darkCertAuditIconCircleActive
-                                    : selectedDay.certificationStatus ===
-                                        'certified'
-                                      ? styles.darkCertAuditIconCircleCertified
-                                      : styles.darkCertAuditIconCircleRestart),
                         ]}
                     >
                         <Icon
@@ -136,17 +100,11 @@ export const HosTimelineCard: React.FC<HosTimelineCardProps> = ({
                             size={16}
                             color={
                                 selectedDay.certificationStatus === 'active'
-                                    ? isDarkHud
-                                        ? '#FFBF00'
-                                        : '#806000'
+                                    ? theme.actionCobalt
                                     : selectedDay.certificationStatus ===
                                         'certified'
-                                      ? isDarkHud
-                                          ? '#34D399'
-                                          : '#059669'
-                                      : isDarkHud
-                                        ? '#94A3B8'
-                                        : '#64748B'
+                                      ? theme.successEmerald
+                                      : theme.textSecondary
                             }
                         />
                     </View>
@@ -163,14 +121,6 @@ export const HosTimelineCard: React.FC<HosTimelineCardProps> = ({
                                             'certified'
                                           ? styles.certAuditCertifiedTitle
                                           : styles.certAuditRestartTitle,
-                                    isDarkHud &&
-                                        (selectedDay.certificationStatus ===
-                                        'active'
-                                            ? styles.darkCertAuditActiveTitle
-                                            : selectedDay.certificationStatus ===
-                                                'certified'
-                                              ? styles.darkCertAuditCertifiedTitle
-                                              : styles.darkCertAuditRestartTitle),
                                 ]}
                             >
                                 {selectedDay.certificationStatus === 'active'
@@ -189,14 +139,6 @@ export const HosTimelineCard: React.FC<HosTimelineCardProps> = ({
                                             'certified'
                                           ? styles.certStatusPillCertified
                                           : styles.certStatusPillRestart,
-                                    isDarkHud &&
-                                        (selectedDay.certificationStatus ===
-                                        'active'
-                                            ? styles.darkCertStatusPillActive
-                                            : selectedDay.certificationStatus ===
-                                                'certified'
-                                              ? styles.darkCertStatusPillCertified
-                                              : styles.darkCertStatusPillRestart),
                                 ]}
                             >
                                 <Text
@@ -209,14 +151,6 @@ export const HosTimelineCard: React.FC<HosTimelineCardProps> = ({
                                                 'certified'
                                               ? styles.certStatusPillCertifiedText
                                               : styles.certStatusPillRestartText,
-                                        isDarkHud &&
-                                            (selectedDay.certificationStatus ===
-                                            'active'
-                                                ? styles.darkCertStatusPillActiveText
-                                                : selectedDay.certificationStatus ===
-                                                    'certified'
-                                                  ? styles.darkCertStatusPillCertifiedText
-                                                  : styles.darkCertStatusPillRestartText),
                                     ]}
                                 >
                                     {selectedDay.certificationStatus ===
@@ -241,14 +175,6 @@ export const HosTimelineCard: React.FC<HosTimelineCardProps> = ({
                                         'certified'
                                       ? styles.certAuditCertifiedSub
                                       : styles.certAuditRestartSub,
-                                isDarkHud &&
-                                    (selectedDay.certificationStatus ===
-                                    'active'
-                                        ? styles.darkCertAuditActiveSub
-                                        : selectedDay.certificationStatus ===
-                                            'certified'
-                                          ? styles.darkCertAuditCertifiedSub
-                                          : styles.darkCertAuditRestartSub),
                             ]}
                         >
                             {selectedDay.certifiedByText}
@@ -260,209 +186,140 @@ export const HosTimelineCard: React.FC<HosTimelineCardProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
-    certAuditActive: {
-        backgroundColor: '#FFF3C4',
-        borderColor: '#FFF3C4',
-    },
-    certAuditActiveSub: {
-        color: '#806000',
-    },
-    certAuditActiveTitle: {
-        color: '#806000',
-    },
-    certAuditBadge: {
-        borderRadius: 12,
-        borderWidth: 1,
-        marginTop: 10,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-    },
-    certAuditCardInner: {
-        alignItems: 'center',
-        flexDirection: 'row',
-        gap: 10,
-    },
-    certAuditCertified: {
-        backgroundColor: '#ECFDF5',
-        borderColor: '#A7F3D0',
-    },
-    certAuditCertifiedSub: {
-        color: '#047857',
-    },
-    certAuditCertifiedTitle: {
-        color: '#065F46',
-    },
-    certAuditHeaderRow: {
-        alignItems: 'center',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 2,
-    },
-    certAuditIconCircle: {
-        alignItems: 'center',
-        borderRadius: 16,
-        borderWidth: 1,
-        height: 32,
-        justifyContent: 'center',
-        width: 32,
-    },
-    certAuditIconCircleActive: {
-        backgroundColor: '#FFF3C4',
-        borderColor: 'rgba(255, 191, 0, 0.3)',
-    },
-    certAuditIconCircleCertified: {
-        backgroundColor: '#D1FAE5',
-        borderColor: 'rgba(16, 185, 129, 0.3)',
-    },
-    certAuditIconCircleRestart: {
-        backgroundColor: '#F1F5F9',
-        borderColor: 'rgba(148, 163, 184, 0.3)',
-    },
-    certAuditRestart: {
-        backgroundColor: '#F8FAFC',
-        borderColor: '#E2E8F0',
-    },
-    certAuditRestartSub: {
-        color: '#64748B',
-    },
-    certAuditRestartTitle: {
-        color: '#334155',
-    },
-    certAuditSub: {
-        fontSize: 12,
-        fontWeight: '600',
-        lineHeight: 16,
-    },
-    certAuditTextContainer: {
-        flex: 1,
-    },
-    certAuditTitle: {
-        flex: 1,
-        fontSize: 12.5,
-        fontWeight: '800',
-        marginRight: 8,
-    },
-    certStatusPill: {
-        borderRadius: 9999,
-        borderWidth: 1,
-        paddingHorizontal: 6,
-        paddingVertical: 1.5,
-    },
-    certStatusPillActive: {
-        backgroundColor: '#FFF3C4',
-        borderColor: '#FFBF00',
-    },
-    certStatusPillActiveText: {
-        color: '#806000',
-    },
-    certStatusPillCertified: {
-        backgroundColor: '#D1FAE5',
-        borderColor: '#10B981',
-    },
-    certStatusPillCertifiedText: {
-        color: '#047857',
-    },
-    certStatusPillRestart: {
-        backgroundColor: '#F1F5F9',
-        borderColor: '#94A3B8',
-    },
-    certStatusPillRestartText: {
-        color: '#475569',
-    },
-    certStatusPillText: {
-        fontSize: 12,
-        fontWeight: '800',
-        letterSpacing: 0.5,
-    },
-    cycleBadge: {
-        backgroundColor: '#F1F5F9',
-        borderColor: '#CBD5E1',
-        borderRadius: 9999,
-        borderWidth: 1,
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-    },
-    cycleBadgeText: {
-        color: '#475569',
-        fontSize: 12,
-        fontWeight: '800',
-        letterSpacing: 0.5,
-    },
-    darkCertAuditActive: {
-        backgroundColor: 'rgba(255, 191, 0, 0.08)',
-        borderColor: 'rgba(255, 191, 0, 0.28)',
-    },
-    darkCertAuditActiveSub: {
-        color: '#FFBF00',
-    },
-    darkCertAuditActiveTitle: {
-        color: '#FFBF00',
-    },
-    darkCertAuditCertified: {
-        backgroundColor: 'rgba(16, 185, 129, 0.08)',
-        borderColor: 'rgba(16, 185, 129, 0.25)',
-    },
-    darkCertAuditCertifiedSub: {
-        color: '#A7F3D0',
-    },
-    darkCertAuditCertifiedTitle: {
-        color: '#34D399',
-    },
-    darkCertAuditIconCircleActive: {
-        backgroundColor: 'rgba(255, 191, 0, 0.18)',
-        borderColor: 'rgba(255, 191, 0, 0.35)',
-    },
-    darkCertAuditIconCircleCertified: {
-        backgroundColor: 'rgba(16, 185, 129, 0.18)',
-        borderColor: 'rgba(16, 185, 129, 0.35)',
-    },
-    darkCertAuditIconCircleRestart: {
-        backgroundColor: 'rgba(148, 163, 184, 0.15)',
-        borderColor: 'rgba(148, 163, 184, 0.3)',
-    },
-    darkCertAuditRestart: {
-        backgroundColor: '#0F172A',
-        borderColor: '#334155',
-    },
-    darkCertAuditRestartSub: {
-        color: '#94A3B8',
-    },
-    darkCertAuditRestartTitle: {
-        color: '#CBD5E1',
-    },
-    darkCertStatusPillActive: {
-        backgroundColor: 'rgba(255, 191, 0, 0.2)',
-        borderColor: '#FFBF00',
-    },
-    darkCertStatusPillActiveText: {
-        color: '#FFBF00',
-    },
-    darkCertStatusPillCertified: {
-        backgroundColor: 'rgba(16, 185, 129, 0.2)',
-        borderColor: '#10B981',
-    },
-    darkCertStatusPillCertifiedText: {
-        color: '#34D399',
-    },
-    darkCertStatusPillRestart: {
-        backgroundColor: 'rgba(148, 163, 184, 0.15)',
-        borderColor: '#64748B',
-    },
-    darkCertStatusPillRestartText: {
-        color: '#94A3B8',
-    },
-    darkCycleBadge: {
-        backgroundColor: '#0F172A',
-        borderColor: '#334155',
-    },
-    darkCycleBadgeText: {
-        color: '#94A3B8',
-    },
-    timelineHeaderRow: {
-        alignItems: 'flex-start',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 8,
-    },
-});
+const createStyles = (theme: ThemeColors) =>
+    StyleSheet.create({
+        certAuditActive: {
+            backgroundColor: theme.actionCobaltLight,
+            borderColor: theme.actionCobalt,
+        },
+        certAuditActiveSub: {
+            color: theme.textPrimary,
+        },
+        certAuditActiveTitle: {
+            color: theme.textPrimary,
+        },
+        certAuditBadge: {
+            borderRadius: 12,
+            borderWidth: 1,
+            marginTop: 10,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+        },
+        certAuditCardInner: {
+            alignItems: 'center',
+            flexDirection: 'row',
+            gap: 10,
+        },
+        certAuditCertified: {
+            backgroundColor: theme.successEmeraldLight,
+            borderColor: theme.successEmerald,
+        },
+        certAuditCertifiedSub: {
+            color: theme.textPrimary,
+        },
+        certAuditCertifiedTitle: {
+            color: theme.successEmeraldText,
+        },
+        certAuditHeaderRow: {
+            alignItems: 'center',
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            marginBottom: 2,
+        },
+        certAuditIconCircle: {
+            alignItems: 'center',
+            borderRadius: 16,
+            borderWidth: 1,
+            height: 32,
+            justifyContent: 'center',
+            width: 32,
+        },
+        certAuditIconCircleActive: {
+            backgroundColor: theme.surface,
+            borderColor: theme.actionCobalt,
+        },
+        certAuditIconCircleCertified: {
+            backgroundColor: theme.surface,
+            borderColor: theme.successEmerald,
+        },
+        certAuditIconCircleRestart: {
+            backgroundColor: theme.surface,
+            borderColor: theme.borderStrong,
+        },
+        certAuditRestart: {
+            backgroundColor: theme.surfaceHighlight,
+            borderColor: theme.borderStrong,
+        },
+        certAuditRestartSub: {
+            color: theme.textPrimary,
+        },
+        certAuditRestartTitle: {
+            color: theme.textPrimary,
+        },
+        certAuditSub: {
+            fontSize: 12,
+            fontWeight: '500',
+            lineHeight: 16,
+        },
+        certAuditTextContainer: {
+            flex: 1,
+        },
+        certAuditTitle: {
+            flex: 1,
+            fontSize: 12.5,
+            fontWeight: '700',
+            marginRight: 8,
+        },
+        certStatusPill: {
+            borderRadius: 9999,
+            borderWidth: 1,
+            paddingHorizontal: 6,
+            paddingVertical: 1.5,
+        },
+        certStatusPillActive: {
+            backgroundColor: theme.surface,
+            borderColor: theme.actionCobalt,
+        },
+        certStatusPillActiveText: {
+            color: theme.textPrimary,
+        },
+        certStatusPillCertified: {
+            backgroundColor: theme.surface,
+            borderColor: theme.successEmerald,
+        },
+        certStatusPillCertifiedText: {
+            color: theme.successEmeraldText,
+        },
+        certStatusPillRestart: {
+            backgroundColor: theme.surface,
+            borderColor: theme.borderStrong,
+        },
+        certStatusPillRestartText: {
+            color: theme.textPrimary,
+        },
+        certStatusPillText: {
+            fontSize: 12,
+            fontWeight: '700',
+            letterSpacing: 0.5,
+        },
+        cycleBadge: {
+            backgroundColor: theme.surfaceHighlight,
+            borderColor: theme.borderStrong,
+            borderRadius: 9999,
+            borderWidth: 1,
+            paddingHorizontal: 8,
+            paddingVertical: 3,
+        },
+        cycleBadgeText: {
+            color: theme.textPrimary,
+            fontSize: 12,
+            fontWeight: '700',
+            letterSpacing: 0.5,
+        },
+        timelineHeaderRow: {
+            alignItems: 'flex-start',
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            marginBottom: 8,
+        },
+    });

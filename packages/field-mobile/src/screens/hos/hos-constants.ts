@@ -8,7 +8,7 @@ export const DUTY_STATUS_OPTIONS: DutyStatusOptionConfig[] = [
         title: 'On Duty — Crane / Machine Operating',
         subtitle: 'Active site lifting, rigging, crane operations, excavation',
         iconName: 'crane',
-        accentColor: '#FFBF00',
+        accentToken: 'dutyOnDuty',
     },
     {
         status: 'driving',
@@ -16,7 +16,7 @@ export const DUTY_STATUS_OPTIONS: DutyStatusOptionConfig[] = [
         title: 'On Duty — Driving / Transit',
         subtitle: 'Transporting crane, lowbed carrier, or escort vehicle',
         iconName: 'truck',
-        accentColor: '#3B82F6',
+        accentToken: 'dutyDriving',
     },
     {
         status: 'standby',
@@ -24,7 +24,7 @@ export const DUTY_STATUS_OPTIONS: DutyStatusOptionConfig[] = [
         title: 'On Duty — Standby / Delay (Demurrage)',
         subtitle: 'Waiting on client, concrete trucks, permits, or weather',
         iconName: 'clock',
-        accentColor: '#FFBF00',
+        accentToken: 'dutyStandby',
     },
     {
         status: 'on_break',
@@ -32,7 +32,7 @@ export const DUTY_STATUS_OPTIONS: DutyStatusOptionConfig[] = [
         title: 'On Break — 30-min Meal / Rest Period',
         subtitle: 'Mandatory 30-minute rest or lunch pause',
         iconName: 'tools',
-        accentColor: '#10B981',
+        accentToken: 'successEmerald',
     },
     {
         status: 'off_duty',
@@ -40,7 +40,7 @@ export const DUTY_STATUS_OPTIONS: DutyStatusOptionConfig[] = [
         title: 'Off Duty — Shift Complete',
         subtitle: 'Clocked out from work, 10-hour daily rest reset',
         iconName: 'power',
-        accentColor: '#94A3B8',
+        accentToken: 'textSecondary',
     },
 ];
 
