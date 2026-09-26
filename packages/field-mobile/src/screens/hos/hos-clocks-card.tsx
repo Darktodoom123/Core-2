@@ -239,7 +239,9 @@ export const HosClocksCard: React.FC<HosClocksCardProps> = ({
                             {formatHoursMinutes(value)}
                         </Text>
                         <Text style={[styles.clockCellSub]}>
-                            server accepted
+                            {value === null
+                                ? 'not synced yet'
+                                : 'server accepted'}
                         </Text>
                     </View>
                 ))}

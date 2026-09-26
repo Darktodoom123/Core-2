@@ -163,3 +163,17 @@ describe('HosClocksCard state colors', () => {
         });
     });
 });
+
+describe('HosClocksCard accepted duration breakdown', () => {
+    it('labels a duration server accepted only when the server has reported one', async () => {
+        const view = await renderCard({
+            durationBreakdown: [
+                ['Driving', 2],
+                ['Standby', null],
+            ],
+        });
+
+        expect(view.getAllByText('server accepted')).toHaveLength(1);
+        expect(view.getAllByText('not synced yet')).toHaveLength(1);
+    });
+});
