@@ -70,7 +70,8 @@ Specifications and testing guides for the React Native / Expo field client (`pac
 
 | Document | Purpose & Scope |
 | :--- | :--- |
-| [mobile-lifecycle.md](prds/mobile-prd/mobile-lifecycle.md) | Field asset tracking, HoS duty progression, offline SQLite outbox, and DVIR inspection workflows. |
+| [mobile-lifecycle-v1.1.md](prds/mobile-prd/mobile-lifecycle-v1.1.md) | **Current.** Field asset tracking, HoS duty progression, offline SQLite outbox, and DVIR inspection workflows, with visual styling delegated to [mobile.md](design/mobile.md) and freshness thresholds aligned with the server. |
+| [mobile-lifecycle.md](prds/mobile-prd/mobile-lifecycle.md) | Locked v1.0 baseline, superseded by v1.1. Kept for traceability. |
 | [AGENT-ORCHESTRATION-AND-E2E-GUIDE.md](prds/mobile-prd/AGENT-ORCHESTRATION-AND-E2E-GUIDE.md) | 8-phase master lifecycle matrix, edge cases, and Detox/Maestro E2E testing guide. |
 
 ### 4. UI/UX Design & System Tokens (`Docs/design/`)
@@ -79,7 +80,8 @@ Design system tokens, color palettes, typography, and visual diagrams:
 
 | Document | Purpose & Scope |
 | :--- | :--- |
-| [Design.md](design/Design.md) | Visual identity, gold palette tokens, Instrument Sans typography, and Tactical HUD dark mode tokens. |
+| [Design.md](design/Design.md) | Shared experience principles, color roles, required states, and the web visual system (gold palette, Instrument Sans). |
+| [mobile.md](design/mobile.md) | Native Android field client design: source precedence, system typography, dp touch targets, color roles, home tiles, dark HUD mode, and Android accessibility. |
 | [Office dispatch decision flow](design/dispatch-workspace/FLOW.md) | Dispatcher journey, screen decisions, data-confidence rules, and delivery order. |
 | [Diagrams/README.md](design/Diagrams/README.md) | Index of system diagrams including BPA, DFD, ERD, and module boundary diagrams. |
 

@@ -1,7 +1,7 @@
 # Core Transaction 2 — Product Design
 
-**Last updated:** 2026-09-25  
-**Authority:** Canonical product and interface design specification; informed by the current workspace and interactive prototype
+**Last updated:** 2026-09-26  
+**Authority:** Canonical product and interface design specification; informed by the current workspace and interactive prototype. The native Android field client follows [mobile.md](mobile.md), which extends this file and takes precedence for native-specific decisions.
 
 ## Experience direction
 
@@ -88,12 +88,14 @@ route.
 
 ## Visual foundations
 
-- **Typeface:** Instrument Sans, weights 400, 500, and 600.
+- **Typeface:** Instrument Sans, weights 400, 500, and 600 (web). The native
+  field client uses the Android system font; see [mobile.md](mobile.md).
 - **Scale:** 0.75rem metadata, 0.875rem secondary UI, 1rem body, 1.125rem section heading, 1.5rem page heading.
 - **Spacing:** 4px base; common steps 4, 8, 12, 16, 24, and 32px.
 - **Radii:** 8px controls, 12px panels, 16px primary workspaces.
 - **Motion:** 150–250ms ease-out for state change only; instant under reduced-motion preference.
-- **Icons:** One consistent Lucide vocabulary.
+- **Icons:** One consistent Lucide vocabulary (web). The native field client
+  uses its own icon wrapper; see [mobile.md](mobile.md).
 
 ### Color roles
 
@@ -123,7 +125,9 @@ their color with explicit text and an icon; cobalt remains informational.
 - Mobile targets are at least 44px and keep safety/sync state visible.
 - Responsive web and the focused React Native field application are parallel
   capstone workstreams. They share interaction language and state vocabulary,
-  but native field workflows may use platform-appropriate navigation.
+  but native field workflows may use platform-appropriate navigation. Native
+  typography, touch targets, tiles, dark HUD mode, and Android behavior are
+  defined in [mobile.md](mobile.md).
 
 ### Heavy-crane driver mobile flow
 
@@ -224,11 +228,15 @@ syncing, failed, conflict, and synchronized writes. Map/style/tile/WebGL
 failures preserve the synchronized list alternative. Stadia Free is limited to
 local development/evaluation; paid provider configuration is required before
 operational deployment.
-Native field offline behavior remains a later live slice.
+The native field client queues offline writes in an Expo SQLite outbox and
+shows queued, syncing, failed, conflict, and synchronized states.
 
-Location presentation uses the accepted thresholds: fresh within 2 minutes,
-delayed through 10 minutes, stale after 10 minutes, and offline when reported
-by the client or after 30 minutes without an update.
+Location presentation uses the server thresholds in
+`apps/operations/app/Platform/Tracking/Models/LocationUpdate.php`: fresh within
+3 minutes, delayed until 15 minutes, stale through 30 minutes, and offline when
+reported by the client or after 30 minutes without an update. Fresh uses the
+success role, delayed the warning role, stale the critical role, and offline a
+neutral tone, each with a text label and icon.
 
 ## Accessibility acceptance
 
@@ -261,8 +269,11 @@ by the client or after 30 minutes without an update.
 ## Reusable design implementation prompt
 
 Use this prompt when asking an implementation agent to create or refine a CT2
-interface. Replace the bracketed fields and include the relevant product
-documents for the workflow.
+web interface. Replace the bracketed fields and include the relevant product
+documents for the workflow. For the native field client in
+`packages/field-mobile`, point the agent at [mobile.md](mobile.md) and the
+[mobile lifecycle PRD v1.1](../prds/mobile-prd/mobile-lifecycle-v1.1.md)
+instead of the web stack and token lines below.
 
 ```text
 You are implementing Core Transaction 2 (CT2), a safety-conscious operations
@@ -276,17 +287,16 @@ Required data and actions: [INPUTS, OUTPUTS, AND ACTIONS]
 Known constraints: [AUTHORIZATION, BUSINESS RULES, OR TECHNICAL LIMITS]
 
 Before editing:
-1. Read Docs/README.md, Docs/Design.md, Docs/phase-0-baseline.md, and the
-   product documents relevant to the workflow.
+1. Read Docs/README.md, Docs/design/Design.md, and the product documents
+   relevant to the workflow.
 2. Inspect the affected Laravel route, policy, request/action, view model,
    React components, CSS tokens, and focused tests.
 3. Treat product documents as intended behavior and migrations/application
    code/tests as current implementation evidence.
-4. Use Docs/consolidated/05_Design_System_Specification.md for the maintained
-   standalone component, state, layout, accessibility, and content contract.
-5. Treat Docs/consolidated/supplements as non-canonical recommendation sources.
-   Do not copy a supplemental stack, state, target, palette, or typeface unless
-   the recommendation register and canonical documents explicitly accept it.
+4. Treat Docs/archive/ (including archive/phase-0-baseline.md and
+   archive/consolidated/) as historical context, not current specification.
+   Do not copy an archived or supplemental stack, state, target, palette, or
+   typeface unless the canonical documents explicitly accept it.
 
 Canonical design direction:
 - Instrument Sans is the UI typeface.

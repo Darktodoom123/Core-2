@@ -1,6 +1,6 @@
 # Mobile Lifecycle Agent Orchestration & E2E Verification Guide
 
-This document describes the agent architecture, autonomous `/goal` execution patterns, and end-to-end testing matrix built for [Docs/prds/mobile-prd/mobile-lifecycle.md](mobile-lifecycle.md).
+This document describes the agent architecture, autonomous `/goal` execution patterns, and end-to-end testing matrix built for [Docs/prds/mobile-prd/mobile-lifecycle-v1.1.md](mobile-lifecycle-v1.1.md) (superseding the [v1.0 baseline](mobile-lifecycle.md)). Status colors follow the roles in [Docs/design/mobile.md](../../design/mobile.md#telemetry-freshness).
 
 ---
 
@@ -31,7 +31,7 @@ Two specialized testing roles govern this lifecycle:
 - **Role**: Dedicated multi-tier end-to-end testing and verification specialist.
 - **Scope**:
   - **Tier 1: Backend Domain & API E2E**: Pest PHP tests validating state transitions, Sanctum authentication, optimistic locking, and regional compliance.
-  - **Tier 2: Web Dispatch Dashboard E2E**: Playwright tests verifying MapLibre tracking indicators (`Offline` gray, `Fresh` glowing green, `Delayed`/`Stale` gold).
+  - **Tier 2: Web Dispatch Dashboard E2E**: Playwright tests verifying MapLibre tracking indicators (`Offline` neutral, `Fresh` success, `Delayed` warning, `Stale` critical).
   - **Tier 3: Mobile Field Client**: Jest & tsx component tests in `packages/field-mobile`, SQLite offline outbox store-and-forward replay, and native Detox/Maestro runners.
   - **Zero-Leak Security**: Enforces zero credentials, plain bearer tokens, or PII coordinates in logs or test outputs.
 
@@ -41,12 +41,12 @@ Two specialized testing roles govern this lifecycle:
 
 | Phase | HoS Duty Status | Assigned Unit Status | Mobile Background GPS | Dashboard Status (Web Map) | Verification Endpoint / Action |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **1. Dispatch Sent** | `Off Duty` | Dispatched (`Pending`) | Disabled | `Offline` (Gray) | `GET /api/v1/dispatch-jobs` (pending) |
-| **2. Order Accepted** | `Off Duty` | Accepted (`Awaiting Arrival`) | Disabled | `Offline` (Gray) | `POST .../assignments/{id}/response` (`accepted`) |
-| **3. Shift Started** | `On Duty` | Accepted (`Unlinked`) | Disabled | `Offline` (Gray) | `POST /api/v1/hos/shifts/start` (Duty: `operating`) |
-| **4. On-Site Unit Start** | `On Duty` | **Linked (`CRN-101`)** | **Active Stream** | **`Fresh` (Glowing Green)** | `POST /api/v1/locations` (Sharing: true) |
-| **5. Pre-Trip DVIR** | `On Duty (Operating)` | Inspected & Operating | Active Stream | **`Fresh` (Glowing Green)** | `POST /api/v1/dvir/inspections` (`pre_trip`) |
-| **6. Break / Lunch** | `Rest / Meal Break` | Linked (`Telemetry Paused`) | Paused / Standby | `Delayed` / `Stale` (Gold) | `POST /api/v1/hos/duty-status` (`on_break`) |
+| **1. Dispatch Sent** | `Off Duty` | Dispatched (`Pending`) | Disabled | `Offline` (neutral) | `GET /api/v1/dispatch-jobs` (pending) |
+| **2. Order Accepted** | `Off Duty` | Accepted (`Awaiting Arrival`) | Disabled | `Offline` (neutral) | `POST .../assignments/{id}/response` (`accepted`) |
+| **3. Shift Started** | `On Duty` | Accepted (`Unlinked`) | Disabled | `Offline` (neutral) | `POST /api/v1/hos/shifts/start` (Duty: `operating`) |
+| **4. On-Site Unit Start** | `On Duty` | **Linked (`CRN-101`)** | **Active Stream** | **`Fresh` (success)** | `POST /api/v1/locations` (Sharing: true) |
+| **5. Pre-Trip DVIR** | `On Duty (Operating)` | Inspected & Operating | Active Stream | **`Fresh` (success)** | `POST /api/v1/dvir/inspections` (`pre_trip`) |
+| **6. Break / Lunch** | `Rest / Meal Break` | Linked (`Telemetry Paused`) | Paused / Standby | `Delayed` (warning) / `Stale` (critical) | `POST /api/v1/hos/duty-status` (`on_break`) |
 | **7. Release / Handover**| `On Duty` | **Released (`Available`)** | **Disabled** | `Stale` (Last Known Location) | `POST /api/v1/dvir/inspections` (`post_trip`) |
 | **8. End Shift** | `Off Duty` | Unassigned | Disabled | `Offline` / `Stale` | `POST /api/v1/hos/shifts/certify` (`completed`) |
 
@@ -57,7 +57,7 @@ Two specialized testing roles govern this lifecycle:
 1. **Shift Started Without Dispatch (4.1)**: Clock-in on HoS allowed; telemetry stays disabled.
 2. **Dispatch Rejection (4.1)**: Rejection requires a mandatory reason (`hours_conflict`, `sick_leave`); clears assignment from operator view.
 3. **Commute Leak Intercept (4.2)**: Telemetry strictly decoupled until physical on-site confirmation.
-4. **Silence Degradation (4.3)**: 3-min silence degrades marker to `Delayed`; 15-min degrades to `Stale`.
+4. **Silence Degradation (4.3)**: 3-min silence degrades marker to `Delayed`; 15-min degrades to `Stale`; after 30 min it is `Offline`.
 5. **Offline SQLite Queue Flush (4.3)**: Reconnect flushes stored pings in compressed batches (max 100 points/payload).
 6. **Critical DVIR Defect Lockout (4.4)**: Defects in post-trip DVIR flag asset for maintenance lockout.
 7. **DOLE 10h Cap & NSD (5.1)**: 9.0h warning alert, 10.0h hard cap, +10% Night Shift Differential between 22:00 and 06:00.
