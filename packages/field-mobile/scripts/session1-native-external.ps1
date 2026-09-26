@@ -1187,7 +1187,7 @@ try {
     Invoke-Checked -FilePath $php -Arguments @(
         $operationsArtisan,
         'db:seed',
-        '--class=Database\Seeders\Session1NativeAcceptanceSeeder',
+        '--class=Database\Seeders\Acceptance\Session1NativeAcceptanceSeeder',
         '--force',
         '--no-interaction'
     ) -WorkingDirectory $operationsTarget -FailureMessage 'Session 1 fixture seeding failed'

@@ -299,12 +299,21 @@ export interface SafetyHazardCommandPayload {
     photo_command_ids?: string[];
 }
 
+export type WorkStoppageType = 'standard' | 'imminent_danger';
+
 export interface WorkStoppageCommandPayload {
     project_site: string;
     reason: string;
     affected_area: string;
     affected_asset_ids?: number[] | null;
     dole_regulation_reference?: string | null;
+    is_imminent_danger?: boolean | null;
+    stoppage_type?: WorkStoppageType | string | null;
+    statutory_basis?: 'ra_11058' | 'dole_do13' | string | null;
+    location_latitude?: number | null;
+    location_longitude?: number | null;
+    location_accuracy_metres?: number | null;
+    location_observed_at?: string | null;
 }
 
 export interface HosStartCommandPayload {
@@ -613,6 +622,7 @@ export interface ShiftInfo {
     breakCountdownMinutes?: number | null;
     fatigueStatus?: string | null;
     doleWarning?: boolean;
+    continuousOperatingMinutes?: number | null;
 }
 
 // ==========================================
@@ -683,6 +693,12 @@ export interface DvirInspectionRecord {
     criticalDefectsCount: number;
     checks: TechnicianInspectionCheck[];
     signatureCaptured: boolean;
+    signatureData?: {
+        signerName: string;
+        signerRole: string;
+        signedAt: string;
+        pointCount: number;
+    } | null;
     remarks?: string | null;
     completedAt: string;
     photos?: Array<{

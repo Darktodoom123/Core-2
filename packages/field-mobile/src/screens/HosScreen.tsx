@@ -15,6 +15,7 @@ import type { IconName } from '../components/common/Icon';
 import { TileScreenHeader } from '../components/layout/tile-screen-header';
 import { EndShiftSafeguardModal } from '../components/sheets/EndShiftSafeguardModal';
 import { ReliefHandoverModal } from '../components/sheets/ReliefHandoverModal';
+import { useHosCompliance } from '../hooks/useHosCompliance';
 import type { FieldApiClient } from '../services/apiClient';
 import { useTheme } from '../theme';
 import type { DutyStatus, ShiftInfo, StandbyReason } from '../types/index';
@@ -842,15 +843,12 @@ export const HosScreen: React.FC<HosScreenProps> = ({
         }
     }, [isSaved, stampOpacity, stampScale]);
 
-    const hoursElapsed = shiftInfo.hoursElapsed ?? null;
+    const hosCompliance = useHosCompliance(shiftInfo, { timelineHistory });
+    const hoursElapsed = hosCompliance.hoursElapsed;
     const hasServerClock =
         shiftInfo.shiftElapsedMinutes !== null &&
         shiftInfo.shiftElapsedMinutes !== undefined;
-    const limitCounterHours =
-        shiftInfo.limitCounterMinutes !== null &&
-        shiftInfo.limitCounterMinutes !== undefined
-            ? shiftInfo.limitCounterMinutes / 60
-            : null;
+    const limitCounterHours = hosCompliance.limitCounterHours;
     const cycleHoursElapsed =
         shiftInfo.cycleAccumulatedMinutes !== null &&
         shiftInfo.cycleAccumulatedMinutes !== undefined
@@ -858,13 +856,8 @@ export const HosScreen: React.FC<HosScreenProps> = ({
             : null;
 
     // DOLE 10-Hour Shift Limit Compliance Checks
-    const isDoleWarning =
-        shiftInfo.doleWarning ??
-        (limitCounterHours !== null && limitCounterHours >= 9.0);
-    const isDoleCapExceeded =
-        (limitCounterHours !== null && limitCounterHours >= 10.0) ||
-        shiftInfo.fatigueStatus === 'critical' ||
-        shiftInfo.fatigueStatus === 'violation';
+    const isDoleWarning = hosCompliance.isDoleWarning;
+    const isDoleCapExceeded = hosCompliance.isDoleCapExceeded;
 
     // Remaining ELD calculations
     const driveRemainingHours =
@@ -1102,6 +1095,104 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                                 </Text>
                             ))}
                         </View>
+                    </View>
+                ) : null}
+
+                {/* DOLE 4.5-Hour Continuous Operation Rest Prompter Banner */}
+                {hosCompliance.breakSuggestion ? (
+                    <View
+                        accessibilityRole="alert"
+                        style={[
+                            styles.doleContinuousRestBanner,
+                            hosCompliance.isContinuousRestRequired &&
+                                styles.doleContinuousRestRequiredBanner,
+                            isDarkHud && styles.darkDoleContinuousRestBanner,
+                        ]}
+                        testID="dole-continuous-rest-banner"
+                    >
+                        <View style={styles.doleContinuousRestContent}>
+                            <View style={styles.doleContinuousRestHeader}>
+                                <Icon
+                                    color={
+                                        hosCompliance.isContinuousRestRequired
+                                            ? isDarkHud
+                                                ? '#F59E0B'
+                                                : '#B45309'
+                                            : isDarkHud
+                                              ? '#38BDF8'
+                                              : '#0284C7'
+                                    }
+                                    name="clock"
+                                    size={18}
+                                />
+                                <Text
+                                    style={[
+                                        styles.doleContinuousRestTitle,
+                                        isDarkHud &&
+                                            styles.darkDoleContinuousRestTitle,
+                                    ]}
+                                >
+                                    {hosCompliance.breakSuggestion.title}
+                                </Text>
+                                <View
+                                    style={[
+                                        styles.continuousPill,
+                                        isDarkHud && styles.darkContinuousPill,
+                                    ]}
+                                    testID="dole-continuous-counter-pill"
+                                >
+                                    <Text
+                                        style={[
+                                            styles.continuousPillText,
+                                            isDarkHud &&
+                                                styles.darkContinuousPillText,
+                                        ]}
+                                    >
+                                        {hosCompliance.continuousCounterLabel}
+                                    </Text>
+                                </View>
+                            </View>
+                            <Text
+                                style={[
+                                    styles.doleContinuousRestMessage,
+                                    isDarkHud &&
+                                        styles.darkDoleContinuousRestMessage,
+                                ]}
+                            >
+                                {hosCompliance.breakSuggestion.message}
+                            </Text>
+                        </View>
+                        <Pressable
+                            accessibilityLabel={
+                                hosCompliance.breakSuggestion.actionLabel
+                            }
+                            accessibilityRole="button"
+                            onPress={() => {
+                                setOverriddenStatus({
+                                    propStatus: shiftInfo.dutyStatus,
+                                    localStatus: 'standby',
+                                });
+
+                                if (onUpdateDutyStatus) {
+                                    void onUpdateDutyStatus('standby');
+                                }
+                            }}
+                            style={[
+                                styles.doleContinuousRestBtn,
+                                isDarkHud && styles.darkDoleContinuousRestBtn,
+                            ]}
+                            testID="dole-continuous-break-btn"
+                        >
+                            <Text
+                                style={[
+                                    styles.doleContinuousRestBtnText,
+                                    isDarkHud &&
+                                        styles.darkDoleContinuousRestBtnText,
+                                ]}
+                            >
+                                {hosCompliance.breakSuggestion.actionLabel}
+                            </Text>
+                        </Pressable>
                     </View>
                 ) : null}
 
@@ -4283,6 +4374,93 @@ const styles = StyleSheet.create({
     },
     syncStatusTextFailed: {
         color: '#B91C1C',
+    },
+    doleContinuousRestBanner: {
+        alignItems: 'center',
+        backgroundColor: '#FEF3C7',
+        borderColor: '#F59E0B',
+        borderRadius: 12,
+        borderWidth: 1.5,
+        flexDirection: 'row',
+        gap: 10,
+        justifyContent: 'space-between',
+        marginBottom: 14,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+    },
+    doleContinuousRestRequiredBanner: {
+        backgroundColor: '#FFFBEB',
+        borderColor: '#D97706',
+    },
+    darkDoleContinuousRestBanner: {
+        backgroundColor: '#1E293B',
+        borderColor: '#F59E0B',
+    },
+    doleContinuousRestContent: {
+        flex: 1,
+        gap: 4,
+    },
+    doleContinuousRestHeader: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 6,
+    },
+    doleContinuousRestTitle: {
+        color: '#92400E',
+        fontSize: 12,
+        fontWeight: '800',
+        letterSpacing: 0.2,
+    },
+    darkDoleContinuousRestTitle: {
+        color: '#FBBF24',
+    },
+    continuousPill: {
+        backgroundColor: '#FDE68A',
+        borderColor: '#F59E0B',
+        borderRadius: 6,
+        borderWidth: 1,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+    },
+    darkContinuousPill: {
+        backgroundColor: 'rgba(245, 158, 11, 0.2)',
+        borderColor: '#F59E0B',
+    },
+    continuousPillText: {
+        color: '#78350F',
+        fontFamily: 'monospace',
+        fontSize: 10,
+        fontWeight: '800',
+    },
+    darkContinuousPillText: {
+        color: '#FDE68A',
+    },
+    doleContinuousRestMessage: {
+        color: '#92400E',
+        fontSize: 11,
+        fontWeight: '600',
+        lineHeight: 15,
+    },
+    darkDoleContinuousRestMessage: {
+        color: '#FCD34D',
+    },
+    doleContinuousRestBtn: {
+        backgroundColor: '#D97706',
+        borderRadius: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+    },
+    darkDoleContinuousRestBtn: {
+        backgroundColor: '#F59E0B',
+    },
+    doleContinuousRestBtnText: {
+        color: '#FFFFFF',
+        fontSize: 11,
+        fontWeight: '800',
+    },
+    darkDoleContinuousRestBtnText: {
+        color: '#0F172A',
     },
     doleWarningBanner: {
         alignItems: 'center',

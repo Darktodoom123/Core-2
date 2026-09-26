@@ -188,6 +188,7 @@ export class CommandOutboxManager {
     private commands = new Map<string, OutboxCommand>();
     private listeners = new Set<OutboxListener>();
     private processingActors = new Set<number>();
+    private refreshAttemptedCommands = new Set<string>();
     private activeActorId: number | null = null;
     private activationSequence = 0;
     private lastCreatedAtMs = 0;
@@ -246,6 +247,7 @@ export class CommandOutboxManager {
         }
 
         this.activeActorId = actorId;
+        this.refreshAttemptedCommands.clear();
         this.commands = new Map(
             restored.map((command) => [command.id, command]),
         );
@@ -262,6 +264,7 @@ export class CommandOutboxManager {
         this.activeActorId = null;
         this.lastCreatedAtMs = 0;
         this.commands.clear();
+        this.refreshAttemptedCommands.clear();
         this.notify();
     }
 
@@ -912,6 +915,7 @@ export class CommandOutboxManager {
                     command.error?.code !== 'MISSING_ATTACHMENTS' &&
                     command.error?.code !== 'QUARANTINED' &&
                     command.error?.code !== 'AUTHENTICATION_REQUIRED' &&
+                    command.error?.code !== 'AUTH_BLOCKED' &&
                     (!command.nextAttemptAt ||
                         Date.parse(command.nextAttemptAt) <= nowMs)
                 ) {
@@ -1601,6 +1605,47 @@ export class CommandOutboxManager {
 
             return response;
         } catch (error: unknown) {
+            const isUnauthorized =
+                (error instanceof ApiClientError && error.status === 401) ||
+                (typeof error === 'object' &&
+                    error !== null &&
+                    (error as Record<string, unknown>).status === 401);
+
+            const canRefresh =
+                typeof (
+                    apiClient as unknown as {
+                        canRefreshToken?: () => boolean;
+                    }
+                ).canRefreshToken === 'function'
+                    ? (
+                          apiClient as unknown as {
+                              canRefreshToken: () => boolean;
+                          }
+                      ).canRefreshToken()
+                    : typeof apiClient.refreshToken === 'function';
+
+            if (
+                isUnauthorized &&
+                !this.refreshAttemptedCommands.has(command.id) &&
+                canRefresh
+            ) {
+                this.refreshAttemptedCommands.add(command.id);
+
+                try {
+                    const refreshedToken = await apiClient.refreshToken();
+
+                    if (refreshedToken) {
+                        return await this.executeCommand(
+                            command,
+                            apiClient,
+                            result,
+                        );
+                    }
+                } catch {
+                    // Token refresh failed or network down; proceed to auth failure
+                }
+            }
+
             await this.handleExecutionFailure(command, error, result);
 
             return null;
@@ -1635,14 +1680,21 @@ export class CommandOutboxManager {
 
             if (error.status === 401 || error.status === 403) {
                 command.state = 'failed';
+                const isAuthBlocked =
+                    error.status === 401 &&
+                    this.refreshAttemptedCommands.has(command.id);
                 command.error = {
                     code:
-                        error.status === 401
-                            ? 'AUTHENTICATION_REQUIRED'
-                            : 'AUTHORIZATION_DENIED',
+                        error.status === 403
+                            ? 'AUTHORIZATION_DENIED'
+                            : isAuthBlocked
+                              ? 'AUTH_BLOCKED'
+                              : 'AUTHENTICATION_REQUIRED',
                     message:
                         error.status === 401
-                            ? 'Sign in again before reviewing queued commands.'
+                            ? isAuthBlocked
+                                ? 'Authentication token refresh failed. Sign in again to unblock queued commands.'
+                                : 'Sign in again before reviewing queued commands.'
                             : 'This account is not authorized to replay the command.',
                     retryable: error.status === 401,
                 };

@@ -1,5 +1,13 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+    Animated,
+    Pressable,
+    StyleSheet,
+    Text,
+    Vibration,
+    View,
+} from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
 import { useTheme } from '../../theme';
 import type {
     DispatchJob,
@@ -10,11 +18,14 @@ import { formatPHT } from '../../utils/formatters';
 import { Icon } from '../common/Icon';
 import { colors, shadows } from '../nativeStyles';
 import { CommandConflictBanner } from '../panels/CommandConflictBanner';
+import { DigitalSignatureModal } from '../signature/DigitalSignatureModal';
+import type { DigitalSignatureData } from '../signature/DigitalSignatureModal';
 
 export interface JobListItemCardProps {
     job: DispatchJob;
     conflictedCommands?: OutboxCommand[];
     queuedDelayCommand?: OutboxCommand;
+    hideAssignmentActions?: boolean;
     onAcceptServerState?: (commandId: string) => void;
     onRetryNewVersion?: (commandId: string, newVersion: number) => void;
     onSelectJob?: (jobId: number) => void;
@@ -33,23 +44,216 @@ export interface JobListItemCardProps {
         jobId: number,
         nextStatus: DispatchStatus,
         version: number,
+        signatureData?: DigitalSignatureData,
     ) => void;
     onOpenDriveRoutes?: () => void;
     onReportDelay?: (job: DispatchJob) => void;
 }
 
+export interface HoldToConfirmTransitButtonProps {
+    label: string;
+    icon: any;
+    accessibilityLabel: string;
+    testID: string;
+    progressTestID?: string;
+    onConfirm: () => void;
+    baseStyle: StyleProp<ViewStyle>;
+    progressColor?: string;
+    holdDurationMs?: number;
+}
+
+export const HoldToConfirmTransitButton: React.FC<
+    HoldToConfirmTransitButtonProps
+> = ({
+    label,
+    icon,
+    accessibilityLabel,
+    testID,
+    progressTestID,
+    onConfirm,
+    baseStyle,
+    progressColor = 'rgba(255, 255, 255, 0.45)',
+    holdDurationMs = 500,
+}) => {
+    const [progress, setProgress] = useState(0);
+    const [isHolding, setIsHolding] = useState(false);
+    const [progressAnim] = useState(() => new Animated.Value(0));
+    const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const isTouchActiveRef = useRef(false);
+    const touchReleasedEarlyRef = useRef(false);
+    const completedRef = useRef(false);
+    const startTimeRef = useRef(0);
+
+    const cleanupTimers = useCallback(() => {
+        if (holdTimerRef.current) {
+            clearTimeout(holdTimerRef.current);
+            holdTimerRef.current = null;
+        }
+
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+        }
+
+        progressAnim.stopAnimation();
+    }, [progressAnim]);
+
+    const handlePressIn = useCallback(() => {
+        isTouchActiveRef.current = true;
+        touchReleasedEarlyRef.current = false;
+        completedRef.current = false;
+        startTimeRef.current = Date.now();
+        setIsHolding(true);
+        setProgress(0);
+        progressAnim.setValue(0);
+
+        Animated.timing(progressAnim, {
+            toValue: 1,
+            duration: holdDurationMs,
+            useNativeDriver: false,
+        }).start();
+
+        intervalRef.current = setInterval(() => {
+            const elapsed = Date.now() - startTimeRef.current;
+            const frac = Math.min(1, elapsed / holdDurationMs);
+            setProgress(frac);
+        }, 50);
+
+        holdTimerRef.current = setTimeout(() => {
+            completedRef.current = true;
+            touchReleasedEarlyRef.current = false;
+            cleanupTimers();
+            setIsHolding(false);
+            setProgress(1);
+
+            try {
+                Vibration.vibrate(60);
+            } catch {
+                // Ignore vibration error in mock or test environment
+            }
+
+            onConfirm();
+        }, holdDurationMs);
+    }, [cleanupTimers, holdDurationMs, onConfirm, progressAnim]);
+
+    const handlePressOut = useCallback(() => {
+        isTouchActiveRef.current = false;
+        cleanupTimers();
+        setIsHolding(false);
+
+        if (!completedRef.current) {
+            touchReleasedEarlyRef.current = true;
+            Animated.timing(progressAnim, {
+                toValue: 0,
+                duration: 150,
+                useNativeDriver: false,
+            }).start(() => setProgress(0));
+        }
+    }, [cleanupTimers, progressAnim]);
+
+    const handlePress = useCallback(() => {
+        // Accidental brief glove tap (< 500ms): touch sequence was active but released early. Prevent transition!
+        if (touchReleasedEarlyRef.current) {
+            touchReleasedEarlyRef.current = false;
+
+            try {
+                Vibration.vibrate(30);
+            } catch {
+                // Ignore
+            }
+
+            return;
+        }
+
+        // Direct press activation for screen readers (WCAG 2.2 AA) and unit testing (fireEvent.press without pressIn)
+        if (!isTouchActiveRef.current && !completedRef.current) {
+            try {
+                Vibration.vibrate(40);
+            } catch {
+                // Ignore
+            }
+
+            onConfirm();
+
+            return;
+        }
+
+        // Hold completed successfully; reset state for subsequent interactions
+        if (completedRef.current) {
+            completedRef.current = false;
+            setProgress(0);
+            progressAnim.setValue(0);
+        }
+    }, [onConfirm, progressAnim]);
+
+    useEffect(() => {
+        return () => cleanupTimers();
+    }, [cleanupTimers]);
+
+    const progressWidth = useMemo(
+        () =>
+            progressAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: ['0%', '100%'],
+            }),
+        [progressAnim],
+    );
+
+    return (
+        <Pressable
+            accessibilityHint="Hold for 0.5s to confirm dispatch status transition"
+            accessibilityLabel={accessibilityLabel}
+            accessibilityRole="button"
+            onPress={handlePress}
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+            style={({ pressed }) => [
+                styles.btnProgression,
+                baseStyle,
+                pressed && styles.btnPressed,
+                styles.holdBtnContainer,
+            ]}
+            testID={testID}
+        >
+            <Animated.View
+                style={[
+                    styles.holdProgressBar,
+                    {
+                        backgroundColor: progressColor,
+                        width: progressWidth,
+                    },
+                ]}
+                testID={progressTestID || `${testID}-progress`}
+            />
+            <View pointerEvents="none" style={styles.holdButtonContent}>
+                <Icon color="#FFFFFF" name={icon} size={15} />
+                <Text style={styles.btnProgressionText}>
+                    {isHolding && progress > 0.1
+                        ? `${label} (Holding ${Math.round(progress * 100)}%)`
+                        : label}
+                </Text>
+            </View>
+        </Pressable>
+    );
+};
+
 export const JobListItemCard: React.FC<JobListItemCardProps> = ({
     job,
     conflictedCommands,
     queuedDelayCommand,
+    hideAssignmentActions = false,
     onAcceptServerState,
     onRetryNewVersion,
     onSelectJob,
     onAcceptAssignment,
     onRejectAssignment,
+    onTransitionStatus,
     onReportDelay,
 }) => {
     const { isDarkHud } = useTheme();
+    const [showCompletionSignature, setShowCompletionSignature] =
+        useState(false);
 
     const isPendingAssignment =
         job.my_assignment?.response_status === 'pending';
@@ -411,7 +615,7 @@ export const JobListItemCard: React.FC<JobListItemCardProps> = ({
             </View>
 
             {/* 4. Initial Assignment Response Actions (Accept / Decline) */}
-            {isPendingAssignment ? (
+            {isPendingAssignment && !hideAssignmentActions ? (
                 <View style={styles.actionsContainer}>
                     <View style={styles.pendingActionBlock}>
                         <View
@@ -498,6 +702,107 @@ export const JobListItemCard: React.FC<JobListItemCardProps> = ({
                 </View>
             ) : (
                 <View style={styles.nonPendingActionsContainer}>
+                    {/* Status progression button when active */}
+                    {onTransitionStatus &&
+                    job.capabilities?.can_update_status !== false ? (
+                        <View style={styles.progressionActionRow}>
+                            {currentStatus === 'accepted' ||
+                            currentStatus === 'dispatched' ? (
+                                <HoldToConfirmTransitButton
+                                    accessibilityLabel={`Start transit for ${job.reference}`}
+                                    baseStyle={[
+                                        styles.btnEnRoute,
+                                        isDarkHud && styles.darkBtnEnRoute,
+                                    ]}
+                                    icon="route"
+                                    label="Start Transit"
+                                    onConfirm={() =>
+                                        onTransitionStatus(
+                                            job.id,
+                                            'en_route',
+                                            job.version,
+                                        )
+                                    }
+                                    progressColor="rgba(255, 255, 255, 0.4)"
+                                    progressTestID={`transit-hold-progress-${job.id}`}
+                                    testID={`action-en-route-btn-${job.id}`}
+                                />
+                            ) : currentStatus === 'en_route' ? (
+                                <HoldToConfirmTransitButton
+                                    accessibilityLabel={`Arrived on site for ${job.reference}`}
+                                    baseStyle={[
+                                        styles.btnArrive,
+                                        isDarkHud && styles.darkBtnArrive,
+                                    ]}
+                                    icon="pin"
+                                    label="Arrived On Site"
+                                    onConfirm={() =>
+                                        onTransitionStatus(
+                                            job.id,
+                                            'arrived',
+                                            job.version,
+                                        )
+                                    }
+                                    progressColor="rgba(255, 255, 255, 0.4)"
+                                    progressTestID={`arrive-hold-progress-${job.id}`}
+                                    testID={`action-arrive-btn-${job.id}`}
+                                />
+                            ) : currentStatus === 'arrived' ? (
+                                <Pressable
+                                    accessibilityLabel={`Begin work for ${job.reference}`}
+                                    accessibilityRole="button"
+                                    onPress={() =>
+                                        onTransitionStatus(
+                                            job.id,
+                                            'working',
+                                            job.version,
+                                        )
+                                    }
+                                    style={({ pressed }) => [
+                                        styles.btnProgression,
+                                        styles.btnStartWork,
+                                        isDarkHud && styles.darkBtnStartWork,
+                                        pressed && styles.btnPressed,
+                                    ]}
+                                    testID={`action-start-work-btn-${job.id}`}
+                                >
+                                    <Icon
+                                        color="#FFFFFF"
+                                        name="crane"
+                                        size={15}
+                                    />
+                                    <Text style={styles.btnProgressionText}>
+                                        Begin Work
+                                    </Text>
+                                </Pressable>
+                            ) : currentStatus === 'working' ? (
+                                <Pressable
+                                    accessibilityLabel={`Complete job for ${job.reference}`}
+                                    accessibilityRole="button"
+                                    onPress={() =>
+                                        setShowCompletionSignature(true)
+                                    }
+                                    style={({ pressed }) => [
+                                        styles.btnProgression,
+                                        styles.btnComplete,
+                                        isDarkHud && styles.darkBtnComplete,
+                                        pressed && styles.btnPressed,
+                                    ]}
+                                    testID={`action-complete-btn-${job.id}`}
+                                >
+                                    <Icon
+                                        color="#FFFFFF"
+                                        name="check"
+                                        size={15}
+                                    />
+                                    <Text style={styles.btnProgressionText}>
+                                        Complete Job
+                                    </Text>
+                                </Pressable>
+                            ) : null}
+                        </View>
+                    ) : null}
+
                     {queuedDelayCommand ? (
                         <View
                             style={[
@@ -623,6 +928,24 @@ export const JobListItemCard: React.FC<JobListItemCardProps> = ({
                     ) : null}
                 </View>
             )}
+
+            {showCompletionSignature ? (
+                <DigitalSignatureModal
+                    clientName={job.client}
+                    jobReference={job.reference}
+                    onClose={() => setShowCompletionSignature(false)}
+                    onConfirmSignature={(sigData) => {
+                        setShowCompletionSignature(false);
+                        onTransitionStatus?.(
+                            job.id,
+                            'completed',
+                            job.version,
+                            sigData,
+                        );
+                    }}
+                    visible={showCompletionSignature}
+                />
+            ) : null}
         </Pressable>
     );
 };
@@ -935,5 +1258,64 @@ const styles = StyleSheet.create({
     },
     darkBtnReportDelayText: {
         color: '#FFBF00',
+    },
+    progressionActionRow: {
+        marginBottom: 8,
+    },
+    btnProgression: {
+        alignItems: 'center',
+        borderRadius: 10,
+        flexDirection: 'row',
+        gap: 8,
+        justifyContent: 'center',
+        minHeight: 44,
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+    },
+    btnProgressionText: {
+        color: '#FFFFFF',
+        fontSize: 14,
+        fontWeight: '700',
+    },
+    btnEnRoute: {
+        backgroundColor: '#0284C7',
+    },
+    darkBtnEnRoute: {
+        backgroundColor: '#0369A1',
+    },
+    btnArrive: {
+        backgroundColor: '#0D9488',
+    },
+    darkBtnArrive: {
+        backgroundColor: '#0F766E',
+    },
+    btnStartWork: {
+        backgroundColor: '#D97706',
+    },
+    darkBtnStartWork: {
+        backgroundColor: '#B45309',
+    },
+    btnComplete: {
+        backgroundColor: '#059669',
+    },
+    darkBtnComplete: {
+        backgroundColor: '#047857',
+    },
+    holdBtnContainer: {
+        overflow: 'hidden',
+        position: 'relative',
+    },
+    holdProgressBar: {
+        bottom: 0,
+        left: 0,
+        position: 'absolute',
+        top: 0,
+    },
+    holdButtonContent: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 8,
+        justifyContent: 'center',
+        zIndex: 2,
     },
 });

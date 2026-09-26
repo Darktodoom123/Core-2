@@ -25,6 +25,8 @@ import type {
 } from '../components/inspection';
 import { TileScreenHeader } from '../components/layout/tile-screen-header';
 import { colors } from '../components/nativeStyles';
+import { DigitalSignatureModal } from '../components/signature/DigitalSignatureModal';
+import type { DigitalSignatureData } from '../components/signature/DigitalSignatureModal';
 import type { FieldApiClient } from '../services/apiClient';
 import type { CommandOutboxManager } from '../services/commandOutbox';
 import { useTheme } from '../theme';
@@ -322,6 +324,9 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     const [showOlderArchive, setShowOlderArchive] = useState(false);
     const [isHistoryLoading, setIsHistoryLoading] = useState(false);
     const [syncError, setSyncError] = useState<string | null>(null);
+    const [dvirSignature, setDvirSignature] =
+        useState<DigitalSignatureData | null>(null);
+    const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
 
     const [prevTrackedAssetKey, setPrevTrackedAssetKey] = useState<
         string | null
@@ -337,7 +342,15 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
         setWalkaroundPhotos({});
         setSafetyStatus('safe');
         setRemarks('');
+        setDvirSignature(null);
         setIsSaved(false);
+    }
+
+    const [prevInitialMode, setPrevInitialMode] = useState(initialMode);
+
+    if (initialMode && initialMode !== prevInitialMode) {
+        setPrevInitialMode(initialMode);
+        setMode(initialMode);
     }
 
     useEffect(() => {
@@ -565,6 +578,10 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                 : []),
         ];
 
+        const hasSignatureCaptured = Boolean(
+            dvirSignature || !apiClient || inspectorName,
+        );
+
         const record: DvirInspectionRecord = {
             id: `DVIR-${Date.now().toString(36).toUpperCase()}`,
             type: mode === 'post_trip' ? 'post_trip' : 'pre_trip',
@@ -580,7 +597,15 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
             criticalDefectsCount: selectedDefects.filter((d) => d.critical)
                 .length,
             checks: checksList,
-            signatureCaptured: true,
+            signatureCaptured: hasSignatureCaptured,
+            signatureData: dvirSignature
+                ? {
+                      signerName: dvirSignature.signerName,
+                      signerRole: dvirSignature.signerRole,
+                      signedAt: dvirSignature.signedAt,
+                      pointCount: dvirSignature.pointCount,
+                  }
+                : null,
             remarks:
                 remarks.trim() ||
                 (mode === 'pre_trip'
@@ -649,7 +674,16 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                     : null,
             engine_hours: record.engineHours ?? null,
             has_defects: record.hasDefects,
-            signature_captured: true,
+            signature_captured: hasSignatureCaptured,
+            digital_signature: dvirSignature
+                ? {
+                      signer_name: dvirSignature.signerName,
+                      signer_role: dvirSignature.signerRole,
+                      signed_at: dvirSignature.signedAt,
+                      strokes: dvirSignature.strokes,
+                      point_count: dvirSignature.pointCount,
+                  }
+                : undefined,
             remarks: record.remarks,
             checks: checksPayload,
             photos: photosPayload.length > 0 ? photosPayload : undefined,
@@ -2108,6 +2142,115 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                 value={remarks}
                             />
                         </View>
+
+                        {/* Digital Signature Capture Section */}
+                        <View
+                            style={[
+                                styles.telemetryCard,
+                                isDarkHud && styles.darkTelemetryCard,
+                            ]}
+                            testID="dvir-signature-section"
+                        >
+                            <Text
+                                style={[
+                                    styles.telemetryHeading,
+                                    isDarkHud && styles.darkTelemetryHeading,
+                                ]}
+                            >
+                                DIGITAL SIGNATURE CERTIFICATION
+                            </Text>
+
+                            {dvirSignature ? (
+                                <View
+                                    style={[
+                                        styles.signatureConfirmedCard,
+                                        isDarkHud &&
+                                            styles.darkSignatureConfirmedCard,
+                                    ]}
+                                    testID="dvir-signature-confirmed"
+                                >
+                                    <View
+                                        style={styles.signatureConfirmedHeader}
+                                    >
+                                        <Icon
+                                            color="#10B981"
+                                            name="check-circle"
+                                            size={18}
+                                        />
+                                        <Text
+                                            style={[
+                                                styles.signatureConfirmedTitle,
+                                                isDarkHud &&
+                                                    styles.darkSignatureConfirmedTitle,
+                                            ]}
+                                        >
+                                            Certified by{' '}
+                                            {dvirSignature.signerName} (
+                                            {dvirSignature.signerRole})
+                                        </Text>
+                                    </View>
+                                    <Text
+                                        style={[
+                                            styles.signatureConfirmedSub,
+                                            isDarkHud &&
+                                                styles.darkSignatureConfirmedSub,
+                                        ]}
+                                    >
+                                        Signed at{' '}
+                                        {new Date(
+                                            dvirSignature.signedAt,
+                                        ).toLocaleTimeString()}{' '}
+                                        · {dvirSignature.pointCount} points
+                                        captured
+                                    </Text>
+                                    <Pressable
+                                        accessibilityLabel="Re-sign DVIR"
+                                        accessibilityRole="button"
+                                        onPress={() =>
+                                            setIsSignatureModalOpen(true)
+                                        }
+                                        style={styles.reSignBtn}
+                                        testID="dvir-re-sign-button"
+                                    >
+                                        <Text style={styles.reSignBtnText}>
+                                            Re-sign
+                                        </Text>
+                                    </Pressable>
+                                </View>
+                            ) : (
+                                <Pressable
+                                    accessibilityLabel="Capture Digital Signature"
+                                    accessibilityRole="button"
+                                    onPress={() =>
+                                        setIsSignatureModalOpen(true)
+                                    }
+                                    style={({ pressed }) => [
+                                        styles.captureSignatureBtn,
+                                        isDarkHud &&
+                                            styles.darkCaptureSignatureBtn,
+                                        pressed && styles.pressed,
+                                    ]}
+                                    testID="dvir-sign-button"
+                                >
+                                    <Icon
+                                        color={
+                                            isDarkHud ? '#60A5FA' : '#2563EB'
+                                        }
+                                        name="signature"
+                                        size={18}
+                                    />
+                                    <Text
+                                        style={[
+                                            styles.captureSignatureBtnText,
+                                            isDarkHud &&
+                                                styles.darkCaptureSignatureBtnText,
+                                        ]}
+                                    >
+                                        Capture Inspector Digital Signature
+                                    </Text>
+                                </Pressable>
+                            )}
+                        </View>
                     </View>
                 )}
             </ScrollView>
@@ -2150,6 +2293,20 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                     </Pressable>
                 </View>
             ) : null}
+
+            {/* Digital Signature Modal */}
+            <DigitalSignatureModal
+                clientName={inspectorName || 'Lead Inspector'}
+                jobReference={activeJobReference || localAssetCode}
+                onClose={() => setIsSignatureModalOpen(false)}
+                onConfirmSignature={(sig) => {
+                    setDvirSignature(sig);
+                    setIsSignatureModalOpen(false);
+                    setIsSaved(false);
+                }}
+                testID="dvir-digital-signature-modal"
+                visible={isSignatureModalOpen}
+            />
 
             {/* Defects Modal (Screenshot 3) */}
             <DvirDefectsModal
@@ -2987,6 +3144,75 @@ const styles = StyleSheet.create({
     },
     darkNoAssetBannerText: {
         color: '#FFBF00',
+    },
+    signatureConfirmedCard: {
+        backgroundColor: '#ECFDF5',
+        borderWidth: 1,
+        borderColor: '#A7F3D0',
+        borderRadius: 10,
+        padding: 14,
+    },
+    darkSignatureConfirmedCard: {
+        backgroundColor: '#064E3B30',
+        borderColor: '#059669',
+    },
+    signatureConfirmedHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 4,
+    },
+    signatureConfirmedTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#065F46',
+    },
+    darkSignatureConfirmedTitle: {
+        color: '#6EE7B7',
+    },
+    signatureConfirmedSub: {
+        fontSize: 12,
+        color: '#047857',
+        marginBottom: 8,
+    },
+    darkSignatureConfirmedSub: {
+        color: '#A7F3D0',
+    },
+    reSignBtn: {
+        alignSelf: 'flex-start',
+        paddingVertical: 4,
+        paddingHorizontal: 10,
+        backgroundColor: '#D1FAE5',
+        borderRadius: 6,
+    },
+    reSignBtnText: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#065F46',
+    },
+    captureSignatureBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        backgroundColor: '#EFF6FF',
+        borderWidth: 1,
+        borderColor: '#BFDBFE',
+        borderRadius: 10,
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+    },
+    darkCaptureSignatureBtn: {
+        backgroundColor: '#1E3A8A30',
+        borderColor: '#3B82F6',
+    },
+    captureSignatureBtnText: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#1D4ED8',
+    },
+    darkCaptureSignatureBtnText: {
+        color: '#60A5FA',
     },
     nextButtonDisabled: {
         opacity: 0.45,

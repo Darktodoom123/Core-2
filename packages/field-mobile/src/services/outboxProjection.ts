@@ -612,7 +612,9 @@ export function projectCommandToDisplay(
         cmd.state === 'unresolved' || errorCode === 'OUTCOME_UNRESOLVED';
     const isMissingAttachments = errorCode === 'MISSING_ATTACHMENTS';
     const missingAttachmentUri = cmd.error?.missingAttachmentUri;
-    const isAuthenticationRequired = errorCode === 'AUTHENTICATION_REQUIRED';
+    const isAuthenticationRequired =
+        errorCode === 'AUTHENTICATION_REQUIRED' ||
+        errorCode === 'AUTH_BLOCKED';
     const isAuthorizationDenied = errorCode === 'AUTHORIZATION_DENIED';
     const isValidationFailed =
         errorCode === 'VALIDATION_FAILED' ||

@@ -1,3 +1,7 @@
+/**
+ * @deprecated The canonical drive mode route screen is HeavyCraneDriveModeScreen.
+ * This modal component is retained for backward compatibility with native field workflow tests.
+ */
 import React, { useState } from 'react';
 import {
     Modal,

@@ -1,3 +1,7 @@
+/**
+ * Canonical profile and quick-settings sheet rendered from AssignedJobsListScreen,
+ * managing session, outbox sync status, and appearance preferences.
+ */
 import React, { useContext, useEffect, useMemo } from 'react';
 import {
     Animated,

@@ -17,6 +17,7 @@ import type {
     OutboxCommand,
     SafetyHazardCommandPayload,
     WorkStoppageCommandPayload,
+    WorkStoppageType,
 } from '../types';
 
 type SafetyMode = 'home' | 'hazard' | 'stop-work';
@@ -41,6 +42,8 @@ export interface FieldSafetyScreenProps {
         payload: WorkStoppageCommandPayload,
     ) => Promise<string>;
     onRetryCommand?: (commandId: string) => void;
+    initialMode?: SafetyMode;
+    initialStoppageType?: WorkStoppageType;
 }
 
 const severityOptions: Array<{ value: HazardSeverity; label: string }> = [
@@ -67,8 +70,13 @@ export function FieldSafetyScreen({
     onReportHazard,
     onIssueWorkStoppage,
     onRetryCommand,
+    initialMode,
+    initialStoppageType,
 }: FieldSafetyScreenProps) {
-    const [mode, setMode] = useState<SafetyMode>('home');
+    const [mode, setMode] = useState<SafetyMode>(initialMode ?? 'home');
+    const [stoppageType, setStoppageType] = useState<WorkStoppageType>(
+        initialStoppageType ?? 'standard',
+    );
     const [projectSite, setProjectSite] = useState<string | null>(null);
     const projectSiteValue = projectSite ?? activeSite ?? '';
     const [area, setArea] = useState('');
@@ -216,15 +224,35 @@ export function FieldSafetyScreen({
         setError(null);
 
         try {
-            const commandId = await onIssueWorkStoppage({
+            const isImminent = stoppageType === 'imminent_danger';
+            const payload: WorkStoppageCommandPayload = {
                 project_site: projectSiteValue.trim(),
                 affected_area: area.trim(),
                 reason: reason.trim(),
-            });
+                ...(location
+                    ? {
+                          location_latitude: location.latitude,
+                          location_longitude: location.longitude,
+                          location_accuracy_metres: location.accuracyMetres,
+                          location_observed_at: location.observedAt,
+                      }
+                    : {}),
+                ...(isImminent
+                    ? {
+                          is_imminent_danger: true,
+                          stoppage_type: 'imminent_danger',
+                          dole_regulation_reference:
+                              'DOLE D.O. 13 s. 1998 Section 8 & RA 11058 Section 20',
+                          statutory_basis: 'ra_11058',
+                      }
+                    : {}),
+            };
+            const commandId = await onIssueWorkStoppage(payload);
             setPendingCommandId(commandId);
             setMode('home');
             setReason('');
             setArea('');
+            setStoppageType('standard');
         } catch (submitError) {
             setError(
                 submitError instanceof Error
@@ -308,6 +336,7 @@ export function FieldSafetyScreen({
                             accessibilityRole="button"
                             onPress={() => {
                                 setMode('stop-work');
+                                setStoppageType('standard');
                                 setError(null);
                                 setArea('');
                             }}
@@ -316,6 +345,22 @@ export function FieldSafetyScreen({
                         >
                             <Text style={styles.stopButtonText}>
                                 Issue stop-work order
+                            </Text>
+                        </Pressable>
+                        <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="Declare RA 11058 Imminent Danger Stoppage"
+                            onPress={() => {
+                                setMode('stop-work');
+                                setStoppageType('imminent_danger');
+                                setError(null);
+                                setArea('');
+                            }}
+                            style={styles.statutoryLinkButton}
+                            testID="open-imminent-danger-stoppage"
+                        >
+                            <Text style={styles.statutoryLinkText}>
+                                Statutory RA 11058 Imminent Danger Refusal →
                             </Text>
                         </Pressable>
                     </View>
@@ -372,12 +417,14 @@ export function FieldSafetyScreen({
                                 WORK MUST STOP
                             </Text>
                             <Text style={styles.cardTitle}>
-                                Describe the danger
+                                {stoppageType === 'imminent_danger'
+                                    ? 'RA 11058 Imminent Danger Refusal'
+                                    : 'Describe the danger'}
                             </Text>
                             <Text style={styles.bodyText}>
-                                Keep work stopped in the affected area while
-                                this order is sent and until an Operations
-                                Manager confirms it can resume.
+                                {stoppageType === 'imminent_danger'
+                                    ? 'Statutory work refusal declared under RA 11058 Section 20. Keep work stopped in the affected area until safety rectification is verified.'
+                                    : 'Keep work stopped in the affected area while this order is sent and until an Operations Manager confirms it can resume.'}
                             </Text>
                         </View>
                     ) : (
@@ -389,6 +436,61 @@ export function FieldSafetyScreen({
                                 If this is an immediate danger, stop work first
                                 using the red action on the Safety screen.
                             </Text>
+                        </View>
+                    )}
+
+                    {mode === 'stop-work' && (
+                        <View style={styles.stoppageClassificationSection}>
+                            <Text style={styles.inputLabel}>
+                                Order classification
+                            </Text>
+                            <View style={styles.optionRow}>
+                                <ChoiceButton
+                                    label="Standard Operational Delay"
+                                    selected={stoppageType === 'standard'}
+                                    onPress={() => setStoppageType('standard')}
+                                    testID="stoppage-type-standard"
+                                />
+                                <ChoiceButton
+                                    label="Imminent Danger (RA 11058 §20)"
+                                    selected={stoppageType === 'imminent_danger'}
+                                    onPress={() =>
+                                        setStoppageType('imminent_danger')
+                                    }
+                                    testID="stoppage-type-imminent-danger"
+                                />
+                            </View>
+
+                            {stoppageType === 'imminent_danger' && (
+                                <View
+                                    accessibilityLiveRegion="polite"
+                                    accessibilityRole="alert"
+                                    style={styles.statutoryBadge}
+                                    testID="ra-11058-statutory-badge"
+                                >
+                                    <View style={styles.statutoryBadgeHeader}>
+                                        <Text style={styles.statutoryBadgeTag}>
+                                            STATUTORY PROTECTION
+                                        </Text>
+                                    </View>
+                                    <Text style={styles.statutoryBadgeTitle}>
+                                        Philippine RA 11058 Section 20
+                                    </Text>
+                                    <Text style={styles.statutoryBadgeText}>
+                                        Workers have the absolute right to
+                                        refuse unsafe work without threat or
+                                        reprisal when an imminent danger
+                                        condition exists that may cause death or
+                                        serious physical injury.
+                                    </Text>
+                                    <Text
+                                        style={styles.statutoryRegulationRef}
+                                    >
+                                        Regulatory Reference: DOLE D.O. 13 s.
+                                        1998 Section 8 & RA 11058 Section 20
+                                    </Text>
+                                </View>
+                            )}
                         </View>
                     )}
 
@@ -556,7 +658,9 @@ export function FieldSafetyScreen({
                         ) : (
                             <Text style={styles.stopButtonText}>
                                 {mode === 'stop-work'
-                                    ? 'Issue stop-work order'
+                                    ? stoppageType === 'imminent_danger'
+                                        ? 'Issue RA 11058 Stop-Work Order'
+                                        : 'Issue stop-work order'
                                     : 'Save hazard report'}
                             </Text>
                         )}
@@ -648,6 +752,14 @@ function CommandStatus({
     onRetry?: (commandId: string) => void;
 }) {
     const isOrder = command.type === 'issue_work_stoppage';
+    const isStatutory =
+        isOrder &&
+        (Boolean(command.payload.is_imminent_danger) ||
+            command.payload.stoppage_type === 'imminent_danger' ||
+            command.payload.statutory_basis === 'ra_11058');
+    const orderTitle = isStatutory
+        ? 'RA 11058 Stop-work order'
+        : 'Stop-work order';
     const site =
         typeof command.payload.project_site === 'string'
             ? command.payload.project_site
@@ -681,7 +793,7 @@ function CommandStatus({
             ]}
         >
             <Text style={styles.commandTitle}>
-                {isOrder ? 'Stop-work order' : 'Hazard report'} · {site}
+                {isOrder ? orderTitle : 'Hazard report'} · {site}
             </Text>
             <Text style={styles.commandText}>{message}</Text>
             {failed && onRetry && (
@@ -809,6 +921,22 @@ const styles = StyleSheet.create({
         fontWeight: '800',
         textAlign: 'center',
     },
+    statutoryLinkButton: {
+        alignItems: 'center',
+        backgroundColor: colors.surface,
+        borderColor: colors.redBorder,
+        borderRadius: 12,
+        borderWidth: 1,
+        justifyContent: 'center',
+        marginTop: 8,
+        minHeight: 46,
+        paddingHorizontal: 14,
+    },
+    statutoryLinkText: {
+        color: colors.redDark,
+        fontSize: 13,
+        fontWeight: '800',
+    },
     secondaryButton: {
         alignItems: 'center',
         backgroundColor: colors.surfaceMuted,
@@ -885,6 +1013,45 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     choiceTextSelected: { color: colors.primaryDark },
+    stoppageClassificationSection: { gap: 8 },
+    statutoryBadge: {
+        backgroundColor: colors.redLight,
+        borderColor: colors.redBorder,
+        borderRadius: 12,
+        borderWidth: 1,
+        gap: 6,
+        padding: 12,
+    },
+    statutoryBadgeHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    statutoryBadgeTag: {
+        backgroundColor: colors.redDark,
+        borderRadius: 4,
+        color: colors.white,
+        fontSize: 10,
+        fontWeight: '800',
+        letterSpacing: 0.6,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+    },
+    statutoryBadgeTitle: {
+        color: colors.redDark,
+        fontSize: 14,
+        fontWeight: '800',
+    },
+    statutoryBadgeText: {
+        color: colors.text,
+        fontSize: 13,
+        lineHeight: 18,
+    },
+    statutoryRegulationRef: {
+        color: colors.textSecondary,
+        fontSize: 11,
+        fontStyle: 'italic',
+        fontWeight: '600',
+    },
     criticalHint: {
         backgroundColor: colors.warningLight,
         borderColor: colors.warningBorder,

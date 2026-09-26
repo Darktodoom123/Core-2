@@ -766,4 +766,64 @@ describe('FieldApiClient', () => {
         assert.equal(calls[1].headers.get('idempotency-key'), logCommandId);
         assert.equal(calls[1].headers.get('x-command-id'), logCommandId);
     });
+
+    test('supports automatic background token refresh handler and notification callback', async () => {
+        let notifiedToken = '';
+        let currentToken: string | null = 'stale-token';
+
+        const client = new FieldApiClient({
+            baseUrl: 'https://field.example.test/',
+            getToken: () => currentToken,
+            refreshToken: async () => 'refreshed-token-999',
+            onTokenRefreshed: async (newToken) => {
+                notifiedToken = newToken;
+                currentToken = newToken;
+            },
+        });
+
+        const refreshed = await client.refreshToken();
+        assert.equal(refreshed, 'refreshed-token-999');
+        assert.equal(notifiedToken, 'refreshed-token-999');
+        assert.equal(currentToken, 'refreshed-token-999');
+        assert.equal(
+            client.getHeaders()['Authorization'],
+            'Bearer refreshed-token-999',
+        );
+
+        // Can also dynamically register new handler
+        client.setTokenRefreshHandler(async () => 'dynamic-token-111');
+        const secondRefresh = await client.refreshToken();
+        assert.equal(secondRefresh, 'dynamic-token-111');
+    });
+
+    test('coalesces concurrent background refreshToken calls into a single network execution', async () => {
+        let refreshInvocations = 0;
+        let resolveRefresh: ((token: string) => void) | null = null;
+
+        const client = new FieldApiClient({
+            baseUrl: 'https://field.example.test/',
+            getToken: () => 'old-token',
+            refreshToken: async () => {
+                refreshInvocations += 1;
+
+                return new Promise((resolve) => {
+                    resolveRefresh = resolve;
+                });
+            },
+        });
+
+        // Fire 3 concurrent refresh calls
+        const p1 = client.refreshToken();
+        const p2 = client.refreshToken();
+        const p3 = client.refreshToken();
+
+        assert.equal(refreshInvocations, 1);
+        resolveRefresh!('shared-new-token');
+
+        const [r1, r2, r3] = await Promise.all([p1, p2, p3]);
+        assert.equal(r1, 'shared-new-token');
+        assert.equal(r2, 'shared-new-token');
+        assert.equal(r3, 'shared-new-token');
+        assert.equal(refreshInvocations, 1);
+    });
 });

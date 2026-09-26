@@ -461,6 +461,65 @@ describe('CommandOutboxManager', () => {
         assert.equal(outbox.getCommand(blocked.id)?.state, 'completed');
     });
 
+    test('intercepts 401 Unauthorized during synchronization and automatically retries with refreshed token', async () => {
+        const outbox = await createOutbox(15);
+        const command = await outbox.enqueueTransitionStatus(60, 'en_route', 1);
+
+        let transitionCalls = 0;
+        let refreshCalls = 0;
+        let token = 'expired-token';
+
+        const apiClient = {
+            refreshToken: async () => {
+                refreshCalls += 1;
+                token = 'refreshed-token-xyz';
+
+                return token;
+            },
+            transitionStatus: async () => {
+                transitionCalls += 1;
+
+                if (token === 'expired-token') {
+                    throw new ApiClientError('Token expired.', 401);
+                }
+
+                return { id: 60, version: 2 } as DispatchJob;
+            },
+        } as unknown as FieldApiClient;
+
+        const result = await outbox.processQueue(apiClient);
+        assert.equal(result.requiresAuthentication, false);
+        assert.equal(result.completed, 1);
+        assert.equal(transitionCalls, 2);
+        assert.equal(refreshCalls, 1);
+        assert.equal(outbox.getCommand(command.id)?.state, 'completed');
+    });
+
+    test('flags command as auth blocked when automatic background token refresh fails on 401', async () => {
+        const outbox = await createOutbox(16);
+        const command = await outbox.enqueueTransitionStatus(61, 'en_route', 1);
+
+        let refreshCalls = 0;
+        const apiClient = {
+            refreshToken: async () => {
+                refreshCalls += 1;
+
+                return null;
+            },
+            transitionStatus: async () => {
+                throw new ApiClientError('Unauthenticated.', 401);
+            },
+        } as unknown as FieldApiClient;
+
+        const result = await outbox.processQueue(apiClient);
+        assert.equal(result.requiresAuthentication, true);
+        assert.equal(result.failed, 1);
+        assert.equal(refreshCalls, 1);
+        const stored = outbox.getCommand(command.id);
+        assert.equal(stored?.state, 'failed');
+        assert.equal(stored?.error?.code, 'AUTH_BLOCKED');
+    });
+
     test('does not enqueue into a new actor queue when identity changes during hashing', async () => {
         const repository = new MemoryOutboxRepository();
         let releaseHash: ((hash: string) => void) | undefined;

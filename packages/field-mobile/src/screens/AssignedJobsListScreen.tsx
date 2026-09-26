@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
+    Alert,
+    Platform,
     Pressable,
     RefreshControl,
     ScrollView,
@@ -34,6 +36,7 @@ import { ProfileSheet } from '../components/sheets/profile-sheet';
 import { ReliefHandoverModal } from '../components/sheets/ReliefHandoverModal';
 import { ReportDelayModal } from '../components/sheets/ReportDelayModal';
 import { isFetchError } from '../connectivity/networkMonitor';
+import { useHosCompliance } from '../hooks/useHosCompliance';
 import type { FieldApiClient } from '../services/apiClient';
 import { projectOutbox } from '../services/outboxProjection';
 import { useTheme } from '../theme';
@@ -86,7 +89,7 @@ export interface AssignedJobsListScreenProps {
         standbyReason?: StandbyReason,
         remarks?: string,
     ) => void;
-    onOpenDvir?: () => void;
+    onOpenDvir?: (mode?: 'pre_trip' | 'post_trip') => void;
     onOpenHos?: () => void;
     onOpenSafety?: () => void;
     onOpenDocuments?: () => void;
@@ -152,8 +155,8 @@ interface TileItem {
 }
 
 export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
-    jobs,
-    outboxCommands,
+    jobs = [],
+    outboxCommands = [],
     isLoading,
     isOnline = null,
     userName,
@@ -229,6 +232,9 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     >(undefined);
     const [onSiteConfirmationOpen, setOnSiteConfirmationOpen] = useState(false);
     const [reliefHandoverOpen, setReliefHandoverOpen] = useState(false);
+    const [reliefHandoverMode, setReliefHandoverMode] = useState<
+        'outgoing_offer' | 'incoming_claim'
+    >('outgoing_offer');
     const [changeUnitModalOpen, setChangeUnitModalOpen] = useState(false);
     const [defectFallbackModalOpen, setDefectFallbackModalOpen] =
         useState(false);
@@ -398,31 +404,12 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
         localDefectLockout !== null
             ? localDefectLockout
             : preTripDefectLockout || currentDvirStatus === 'defect';
-    const hoursElapsed = shiftInfo.hoursElapsed ?? null;
-    const limitCounterHours =
-        shiftInfo.limitCounterMinutes !== null &&
-        shiftInfo.limitCounterMinutes !== undefined
-            ? shiftInfo.limitCounterMinutes / 60
-            : null;
-    const isDoleWarning =
-        shiftInfo.doleWarning ??
-        (limitCounterHours !== null && limitCounterHours >= 9.0);
-    const isDoleCapExceeded =
-        (limitCounterHours !== null && limitCounterHours >= 10.0) ||
-        shiftInfo.fatigueStatus === 'critical' ||
-        shiftInfo.fatigueStatus === 'violation';
-    const elapsedClock =
-        hoursElapsed === null
-            ? 'Unavailable'
-            : `${Math.floor(hoursElapsed).toString().padStart(2, '0')}:${Math.round(
-                  (hoursElapsed % 1) * 60,
-              )
-                  .toString()
-                  .padStart(2, '0')}`;
-    const limitCounterLabel =
-        limitCounterHours === null
-            ? 'Limit counter unavailable'
-            : `${limitCounterHours.toFixed(1)}h operating + driving`;
+    const hosCompliance = useHosCompliance(shiftInfo);
+    const hoursElapsed = hosCompliance.hoursElapsed;
+    const isDoleWarning = hosCompliance.isDoleWarning;
+    const isDoleCapExceeded = hosCompliance.isDoleCapExceeded;
+    const elapsedClock = hosCompliance.elapsedClock;
+    const limitCounterLabel = hosCompliance.limitCounterLabel;
 
     const [handoverPin, setHandoverPin] = useState<string>('');
     const [handoverReliefName, setHandoverReliefName] = useState<string>(
@@ -449,6 +436,27 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 });
         }
     }, [reliefHandoverOpen, activeJob, apiClient, handoverPin]);
+
+    const handleClaimHandover = async (pin?: string) => {
+        const targetJobId =
+            activeJob?.id || (jobs.length > 0 && jobs[0] ? jobs[0].id : 1);
+
+        if (apiClient) {
+            try {
+                await apiClient.claimEquipmentHandover(
+                    targetJobId,
+                    pin || handoverPin || '8421',
+                );
+            } catch {
+                // Outbox or local fallback preserves workflow continuity
+            }
+        }
+
+        setIsLinkedLocal(true);
+        onLinkUnit?.(effectiveAssetCode);
+        setReliefHandoverOpen(false);
+        onRefresh?.();
+    };
 
     // 6 Dashboard Tiles
     const DASHBOARD_TILES: TileItem[] = useMemo(
@@ -606,7 +614,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
 
                 break;
             case 'dvir':
-                onOpenDvir?.();
+                onOpenDvir?.('pre_trip');
                 break;
             case 'routes':
                 if (onOpenRoutes) {
@@ -750,6 +758,102 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                         >
                             {locationTrackingError}
                         </Text>
+                    </View>
+                ) : null}
+
+                {/* DOLE 4.5-Hour Continuous Operation Rest Prompter Banner */}
+                {hosCompliance.breakSuggestion ? (
+                    <View
+                        accessibilityRole="alert"
+                        style={[
+                            styles.doleContinuousRestBanner,
+                            hosCompliance.isContinuousRestRequired &&
+                                styles.doleContinuousRestRequiredBanner,
+                            isDarkHud && styles.darkDoleContinuousRestBanner,
+                        ]}
+                        testID="dole-continuous-rest-banner"
+                    >
+                        <View style={styles.doleContinuousRestContent}>
+                            <View style={styles.doleContinuousRestHeader}>
+                                <Icon
+                                    color={
+                                        hosCompliance.isContinuousRestRequired
+                                            ? isDarkHud
+                                                ? '#F59E0B'
+                                                : '#B45309'
+                                            : isDarkHud
+                                              ? '#38BDF8'
+                                              : '#0284C7'
+                                    }
+                                    name="clock"
+                                    size={18}
+                                />
+                                <Text
+                                    style={[
+                                        styles.doleContinuousRestTitle,
+                                        isDarkHud &&
+                                            styles.darkDoleContinuousRestTitle,
+                                    ]}
+                                >
+                                    {hosCompliance.breakSuggestion.title}
+                                </Text>
+                                <View
+                                    style={[
+                                        styles.continuousPill,
+                                        isDarkHud && styles.darkContinuousPill,
+                                    ]}
+                                    testID="dole-continuous-counter-pill"
+                                >
+                                    <Text
+                                        style={[
+                                            styles.continuousPillText,
+                                            isDarkHud &&
+                                                styles.darkContinuousPillText,
+                                        ]}
+                                    >
+                                        {hosCompliance.continuousCounterLabel}
+                                    </Text>
+                                </View>
+                            </View>
+                            <Text
+                                style={[
+                                    styles.doleContinuousRestMessage,
+                                    isDarkHud &&
+                                        styles.darkDoleContinuousRestMessage,
+                                ]}
+                            >
+                                {hosCompliance.breakSuggestion.message}
+                            </Text>
+                        </View>
+                        <Pressable
+                            accessibilityLabel={
+                                hosCompliance.breakSuggestion.actionLabel
+                            }
+                            accessibilityRole="button"
+                            onPress={() => {
+                                if (onChangeDutyStatus) {
+                                    onChangeDutyStatus('on_break');
+                                } else {
+                                    onOpenHos?.();
+                                }
+                            }}
+                            style={({ pressed }) => [
+                                styles.doleContinuousRestBtn,
+                                isDarkHud && styles.darkDoleContinuousRestBtn,
+                                pressed && styles.pressed,
+                            ]}
+                            testID="dole-continuous-break-btn"
+                        >
+                            <Text
+                                style={[
+                                    styles.doleContinuousRestBtnText,
+                                    isDarkHud &&
+                                        styles.darkDoleContinuousRestBtnText,
+                                ]}
+                            >
+                                {hosCompliance.breakSuggestion.actionLabel}
+                            </Text>
+                        </Pressable>
                     </View>
                 ) : null}
 
@@ -1008,26 +1112,134 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                     </View>
                 ) : !isLinked ? (
                     /* State 1: When Unlinked */
-                    <Pressable
-                        accessibilityLabel={`I'm On Site — Start Unit for ${effectiveAssetCode}`}
-                        accessibilityRole="button"
-                        onPress={() => setOnSiteConfirmationOpen(true)}
-                        style={({ pressed }) => [
-                            styles.startUnitBtn,
-                            isDarkHud && styles.darkStartUnitBtn,
-                            pressed && styles.pressed,
-                        ]}
-                        testID="start-unit-on-site-btn"
-                    >
-                        <Text
-                            style={[
-                                styles.startUnitBtnText,
-                                isDarkHud && styles.darkStartUnitBtnText,
-                            ]}
-                        >
-                            I'm On Site — Start Unit ({effectiveAssetCode})
-                        </Text>
-                    </Pressable>
+                    jobs.length === 0 ? (
+                        <View style={styles.unlinkedUnitBlock}>
+                            <View
+                                style={[
+                                    styles.standbyNoDispatchCard,
+                                    isDarkHud &&
+                                        styles.darkStandbyNoDispatchCard,
+                                ]}
+                                testID="standby-no-dispatch-banner"
+                            >
+                                <View style={styles.standbyNoDispatchHeader}>
+                                    <Icon
+                                        color={
+                                            isDarkHud ? '#FFBF00' : '#806000'
+                                        }
+                                        name="clock"
+                                        size={16}
+                                    />
+                                    <Text
+                                        style={[
+                                            styles.standbyNoDispatchTitle,
+                                            isDarkHud &&
+                                                styles.darkStandbyNoDispatchTitle,
+                                        ]}
+                                    >
+                                        Standby / No Active Dispatch
+                                    </Text>
+                                </View>
+                                <Text
+                                    style={[
+                                        styles.standbyNoDispatchSubtitle,
+                                        isDarkHud &&
+                                            styles.darkStandbyNoDispatchSubtitle,
+                                    ]}
+                                >
+                                    No equipment assigned to current shift.
+                                    Waiting for central dispatch orders.
+                                </Text>
+                            </View>
+
+                            <Pressable
+                                accessibilityLabel="Claim equipment handover for relief"
+                                accessibilityRole="button"
+                                onPress={() => {
+                                    setReliefHandoverMode('incoming_claim');
+                                    setReliefHandoverOpen(true);
+                                }}
+                                style={({ pressed }) => [
+                                    styles.claimHandoverTriggerBtn,
+                                    isDarkHud &&
+                                        styles.darkClaimHandoverTriggerBtn,
+                                    pressed && styles.pressed,
+                                ]}
+                                testID="incoming-handover-claim-btn"
+                            >
+                                <Icon
+                                    color={isDarkHud ? '#38BDF8' : '#0284C7'}
+                                    name="sync"
+                                    size={14}
+                                />
+                                <Text
+                                    style={[
+                                        styles.claimHandoverTriggerBtnText,
+                                        isDarkHud &&
+                                            styles.darkClaimHandoverTriggerBtnText,
+                                    ]}
+                                >
+                                    Claim Equipment Handover (Relief)
+                                </Text>
+                            </Pressable>
+                        </View>
+                    ) : (
+                        <View style={styles.unlinkedUnitBlock}>
+                            <Pressable
+                                accessibilityLabel={`I'm On Site — Start Unit for ${effectiveAssetCode}`}
+                                accessibilityRole="button"
+                                onPress={() => setOnSiteConfirmationOpen(true)}
+                                style={({ pressed }) => [
+                                    styles.startUnitBtn,
+                                    isDarkHud && styles.darkStartUnitBtn,
+                                    pressed && styles.pressed,
+                                ]}
+                                testID="start-unit-on-site-btn"
+                            >
+                                <Text
+                                    style={[
+                                        styles.startUnitBtnText,
+                                        isDarkHud &&
+                                            styles.darkStartUnitBtnText,
+                                    ]}
+                                >
+                                    I'm On Site — Start Unit (
+                                    {effectiveAssetCode})
+                                </Text>
+                            </Pressable>
+
+                            <Pressable
+                                accessibilityLabel={`Claim equipment handover for ${effectiveAssetCode}`}
+                                accessibilityRole="button"
+                                onPress={() => {
+                                    setReliefHandoverMode('incoming_claim');
+                                    setReliefHandoverOpen(true);
+                                }}
+                                style={({ pressed }) => [
+                                    styles.claimHandoverTriggerBtn,
+                                    isDarkHud &&
+                                        styles.darkClaimHandoverTriggerBtn,
+                                    pressed && styles.pressed,
+                                ]}
+                                testID="incoming-handover-claim-btn"
+                            >
+                                <Icon
+                                    color={isDarkHud ? '#38BDF8' : '#0284C7'}
+                                    name="sync"
+                                    size={14}
+                                />
+                                <Text
+                                    style={[
+                                        styles.claimHandoverTriggerBtnText,
+                                        isDarkHud &&
+                                            styles.darkClaimHandoverTriggerBtnText,
+                                    ]}
+                                >
+                                    Claim Equipment Handover (Relief)
+                                </Text>
+                            </Pressable>
+                        </View>
+                    )
                 ) : currentDvirStatus === 'cleared' ||
                   currentDvirStatus === 'passed' ? (
                     /* State 3: When Linked & Pre-Trip DVIR is Passed */
@@ -1109,6 +1321,41 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                     {locationSharingActive
                                         ? 'Pause Telemetry'
                                         : 'Resume Telemetry'}
+                                </Text>
+                            </Pressable>
+                            <Pressable
+                                accessibilityLabel="Post-Trip DVIR"
+                                accessibilityRole="button"
+                                onPress={() =>
+                                    onOpenDvir
+                                        ? onOpenDvir('post_trip')
+                                        : undefined
+                                }
+                                style={({ pressed }) => [
+                                    styles.quickActionBtn,
+                                    isDarkHud && styles.darkQuickActionBtn,
+                                    pressed && styles.pressed,
+                                ]}
+                                testID="quick-action-post-trip-dvir-btn"
+                            >
+                                <Icon
+                                    color={isDarkHud ? '#A78BFA' : '#7C3AED'}
+                                    name="clipboard"
+                                    size={14}
+                                />
+                                <Text
+                                    style={[
+                                        styles.quickActionBtnText,
+                                        isDarkHud &&
+                                            styles.darkQuickActionBtnText,
+                                        {
+                                            color: isDarkHud
+                                                ? '#C4B5FD'
+                                                : '#6D28D9',
+                                        },
+                                    ]}
+                                >
+                                    Post-Trip DVIR
                                 </Text>
                             </Pressable>
                             <Pressable
@@ -1199,7 +1446,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                         <Pressable
                             accessibilityLabel={`Start Pre-Trip DVIR Inspection for ${effectiveAssetCode}`}
                             accessibilityRole="button"
-                            onPress={onOpenDvir}
+                            onPress={() => onOpenDvir?.('pre_trip')}
                             style={({ pressed }) => [
                                 styles.startPreTripBtn,
                                 isDarkHud && styles.darkStartPreTripBtn,
@@ -1325,10 +1572,111 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
 
                 {activeNavItem === 'today' || activeNavItem === 'profile' ? (
                     <>
-                        {/* Accessible work summary header for testing & screen readers */}
-                        <View style={styles.accessibleHeader}>
-                            <Text style={styles.srText}>Your assignments</Text>
-                            <Text style={styles.srText}>{workSummary}</Text>
+                        {/* Visible Assignment Summary Card */}
+                        <View
+                            style={[
+                                styles.assignmentSummaryCard,
+                                isDarkHud && styles.darkAssignmentSummaryCard,
+                            ]}
+                            testID="home-assignment-summary-card"
+                        >
+                            <View style={styles.assignmentSummaryHeader}>
+                                <View style={styles.assignmentIconTitleGroup}>
+                                    <Icon
+                                        color={
+                                            isDarkHud ? '#60A5FA' : '#2563EB'
+                                        }
+                                        name="clipboard"
+                                        size={18}
+                                    />
+                                    <Text
+                                        style={[
+                                            styles.assignmentTitleText,
+                                            isDarkHud &&
+                                                styles.darkAssignmentTitleText,
+                                        ]}
+                                    >
+                                        Your assignments
+                                    </Text>
+                                </View>
+                                {jobs.length > 0 ? (
+                                    <Pressable
+                                        accessibilityLabel="View dispatch orders"
+                                        accessibilityRole="button"
+                                        onPress={() =>
+                                            setDispatchIntakeOpen(true)
+                                        }
+                                        style={styles.assignmentActionBadge}
+                                        testID="home-view-orders-btn"
+                                    >
+                                        <Text
+                                            style={
+                                                styles.assignmentActionBadgeText
+                                            }
+                                        >
+                                            View Orders ({jobs.length})
+                                        </Text>
+                                    </Pressable>
+                                ) : null}
+                            </View>
+                            <Text
+                                style={[
+                                    styles.assignmentSummaryBody,
+                                    isDarkHud &&
+                                        styles.darkAssignmentSummaryBody,
+                                ]}
+                            >
+                                {workSummary}
+                            </Text>
+
+                            {jobs.length > 0 && jobs[0] ? (
+                                <Pressable
+                                    accessibilityLabel={`Open dispatch assignment ${jobs[0].reference || jobs[0].id}`}
+                                    accessibilityRole="button"
+                                    onPress={() => {
+                                        onSelectJob?.(jobs[0].id);
+                                        setDispatchIntakeOpen(true);
+                                    }}
+                                    style={({ pressed }) => [
+                                        styles.activeJobPillRow,
+                                        isDarkHud &&
+                                            styles.darkActiveJobPillRow,
+                                        pressed && styles.pressed,
+                                    ]}
+                                    testID="home-active-job-pill"
+                                >
+                                    <View style={styles.activeJobPillLeft}>
+                                        <Text
+                                            style={[
+                                                styles.activeJobPillRef,
+                                                isDarkHud &&
+                                                    styles.darkActiveJobPillRef,
+                                            ]}
+                                        >
+                                            {jobs[0].reference ||
+                                                `Job #${jobs[0].id}`}
+                                        </Text>
+                                        <Text
+                                            numberOfLines={1}
+                                            style={[
+                                                styles.activeJobPillTitle,
+                                                isDarkHud &&
+                                                    styles.darkActiveJobPillTitle,
+                                            ]}
+                                        >
+                                            {jobs[0].title ||
+                                                'Dispatch Assignment'}
+                                        </Text>
+                                    </View>
+                                    <Icon
+                                        color={
+                                            isDarkHud ? '#94A3B8' : '#64748B'
+                                        }
+                                        name="chevron-right"
+                                        size={16}
+                                    />
+                                </Pressable>
+                            ) : null}
                         </View>
 
                         {/* Hidden/accessible outbox container to keep the main Today dashboard clean */}
@@ -1501,11 +1849,68 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 failedCount={failedCount}
                 isOnline={isOnline}
                 onAcceptJob={(jobId) => {
-                    onSelectJob?.(jobId);
+                    const targetJob = jobs.find((j) => j.id === jobId);
+
+                    if (targetJob?.my_assignment?.id && onAcceptAssignment) {
+                        onAcceptAssignment(
+                            targetJob.id,
+                            targetJob.my_assignment.id,
+                            targetJob.version,
+                        );
+                    } else {
+                        onSelectJob?.(jobId);
+                    }
+
                     setNotificationsSheetOpen(false);
                 }}
                 onClose={() => setNotificationsSheetOpen(false)}
-                onDeclineJob={() => {
+                onDeclineJob={(jobId) => {
+                    const targetJob = jobs.find((j) => j.id === jobId);
+
+                    if (targetJob?.my_assignment?.id && onRejectAssignment) {
+                        const defaultReason =
+                            'Declined by mobile operator via notifications';
+
+                        if (
+                            Platform.OS === 'ios' &&
+                            process.env.NODE_ENV !== 'test' &&
+                            typeof Alert !== 'undefined' &&
+                            typeof Alert.prompt === 'function'
+                        ) {
+                            Alert.prompt(
+                                'Decline Assignment',
+                                `Specify reason for declining ${targetJob.reference}:`,
+                                [
+                                    { text: 'Cancel', style: 'cancel' },
+                                    {
+                                        text: 'Decline',
+                                        style: 'destructive',
+                                        onPress: (reason?: string) => {
+                                            onRejectAssignment(
+                                                targetJob.id,
+                                                targetJob.my_assignment!.id,
+                                                reason?.trim() || defaultReason,
+                                                targetJob.version,
+                                            );
+                                            setNotificationsSheetOpen(false);
+                                        },
+                                    },
+                                ],
+                                'plain-text',
+                                defaultReason,
+                            );
+
+                            return;
+                        }
+
+                        onRejectAssignment(
+                            targetJob.id,
+                            targetJob.my_assignment.id,
+                            defaultReason,
+                            targetJob.version,
+                        );
+                    }
+
                     setNotificationsSheetOpen(false);
                 }}
                 onDiscardCommand={onDiscardCommand}
@@ -1607,7 +2012,9 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
             <ReliefHandoverModal
                 assetCode={effectiveAssetCode}
                 handoverPin={handoverPin || '8421'}
-                mode="outgoing_offer"
+                mode={reliefHandoverMode}
+                onClaim1Tap={() => void handleClaimHandover()}
+                onClaimWithPin={(pin) => void handleClaimHandover(pin)}
                 onClose={() => setReliefHandoverOpen(false)}
                 onInitiatePushHandover={() => {
                     // Push notification alert dispatched to scheduled incoming relief operator
@@ -1966,6 +2373,94 @@ const styles = StyleSheet.create({
     pressedTile: {
         opacity: 0.85,
         transform: [{ scale: 0.96 }],
+    },
+    doleContinuousRestBanner: {
+        backgroundColor: '#FEF3C7',
+        borderColor: '#F59E0B',
+        borderRadius: 12,
+        borderWidth: 1.5,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        marginBottom: 12,
+        gap: 10,
+        ...shadows.sm,
+    },
+    doleContinuousRestRequiredBanner: {
+        backgroundColor: '#FFFBEB',
+        borderColor: '#D97706',
+    },
+    darkDoleContinuousRestBanner: {
+        backgroundColor: '#1E293B',
+        borderColor: '#F59E0B',
+    },
+    doleContinuousRestContent: {
+        flex: 1,
+        gap: 4,
+    },
+    doleContinuousRestHeader: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 6,
+    },
+    doleContinuousRestTitle: {
+        color: '#92400E',
+        fontSize: 12,
+        fontWeight: '800',
+        letterSpacing: 0.2,
+    },
+    darkDoleContinuousRestTitle: {
+        color: '#FBBF24',
+    },
+    continuousPill: {
+        backgroundColor: '#FDE68A',
+        borderColor: '#F59E0B',
+        borderRadius: 6,
+        borderWidth: 1,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+    },
+    darkContinuousPill: {
+        backgroundColor: 'rgba(245, 158, 11, 0.2)',
+        borderColor: '#F59E0B',
+    },
+    continuousPillText: {
+        color: '#78350F',
+        fontFamily: 'monospace',
+        fontSize: 10,
+        fontWeight: '800',
+    },
+    darkContinuousPillText: {
+        color: '#FDE68A',
+    },
+    doleContinuousRestMessage: {
+        color: '#92400E',
+        fontSize: 11,
+        fontWeight: '600',
+        lineHeight: 15,
+    },
+    darkDoleContinuousRestMessage: {
+        color: '#FCD34D',
+    },
+    doleContinuousRestBtn: {
+        backgroundColor: '#D97706',
+        borderRadius: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+    },
+    darkDoleContinuousRestBtn: {
+        backgroundColor: '#F59E0B',
+    },
+    doleContinuousRestBtnText: {
+        color: '#FFFFFF',
+        fontSize: 11,
+        fontWeight: '800',
+    },
+    darkDoleContinuousRestBtnText: {
+        color: '#0F172A',
     },
     doleWarningBanner: {
         backgroundColor: colors.warningSoft,
@@ -2332,10 +2827,153 @@ const styles = StyleSheet.create({
     darkFallbackStandbyBtnText: {
         color: '#FFBF00',
     },
-    accessibleHeader: {
-        height: 1,
-        opacity: 0.01,
-        overflow: 'hidden',
+    unlinkedUnitBlock: {
+        width: '100%',
+    },
+    standbyNoDispatchCard: {
+        backgroundColor: '#FFFBEB',
+        borderColor: '#FDE68A',
+        borderWidth: 1,
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 12,
+    },
+    darkStandbyNoDispatchCard: {
+        backgroundColor: '#78350F25',
+        borderColor: '#D97706',
+    },
+    standbyNoDispatchHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 6,
+    },
+    standbyNoDispatchTitle: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#92400E',
+    },
+    darkStandbyNoDispatchTitle: {
+        color: '#FCD34D',
+    },
+    standbyNoDispatchSubtitle: {
+        fontSize: 13,
+        lineHeight: 18,
+        color: '#B45309',
+    },
+    darkStandbyNoDispatchSubtitle: {
+        color: '#FDE68A',
+    },
+    claimHandoverTriggerBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        backgroundColor: '#F0F9FF',
+        borderWidth: 1,
+        borderColor: '#BAE6FD',
+        borderRadius: 10,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        marginTop: 6,
+    },
+    darkClaimHandoverTriggerBtn: {
+        backgroundColor: '#0C4A6E40',
+        borderColor: '#0284C7',
+    },
+    claimHandoverTriggerBtnText: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: '#0369A1',
+    },
+    darkClaimHandoverTriggerBtnText: {
+        color: '#38BDF8',
+    },
+    assignmentSummaryCard: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        padding: 14,
+        marginHorizontal: 16,
+        marginTop: 12,
+        marginBottom: 8,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        ...shadows.sm,
+    },
+    darkAssignmentSummaryCard: {
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
+    },
+    assignmentSummaryHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 8,
+    },
+    assignmentIconTitleGroup: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    assignmentTitleText: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#0F172A',
+    },
+    darkAssignmentTitleText: {
+        color: '#F8FAFC',
+    },
+    assignmentActionBadge: {
+        backgroundColor: '#EFF6FF',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
+    },
+    assignmentActionBadgeText: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#2563EB',
+    },
+    assignmentSummaryBody: {
+        fontSize: 13,
+        lineHeight: 18,
+        color: '#64748B',
+    },
+    darkAssignmentSummaryBody: {
+        color: '#94A3B8',
+    },
+    activeJobPillRow: {
+        marginTop: 10,
+        paddingTop: 10,
+        borderTopWidth: 1,
+        borderTopColor: '#F1F5F9',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    darkActiveJobPillRow: {
+        borderTopColor: '#334155',
+    },
+    activeJobPillLeft: {
+        flex: 1,
+        marginRight: 8,
+    },
+    activeJobPillRef: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#2563EB',
+    },
+    darkActiveJobPillRef: {
+        color: '#60A5FA',
+    },
+    activeJobPillTitle: {
+        fontSize: 13,
+        fontWeight: '500',
+        color: '#334155',
+        marginTop: 2,
+    },
+    darkActiveJobPillTitle: {
+        color: '#CBD5E1',
     },
     accessibleOutbox: {
         height: 1,

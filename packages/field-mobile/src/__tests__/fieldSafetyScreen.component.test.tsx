@@ -120,4 +120,65 @@ describe('FieldSafetyScreen', () => {
             ),
         );
     });
+
+    it('submits an RA 11058 statutory imminent danger work stoppage with statutory references', async () => {
+        const onIssueWorkStoppage = jest
+            .fn()
+            .mockResolvedValue('ra11058-command-1');
+        const view = await render(
+            <FieldSafetyScreen
+                activeSite="Batangas Yard"
+                commands={[]}
+                isOnline
+                onBack={jest.fn()}
+                onIssueWorkStoppage={onIssueWorkStoppage}
+                onReportHazard={jest.fn()}
+            />,
+        );
+
+        // Open stop-work form and choose RA 11058 Imminent Danger classification
+        await fireEvent.press(view.getByTestId('open-stop-work-form'));
+        expect(view.getByTestId('stoppage-type-standard')).toBeVisible();
+        expect(view.getByTestId('stoppage-type-imminent-danger')).toBeVisible();
+
+        await fireEvent.press(view.getByTestId('stoppage-type-imminent-danger'));
+
+        // Statutory rights badge should be visible
+        const statutoryBadge = view.getByTestId('ra-11058-statutory-badge');
+        expect(statutoryBadge).toBeVisible();
+        expect(
+            view.getAllByText(/RA 11058 Section 20/i).length,
+        ).toBeGreaterThan(0);
+        expect(view.getByText(/DOLE D.O. 13 s. 1998 Section 8/i)).toBeVisible();
+
+        // Fill required fields
+        await fireEvent.changeText(
+            view.getByTestId('safety-area'),
+            'Substation B Trench',
+        );
+        await fireEvent.changeText(
+            view.getByTestId('stop-work-reason'),
+            'Unshored deep excavation showing active soil collapse risk.',
+        );
+
+        // Verify button label
+        expect(
+            view.getByText('Issue RA 11058 Stop-Work Order'),
+        ).toBeVisible();
+
+        await fireEvent.press(view.getByTestId('submit-stop-work'));
+
+        await waitFor(() =>
+            expect(onIssueWorkStoppage).toHaveBeenCalledWith({
+                project_site: 'Batangas Yard',
+                affected_area: 'Substation B Trench',
+                reason: 'Unshored deep excavation showing active soil collapse risk.',
+                is_imminent_danger: true,
+                stoppage_type: 'imminent_danger',
+                dole_regulation_reference:
+                    'DOLE D.O. 13 s. 1998 Section 8 & RA 11058 Section 20',
+                statutory_basis: 'ra_11058',
+            }),
+        );
+    });
 });

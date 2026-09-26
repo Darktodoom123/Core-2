@@ -282,20 +282,13 @@ export const DispatchOrdersScreen: React.FC<DispatchOrdersScreenProps> = ({
                                             jobConflictedCommands
                                         }
                                         job={job}
-                                        onAcceptAssignment={
-                                            isPending
-                                                ? undefined
-                                                : onAcceptAssignment
-                                        }
+                                        hideAssignmentActions={isPending}
+                                        onAcceptAssignment={onAcceptAssignment}
                                         onAcceptServerState={
                                             onAcceptServerState
                                         }
                                         onOpenDriveRoutes={onOpenRoutes}
-                                        onRejectAssignment={
-                                            isPending
-                                                ? undefined
-                                                : onRejectAssignment
-                                        }
+                                        onRejectAssignment={onRejectAssignment}
                                         onReportDelay={handleReportDelay}
                                         queuedDelayCommand={queuedDelayCommand}
                                         onRetryNewVersion={onRetryNewVersion}

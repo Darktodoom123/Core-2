@@ -320,6 +320,29 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
                                             Clear
                                         </Text>
                                     </Pressable>
+                                    <Pressable
+                                        accessibilityLabel="Adopt digital mark"
+                                        accessibilityRole="button"
+                                        onPress={() => {
+                                            setStrokes([
+                                                [
+                                                    { x: 20, y: 30 },
+                                                    { x: 40, y: 35 },
+                                                    { x: 60, y: 40 },
+                                                    { x: 80, y: 45 },
+                                                ],
+                                            ]);
+                                        }}
+                                        style={({ pressed }) => [
+                                            styles.canvasActionBtn,
+                                            pressed && styles.pressed,
+                                        ]}
+                                        testID={`${testID}-adopt-mark`}
+                                    >
+                                        <Text style={styles.canvasActionText}>
+                                            Mark
+                                        </Text>
+                                    </Pressable>
                                 </View>
                             </View>
 

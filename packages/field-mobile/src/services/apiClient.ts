@@ -109,17 +109,67 @@ export interface ApiClientConfig {
     baseUrl: string;
     getToken: () => string | null;
     fetchFn?: typeof fetch;
+    refreshToken?: () => Promise<string | null>;
+    onTokenRefreshed?: (newToken: string) => void | Promise<void>;
 }
 
 export class FieldApiClient {
     private baseUrl: string;
     private getToken: () => string | null;
     private fetchFn: typeof fetch;
+    private refreshTokenFn?: () => Promise<string | null>;
+    private onTokenRefreshedFn?: (newToken: string) => void | Promise<void>;
+    private refreshPromise: Promise<string | null> | null = null;
 
     constructor(config: ApiClientConfig) {
         this.baseUrl = config.baseUrl.replace(/\/+$/, '');
         this.getToken = config.getToken;
         this.fetchFn = config.fetchFn ?? globalThis.fetch;
+        this.refreshTokenFn = config.refreshToken;
+        this.onTokenRefreshedFn = config.onTokenRefreshed;
+    }
+
+    public setTokenRefreshHandler(
+        handler: () => Promise<string | null>,
+        onRefreshed?: (newToken: string) => void | Promise<void>,
+    ): void {
+        this.refreshTokenFn = handler;
+
+        if (onRefreshed) {
+            this.onTokenRefreshedFn = onRefreshed;
+        }
+    }
+
+    public canRefreshToken(): boolean {
+        return typeof this.refreshTokenFn === 'function';
+    }
+
+    public async refreshToken(): Promise<string | null> {
+        if (!this.refreshTokenFn) {
+            return null;
+        }
+
+        if (this.refreshPromise) {
+            return this.refreshPromise;
+        }
+
+        this.refreshPromise = (async () => {
+            try {
+                const newToken = await this.refreshTokenFn!();
+
+                if (newToken && this.onTokenRefreshedFn) {
+                    await this.onTokenRefreshedFn(newToken);
+                }
+
+                return newToken;
+            } catch {
+                return null;
+            } finally {
+                this.refreshPromise = null;
+            }
+        })();
+
+        return this.refreshPromise;
     }
 
     public getHeaders(commandId?: string): Record<string, string> {

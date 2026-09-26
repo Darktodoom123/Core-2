@@ -1,3 +1,7 @@
+/**
+ * @deprecated The canonical home screen is AssignedJobsListScreen.
+ * This screen is retained for backward compatibility with legacy component test suites.
+ */
 import React, { useMemo, useState } from 'react';
 import {
     Pressable,

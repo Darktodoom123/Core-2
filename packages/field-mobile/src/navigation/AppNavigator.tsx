@@ -565,6 +565,9 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         | 'dispatch'
         | 'profile'
     >('main');
+    const [dvirInitialMode, setDvirInitialMode] = useState<
+        'pre_trip' | 'post_trip'
+    >('pre_trip');
     const [fuelFocusRequestId, setFuelFocusRequestId] = useState<number | null>(
         null,
     );
@@ -1923,6 +1926,39 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         [activeJob, commandOutbox, handleRequestFailure, jobs, syncQueue],
     );
 
+    const handleSwapUnit = useCallback(
+        async (newUnitCode: string, reason?: string) => {
+            setOverriddenAssetCode(newUnitCode);
+            setIsUnitLinked(true);
+            setDvirStatus('pending');
+            setLocationSharingActive(true);
+
+            const effectiveJob = activeJob || jobs[0];
+
+            if (effectiveJob) {
+                try {
+                    await commandOutbox.enqueueReportDelay(
+                        {
+                            dispatch_job_id: effectiveJob.id,
+                            context: 'equipment',
+                            reason: 'mechanical_breakdown',
+                            notes: `Unit swapped to ${newUnitCode}. Reason: ${reason || 'Equipment replacement / defect swap'}`,
+                            reported_at: new Date().toISOString(),
+                        },
+                        effectiveJob.version,
+                    );
+                    void syncQueue();
+                } catch (error) {
+                    console.warn(
+                        '[AppNavigator] Failed to enqueue equipment swap delay command:',
+                        error,
+                    );
+                }
+            }
+        },
+        [activeJob, commandOutbox, jobs, syncQueue],
+    );
+
     const handleReportSafetyHazard = useCallback(
         async (payload: SafetyHazardCommandPayload): Promise<string> => {
             const command =
@@ -2819,6 +2855,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 }
                                 assetName={resolvedAssetName}
                                 commandOutbox={commandOutbox}
+                                initialMode={dvirInitialMode}
                                 inspectorName={resolvedOperatorName}
                                 onBack={() => setActiveAppView('main')}
                                 onDefectLockout={() => {
@@ -2847,12 +2884,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                     setDvirStatus('cleared');
                                 }}
                                 onSelectAsset={(id) => setSelectedAssetId(id)}
-                                onSwapUnit={(newUnitCode) => {
-                                    setOverriddenAssetCode(newUnitCode);
-                                    setIsUnitLinked(true);
-                                    setDvirStatus('pending');
-                                    setLocationSharingActive(true);
-                                }}
+                                onSwapUnit={handleSwapUnit}
                                 onSwitchToStandby={() => {
                                     handleChangeDutyStatus(
                                         'standby',
@@ -3034,7 +3066,10 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 onAcceptAssignment={handleAcceptAssignment}
                                 onAcceptServerState={handleAcceptServerState}
                                 onBack={() => setActiveAppView('main')}
-                                onOpenDvir={() => setActiveAppView('dvir')}
+                                onOpenDvir={() => {
+                                    setDvirInitialMode('pre_trip');
+                                    setActiveAppView('dvir');
+                                }}
                                 onOpenRoutes={() => setActiveAppView('routes')}
                                 onRejectAssignment={handleRejectAssignment}
                                 onRetryNewVersion={handleRetryNewVersion}
@@ -3188,12 +3223,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                     preTripDefectLockout={
                                         dvirStatus === 'defect'
                                     }
-                                    onSwapUnit={(newUnitCode) => {
-                                        setOverriddenAssetCode(newUnitCode);
-                                        setIsUnitLinked(true);
-                                        setDvirStatus('pending');
-                                        setLocationSharingActive(true);
-                                    }}
+                                    onSwapUnit={handleSwapUnit}
                                     locationSharingActive={
                                         locationSharingActive
                                     }
@@ -3206,7 +3236,10 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                     onOpenDocuments={() =>
                                         setActiveAppView('documents')
                                     }
-                                    onOpenDvir={() => setActiveAppView('dvir')}
+                                    onOpenDvir={(mode) => {
+                                        setDvirInitialMode(mode || 'pre_trip');
+                                        setActiveAppView('dvir');
+                                    }}
                                     onOpenSafety={() =>
                                         setActiveAppView('safety')
                                     }
