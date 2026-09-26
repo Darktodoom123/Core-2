@@ -68,8 +68,9 @@ chdir($root);
 $php = escapeshellarg(PHP_BINARY);
 
 $migrationCommand = sprintf(
-    '%s artisan migrate:fresh --seed --seeder=BrowserAcceptanceSeeder --force --ansi --database=sqlite',
-    $php
+    '%s artisan migrate:fresh --seed --seeder=%s --force --ansi --database=sqlite',
+    $php,
+    escapeshellarg('Database\\Seeders\\Acceptance\\BrowserAcceptanceSeeder')
 );
 
 passthru($migrationCommand, $migrationStatus);

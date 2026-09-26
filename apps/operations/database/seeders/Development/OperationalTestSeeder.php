@@ -1,6 +1,6 @@
 <?php
 
-namespace Database\Seeders;
+namespace Database\Seeders\Development;
 
 use App\Modules\Assignment\Enums\AssignmentResponse;
 use App\Modules\Assignment\Models\DispatchAssetAssignment;

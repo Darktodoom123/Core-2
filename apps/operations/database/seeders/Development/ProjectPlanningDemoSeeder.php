@@ -1,6 +1,6 @@
 <?php
 
-namespace Database\Seeders;
+namespace Database\Seeders\Development;
 
 use App\Modules\Dispatch\Planning\Models\ProjectPlan;
 use App\Modules\Dispatch\Planning\Services\ProjectPlanService;
@@ -9,6 +9,7 @@ use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
 use App\Shared\Assets\Enums\AssetStatus;
 use App\Shared\Assets\Models\OperationalAsset;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 

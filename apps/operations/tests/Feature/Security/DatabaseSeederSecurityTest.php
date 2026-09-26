@@ -3,10 +3,10 @@
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\PersonnelCredential;
 use App\Platform\Identity\Models\User;
-use Database\Seeders\BrowserAcceptanceSeeder;
+use Database\Seeders\Acceptance\BrowserAcceptanceSeeder;
 use Database\Seeders\DatabaseSeeder;
-use Database\Seeders\LocalDevelopmentSeeder;
-use Database\Seeders\PhilippineSafetyOperationsSeeder;
+use Database\Seeders\Development\LocalDevelopmentSeeder;
+use Database\Seeders\Development\PhilippineSafetyOperationsSeeder;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;

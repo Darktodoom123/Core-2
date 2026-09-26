@@ -13,7 +13,7 @@ use App\Platform\Identity\Models\User;
 use App\Shared\Assets\Enums\AssetStatus;
 use App\Shared\Assets\Models\OperationalAsset;
 use Carbon\Carbon;
-use Database\Seeders\OperationalTestSeeder;
+use Database\Seeders\Development\OperationalTestSeeder;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 

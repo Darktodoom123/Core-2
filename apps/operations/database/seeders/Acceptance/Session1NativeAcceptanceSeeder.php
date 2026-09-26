@@ -1,6 +1,6 @@
 <?php
 
-namespace Database\Seeders;
+namespace Database\Seeders\Acceptance;
 
 use App\Modules\Assignment\Enums\AssignmentResponse;
 use App\Modules\Assignment\Models\DispatchAssetAssignment;
@@ -11,6 +11,8 @@ use App\Modules\Dispatch\Models\DispatchJob;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
 use App\Shared\Assets\Models\OperationalAsset;
+use Database\Seeders\Development\LocalDevelopmentSeeder;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use LogicException;

@@ -1,7 +1,7 @@
 <?php
 
 use App\Shared\Assets\Models\OperationalAsset;
-use Database\Seeders\AlibatonCraneFleetSeeder;
+use Database\Seeders\Development\AlibatonCraneFleetSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
