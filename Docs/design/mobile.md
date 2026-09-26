@@ -37,6 +37,8 @@ defines behavior. It does not define colors or visual styling; this file does.
 | Typeface | Android system font. Instrument Sans is not loaded on native. |
 | Sales Delivery tile | Removed from scope. Core 2 does not receive or fulfill sale handoffs. |
 | Warning color | Warning uses a semantic orange family, separate from brand gold. |
+| Sync pill severity | `attention` (conflicts, unresolved outcomes, retryable failures, sign-in required) is a warning: orange in both modes. `failed` (a non-retryable server rejection, or an expired SOS) is critical: red in both modes. |
+| Hours of Service limit color | The shift gauge and limit counter follow the DOLE flags: orange from the 9.0h warning, red at the 10.0h cap. Individual clocks turn orange at 1 hour or less remaining and red at zero. |
 
 ## Carried over from Design.md unchanged
 
@@ -263,17 +265,12 @@ opportunistically in code you touch:
   times outside `src/theme`.
 - Resting panels combine a border with a shadow (`sharedStyles.panel`,
   `shadows.md`).
-- The sync pill's "attention" tone is orange with red text in light mode but
-  red in dark HUD; its meaning (warning or critical) needs deciding.
 - `createMachinedStyles` in `src/theme/index.tsx` (uppercase "pedal" buttons and
   panels) has no callers.
 - Very large screen files: `AppNavigator.tsx` and `DvirScreen.tsx` are each
   over 3,000 lines. `HosScreen.tsx` was split into `src/screens/hos/` (largest
   file 667 lines); its section components still receive raw state setters
   (for example `setIsSaved`) and could take intent-named callbacks instead.
-- The Hours of Service shift gauge turns orange above 70% and red above 85%
-  of the shift window, which does not match the DOLE 9.0h warning and 10.0h
-  cap. The clock values warn at 1 hour or less remaining.
 
 ## Mobile design QA checklist
 

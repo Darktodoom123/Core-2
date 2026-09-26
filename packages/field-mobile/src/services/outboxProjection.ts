@@ -6,7 +6,7 @@ import type {
 } from '../types/index';
 
 export type SyncPillTone =
-    'online' | 'offline' | 'checking' | 'attention' | 'syncing';
+    'online' | 'offline' | 'checking' | 'attention' | 'failed' | 'syncing';
 
 export interface OutboxItemDisplay {
     id: string;
@@ -613,8 +613,7 @@ export function projectCommandToDisplay(
     const isMissingAttachments = errorCode === 'MISSING_ATTACHMENTS';
     const missingAttachmentUri = cmd.error?.missingAttachmentUri;
     const isAuthenticationRequired =
-        errorCode === 'AUTHENTICATION_REQUIRED' ||
-        errorCode === 'AUTH_BLOCKED';
+        errorCode === 'AUTHENTICATION_REQUIRED' || errorCode === 'AUTH_BLOCKED';
     const isAuthorizationDenied = errorCode === 'AUTHORIZATION_DENIED';
     const isValidationFailed =
         errorCode === 'VALIDATION_FAILED' ||
@@ -923,6 +922,17 @@ export function projectOutbox(
         (i) => i.state === 'syncing',
     ).length;
     const attentionCount = attentionItems.length;
+    // Critical: the server rejected an action that cannot be retried, or an
+    // SOS expired undelivered. Conflicts, unresolved outcomes, and retryable
+    // failures stay at the warning-level 'attention' tone.
+    const hasCriticalAttention = attentionItems.some(
+        (item) =>
+            item.state === 'expired' ||
+            (item.state === 'failed' && !item.retryable),
+    );
+    const attentionTone: SyncPillTone = hasCriticalAttention
+        ? 'failed'
+        : 'attention';
     const completedCount = completedItems.length;
     const telemetryCount = telemetryItems.length;
     const totalActive =
@@ -945,11 +955,11 @@ export function projectOutbox(
                 ? `${attentionCount} need${attentionCount === 1 ? 's' : ''} attention`
                 : 'Sign in required';
         pillMessage = 'Session expired';
-        pillTone = 'attention';
+        pillTone = attentionTone;
     } else if (attentionCount > 0) {
         pillLabel = `${attentionCount} need${attentionCount === 1 ? 's' : ''} attention`;
         pillMessage = 'Tap to review outbox';
-        pillTone = 'attention';
+        pillTone = attentionTone;
     } else if (submittingUserActions > 0) {
         const totalSubmittingAndWaiting =
             submittingUserActions + waitingUserActions;

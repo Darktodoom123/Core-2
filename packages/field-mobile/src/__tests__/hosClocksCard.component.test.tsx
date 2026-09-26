@@ -15,6 +15,8 @@ const baseProps: HosClocksCardProps = {
     durationBreakdown: [['Driving', 2]],
     hasServerClock: true,
     hoursElapsed: 3,
+    isDoleCapExceeded: false,
+    isDoleWarning: false,
     limitCounterHours: 3,
     maxDriveHours: 8,
     maxShiftHours: 10,
@@ -101,13 +103,63 @@ describe('HosClocksCard state colors', () => {
         expect(view.queryByTestId('hos-clock-cycle-alert')).toBeNull();
     });
 
-    it('fills the shift gauge with Caution Orange, not Signal Gold, in its warning band', async () => {
-        const view = await renderCard({ shiftProgressPercent: 75 });
+    describe('DOLE 9.0h warning and 10.0h cap', () => {
+        function gaugeColor(view: Awaited<ReturnType<typeof renderCard>>) {
+            return StyleSheet.flatten(
+                view.getByTestId('hos-shift-gauge-fill').props.style,
+            ).backgroundColor;
+        }
 
-        const fill = StyleSheet.flatten(
-            view.getByTestId('hos-shift-gauge-fill').props.style,
+        function counterColor(view: Awaited<ReturnType<typeof renderCard>>) {
+            return StyleSheet.flatten(
+                view.getByTestId('hos-limit-counter-value').props.style,
+            ).color;
+        }
+
+        it('stays green below the DOLE warning even when most of a long shift window is used', async () => {
+            const view = await renderCard({
+                limitCounterHours: 8.5,
+                shiftProgressPercent: 88,
+            });
+
+            expect(gaugeColor(view)).toBe(lightThemeColors.successEmerald);
+            expect(counterColor(view)).toBe(lightThemeColors.textPrimary);
+            expect(view.queryByTestId('hos-limit-counter-alert')).toBeNull();
+        });
+
+        it.each([
+            ['light', lightThemeColors],
+            ['dark_hud', darkHudThemeColors],
+        ] as const)(
+            'turns Caution Orange at the 9.0h DOLE warning in %s mode',
+            async (mode, theme) => {
+                const view = await renderCard(
+                    {
+                        isDoleWarning: true,
+                        limitCounterHours: 9.2,
+                        shiftProgressPercent: 40,
+                    },
+                    mode,
+                );
+
+                expect(gaugeColor(view)).toBe(theme.warningOrange);
+                expect(counterColor(view)).toBe(theme.warningOrangeText);
+                expect(
+                    view.getByTestId('hos-limit-counter-alert'),
+                ).toBeTruthy();
+            },
         );
 
-        expect(fill.backgroundColor).toBe(lightThemeColors.warningOrange);
+        it('turns hazard red at the 10.0h DOLE cap, even when the warning flag is also set', async () => {
+            const view = await renderCard({
+                isDoleCapExceeded: true,
+                isDoleWarning: true,
+                limitCounterHours: 10,
+            });
+
+            expect(gaugeColor(view)).toBe(lightThemeColors.hazardRed);
+            expect(counterColor(view)).toBe(lightThemeColors.hazardRedText);
+            expect(view.getByTestId('hos-limit-counter-alert')).toBeTruthy();
+        });
     });
 });

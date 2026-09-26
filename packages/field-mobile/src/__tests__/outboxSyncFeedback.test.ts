@@ -2023,3 +2023,76 @@ describe('Milestone 6 Closure Check 3: Accept Server Consistency & Discard Rules
         );
     });
 });
+
+describe('Header pill severity: attention is a warning, failures are critical', () => {
+    const conflict = createCommandFixture({
+        id: 'cmd-conflict',
+        state: 'conflict',
+        error: {
+            message: 'Stale version',
+            retryable: false,
+            code: 'stale_version',
+            currentVersion: 4,
+        },
+    });
+    const rejected = createCommandFixture({
+        id: 'cmd-rejected',
+        state: 'failed',
+        error: {
+            message: 'Odometer reading is required.',
+            retryable: false,
+            code: 'VALIDATION_FAILED',
+        },
+    });
+    const expiredSos = createCommandFixture({
+        id: 'sos-expired',
+        type: 'activate_sos',
+        priority: 'emergency',
+        state: 'expired',
+        error: {
+            message: 'Emergency SOS delivery timed out.',
+            retryable: false,
+            code: 'SOS_EXPIRED',
+        },
+    });
+
+    test('keeps conflicts and retryable failures at the attention (warning) tone', () => {
+        const retryable = createCommandFixture({
+            id: 'cmd-timeout',
+            state: 'failed',
+            error: {
+                message: 'Server timeout (504)',
+                retryable: true,
+                code: 'GATEWAY_TIMEOUT',
+            },
+        });
+
+        const projection = projectOutbox([conflict, retryable], true, true);
+
+        assert.equal(projection.headerPill.tone, 'attention');
+    });
+
+    test('raises the pill to failed when the server rejected an action that cannot be retried', () => {
+        const projection = projectOutbox([conflict, rejected], true, true);
+
+        assert.equal(projection.headerPill.tone, 'failed');
+        assert.equal(projection.headerPill.label, '2 need attention');
+    });
+
+    test('raises the pill to failed when an emergency SOS expired undelivered', () => {
+        const projection = projectOutbox([expiredSos], true, true);
+
+        assert.equal(projection.headerPill.tone, 'failed');
+    });
+
+    test('treats an expired session as a warning unless something critical is waiting', () => {
+        assert.equal(
+            projectOutbox([conflict], true, false).headerPill.tone,
+            'attention',
+        );
+        assert.equal(
+            projectOutbox([expiredSos], true, false).headerPill.tone,
+            'failed',
+        );
+    });
+});

@@ -5,7 +5,7 @@ import { Icon } from '../common/Icon';
 import { colors, shadows } from '../nativeStyles';
 
 export type SyncTone =
-    'checking' | 'online' | 'attention' | 'offline' | 'syncing';
+    'checking' | 'online' | 'attention' | 'failed' | 'offline' | 'syncing';
 
 export interface SyncStatusPillProps {
     label: string;
@@ -21,6 +21,22 @@ export const SyncStatusPill: React.FC<SyncStatusPillProps> = ({
     onPress,
 }) => {
     const { isDarkHud, theme } = useTheme();
+    // Attention is a warning (conflicts, retryable failures, sign-in);
+    // failed is critical (rejected actions, expired SOS).
+    const severity =
+        tone === 'attention'
+            ? {
+                  surface: theme.warningOrangeLight,
+                  mark: theme.warningOrange,
+                  text: theme.warningOrangeText,
+              }
+            : tone === 'failed'
+              ? {
+                    surface: theme.hazardRedLight,
+                    mark: theme.hazardRed,
+                    text: theme.hazardRedText,
+                }
+              : null;
 
     const pillBody = (
         <View
@@ -37,10 +53,10 @@ export const SyncStatusPill: React.FC<SyncStatusPillProps> = ({
                         backgroundColor: theme.warningOrangeLight,
                         borderColor: theme.warningOrange,
                     },
-                tone === 'attention' && styles.syncPillAttention,
-                isDarkHud &&
-                    tone === 'attention' &&
-                    styles.darkSyncPillAttention,
+                severity && {
+                    backgroundColor: severity.surface,
+                    borderColor: severity.mark,
+                },
                 tone === 'syncing' && styles.syncPillSyncing,
                 isDarkHud && tone === 'syncing' && styles.darkSyncPillSyncing,
             ]}
@@ -52,7 +68,7 @@ export const SyncStatusPill: React.FC<SyncStatusPillProps> = ({
                     tone === 'checking' && styles.syncMarkChecking,
                     tone === 'online' && styles.syncMarkOnline,
                     tone === 'offline' && styles.syncMarkOffline,
-                    tone === 'attention' && styles.syncMarkAttention,
+                    severity && { backgroundColor: severity.mark },
                     tone === 'syncing' && {
                         backgroundColor: theme.actionCobalt,
                     },
@@ -63,7 +79,7 @@ export const SyncStatusPill: React.FC<SyncStatusPillProps> = ({
                 style={[
                     styles.syncLabel,
                     isDarkHud && styles.darkSyncLabel,
-                    tone === 'attention' && styles.syncLabelAttention,
+                    severity && { color: severity.text },
                 ]}
             >
                 {label}
@@ -87,10 +103,10 @@ export const SyncStatusPill: React.FC<SyncStatusPillProps> = ({
             </Text>
             <Icon
                 color={
-                    isDarkHud
-                        ? '#64748B'
-                        : tone === 'attention'
-                          ? colors.warningDark
+                    severity
+                        ? severity.text
+                        : isDarkHud
+                          ? '#64748B'
                           : colors.muted
                 }
                 name="chevron-right"
@@ -473,14 +489,6 @@ const styles = StyleSheet.create({
         backgroundColor: colors.warningLight,
         borderColor: colors.warningBorder,
     },
-    syncPillAttention: {
-        backgroundColor: colors.warningSoft,
-        borderColor: colors.warningBorder,
-    },
-    darkSyncPillAttention: {
-        backgroundColor: 'rgba(239, 68, 68, 0.15)',
-        borderColor: 'rgba(239, 68, 68, 0.4)',
-    },
     syncPillSyncing: {
         backgroundColor: '#EFF6FF',
         borderColor: '#93C5FD',
@@ -488,9 +496,6 @@ const styles = StyleSheet.create({
     darkSyncPillSyncing: {
         backgroundColor: 'rgba(59, 130, 246, 0.15)',
         borderColor: 'rgba(59, 130, 246, 0.4)',
-    },
-    syncLabelAttention: {
-        color: '#DC2626',
     },
     darkSyncLabel: {
         color: '#F8FAFC',
@@ -513,9 +518,6 @@ const styles = StyleSheet.create({
         backgroundColor: colors.green,
     },
     syncMarkOffline: {
-        backgroundColor: colors.warning,
-    },
-    syncMarkAttention: {
         backgroundColor: colors.warning,
     },
     syncLabel: {
@@ -684,14 +686,6 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(16, 185, 129, 0.12)',
         borderColor: 'rgba(16, 185, 129, 0.35)',
     },
-    attentionPill: {
-        backgroundColor: '#FFF3C4',
-        borderColor: '#FFBF00',
-    },
-    darkAttentionPill: {
-        backgroundColor: 'rgba(255, 191, 0, 0.16)',
-        borderColor: 'rgba(255, 191, 0, 0.4)',
-    },
     offlinePill: {
         backgroundColor: '#F1F5F9',
         borderColor: '#CBD5E1',
@@ -722,12 +716,6 @@ const styles = StyleSheet.create({
     },
     darkOnlineSyncedText: {
         color: '#34D399',
-    },
-    attentionText: {
-        color: '#806000',
-    },
-    darkAttentionText: {
-        color: '#FFBF00',
     },
     offlineText: {
         color: '#64748B',

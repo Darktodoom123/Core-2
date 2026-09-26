@@ -15,6 +15,8 @@ export interface HosClocksCardProps {
     durationBreakdown: Array<[string, number | null]>;
     hasServerClock: boolean;
     hoursElapsed: HosComplianceResult['hoursElapsed'];
+    isDoleCapExceeded: HosComplianceResult['isDoleCapExceeded'];
+    isDoleWarning: HosComplianceResult['isDoleWarning'];
     limitCounterHours: HosComplianceResult['limitCounterHours'];
     maxDriveHours: number;
     maxShiftHours: number;
@@ -106,6 +108,8 @@ export const HosClocksCard: React.FC<HosClocksCardProps> = ({
     durationBreakdown,
     hasServerClock,
     hoursElapsed,
+    isDoleCapExceeded,
+    isDoleWarning,
     limitCounterHours,
     maxDriveHours,
     maxShiftHours,
@@ -116,12 +120,22 @@ export const HosClocksCard: React.FC<HosClocksCardProps> = ({
 }) => {
     const { isDarkHud, theme } = useTheme();
     const shiftProgress = shiftProgressPercent ?? 0;
-    const gaugeFillColor =
-        shiftProgress > 85
-            ? theme.hazardRed
-            : shiftProgress > 70
-              ? theme.warningOrange
-              : theme.successEmerald;
+    // DOLE-OSHC: warn at 9.0h, hard cap at 10.0h (server-backed flags).
+    const doleTone: ClockTone = isDoleCapExceeded
+        ? 'hazard'
+        : isDoleWarning
+          ? 'warning'
+          : 'neutral';
+    const gaugeFillColor = {
+        neutral: theme.successEmerald,
+        warning: theme.warningOrange,
+        hazard: theme.hazardRed,
+    }[doleTone];
+    const counterColor = {
+        neutral: theme.textPrimary,
+        warning: theme.warningOrangeText,
+        hazard: theme.hazardRedText,
+    }[doleTone];
 
     return (
         <View
@@ -202,14 +216,19 @@ export const HosClocksCard: React.FC<HosClocksCardProps> = ({
                     {shiftInfo.limitCounterLabel ?? 'Operating + driving'} limit
                     counter
                 </Text>
-                <Text
-                    style={[
-                        styles.clockCellValue,
-                        { color: theme.textPrimary },
-                    ]}
-                >
-                    {formatHoursMinutes(limitCounterHours)}
-                </Text>
+                <View style={styles.clockValueRow}>
+                    {doleTone === 'neutral' ? null : (
+                        <View testID="hos-limit-counter-alert">
+                            <Icon color={counterColor} name="alert" size={16} />
+                        </View>
+                    )}
+                    <Text
+                        style={[styles.clockCellValue, { color: counterColor }]}
+                        testID="hos-limit-counter-value"
+                    >
+                        {formatHoursMinutes(limitCounterHours)}
+                    </Text>
+                </View>
             </View>
 
             {/* Shift Progress Gauge Bar */}
