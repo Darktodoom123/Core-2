@@ -22169,7 +22169,7 @@
       "file_type": "code",
       "norm_label": ".failed()",
       "source_file": "apps/operations/app/Platform/Gpt/Jobs/GenerateGptRecommendationJob.php",
-      "source_location": "L307"
+      "source_location": "L309"
     },
     {
       "id": "apps_operations_app_platform_gpt_jobs_generategptrecommendationjob_generategptrecommendationjob_handle",
@@ -22193,7 +22193,7 @@
       "file_type": "code",
       "norm_label": ".iseligiblecandidateid()",
       "source_file": "apps/operations/app/Platform/Gpt/Jobs/GenerateGptRecommendationJob.php",
-      "source_location": "L291"
+      "source_location": "L293"
     },
     {
       "id": "apps_operations_app_platform_gpt_jobs_generategptrecommendationjob_generategptrecommendationjob_proposedcandidatesareeligible",
@@ -22205,7 +22205,7 @@
       "file_type": "code",
       "norm_label": ".proposedcandidatesareeligible()",
       "source_file": "apps/operations/app/Platform/Gpt/Jobs/GenerateGptRecommendationJob.php",
-      "source_location": "L252"
+      "source_location": "L254"
     },
     {
       "id": "apps_operations_app_platform_gpt_jobs_generategptrecommendationjob_generategptrecommendationjob_recordmetric",
@@ -22217,7 +22217,7 @@
       "file_type": "code",
       "norm_label": ".recordmetric()",
       "source_file": "apps/operations/app/Platform/Gpt/Jobs/GenerateGptRecommendationJob.php",
-      "source_location": "L238"
+      "source_location": "L240"
     },
     {
       "id": "apps_operations_app_platform_gpt_jobs_prunegptrecommendationsjob_prunegptrecommendationsjob_construct",
@@ -55529,7 +55529,7 @@
       "file_type": "code",
       "norm_label": ".hydraterecommendationdetails()",
       "source_file": "apps/operations/app/Platform/Gpt/Jobs/GenerateGptRecommendationJob.php",
-      "source_location": "L327"
+      "source_location": "L329"
     },
     {
       "id": "apps_operations_app_platform_identity_models_user_user_casts",
@@ -118504,7 +118504,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/app/Platform/Gpt/Jobs/GenerateGptRecommendationJob.php",
-      "source_location": "L377",
+      "source_location": "L379",
       "weight": 1.0
     },
     {
@@ -118516,7 +118516,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/app/Platform/Gpt/Jobs/GenerateGptRecommendationJob.php",
-      "source_location": "L381",
+      "source_location": "L383",
       "weight": 1.0
     },
     {
@@ -118528,7 +118528,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/app/Platform/Gpt/Jobs/GenerateGptRecommendationJob.php",
-      "source_location": "L271",
+      "source_location": "L273",
       "weight": 1.0
     },
     {
@@ -132064,7 +132064,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/operations/resources/js/components/workspace/dispatch-blocker-advisory.tsx",
-      "source_location": "L139",
+      "source_location": "L147",
       "weight": 1.0
     },
     {
@@ -313166,7 +313166,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "apps/operations/app/Platform/Gpt/Jobs/GenerateGptRecommendationJob.php",
-      "source_location": "L307",
+      "source_location": "L309",
       "weight": 1.0
     },
     {
@@ -313202,7 +313202,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "apps/operations/app/Platform/Gpt/Jobs/GenerateGptRecommendationJob.php",
-      "source_location": "L238",
+      "source_location": "L240",
       "weight": 1.0
     },
     {
@@ -313214,7 +313214,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "apps/operations/app/Platform/Gpt/Jobs/GenerateGptRecommendationJob.php",
-      "source_location": "L238",
+      "source_location": "L240",
       "weight": 1.0
     },
     {
@@ -407458,7 +407458,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/operations/app/Platform/Gpt/Jobs/GenerateGptRecommendationJob.php",
-      "source_location": "L238",
+      "source_location": "L240",
       "weight": 1.0
     },
     {
@@ -407469,7 +407469,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/operations/app/Platform/Gpt/Jobs/GenerateGptRecommendationJob.php",
-      "source_location": "L252",
+      "source_location": "L254",
       "weight": 1.0
     },
     {
@@ -407480,7 +407480,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/operations/app/Platform/Gpt/Jobs/GenerateGptRecommendationJob.php",
-      "source_location": "L291",
+      "source_location": "L293",
       "weight": 1.0
     },
     {
@@ -407491,7 +407491,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/operations/app/Platform/Gpt/Jobs/GenerateGptRecommendationJob.php",
-      "source_location": "L307",
+      "source_location": "L309",
       "weight": 1.0
     },
     {
@@ -407502,7 +407502,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/operations/app/Platform/Gpt/Jobs/GenerateGptRecommendationJob.php",
-      "source_location": "L327",
+      "source_location": "L329",
       "weight": 1.0
     },
     {
@@ -425256,7 +425256,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/operations/app/Platform/Gpt/Jobs/GenerateGptRecommendationJob.php",
-      "source_location": "L311",
+      "source_location": "L313",
       "weight": 1.0
     },
     {
@@ -435131,5 +435131,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "9e43e5a689734059ec8fa4adfd6bfe94cfccc188"
+  "built_at_commit": "90df38ebe17d731d121c111271d85442bd06767b"
 }
