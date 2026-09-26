@@ -11,7 +11,6 @@ import {
 import { AssetVehicleCard } from '../components/cards/AssetVehicleCard';
 import type { DvirReadinessStatus } from '../components/cards/AssetVehicleCard';
 import { FailedCommandsList } from '../components/cards/FailedCommandsList';
-import { JobListItemCard } from '../components/cards/JobListItemCard';
 import { LocationWeatherCard } from '../components/cards/LocationWeatherCard';
 import { Icon } from '../components/common/Icon';
 import type { IconName } from '../components/common/Icon';
@@ -102,7 +101,6 @@ export interface AssignedJobsListScreenProps {
     onSwapUnit?: (newUnitCode: string, reason: string) => void;
     preTripDefectLockout?: boolean;
     onOpenRental?: () => void;
-    onOpenSales?: () => void;
     onToggleLocationSharing?: () => void;
     onLogout?: () => void;
     onSyncNow?: () => void;
@@ -137,8 +135,7 @@ interface TileItem {
         | 'vehicle'
         | 'fuel'
         | 'forms'
-        | 'rental'
-        | 'sales';
+        | 'rental';
     title: string;
     sublabel: string;
     iconName: IconName;
@@ -194,7 +191,6 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     onSwapUnit,
     preTripDefectLockout = false,
     onOpenRental,
-    onOpenSales,
     onToggleLocationSharing,
     onLogout,
     onSyncNow,
@@ -578,27 +574,12 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 darkIconColor: '#818CF8',
                 darkHaloBg: 'rgba(129, 140, 248, 0.15)',
             },
-            {
-                id: 'sales',
-                title: 'Sales\nDelivery',
-                sublabel: 'Handover & VIN',
-                iconName: 'signature',
-                bgColor: '#E11D48',
-                lightHaloBg: 'rgba(225, 29, 72, 0.12)',
-                lightIconColor: '#E11D48',
-                borderColor: 'transparent',
-                iconColor: '#FFFFFF',
-                darkBgColor: '#1E293B',
-                darkBorderColor: 'rgba(251, 113, 133, 0.45)',
-                darkIconColor: '#FB7185',
-                darkHaloBg: 'rgba(251, 113, 133, 0.15)',
-            },
         ],
         [jobs.length, pendingResponseCount],
     );
 
-    // 2x4 Layout: 4 columns of 2 tiles each, horizontally swipeable
-    // Col 1: HOS & Documents | Col 2: DVIR & Vehicle | Col 3: Routes & Dispatch | Col 4: Rental & Sales
+    // Horizontally swipeable columns of 2 tiles. Drive Routes tile is hidden (unused).
+    // Col 1: HOS & Documents | Col 2: DVIR & Vehicle | Col 3: Dispatch & Rental | Col 4: Fuel
     const TILE_COLUMNS: TileItem[][] = useMemo(() => {
         const byId = (id: TileItem['id']) =>
             DASHBOARD_TILES.find((t) => t.id === id)!;
@@ -606,8 +587,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
         return [
             [byId('hos'), byId('documents')],
             [byId('dvir'), byId('vehicle')],
-            [byId('routes'), byId('forms')],
-            [byId('rental'), byId('sales')],
+            [byId('forms'), byId('rental')],
             [byId('fuel')],
         ];
     }, [DASHBOARD_TILES]);
@@ -648,9 +628,6 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 break;
             case 'rental':
                 onOpenRental?.();
-                break;
-            case 'sales':
-                onOpenSales?.();
                 break;
         }
     };
@@ -1443,62 +1420,11 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                         isDarkHud && styles.darkEmptyText,
                                     ]}
                                 >
-                                    New assignments will appear here. Pull down
-                                    to refresh and check again.
+                                    New assignments will appear in Dispatch.
+                                    Pull down to refresh and check again.
                                 </Text>
                             </View>
                         ) : null}
-
-                        <View style={styles.jobList}>
-                            {jobs.map((job) => {
-                                const jobConflictedCommands =
-                                    outboxCommands.filter(
-                                        (command) =>
-                                            command.state === 'conflict' &&
-                                            (command.jobId === job.id ||
-                                                (command.payload as any)
-                                                    ?.dispatch_job_id ===
-                                                    job.id ||
-                                                (command.payload as any)
-                                                    ?.jobId === job.id ||
-                                                (!command.jobId &&
-                                                    jobs.length === 1)),
-                                    );
-
-                                const queuedDelayCommand = outboxCommands.find(
-                                    (command) =>
-                                        command.type === 'report_delay' &&
-                                        (command.state === 'queued' ||
-                                            command.state === 'syncing') &&
-                                        (command.jobId === job.id ||
-                                            (command.payload as any)
-                                                ?.dispatch_job_id === job.id),
-                                );
-
-                                return (
-                                    <JobListItemCard
-                                        conflictedCommands={
-                                            jobConflictedCommands
-                                        }
-                                        queuedDelayCommand={queuedDelayCommand}
-                                        job={job}
-                                        key={job.id}
-                                        onAcceptAssignment={onAcceptAssignment}
-                                        onAcceptServerState={
-                                            onAcceptServerState
-                                        }
-                                        onOpenDriveRoutes={onOpenRoutes}
-                                        onRejectAssignment={onRejectAssignment}
-                                        onReportDelay={(jobToDelay) =>
-                                            setDelayModalJob(jobToDelay)
-                                        }
-                                        onRetryNewVersion={onRetryNewVersion}
-                                        onSelectJob={onSelectJob}
-                                        onTransitionStatus={onTransitionStatus}
-                                    />
-                                );
-                            })}
-                        </View>
                     </>
                 ) : null}
             </ScrollView>
@@ -2032,9 +1958,6 @@ const styles = StyleSheet.create({
     },
     darkEmptyText: {
         color: '#94A3B8',
-    },
-    jobList: {
-        gap: 12,
     },
     pressed: {
         opacity: 0.78,

@@ -577,7 +577,9 @@ describe('native application component tree', () => {
             />,
         );
 
-        expect(await screen.findByText(driverJob.reference)).toBeVisible();
+        expect(
+            await screen.findByText(new RegExp(`^Ref: ${driverJob.reference}`)),
+        ).toBeVisible();
         await firstMount.unmount();
 
         await renderScreen(
@@ -588,7 +590,9 @@ describe('native application component tree', () => {
             />,
         );
 
-        expect(await screen.findByText(driverJob.reference)).toBeVisible();
+        expect(
+            await screen.findByText(new RegExp(`^Ref: ${driverJob.reference}`)),
+        ).toBeVisible();
         expect(tokenStorage.getCalls).toBeGreaterThanOrEqual(2);
     });
 
@@ -619,7 +623,9 @@ describe('native application component tree', () => {
             .getByTestId('refresh-control')
             .props.refreshControl.props.onRefresh();
 
-        expect(await screen.findByText(driverJob.reference)).toBeVisible();
+        expect(
+            await screen.findByText(new RegExp(`^Ref: ${driverJob.reference}`)),
+        ).toBeVisible();
         expect(screen.queryByText('Dispatch service unavailable.')).toBeNull();
     });
 
@@ -638,7 +644,9 @@ describe('native application component tree', () => {
             />,
         );
         await signIn();
-        expect(await screen.findByText(driverJob.reference)).toBeVisible();
+        expect(
+            await screen.findByText(new RegExp(`^Ref: ${driverJob.reference}`)),
+        ).toBeVisible();
 
         await fireEvent.press(screen.getByLabelText('Open profile'));
         await fireEvent.press(screen.getByTestId('tab-settings'));
@@ -649,9 +657,13 @@ describe('native application component tree', () => {
         await signIn();
 
         expect(
-            await screen.findByText(secondDriverJob.reference),
+            await screen.findByText(
+                new RegExp(`^Ref: ${secondDriverJob.reference}`),
+            ),
         ).toBeVisible();
-        expect(screen.queryByText(driverJob.reference)).toBeNull();
+        expect(
+            screen.queryByText(new RegExp(`^Ref: ${driverJob.reference}`)),
+        ).toBeNull();
         expect(tokenStorage.clearCalls).toBeGreaterThanOrEqual(1);
         expect(
             calls.filter((call) => call.url.endsWith('/api/v1/auth/logout')),
@@ -673,7 +685,9 @@ describe('native application component tree', () => {
             />,
         );
         await signIn();
-        expect(await screen.findByText(driverJob.reference)).toBeVisible();
+        expect(
+            await screen.findByText(new RegExp(`^Ref: ${driverJob.reference}`)),
+        ).toBeVisible();
 
         await fireEvent.press(screen.getByLabelText('Open profile'));
         await fireEvent.press(screen.getByTestId('tab-settings'));
@@ -684,7 +698,9 @@ describe('native application component tree', () => {
         expect(
             await screen.findByText('Secure sign-out pending'),
         ).toBeVisible();
-        expect(screen.queryByText(driverJob.reference)).toBeNull();
+        expect(
+            screen.queryByText(new RegExp(`^Ref: ${driverJob.reference}`)),
+        ).toBeNull();
         expect(tokenStorage.token).toBeNull();
         expect(tokenStorage.pendingRevocationToken).toBe(rawToken);
         expect(tokenStorage.stageCalls).toEqual([rawToken]);
@@ -1045,7 +1061,9 @@ describe('native application component tree', () => {
 
         await act(() => networkMonitor.setOnline(true));
 
-        expect(await screen.findByText(driverJob.reference)).toBeVisible();
+        expect(
+            await screen.findByText(new RegExp(`^Ref: ${driverJob.reference}`)),
+        ).toBeVisible();
         await waitFor(() => {
             expect(
                 calls.filter((call) => call.url.endsWith('/status')),
@@ -1106,7 +1124,9 @@ describe('native application component tree', () => {
 
         await signIn();
         expect(
-            await screen.findByText(secondDriverJob.reference),
+            await screen.findByText(
+                new RegExp(`^Ref: ${secondDriverJob.reference}`),
+            ),
         ).toBeVisible();
         expect(await repository.listForActor(secondDriver.id)).toEqual([]);
         expect(screen.queryByText('Queued: 1')).toBeNull();
@@ -1160,6 +1180,7 @@ describe('native application component tree', () => {
                 tokenStorage={new TestTokenStorage(rawToken)}
             />,
         );
+        await fireEvent.press(await screen.findByTestId('tile-forms'));
         await fireEvent.press(
             await screen.findByTestId('job-card-' + driverJob.id),
         );
@@ -1325,7 +1346,9 @@ describe('native application component tree', () => {
             />,
         );
 
-        expect(await screen.findByText(driverJob.reference)).toBeVisible();
+        expect(
+            await screen.findByText(new RegExp(`^Ref: ${driverJob.reference}`)),
+        ).toBeVisible();
         expect(screen.getByText('Your assignments')).toBeVisible();
         expect(screen.getByText(/1 active assignment/)).toBeVisible();
         expect(screen.getByText('Synced')).toBeVisible();
@@ -1358,7 +1381,7 @@ describe('native application component tree', () => {
             />,
         );
 
-        await screen.findByText(driverJob.reference);
+        await screen.findByText(new RegExp(`^Ref: ${driverJob.reference}`));
         await fireEvent.press(screen.getByTestId('bottom-nav-safety'));
 
         expect(await screen.findByText('Safety and hazards')).toBeVisible();
@@ -1366,7 +1389,9 @@ describe('native application component tree', () => {
         expect(screen.getByTestId('open-hazard-form')).toBeVisible();
 
         await fireEvent.press(screen.getByLabelText('Back'));
-        expect(await screen.findByText(driverJob.reference)).toBeVisible();
+        expect(
+            await screen.findByText(new RegExp(`^Ref: ${driverJob.reference}`)),
+        ).toBeVisible();
     });
 
     it('keeps healthy sync details hidden until an attention state exists', async () => {
@@ -1380,7 +1405,7 @@ describe('native application component tree', () => {
             />,
         );
 
-        await screen.findByText(driverJob.reference);
+        await screen.findByText(new RegExp(`^Ref: ${driverJob.reference}`));
         expect(screen.getByText('Synced')).toBeVisible();
         expect(screen.queryByText('Queued: 0')).toBeNull();
         expect(screen.queryByTestId('sync-details-toggle')).toBeNull();
@@ -1397,7 +1422,7 @@ describe('native application component tree', () => {
             />,
         );
 
-        await screen.findByText(driverJob.reference);
+        await screen.findByText(new RegExp(`^Ref: ${driverJob.reference}`));
 
         expect(screen.queryByTestId('bottom-nav-sync')).toBeNull();
 
@@ -1409,7 +1434,9 @@ describe('native application component tree', () => {
         await fireEvent.press(screen.getByTestId('profile-screen-back'));
         expect(screen.queryByTestId('profile-screen')).toBeNull();
         expect(screen.queryByTestId('bottom-nav-today')).toBeNull();
-        expect(screen.getByText(driverJob.reference)).toBeVisible();
+        expect(
+            screen.getByText(new RegExp(`^Ref: ${driverJob.reference}`)),
+        ).toBeVisible();
     });
 
     it('keeps offline status compact when no actions are waiting to sync', async () => {
@@ -1456,6 +1483,7 @@ describe('native application component tree', () => {
             />,
         );
 
+        await fireEvent.press(await screen.findByTestId('tile-forms'));
         expect(
             await screen.findByTestId(`job-card-${fieldJob.id}`),
         ).toBeVisible();
@@ -1517,7 +1545,7 @@ describe('native application component tree', () => {
             );
 
             expect(
-                await screen.findByTestId(`job-card-${assignedJob.id}`),
+                await screen.findByTestId('hero-vehicle-card'),
             ).toBeVisible();
             expect(locationSpy).not.toHaveBeenCalled();
             expect(screen.queryByTestId('weather-refresh-btn')).toBeNull();
@@ -1542,7 +1570,7 @@ describe('native application component tree', () => {
         }
     });
 
-    it('redirects to Heavy Crane Drive Mode when clicking Routes tile and returns to main on back', async () => {
+    it('hides the unused Drive Routes tile from the dashboard', async () => {
         const { fetchFn } = createApi({ assignedJobs: [driverJob] });
 
         await renderScreen(
@@ -1553,26 +1581,8 @@ describe('native application component tree', () => {
             />,
         );
 
-        // Find the Routes / Heavy Transit tile on dashboard
-        const routesTile = await screen.findByTestId('tile-routes');
-        expect(routesTile).toBeTruthy();
-
-        // Tap Routes tile — redirects to Heavy Crane Drive Mode Screen like DVIR
-        await fireEvent.press(routesTile);
-
-        expect(
-            await screen.findByTestId('heavy-crane-drive-mode-screen'),
-        ).toBeVisible();
-        expect(screen.getByText('Heavy Crane Drive Mode')).toBeVisible();
-
-        // Tap Back button — returns to dashboard
-        const backBtn = screen.getByTestId('drive-mode-back-btn');
-        await fireEvent.press(backBtn);
-
-        expect(
-            screen.queryByTestId('heavy-crane-drive-mode-screen'),
-        ).toBeNull();
-        expect(screen.getByTestId('tile-routes')).toBeVisible();
+        expect(await screen.findByTestId('tile-forms')).toBeVisible();
+        expect(screen.queryByTestId('tile-routes')).toBeNull();
     });
 
     it('redirects to Rental Handover when clicking Rental tile and returns to main on back', async () => {
@@ -1601,33 +1611,5 @@ describe('native application component tree', () => {
 
         expect(screen.queryByTestId('rental-handover-screen')).toBeNull();
         expect(screen.getByTestId('tile-rental')).toBeVisible();
-    });
-
-    it('redirects to Sales Delivery when clicking Sales tile and returns to main on back', async () => {
-        const { fetchFn } = createApi({ assignedJobs: [driverJob] });
-
-        await renderScreen(
-            <App
-                baseUrl={apiBaseUrl}
-                fetchFn={fetchFn}
-                tokenStorage={new TestTokenStorage(rawToken)}
-            />,
-        );
-
-        const salesTile = await screen.findByTestId('tile-sales');
-        expect(salesTile).toBeTruthy();
-
-        await fireEvent.press(salesTile);
-
-        expect(
-            await screen.findByTestId('sales-delivery-screen'),
-        ).toBeVisible();
-        expect(screen.getByText('Equipment Sales Delivery')).toBeVisible();
-
-        const backBtn = screen.getByTestId('sales-back-button');
-        await fireEvent.press(backBtn);
-
-        expect(screen.queryByTestId('sales-delivery-screen')).toBeNull();
-        expect(screen.getByTestId('tile-sales')).toBeVisible();
     });
 });

@@ -2,6 +2,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 import type {
     CreateFuelPayload,
     FuelOfflineSnapshot,
+    FuelUrgency,
 } from '../types/fuel';
 
 export interface FuelDraft {
@@ -11,6 +12,12 @@ export interface FuelDraft {
     assetId: number | null;
     jobId: number | null;
     pending: CreateFuelPayload | null;
+    urgency?: FuelUrgency;
+    /** ISO timestamp, or null when no deadline was chosen. */
+    neededBy?: string | null;
+    levelPercent?: number | null;
+    /** When the operator last edited this draft; drives the restore banner. */
+    savedAt?: string | null;
 }
 
 export const emptyFuelDraft = (): FuelDraft => ({
@@ -20,6 +27,10 @@ export const emptyFuelDraft = (): FuelDraft => ({
     assetId: null,
     jobId: null,
     pending: null,
+    urgency: 'normal',
+    neededBy: null,
+    levelPercent: null,
+    savedAt: null,
 });
 
 export interface FuelDraftStore {
@@ -117,9 +128,7 @@ export class SqliteFuelDraftStore implements FuelDraftStore {
         });
     }
 
-    readOfflineSnapshot(
-        actorId: number,
-    ): Promise<FuelOfflineSnapshot | null> {
+    readOfflineSnapshot(actorId: number): Promise<FuelOfflineSnapshot | null> {
         return this.ordered(async () => {
             const db = await this.open();
             const row = await db.getFirstAsync<{ cache_json: string }>(

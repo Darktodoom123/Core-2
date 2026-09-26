@@ -9,9 +9,6 @@ use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Rental\Enums\RentalReservationStatus;
 use App\Modules\Rental\Models\RentalReservation;
 use App\Modules\Rental\Models\RentalReservationItem;
-use App\Modules\Sales\Enums\SalesOrderStatus;
-use App\Modules\Sales\Models\SalesCatalogItem;
-use App\Modules\Sales\Models\SalesOrder;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
@@ -113,40 +110,6 @@ function r4Rental(
     return $reservation;
 }
 
-function r4SalesOrder(User $actor, OperationalAsset $asset, SalesOrderStatus $status): SalesOrder
-{
-    $client = Client::query()->create([
-        'code' => 'R4-'.strtoupper(Str::random(8)),
-        'company_name' => 'R4 sales client',
-        'status' => 'active',
-    ]);
-    $catalog = SalesCatalogItem::query()->create([
-        'sku' => 'R4-'.strtoupper(Str::random(8)),
-        'name' => 'R4 physical sale',
-        'unit_price_cents' => 100,
-        'quantity_on_hand' => 0,
-        'quantity_reserved' => 0,
-        'operational_asset_id' => $asset->id,
-        'status' => 'active',
-    ]);
-    $order = SalesOrder::query()->create([
-        'reference' => 'R4-SO-'.strtoupper(Str::random(8)),
-        'client_id' => $client->id,
-        'created_by' => $actor->id,
-        'status' => $status,
-        'currency' => 'PHP',
-        'total_cents' => 100,
-    ]);
-    $order->items()->create([
-        'sales_catalog_item_id' => $catalog->id,
-        'quantity' => 1,
-        'unit_price_cents' => 100,
-        'line_total_cents' => 100,
-    ]);
-
-    return $order;
-}
-
 function r4Driver(User $dispatcher, DispatchJob $job): User
 {
     $driver = User::factory()->create(['name' => 'R4 Driver']);
@@ -187,26 +150,6 @@ it('rejects assignment for each active rental reservation status', function (Ren
     'requested' => RentalReservationStatus::Requested,
     'reserved' => RentalReservationStatus::Reserved,
     'checked out' => RentalReservationStatus::CheckedOut,
-]);
-
-it('rejects assignment for each committed physical sales order status', function (SalesOrderStatus $status): void {
-    $dispatcher = r4Dispatcher();
-    $asset = r4Asset('R4-SALES-'.$status->value);
-    $job = r4DispatchJob($dispatcher, 'R4-SALES-'.$status->value);
-    r4SalesOrder($dispatcher, $asset, $status);
-
-    $response = $this->actingAs($dispatcher)->post("/operations/dispatch-jobs/{$job->id}/assignments", [
-        'assets' => [['operational_asset_id' => $asset->id, 'assignment_type' => 'equipment']],
-    ]);
-
-    $response->assertSessionHasErrors(['assets']);
-    expect($response->getSession()->get('errors')->get('assets')[0])
-        ->toContain('committed to another sales order')
-        ->and($job->assetAssignments()->count())->toBe(0);
-})->with([
-    'confirmed' => SalesOrderStatus::Confirmed,
-    'fulfilled' => SalesOrderStatus::Fulfilled,
-    'transferred' => SalesOrderStatus::Transferred,
 ]);
 
 it('allows an assignment when the rental window does not overlap', function (): void {
@@ -309,26 +252,6 @@ it('rechecks a late rental commitment before activation', function (): void {
     expect($response->getSession()->get('errors')->get('assets')[0])
         ->toContain('The asset is committed to another active rental reservation.')
         ->and($job->fresh()->status)->toBe(DispatchStatus::Scheduled);
-});
-
-it('rechecks a late committed sale before activation', function (): void {
-    $dispatcher = r4Dispatcher();
-    $asset = r4Asset('R4-LATE-SALE');
-    $job = r4DispatchJob($dispatcher, 'R4-LATE-SALE');
-    r4Driver($dispatcher, $job);
-    $job->assetAssignments()->create([
-        'operational_asset_id' => $asset->id,
-        'assignment_type' => 'equipment',
-        'assigned_by' => $dispatcher->id,
-        'active_from' => $job->scheduled_start,
-    ]);
-    r4SalesOrder($dispatcher, $asset, SalesOrderStatus::Confirmed);
-    r4Approve($job, $dispatcher);
-
-    $response = $this->actingAs($dispatcher)->post("/operations/dispatch-jobs/{$job->id}/activate", ['version' => 1]);
-
-    $response->assertSessionHasErrors(['assets']);
-    expect($job->fresh()->status)->toBe(DispatchStatus::Scheduled);
 });
 
 it('checks replacement assets during reassignment and leaves the old assignment active on conflict', function (): void {

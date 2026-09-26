@@ -26,6 +26,7 @@ it('publishes the canonical operational status vocabulary and labels', function 
         'rejected' => 'Rejected',
         'verified' => 'Verified',
         'logged' => 'Logged',
+        'withdrawn' => 'Withdrawn',
     ])->and(enumVocabulary(AssetStatus::cases()))->toBe([
         'available' => 'Available',
         'assigned' => 'Assigned',

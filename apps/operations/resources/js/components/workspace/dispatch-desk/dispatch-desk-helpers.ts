@@ -16,7 +16,6 @@ import type {
     DispatchSourceViewModel,
     GptRecommendationViewModel,
     RentalDispatchHandoffViewModel,
-    SalesDispatchHandoffViewModel,
     ServiceRequestViewModel,
 } from '@/types/workspace';
 
@@ -24,7 +23,7 @@ export type DispatchDeskJobGroup = 'preparation' | 'execution' | 'history';
 
 export interface IncomingWorkItem {
     key: string;
-    mode: 'service' | 'rental' | 'sale';
+    mode: 'service' | 'rental';
     sourceLabel: string;
     reference: string;
     client: string;
@@ -266,11 +265,9 @@ export function nextActionForJob(
 export function incomingWorkItems({
     serviceRequests,
     rentalHandoffs,
-    salesHandoffs,
 }: {
     serviceRequests: ServiceRequestViewModel[];
     rentalHandoffs: RentalDispatchHandoffViewModel[];
-    salesHandoffs: SalesDispatchHandoffViewModel[];
 }): IncomingWorkItem[] {
     return [
         ...serviceRequests
@@ -296,19 +293,6 @@ export function incomingWorkItems({
                 key: `rental-${handoff.id}`,
                 mode: 'rental',
                 sourceLabel: 'Rental delivery',
-                reference: handoff.reference,
-                client: handoff.client.company_name,
-                detail: handoff.location || 'Delivery location needs review',
-                status: handoff.status.label,
-                sourceId: handoff.id,
-                linkedJobId: handoff.dispatch_job_id,
-            })),
-        ...salesHandoffs
-            .filter((handoff) => !handoff.dispatch_job_id)
-            .map((handoff): IncomingWorkItem => ({
-                key: `sale-${handoff.id}`,
-                mode: 'sale',
-                sourceLabel: 'Sales delivery',
                 reference: handoff.reference,
                 client: handoff.client.company_name,
                 detail: handoff.location || 'Delivery location needs review',

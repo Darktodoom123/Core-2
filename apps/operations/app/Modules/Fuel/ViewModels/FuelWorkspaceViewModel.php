@@ -2,6 +2,8 @@
 
 namespace App\Modules\Fuel\ViewModels;
 
+use App\Modules\Fuel\Enums\FuelNoReceiptReason;
+use App\Modules\Fuel\Enums\FuelUrgency;
 use App\Modules\Fuel\Models\FuelLog;
 use App\Modules\Fuel\Models\FuelRequest;
 use App\Platform\Attachments\Models\Attachment;
@@ -57,6 +59,14 @@ final class FuelWorkspaceViewModel
             'quantity_litres' => (string) $request->quantity_litres,
             'fuel_type' => $request->fuel_type,
             'purpose' => $request->purpose,
+            'urgency' => [
+                'value' => $request->urgency,
+                'label' => FuelUrgency::tryFrom($request->urgency)?->label() ?? ucfirst($request->urgency),
+            ],
+            'needed_by' => $request->needed_by?->toIso8601String(),
+            'current_fuel_level_percent' => $request->current_fuel_level_percent,
+            'withdrawn_at' => $request->withdrawn_at?->toIso8601String(),
+            'withdrawal_reason' => $request->withdrawal_reason,
             'status' => [
                 'value' => $request->status->value,
                 'label' => $request->status->label(),
@@ -85,6 +95,15 @@ final class FuelWorkspaceViewModel
                     'anomaly_reason' => $log->anomaly_reason,
                     'receipt_path' => $log->receipt_path,
                     'receipt_url' => self::resolveReceiptUrl($log),
+                    'receipt_number' => $log->receipt_number,
+                    'no_receipt_reason' => $log->no_receipt_reason === null ? null : [
+                        'value' => $log->no_receipt_reason,
+                        'label' => FuelNoReceiptReason::tryFrom($log->no_receipt_reason)?->label() ?? $log->no_receipt_reason,
+                    ],
+                    'no_receipt_note' => $log->no_receipt_note,
+                    'requires_receipt_review' => $log->requiresReceiptReview(),
+                    'receipt_reviewed_at' => $log->receipt_reviewed_at?->toIso8601String(),
+                    'receipt_review_note' => $log->receipt_review_note,
                     'recorded_by' => $log->relationLoaded('recorder') ? [
                         'id' => (int) $log->recorder->getKey(),
                         'name' => $log->recorder->name,

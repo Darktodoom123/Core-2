@@ -13,8 +13,6 @@ use App\Modules\Dispatch\Planning\Queries\ProjectPlanningQuery;
 use App\Modules\Fuel\Models\FuelRequest;
 use App\Modules\Rental\Enums\RentalFulfillmentMode;
 use App\Modules\Rental\Models\RentalReservation;
-use App\Modules\Sales\Enums\SalesFulfillmentMode;
-use App\Modules\Sales\Models\SalesOrder;
 use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Gpt\Models\GptRecommendation;
 use App\Platform\Identity\Enums\PermissionName;
@@ -53,7 +51,7 @@ final class OperationsWorkspaceController extends Controller
     /** @var array<string, list<string>> */
     private const SECTION_PROPS = [
         'overview' => ['jobs', 'clients', 'serviceRequests', 'assets', 'assets_total', 'fuelRequests', 'locations', 'approvals', 'users', 'auditEvents', 'gptRecommendations'],
-        'dispatch' => ['jobs', 'clients', 'serviceRequests', 'rentalHandoffs', 'salesHandoffs', 'incoming_total', 'assets', 'assets_total', 'approvals', 'dispatchResourceUsers', 'gptRecommendations', 'projectPlanning'],
+        'dispatch' => ['jobs', 'clients', 'serviceRequests', 'rentalHandoffs', 'incoming_total', 'assets', 'assets_total', 'approvals', 'dispatchResourceUsers', 'gptRecommendations', 'projectPlanning'],
         'assets' => ['assets', 'assets_total', 'assets_pagination', 'locations'],
         'tracking' => ['assets', 'assets_total', 'locations'],
         'fuel' => ['fuelRequests', 'fuelRequests_total', 'fuelRequests_stats', 'fuelRequests_pagination', 'assets', 'assets_total'],
@@ -73,7 +71,6 @@ final class OperationsWorkspaceController extends Controller
         $user = $request->user();
         $canCreateDispatch = $user->can(PermissionName::DispatchCreate->value);
         $canViewRentalHandoffs = $canCreateDispatch && $user->can(PermissionName::RentalView->value);
-        $canViewSalesHandoffs = $canCreateDispatch && $user->can(PermissionName::SalesView->value);
         $canViewAllAssignments = $user->can(PermissionName::AssignmentsViewAll->value);
         $refreshedAt = now();
         $navigation = OperationsWorkspaceViewModel::navigation($user);
@@ -106,7 +103,7 @@ final class OperationsWorkspaceController extends Controller
         ];
 
         $sectionCache = null;
-        $loadSection = function () use (&$sectionCache, $initialSection, $user, $canCreateDispatch, $canViewRentalHandoffs, $canViewSalesHandoffs, $canViewAllAssignments, $assetFilters, $fuelFilters, $reportFilters): array {
+        $loadSection = function () use (&$sectionCache, $initialSection, $user, $canCreateDispatch, $canViewRentalHandoffs, $canViewAllAssignments, $assetFilters, $fuelFilters, $reportFilters): array {
             request()->attributes->set('workspace_inertia_mode', 'deferred');
 
             return $sectionCache ??= $this->loadSection(
@@ -114,7 +111,6 @@ final class OperationsWorkspaceController extends Controller
                 $user,
                 $canCreateDispatch,
                 $canViewRentalHandoffs,
-                $canViewSalesHandoffs,
                 $canViewAllAssignments,
                 $assetFilters,
                 $fuelFilters,
@@ -140,7 +136,7 @@ final class OperationsWorkspaceController extends Controller
         $hasErrors = $request->session()->has('errors');
 
         foreach ($this->allSectionProps() as $prop) {
-            $resolver = fn (): mixed => $this->resolveSectionProp($prop, $loadSection, $user, $canCreateDispatch, $canViewRentalHandoffs, $canViewSalesHandoffs, $canViewAllAssignments, $assetFilters, $fuelFilters, $reportFilters);
+            $resolver = fn (): mixed => $this->resolveSectionProp($prop, $loadSection, $user, $canCreateDispatch, $canViewRentalHandoffs, $canViewAllAssignments, $assetFilters, $fuelFilters, $reportFilters);
             $belongsToInitialSection = in_array($prop, self::SECTION_PROPS[$initialSection] ?? [], true);
             $isNotificationSectionProp = $initialSection === 'notifications'
                 && in_array($prop, ['notifications', 'notifications_total', 'notifications_has_more'], true);
@@ -176,7 +172,6 @@ final class OperationsWorkspaceController extends Controller
         User $user,
         bool $canCreateDispatch,
         bool $canViewRentalHandoffs,
-        bool $canViewSalesHandoffs,
         bool $canViewAllAssignments,
         array $assetFilters = [],
         array $fuelFilters = [],
@@ -200,7 +195,7 @@ final class OperationsWorkspaceController extends Controller
                     'gptRecommendations' => OperationsWorkspaceViewModel::gptRecommendations($this->fetchGptRecommendations($user)),
                 ];
             })(),
-            'dispatch' => (function () use ($user, $canViewAllAssignments, $canCreateDispatch, $canViewRentalHandoffs, $canViewSalesHandoffs): array {
+            'dispatch' => (function () use ($user, $canViewAllAssignments, $canCreateDispatch, $canViewRentalHandoffs): array {
                 [$defaultAssets, $defaultAssetsTotal] = $this->fetchAssetsWithTotal($user);
 
                 return [
@@ -208,7 +203,6 @@ final class OperationsWorkspaceController extends Controller
                     'clients' => OperationsWorkspaceViewModel::clients($this->fetchClients($canCreateDispatch)),
                     'serviceRequests' => OperationsWorkspaceViewModel::serviceRequests($this->fetchServiceRequests($canCreateDispatch)),
                     'rentalHandoffs' => OperationsWorkspaceViewModel::rentalHandoffs($this->fetchRentalHandoffs($canViewRentalHandoffs)),
-                    'salesHandoffs' => OperationsWorkspaceViewModel::salesHandoffs($this->fetchSalesHandoffs($canViewSalesHandoffs)),
                     'incoming_total' => app(DispatchDeskIncomingQuery::class)->counts($user)['total'],
                     'assets' => OperationsWorkspaceViewModel::assets($defaultAssets),
                     'assets_total' => $defaultAssetsTotal,
@@ -331,7 +325,6 @@ final class OperationsWorkspaceController extends Controller
         User $user,
         bool $canCreateDispatch,
         bool $canViewRentalHandoffs,
-        bool $canViewSalesHandoffs,
         bool $canViewAllAssignments,
         array $assetFilters = [],
         array $fuelFilters = [],
@@ -342,7 +335,7 @@ final class OperationsWorkspaceController extends Controller
             return $data[$prop];
         }
 
-        return $this->standaloneProp($prop, $user, $canCreateDispatch, $canViewRentalHandoffs, $canViewSalesHandoffs, $canViewAllAssignments, $assetFilters, $fuelFilters, $reportFilters);
+        return $this->standaloneProp($prop, $user, $canCreateDispatch, $canViewRentalHandoffs, $canViewAllAssignments, $assetFilters, $fuelFilters, $reportFilters);
     }
 
     /**
@@ -355,7 +348,6 @@ final class OperationsWorkspaceController extends Controller
         User $user,
         bool $canCreateDispatch,
         bool $canViewRentalHandoffs,
-        bool $canViewSalesHandoffs,
         bool $canViewAllAssignments,
         array $assetFilters = [],
         array $fuelFilters = [],
@@ -366,7 +358,6 @@ final class OperationsWorkspaceController extends Controller
             'clients' => OperationsWorkspaceViewModel::clients($this->fetchClients($canCreateDispatch)),
             'serviceRequests' => OperationsWorkspaceViewModel::serviceRequests($this->fetchServiceRequests($canCreateDispatch)),
             'rentalHandoffs' => OperationsWorkspaceViewModel::rentalHandoffs($this->fetchRentalHandoffs($canViewRentalHandoffs)),
-            'salesHandoffs' => OperationsWorkspaceViewModel::salesHandoffs($this->fetchSalesHandoffs($canViewSalesHandoffs)),
             'incoming_total' => app(DispatchDeskIncomingQuery::class)->counts($user)['total'],
             'assets' => OperationsWorkspaceViewModel::assets($this->fetchAssets($user)),
             'assets_total' => $this->fetchAssetsTotal($user),
@@ -901,23 +892,6 @@ final class OperationsWorkspaceController extends Controller
             ->whereNull('dispatch_job_id')
             ->orderBy('start_date')
             ->latest('id')
-            ->limit(100)
-            ->get();
-    }
-
-    /** @return Collection<int, SalesOrder> */
-    private function fetchSalesHandoffs(bool $canView): Collection
-    {
-        if (! $canView) {
-            return collect();
-        }
-
-        return SalesOrder::query()
-            ->with('client:id,code,company_name')
-            ->where('status', 'confirmed')
-            ->where('fulfillment_mode', SalesFulfillmentMode::Delivery->value)
-            ->whereNull('dispatch_job_id')
-            ->latest('created_at')
             ->limit(100)
             ->get();
     }

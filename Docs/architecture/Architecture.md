@@ -1,6 +1,6 @@
 # Core Transaction 2 — Architecture
 
-**Last updated:** 2026-09-16  
+**Last updated:** 2026-09-25  
 **Current style:** Two-Service Monorepo: Operations Monolith & BFF (`apps/operations`) + Tracking Microservice (`apps/tracking`), Inertia 3 / React 19 web frontend, REST API v1 & v2, and Laravel Reverb WebSockets
 
 ## Status legend
@@ -23,10 +23,12 @@ The operational core of Core Transaction 2 is built around **5 Main Operational 
 
 *(Note: DVIR inspections, Hours of Service compliance, Emergency SOS, and Statutory Safety Governance operate as sub-features and platform services embedded across these 5 modules and the mobile application).*
 
-These operational modules execute and coordinate work from **3 Upstream Tri-Modal Business Transaction Flows** originating from Core 1:
+These operational modules execute and coordinate work from **2 upstream inbound handoff types** originating from Core 1, plus direct (manual) dispatch created inside Core 2:
 - **Field Service Flow**: Client service requests converted into scheduled, dispatched field lifts.
 - **Rental Flow**: Equipment reservations, operator assignment, checkout/return condition inspections (`apps/operations/app/Modules/Rental`).
-- **Sales Flow**: Equipment sales orders, inventory reservations, delivery logistics, and ownership transfers (`apps/operations/app/Modules/Sales`).
+- **Direct Dispatch**: Manual dispatch intake when no Core 1 handoff exists.
+
+Core 2 does not perform equipment sales fulfillment; the former Sales module and its tables were removed on 2026-09-25.
 
 Authentication and RBAC enforce **3 canonical system users**:
 - `System Administrator` (`system_administrator`) — Platform configuration, user lifecycle, role-based access control, master data management, and system auditing.
@@ -39,9 +41,10 @@ Statutory Philippine Safety Governance (DOLE/OSHC hazard rectification, digital 
 The detailed ownership map is maintained in [Top-level modules](./modules.md).
 
 Core 1 owns Sales, CRM, Client, Job Order, Rental, and Project Management. Core
-2 receives three upstream handoff types—service, rental, and sale—and owns the
-operational processing of those records. Rental and sales currently expose
-partial backend/API operational flow slices. Core 1 itself is outside this
+2 receives two upstream handoff types—service and rental—and owns the
+operational processing of those records. Core 1 commercial sales are outside
+Core 2; Core 2 does not receive or fulfill sale handoffs. Rental currently
+exposes a partial backend/API operational flow slice. Core 1 itself is outside this
 repository's implementation scope. The authenticated Core 2 receiving adapter
 and delivery handoffs remain unfinished; Core 1 commercial UI, contracts,
 payments, billing, and invoicing are not Core 2 deliverables. See [Alibaton Business Context and CT2 Scope](../product/alibaton-business-scope.md) and
@@ -71,7 +74,7 @@ and mobile contract tests.
 ```mermaid
 flowchart LR
     C1[External Core 1: Sales, CRM, Client, Job Order, Rental, Project]
-    C1 -. planned commercial handoff .-> H{Service / Rental / Sale}
+    C1 -. planned commercial handoff .-> H{Service / Rental}
     
     CHR[External Core HR: HCM, ESS, Employee Records]
     CHR -. employee sync & termination kill-switch .-> SYNC[HR & WFM Adapter]
@@ -199,7 +202,7 @@ sequenceDiagram
 
 ## Decisions
 
-### Organize the product around 5 main operational modules and 3 tri-modal business flows
+### Organize the product around 5 main operational modules and 2 inbound business flows
 
 The operational engine is built upon five main operational business modules:
 1. **Dispatch Job and Scheduling (Real-Time Activation)** (including Project Planning)
@@ -211,9 +214,9 @@ The operational engine is built upon five main operational business modules:
 Fleet and Crane/Equipment Management share the current `OperationalAsset` model and persistence table, but maintain
 separate domain route/policy boundaries because their capabilities and workflows diverge. DVIR governs pre/post-trip
 vehicle inspection checklists and defect lockouts within Fleet & Equipment operations, while Hours of Service enforces daily driver duty cycle limits within assignment and mobile execution.
-Upstream commercial business flows from Core 1 (Service, Rental, and Sales) feed into this operational core.
-Rental and Sales have backend operational flow handlers in `apps/operations/app/Modules/Rental` and `apps/operations/app/Modules/Sales` to coordinate
-inventory reservation, checkout/return condition diffs, and prevent asset double-booking. Core 1 customer, CRM,
+Upstream commercial business flows from Core 1 (Service and Rental) feed into this operational core, alongside direct dispatch.
+Rental has backend operational flow handlers in `apps/operations/app/Modules/Rental` to coordinate
+reservation, checkout/return condition diffs, and prevent asset double-booking. Core 1 customer, CRM,
 and financial billing interfaces are outside this architecture. Identity, safety governance, SOS emergency response,
 records, notifications, reports, attachments, and proactive GPT remain shared platform services in Operations. High-frequency GPS telemetry ingestion and caching are isolated into the dedicated Tracking microservice (`apps/tracking`).
 
@@ -231,23 +234,20 @@ Assignment, activation, approval, and transitions combine locking, invariants, p
 
 ### Serialize shared asset use at one boundary
 
-Rental, Sales, Assignment, and Dispatch own their asset-usage queries and
+Rental, Assignment, and Dispatch own their asset-usage queries and
 register checkers through the public `AssetUsageConflictChecker` contract.
 `OperationalAssetAvailability` is the Shared coordinator: it accepts a typed
 `AssetUsageRequest`, typed aggregate source, optional half-open window and
 target status, locks all affected `operational_assets` rows in ascending ID
 order, and combines stable conflict codes with safe operator-facing messages.
-Shared Assets never imports product-module models, and Rental/Sales never query
-each other's tables. Every supported writer rechecks the coordinator after its
+Shared Assets never imports product-module models, and product modules never
+query each other's tables. Every supported writer rechecks the coordinator after its
 critical locks; read-model eligibility uses the same conflict semantics.
 
 Rental dates are inclusive business dates converted to application-timezone
-half-open windows. Dispatch intervals remain half-open timestamps. Confirmed,
-fulfilled, and transferred Sales orders are permanent asset commitments;
-transferred assets remain `unavailable` and are rejected by every operational
-status restoration path.
+half-open windows. Dispatch intervals remain half-open timestamps.
 
-The thirteen Rental/Sales plus later server-owned tables use PostgreSQL RLS with
+The Rental and later server-owned tables use PostgreSQL RLS with
 no Data API policies and no `anon`/`authenticated` table or sequence grants.
 The local PostgreSQL catalog/security gate and an authorized target Supabase
 catalog/Security Advisor check are separate release evidence; the remote target

@@ -24,7 +24,12 @@ import {
     TrackingUnitDetails,
     TrackingUnitRow,
 } from './tracking-preview-units';
-import { UNASSIGNED_JOBSITE, useTrackingPreview } from './use-tracking-preview';
+import {
+    UNASSIGNED_JOBSITE,
+    formatReportAge,
+    locationTimestamp,
+    useTrackingPreview,
+} from './use-tracking-preview';
 
 const LiveTrackingMap = lazy(() =>
     import('@/components/live-tracking-map').then(
@@ -49,6 +54,7 @@ export function LiveTrackingPreview({
     onOpenTracking,
 }: LiveTrackingPreviewProps) {
     const tracking = useTrackingPreview(locations, activeSosIncidents);
+    const newestReportAt = latestReportTimestamp(locations);
 
     return (
         <section
@@ -82,6 +88,12 @@ export function LiveTrackingPreview({
                                     : 'Feed disconnected'}
                             </span>
                         )}
+                        {/* Report age is separate from feed connection state. */}
+                        <span className="text-xs text-ink-soft tabular-nums">
+                            {newestReportAt
+                                ? `Newest report ${formatReportAge(newestReportAt).toLowerCase()}`
+                                : 'No location reports yet'}
+                        </span>
                     </div>
                     <div
                         role="group"
@@ -425,6 +437,27 @@ export function LiveTrackingPreview({
             )}
         </section>
     );
+}
+
+/** Newest received (or captured) time across units that have reported. */
+function latestReportTimestamp(
+    locations: LocationUpdateViewModel[],
+): string | null {
+    let newest: string | null = null;
+
+    for (const location of locations) {
+        if (location.has_gps_report === false) {
+            continue;
+        }
+
+        const value = location.received_at ?? location.captured_at;
+
+        if (value && locationTimestamp(value) > locationTimestamp(newest)) {
+            newest = value;
+        }
+    }
+
+    return newest;
 }
 
 function UnitViewButton({

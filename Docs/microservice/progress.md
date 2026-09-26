@@ -1,6 +1,6 @@
 # Microservice restructuring progress
 
-Updated: 2026-09-09. Status: Plan A (2-Service Architecture) Tasks 1 through 5 fully implemented and verified; Full Quality Gate complete; Phase 7 Distributed Resilience & Failure-Injection Harness verified.
+Updated: 2026-09-25. Status: Plan A (2-Service Architecture) Tasks 1 through 5 fully implemented and verified; Full Quality Gate complete; Phase 7 Distributed Resilience & Failure-Injection Harness verified.
 
 ## Workspace and execution
 
@@ -143,7 +143,7 @@ Stop for Astra review of Phase 1 implementation and verification evidence before
 ### 2. Code, routes, tables, and domain ownership mapping
 
 - **Operations Domain**:
-  - Web Routes (`routes/web.php`): Identity (`Platform/Identity`), Dispatch (`Modules/Dispatch`), Rental (`Modules/Rental`), Sales (`Modules/Sales`), Assignment (`Modules/Assignment`), Fleet (`Modules/Fleet`), Crane Equipment (`Modules/CraneEquipment`), Fuel (`Modules/Fuel`), Shared Assets (`Shared/Assets`), Attachments (`Platform/Attachments`), Notifications (`Platform/Notifications`), Workspace (`Platform/Workspace`), Safety (`Platform/Safety`), plus internal Reporting (`Platform/Reporting`) and internal AI (`Platform/Gpt`).
+  - Web Routes (`routes/web.php`): Identity (`Platform/Identity`), Dispatch (`Modules/Dispatch`), Rental (`Modules/Rental`), Assignment (`Modules/Assignment`), Fleet (`Modules/Fleet`), Crane Equipment (`Modules/CraneEquipment`), Fuel (`Modules/Fuel`), Shared Assets (`Shared/Assets`), Attachments (`Platform/Attachments`), Notifications (`Platform/Notifications`), Workspace (`Platform/Workspace`), Safety (`Platform/Safety`), plus internal Reporting (`Platform/Reporting`) and internal AI (`Platform/Gpt`).
   - API Routes (`routes/api.php`): Identity, Dispatch, Assignment, Fleet, CraneEquipment, Fuel, Safety, HoursOfService, Dvir, and Job Reports.
   - Database Tables (in `core2_ms_operations`):
     - Auth & Users: `users`, `password_reset_tokens`, `sessions`, `personal_access_tokens`, Spatie permission tables (`roles`, `permissions`, `model_has_roles`, etc.), `personnel_profiles`, `personnel_credentials`.
@@ -151,7 +151,7 @@ Stop for Astra review of Phase 1 implementation and verification evidence before
     - Assignment: `dispatch_personnel_assignments`, `dispatch_asset_assignments`.
     - Fleet & Cranes: `operational_assets`, `asset_maintenance_logs`, `maintenance_work_orders`, `asset_inspections`, `tower_crane_shift_logs`.
     - Fuel: `fuel_requests`, `fuel_logs`.
-    - Rental & Sales: `rental_agreements`, `rental_reservations`, `rental_operator_assignments`, `sales_orders`, `sales_order_items`, `client_companies`.
+    - Rental: `rental_agreements`, `rental_reservations`, `rental_operator_assignments`, `client_companies`. (Sales tables were dropped on 2026-09-25 when the Sales module was removed.)
     - Safety & SOS: `sos_incidents`, `sos_incident_recipients`, `sos_delivery_attempts`, `sos_emergency_contacts`, `critical_lift_plans`, `toolbox_meetings`, `work_stoppage_notices`, `site_hazard_tickets`.
     - Hours of Service: `operator_shifts`, `operator_duty_logs`.
     - DVIR: `dvir_inspections`, `dvir_inspection_checks`, `dvir_inspection_photos`.

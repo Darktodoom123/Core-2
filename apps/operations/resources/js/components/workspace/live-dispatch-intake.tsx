@@ -18,30 +18,23 @@ import {
 } from '@/components/ui';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import { DirectDispatchView } from '@/components/workspace/direct-dispatch/direct-dispatch-view';
-import { formatCurrency, humanize } from '@/lib/formatters';
+import { humanize } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import type {
     ClientViewModel,
     DispatchJobViewModel,
     RentalDispatchHandoffViewModel,
-    SalesDispatchHandoffViewModel,
     ServiceRequestViewModel,
     UnlinkedHandoffItem,
     WorkspaceCapabilities,
 } from '@/types/workspace';
 
 export type IntakeMode =
-    | 'manual'
-    | 'service'
-    | 'rental'
-    | 'sale'
-    | 'reconciliation'
-    | 'client'
-    | null;
+    'manual' | 'service' | 'rental' | 'reconciliation' | 'client' | null;
 
 type IncomingWorkItem = {
     key: string;
-    mode: 'service' | 'rental' | 'sale';
+    mode: 'service' | 'rental';
     sourceLabel: string;
     reference: string;
     client: string;
@@ -56,7 +49,6 @@ interface IncomingQueuePage {
     items: IncomingWorkItem[];
     service_requests: ServiceRequestViewModel[];
     rental_handoffs: RentalDispatchHandoffViewModel[];
-    sales_handoffs: SalesDispatchHandoffViewModel[];
     total: number;
     current_page: number;
     last_page: number;
@@ -67,7 +59,6 @@ export function LiveDispatchIntake({
     clients,
     serviceRequests,
     rentalHandoffs = [],
-    salesHandoffs = [],
     jobs = [],
     capabilities,
     initialRequestId,
@@ -81,7 +72,6 @@ export function LiveDispatchIntake({
     clients: ClientViewModel[];
     serviceRequests: ServiceRequestViewModel[];
     rentalHandoffs?: RentalDispatchHandoffViewModel[];
-    salesHandoffs?: SalesDispatchHandoffViewModel[];
     jobs?: DispatchJobViewModel[];
     capabilities: WorkspaceCapabilities;
     initialRequestId?: number | null;
@@ -95,8 +85,7 @@ export function LiveDispatchIntake({
     const canCreateManual = capabilities.create_dispatch;
     const canReviewService = capabilities.convert_service_request;
     const canReviewRental = capabilities.create_rental_dispatch;
-    const canReviewSale = capabilities.create_sales_dispatch;
-    const canReconcile = canReviewService || canReviewRental || canReviewSale;
+    const canReconcile = canReviewService || canReviewRental;
 
     const [queuePage, setQueuePage] = useState(1);
     const [queueRetry, setQueueRetry] = useState(0);
@@ -148,7 +137,6 @@ export function LiveDispatchIntake({
                     !Array.isArray(page.items) ||
                     !Array.isArray(page.service_requests) ||
                     !Array.isArray(page.rental_handoffs) ||
-                    !Array.isArray(page.sales_handoffs) ||
                     !Number.isInteger(page.total) ||
                     !Number.isInteger(page.current_page) ||
                     !Number.isInteger(page.last_page) ||
@@ -191,7 +179,6 @@ export function LiveDispatchIntake({
         queuePage,
         queueRetry,
         rentalHandoffs,
-        salesHandoffs,
         serviceRequests,
         showQueueWhenEmpty,
     ]);
@@ -213,11 +200,6 @@ export function LiveDispatchIntake({
         : sourceDataPending
           ? []
           : rentalHandoffs;
-    const visibleSalesHandoffs = currentQueuePage
-        ? currentQueuePage.sales_handoffs
-        : sourceDataPending
-          ? []
-          : salesHandoffs;
 
     const fallbackIncomingItems = useMemo<IncomingWorkItem[]>(() => {
         const services = canReviewService
@@ -255,33 +237,9 @@ export function LiveDispatchIntake({
                       evidenceSignee: handoff.evidence_signee,
                   }))
             : [];
-        const sales = canReviewSale
-            ? salesHandoffs
-                  .filter((handoff) => !handoff.dispatch_job_id)
-                  .map((handoff) => ({
-                      key: `sale-${handoff.id}`,
-                      mode: 'sale' as const,
-                      sourceLabel: 'Sales delivery',
-                      reference: handoff.reference,
-                      client: handoff.client.company_name,
-                      detail:
-                          handoff.location || 'Delivery location needs review',
-                      status: handoff.status.label,
-                      sourceId: handoff.id,
-                      hasEvidence: handoff.has_evidence,
-                      evidenceSignee: handoff.evidence_signee,
-                  }))
-            : [];
 
-        return [...services, ...rentals, ...sales];
-    }, [
-        canReviewRental,
-        canReviewSale,
-        canReviewService,
-        rentalHandoffs,
-        salesHandoffs,
-        serviceRequests,
-    ]);
+        return [...services, ...rentals];
+    }, [canReviewRental, canReviewService, rentalHandoffs, serviceRequests]);
 
     const incomingItems = currentQueuePage
         ? currentQueuePage.items
@@ -709,25 +667,10 @@ export function LiveDispatchIntake({
                     />
                 )}
 
-                {mode === 'sale' && canReviewSale && (
-                    <SaleIntakeSection
-                        salesHandoffs={visibleSalesHandoffs}
-                        capabilities={capabilities}
-                        focusedHandoffId={
-                            selectedItemKey?.startsWith('sale-')
-                                ? Number(selectedItemKey.slice(5))
-                                : null
-                        }
-                        onShowAll={() => setSelectedItemKey(null)}
-                        onClose={closeWorkflow}
-                    />
-                )}
-
                 {mode === 'reconciliation' && canReconcile && (
                     <ReconciliationQueueSection
                         serviceRequests={visibleServiceRequests}
                         rentalHandoffs={visibleRentalHandoffs}
-                        salesHandoffs={visibleSalesHandoffs}
                         jobs={jobs}
                         onReviewSource={(source, id) => {
                             setSelectedItemKey(`${source}-${id}`);
@@ -1477,248 +1420,17 @@ function RentalIntakeSection({
     );
 }
 
-function SaleIntakeSection({
-    salesHandoffs,
-    capabilities,
-    focusedHandoffId,
-    onShowAll,
-    onClose,
-}: {
-    salesHandoffs: SalesDispatchHandoffViewModel[];
-    capabilities: WorkspaceCapabilities;
-    focusedHandoffId: number | null;
-    onShowAll: () => void;
-    onClose: () => void;
-}) {
-    const focusedHandoff = salesHandoffs.find(
-        (handoff) => handoff.id === focusedHandoffId,
-    );
-    const visibleHandoffs =
-        focusedHandoffId === null
-            ? salesHandoffs
-            : focusedHandoff
-              ? [focusedHandoff]
-              : [];
-    const [pendingHandoffId, setPendingHandoffId] = useState<number | null>(
-        null,
-    );
-    const [scheduledStart, setScheduledStart] = useState(() =>
-        localDateTimeInput(new Date(Date.now() + 60 * 60 * 1000)),
-    );
-    const [scheduledEnd, setScheduledEnd] = useState(() =>
-        localDateTimeInput(new Date(Date.now() + 3 * 60 * 60 * 1000)),
-    );
-
-    const convertSale = (orderId: number) => {
-        setPendingHandoffId(orderId);
-        router.post(
-            `/operations/sales/orders/${orderId}/dispatch`,
-            {
-                scheduled_start: scheduledStart,
-                scheduled_end: scheduledEnd,
-            },
-            {
-                preserveScroll: true,
-                onFinish: () => setPendingHandoffId(null),
-            },
-        );
-    };
-
-    return (
-        <Panel className="mt-4 p-4 md:p-6">
-            <div className="flex flex-col gap-3 border-b border-line pb-4 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-full bg-success-soft px-2.5 py-0.5 text-xs font-semibold text-success-strong">
-                            Sales Order Delivery Workflow
-                        </span>
-                    </div>
-                    <h3 className="mt-2 text-lg font-semibold text-ink">
-                        Sales order deliveries awaiting dispatch
-                    </h3>
-                    <p className="mt-1 max-w-3xl text-sm leading-6 text-ink-soft">
-                        Confirmed sales orders requiring transport and equipment
-                        handover. Converting creates a linked operational
-                        dispatch with catalog items, delivery window, and
-                        destination coordinates.
-                    </p>
-                </div>
-                <Button
-                    size="icon"
-                    variant="quiet"
-                    onClick={onClose}
-                    aria-label="Close sales intake"
-                >
-                    <X className="h-4 w-4" aria-hidden="true" />
-                </Button>
-            </div>
-
-            {focusedHandoffId !== null && (
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-info-strong/30 bg-info-soft p-3 text-sm text-ink">
-                    <span>
-                        {focusedHandoff
-                            ? `Reviewing sales handoff ${focusedHandoff.reference}`
-                            : 'This sales handoff is no longer in the loaded records. Refresh before creating a dispatch.'}
-                    </span>
-                    <Button size="sm" variant="secondary" onClick={onShowAll}>
-                        Show all sales handoffs
-                    </Button>
-                </div>
-            )}
-
-            <div className="mt-4 rounded-lg border border-line bg-surface-subtle p-3">
-                <p className="text-xs font-semibold text-ink">
-                    Global delivery schedule for incoming conversions:
-                </p>
-                <div className="mt-2 grid gap-3 sm:grid-cols-2">
-                    <DateTimePicker
-                        id="sales-global-start"
-                        label="Delivery start"
-                        value={scheduledStart}
-                        onChange={setScheduledStart}
-                    />
-                    <DateTimePicker
-                        id="sales-global-end"
-                        label="Delivery end"
-                        value={scheduledEnd}
-                        onChange={setScheduledEnd}
-                    />
-                </div>
-            </div>
-
-            {visibleHandoffs.length === 0 ? (
-                <EmptyState
-                    compact
-                    icon={Package}
-                    title={
-                        focusedHandoffId === null
-                            ? 'No sales deliveries pending'
-                            : 'Selected sales handoff is unavailable'
-                    }
-                    message={
-                        focusedHandoffId === null
-                            ? 'All confirmed sales orders with delivery fulfillment are already dispatched or fulfilled.'
-                            : 'Refresh the workspace or show all loaded sales handoffs before creating a dispatch.'
-                    }
-                />
-            ) : (
-                <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                    {visibleHandoffs.map((handoff) => {
-                        const isPending = pendingHandoffId === handoff.id;
-
-                        return (
-                            <div
-                                key={handoff.id}
-                                className="rounded-lg border border-line bg-surface p-4 transition-all hover:border-success-strong/50"
-                            >
-                                <div className="flex items-start justify-between gap-3">
-                                    <div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm font-bold text-ink">
-                                                {handoff.reference}
-                                            </span>
-                                            <span className="rounded-full bg-success-soft px-2 py-0.5 text-[10px] font-semibold text-success-strong">
-                                                Sales Delivery
-                                            </span>
-                                        </div>
-                                        <p className="mt-0.5 text-xs text-ink-soft">
-                                            {handoff.client.company_name}
-                                        </p>
-                                    </div>
-                                    <div className="flex flex-wrap items-center gap-1.5">
-                                        {handoff.has_evidence && (
-                                            <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-[10px] font-semibold text-success-strong">
-                                                <CheckCircle2
-                                                    className="size-3"
-                                                    aria-hidden="true"
-                                                />
-                                                Evidence Recorded
-                                            </span>
-                                        )}
-                                        <span className="inline-flex items-center rounded-full bg-surface-subtle px-2 py-0.5 text-xs font-medium text-ink-soft">
-                                            {handoff.status.label}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <dl className="mt-3 divide-y divide-line text-xs">
-                                    <DataPair
-                                        label="Order value"
-                                        value={formatCurrency(
-                                            handoff.total_cents / 100,
-                                        )}
-                                    />
-                                    <DataPair
-                                        label="Delivery destination"
-                                        value={
-                                            handoff.location ||
-                                            'Warehouse handover location'
-                                        }
-                                    />
-                                    <DataPair
-                                        label="Fulfillment mode"
-                                        value={humanize(
-                                            handoff.fulfillment_mode,
-                                        )}
-                                    />
-                                </dl>
-
-                                <div className="mt-3 rounded-lg border border-line bg-surface-subtle p-2.5 text-xs">
-                                    <p className="text-[10px] font-semibold text-ink-soft uppercase">
-                                        Catalog &amp; Delivery Details:
-                                    </p>
-                                    <div className="mt-1 flex items-center justify-between text-ink-soft">
-                                        <span>
-                                            Order fulfillment handover checklist
-                                        </span>
-                                        <span className="font-mono text-ink">
-                                            Delivery Coordinates verified
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div className="mt-4 flex items-center justify-between border-t border-line pt-3">
-                                    <span className="text-xs text-ink-soft">
-                                        {handoff.ready
-                                            ? 'Ready for transport'
-                                            : 'Order confirmed'}
-                                    </span>
-                                    <Button
-                                        size="sm"
-                                        variant="primary"
-                                        onClick={() => convertSale(handoff.id)}
-                                        disabled={
-                                            isPending ||
-                                            !capabilities.create_sales_dispatch
-                                        }
-                                    >
-                                        {isPending
-                                            ? 'Converting…'
-                                            : 'Create delivery dispatch'}
-                                    </Button>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
-        </Panel>
-    );
-}
-
 function ReconciliationQueueSection({
     serviceRequests,
     rentalHandoffs,
-    salesHandoffs,
     jobs,
     onReviewSource,
     onClose,
 }: {
     serviceRequests: ServiceRequestViewModel[];
     rentalHandoffs: RentalDispatchHandoffViewModel[];
-    salesHandoffs: SalesDispatchHandoffViewModel[];
     jobs: DispatchJobViewModel[];
-    onReviewSource: (source: 'rental' | 'sale', id: number) => void;
+    onReviewSource: (source: 'rental', id: number) => void;
     onClose: () => void;
 }) {
     const unlinkedItems: UnlinkedHandoffItem[] = useMemo(() => {
@@ -1801,46 +1513,8 @@ function ReconciliationQueueSection({
             }
         }
 
-        for (const so of salesHandoffs) {
-            if (!so.dispatch_job_id) {
-                const matchedJob = jobs.find(
-                    (j) =>
-                        (j.source === null ||
-                            j.source.type === 'manual' ||
-                            j.source.type === 'direct') &&
-                        (j.client
-                            .toLowerCase()
-                            .includes(so.client.company_name.toLowerCase()) ||
-                            so.client.company_name
-                                .toLowerCase()
-                                .includes(j.client.toLowerCase())),
-                );
-
-                list.push({
-                    id: so.id,
-                    source_type: 'sale',
-                    source_label: 'Sales Delivery',
-                    reference: so.reference,
-                    client: so.client,
-                    title: `Order Delivery (${formatCurrency(so.total_cents / 100)})`,
-                    location: so.location,
-                    total_cents: so.total_cents,
-                    fulfillment_mode: so.fulfillment_mode,
-                    dispatch_job_id: null,
-                    matched_draft_job_id: matchedJob?.id ?? null,
-                    matched_draft_reference: matchedJob?.reference ?? null,
-                    match_reason: matchedJob
-                        ? `Client name resembles manual draft ${matchedJob.reference}; verify the site and work before creating another dispatch.`
-                        : null,
-                    reconciliation_status: matchedJob
-                        ? 'matching_draft_found'
-                        : 'unlinked',
-                });
-            }
-        }
-
         return list;
-    }, [serviceRequests, rentalHandoffs, salesHandoffs, jobs]);
+    }, [serviceRequests, rentalHandoffs, jobs]);
 
     return (
         <Panel className="mt-4 p-4 md:p-6">
@@ -1906,8 +1580,6 @@ function ReconciliationQueueSection({
                                                     'bg-brand-soft text-brand-strong',
                                                 item.source_type === 'rental' &&
                                                     'bg-warning-soft text-warning-strong',
-                                                item.source_type === 'sale' &&
-                                                    'bg-success-soft text-success-strong',
                                             )}
                                         >
                                             {item.source_label}
@@ -1988,13 +1660,6 @@ function ReconciliationQueueSection({
                                                 ) {
                                                     onReviewSource(
                                                         'rental',
-                                                        item.id,
-                                                    );
-                                                } else if (
-                                                    item.source_type === 'sale'
-                                                ) {
-                                                    onReviewSource(
-                                                        'sale',
                                                         item.id,
                                                     );
                                                 }
@@ -2318,10 +1983,4 @@ function addHours(value: string, hours: number): string {
     date.setHours(date.getHours() + hours);
 
     return toLocalDateTime(date.toISOString());
-}
-
-function localDateTimeInput(date: Date): string {
-    const pad = (n: number) => String(n).padStart(2, '0');
-
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }

@@ -1,6 +1,6 @@
 # Core Transaction 2 — Requirements
 
-**Last updated:** 2026-09-16  
+**Last updated:** 2026-09-25  
 **Legend:** Implemented means server-backed and covered by current code; Partial means only part of the behavior exists; Planned means the repository defines or prototypes the concept but does not complete it.
 
 ## Operational Architecture & Business Flows
@@ -15,16 +15,18 @@ Core 2 organizes its operational capabilities into **5 Main Operational Business
 
 *(Note: DVIR inspections, Hours of Service compliance, Emergency SOS, and Statutory Safety Governance operate as sub-features and platform services embedded across these 5 modules and the mobile application).*
 
-These 5 main operational engines execute and coordinate the **3 Tri-Modal Inbound Business Flows** received from Core 1:
+These 5 main operational engines execute and coordinate the **2 inbound business flows** received from Core 1, plus direct (manual) dispatch created in Core 2:
 - **Field Service Flow**: Client service requests converted into scheduled, dispatched field execution and project plans.
 - **Rental Flow**: Rental reservations, equipment availability, checkout, operator assignment, return condition diffs (`apps/operations/app/Modules/Rental`).
-- **Sales Flow**: Catalog inventory, sales quotes, order reservation, delivery transport, and ownership transfer (`apps/operations/app/Modules/Sales`).
+- **Direct Dispatch**: Manual operational dispatch when no Core 1 handoff exists.
+
+Core 2 does not receive or fulfill sale handoffs; the Sales module was removed on 2026-09-25.
 
 Identity & RBAC, live tracking & telemetry, statutory safety governance (DOLE OSHS Rule 1410 & DO 198-18), SOS emergency response, audit trail, notifications, reports & attachments, data exports, and GPT assistance serve as shared cross-cutting platform services. See [Top-level modules](../architecture/modules.md).
 
 Core 1 is the upstream commercial system containing Sales, CRM, Client, Job Order, Rental,
-and Project Management. Core 2 receives three handoff types from Core 1:
-service, rental, and sale. CT2 supports their operational processing, while
+and Project Management. Core 2 receives two handoff types from Core 1:
+service and rental. CT2 supports their operational processing, while
 Core 1 remains authoritative for customer and commercial transactions and is
 outside this repository's implementation scope. The Core 2 receiving adapter
 and delivery/dispatch handoffs remain incomplete; Core 1 commercial screens,
@@ -90,7 +92,7 @@ Sanctum token handling, CSRF protection, and password hashing are unchanged.
 - **FR-013 — Implemented:** Operator and Rigger assignments shall require valid qualifications/credentials (e.g. LTO professional driver's license, TESDA Heavy Equipment Operator NC II, TESDA Crane Rigging NC II, DOLE-BOSH) at the scheduled start.
 - **FR-014 — Implemented:** Inactive, suspended, unavailable, or on-leave personnel shall not be assignable.
 - **FR-015 — Implemented:** Non-dispatchable assets, assets with an open blocking work order, and assets with overlapping active assignments shall not be assignable.
-- **FR-016 — Implemented:** All dispatch assignments (routine, priority, emergency) across tri-modal streams shall create a pending Operations approval request.
+- **FR-016 — Implemented:** All dispatch assignments (routine, priority, emergency) across service, rental, and direct dispatch streams shall create a pending Operations approval request.
 - **FR-017 — Implemented:** A requester shall not decide their own exceptional
   approval, and every approval or rejection shall record a required reason.
 - **FR-018 — Implemented:** The live Operations workspace shall activate only
@@ -108,7 +110,7 @@ Sanctum token handling, CSRF protection, and password hashing are unchanged.
 ### External Core 1 handoff boundary
 
 - **FR-021 — Planned:** Core 2 shall accept only the operational handoff types
-  `service`, `rental`, and `sale` from external Core 1.
+  `service` and `rental` from external Core 1.
 - **FR-022 — Planned:** Every received transaction shall retain its Core 1
   source reference, source timestamp, and an idempotency key so retries cannot
   duplicate operational records.
@@ -132,10 +134,10 @@ Sanctum token handling, CSRF protection, and password hashing are unchanged.
 
 ### Module 5: Fuel Management
 
-- **FR-040 — Implemented:** Authorized field users shall submit a fuel request with quantity, fuel type, purpose, and optional job/asset.
-- **FR-041 — Implemented:** The supported server workflow shall be `submitted → forwarded → approved/rejected → verified → logged`.
+- **FR-040 — Implemented:** Authorized field users shall submit a fuel request with quantity, fuel type, purpose, optional job/asset, and optional urgency, needed-by time, and current tank level.
+- **FR-041 — Implemented:** The supported server workflow shall be `submitted → forwarded → approved/rejected → verified → logged`. A reviewer with forward and approve rights may record both stages with one audited review decision; the requester may withdraw while `submitted` or `forwarded`.
 - **FR-042 — Implemented:** The request owner shall not approve their own fuel request.
-- **FR-043 — Implemented:** The `logged` state and `FuelLog` persistence are fully supported by the transition endpoint, including quantity, price/litre, total cost, odometer, hour meter, fuel station, and receipt attachment.
+- **FR-043 — Implemented:** The `logged` state and `FuelLog` persistence are fully supported by the transition endpoint, including quantity, price/litre, total cost, odometer, hour meter, fuel station, receipt/OR number, and receipt attachment. A log requires a receipt image or a supported no-receipt reason; no-receipt logs remain in a receipt-review queue until a verifier clears them.
 - **FR-044 — Implemented:** Authorized field users shall submit their own coordinates with capture time, accuracy, optional asset, and sharing state.
 - **FR-045 — Implemented:** Only users with all-tracking permission shall read the operations-wide location feed.
 - **FR-046 — Partial:** Precise location is collected only during
@@ -225,7 +227,7 @@ Sanctum token handling, CSRF protection, and password hashing are unchanged.
 - **FR-123 — Implemented:** Project plans shall track estimated versus actual operating hours, fuel usage, and labor costs.
 - **FR-124 — Implemented:** Project completion shall generate an integrated closeout dossier combining all linked dispatch tickets, job reports, DVIR logs, and statutory lift plans.
 
-## Tri-Modal Commercial Inbound Flow: Rental Operations
+## Inbound Flow: Rental Operations
 
 - **FR-060 - Implemented (partial backend/API):** Authorized users can create a
   rental reservation, approve it, check out the reserved assets, and record a
@@ -243,45 +245,20 @@ Sanctum token handling, CSRF protection, and password hashing are unchanged.
 - **FR-063 - Implemented (partial backend/API):** Creation, approval, and
   checkout lock and recheck assets through the Shared availability coordinator.
   Missing, deleted, unsafe, blocked, overlapping Dispatch, overlapping active
-  Rental, and committed Sales assets fail atomically. Return records evidence
-  and preserves a more restrictive maintenance, inspection, sale, or unavailable
+  Rental assets fail atomically. Return records evidence
+  and preserves a more restrictive maintenance, inspection, or unavailable
   state rather than reviving an unsafe asset.
 - **FR-064 - Implemented (partial backend/API):** Rental routes require the
   dedicated Rental permission plus authenticated, active, verified account
   middleware. Supported mutations persist an attributable audit event in the
   same transaction; failures do not create success audit or domain rows.
 
-## Tri-Modal Commercial Inbound Flow: Sales Operations
+## Retired: Sales Operations
 
-- **FR-070 - Implemented (partial backend/API):** Authorized users can manage
-  operational catalog rows, create/list quotes, accept a quote into an order,
-  fulfill a confirmed order, and transfer ownership through the JSON boundary.
-  Core 2 receiving, delivery orchestration, routed Sales UI, payments,
-  invoicing, tax, and accounting remain deferred.
-- **FR-071 - Implemented (partial backend/API):** Catalog, quote, and order
-  prices and totals are server-derived. Catalog/quote item batches are bounded
-  to 100 entries, supported persisted quantities and cents fit the signed
-  32-bit maximum, checked arithmetic rejects line or aggregate overflow, and a
-  physical catalog item has exactly one unit.
-- **FR-072 - Implemented (partial backend/API):** Quote acceptance locks the
-  quote, catalog rows, and linked assets, rechecks inventory/readiness and
-  cross-module conflicts, reserves stock, writes the reserve ledger, creates
-  the order, and audits atomically. Expired drafts fail while remaining draft;
-  `valid_until` equals today in the application timezone.
-- **FR-073 - Implemented (partial backend/API):** Confirmed, fulfilled, and
-  transferred orders remain asset commitments independent of the reserved-stock
-  counter. Fulfillment rechecks stock and readiness, decrements counters, writes
-  the sale ledger, marks linked physical assets unavailable, and commits the
-  order transition and audit together.
-- **FR-074 - Implemented (partial backend/API):** Ownership transfer has one
-  physical-asset uniqueness boundary, is available only from `fulfilled`, moves
-  the order to terminal `transferred`, and cannot restore the asset to an
-  operational status. Duplicate or concurrent attempts return a domain
-  validation failure.
-- **FR-075 - Implemented (partial backend/API):** Sales routes require their
-  exact dedicated permissions plus authenticated, active, verified account
-  middleware. Prices, totals, asset references, inventory, ownership, and audit
-  writes are server-authoritative and rollback together on failure.
+- **FR-070 to FR-075 — Retired (2026-09-25):** Core 2 no longer performs sales
+  fulfillment. The Sales module, its routes, tables, and `sales.*` permissions
+  were removed; existing sale-sourced dispatches were converted to direct
+  (manual) dispatches. These requirement IDs are not reused.
 
 ## Non-functional requirements
 

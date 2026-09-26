@@ -143,7 +143,6 @@ function createCapabilities(
         create_service_request: true,
         convert_service_request: true,
         create_rental_dispatch: true,
-        create_sales_dispatch: true,
         share_location: true,
         view_tracking: true,
         request_fuel: true,
@@ -282,7 +281,7 @@ describe('FleetSurface & Modular Fleet Components', () => {
             expect(
                 screen.getByRole('heading', {
                     level: 1,
-                    name: 'Fleet Management',
+                    name: 'Fleet & Equipment',
                 }),
             ).toBeInTheDocument();
 

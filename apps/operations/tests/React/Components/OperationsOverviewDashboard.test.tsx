@@ -3,7 +3,6 @@ import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OperationsOverviewDashboard } from '@/components/dashboards/operations-overview-dashboard';
 import type {
-    ApprovalViewModel,
     AssetViewModel,
     AuditEventViewModel,
     DispatchJobViewModel,
@@ -19,6 +18,19 @@ let mockAuthRole = 'system_administrator';
 let mockAuthRoleLabel = 'System Administrator';
 
 vi.mock('@inertiajs/react', () => ({
+    Link: ({
+        children,
+        href,
+        ...props
+    }: {
+        children: React.ReactNode;
+        href: string;
+        [key: string]: unknown;
+    }) => (
+        <a href={href} {...props}>
+            {children}
+        </a>
+    ),
     usePage: () => ({
         props: {
             auth: {
@@ -222,6 +234,19 @@ describe('OperationsOverviewDashboard', () => {
                     });
                 }
 
+                if (url.includes('/operations/dispatch-desk/jobs')) {
+                    return Promise.resolve({
+                        ok: true,
+                        status: 200,
+                        json: () =>
+                            Promise.resolve({
+                                jobs: [],
+                                total: 0,
+                                last_page: 1,
+                            }),
+                    });
+                }
+
                 return Promise.resolve({
                     ok: true,
                     json: () => Promise.resolve({}),
@@ -363,7 +388,7 @@ describe('OperationsOverviewDashboard', () => {
         ).toBeInTheDocument();
     });
 
-    it('renders operations manager view with high-density MetricStrip and contextual quick actions', () => {
+    it('routes operations managers to the manager dashboard', async () => {
         mockAuthRole = 'operations_manager';
         mockAuthRoleLabel = 'Operations Manager';
 
@@ -381,33 +406,35 @@ describe('OperationsOverviewDashboard', () => {
             />,
         );
 
-        // Header and perspective actions
         expect(
             screen.getByRole('heading', {
                 level: 1,
                 name: /operation dashboard/i,
             }),
         ).toBeInTheDocument();
-        const dispatchActionBtn = screen.getByRole('button', {
-            name: /Open dispatch workspace/i,
-        });
-        expect(dispatchActionBtn).toBeInTheDocument();
-        fireEvent.click(dispatchActionBtn);
-        expect(mockOnSectionChange).toHaveBeenCalledWith('dispatch');
+        expect(
+            screen.getByRole('region', { name: 'Today at a glance' }),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByRole('region', {
+                name: 'Manager action & exception queue',
+            }),
+        ).toBeInTheDocument();
+        expect(screen.getByTestId('live-tracking-preview')).toBeInTheDocument();
 
-        // High-density KPI strip
-        expect(screen.getByText("Today's Dispatches")).toBeInTheDocument();
-        expect(screen.getByText('Fleet Readiness')).toBeInTheDocument();
-        expect(screen.getByText('Field Authorizations')).toBeInTheDocument();
-        expect(screen.getByText('Safety & Grounded Units')).toBeInTheDocument();
+        // Administrator tooling stays out of the manager view.
+        expect(
+            screen.queryByRole('button', { name: /Users & Credentials/i }),
+        ).not.toBeInTheDocument();
 
-        // Clicking KPI triggers section change
-        const dispatchesKpi = screen
-            .getByText("Today's Dispatches")
-            .closest('button');
-        expect(dispatchesKpi).not.toBeNull();
-        fireEvent.click(dispatchesKpi!);
-        expect(mockOnSectionChange).toHaveBeenCalledWith('dispatch');
+        // Upcoming work from the overview props fills the empty schedule.
+        expect(
+            await screen.findByText("No dispatches on today's schedule"),
+        ).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: 'JOB-101' })).toHaveAttribute(
+            'href',
+            '/operations/dispatch-jobs/1?return_to=%2F%3Fview%3Doverview',
+        );
     });
 
     it('renders operator field worker view with calm MetricStrip and shift KPIs', () => {
@@ -546,67 +573,5 @@ describe('OperationsOverviewDashboard', () => {
         // Subsystem cards should show honest unknown/unavailable indicators rather than fake data
         expect(screen.queryByText('12.4 ms')).not.toBeInTheDocument();
         expect(screen.queryByText('1.2 ms')).not.toBeInTheDocument();
-    });
-
-    it('renders operations manager view with interactive action filters and accessible aria-pressed states', () => {
-        mockAuthRole = 'operations_manager';
-        mockAuthRoleLabel = 'Operations Manager';
-
-        const blockedAssets: AssetViewModel[] = [
-            {
-                id: 11,
-                code: 'CR-99',
-                name: 'Damaged Crane',
-                kind: 'crane',
-                status: { value: 'maintenance', label: 'Maintenance' },
-                blocking_work_orders_count: 2,
-            } as unknown as AssetViewModel,
-        ];
-
-        render(
-            <OperationsOverviewDashboard
-                jobs={mockJobs}
-                assets={blockedAssets}
-                fuelRequests={mockFuelRequests}
-                locations={mockLocations}
-                approvals={[
-                    {
-                        id: 1,
-                        can_decide: true,
-                        title: 'Emergency Overtime',
-                    } as unknown as ApprovalViewModel,
-                ]}
-                users={mockUsers}
-                capabilities={capabilities}
-                availableSections={availableSections}
-                onSectionChange={mockOnSectionChange}
-            />,
-        );
-
-        // Schedule filter buttons
-        const allScheduleFilter = screen.getByRole('button', {
-            name: /^all \(1\)/i,
-        });
-        expect(allScheduleFilter).toHaveAttribute('aria-pressed', 'true');
-
-        const activeScheduleFilter = screen.getByRole('button', {
-            name: /^active \(1\)/i,
-        });
-        expect(activeScheduleFilter).toHaveAttribute('aria-pressed', 'false');
-
-        // Locate filter buttons in the action queue (we have approvals + blocked assets)
-        const allActionsFilter = screen.getByRole('button', {
-            name: /^all \(2\)/i,
-        });
-        expect(allActionsFilter).toHaveAttribute('aria-pressed', 'true');
-
-        const approvalsFilter = screen.getByRole('button', {
-            name: /approvals/i,
-        });
-        expect(approvalsFilter).toHaveAttribute('aria-pressed', 'false');
-
-        fireEvent.click(approvalsFilter);
-        expect(approvalsFilter).toHaveAttribute('aria-pressed', 'true');
-        expect(allActionsFilter).toHaveAttribute('aria-pressed', 'false');
     });
 });

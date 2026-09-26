@@ -70,7 +70,6 @@ const defaultCapabilities: WorkspaceCapabilities = {
     create_service_request: false,
     convert_service_request: false,
     create_rental_dispatch: false,
-    create_sales_dispatch: false,
     share_location: false,
     view_tracking: false,
     request_fuel: false,

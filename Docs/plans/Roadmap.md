@@ -1,6 +1,6 @@
 # Core Transaction 2 — Roadmap
 
-**Last updated:** 2026-09-16  
+**Last updated:** 2026-09-25  
 **Planning rule:** Use outcome gates instead of calendar promises until team
 capacity and rollout dates are known.
 
@@ -46,7 +46,7 @@ environment.
 
 ## Accepted Module & Flow Structure
 
-Delivery work is organized around **5 core operational modules** and **3 tri-modal inbound business flows**:
+Delivery work is organized around **5 core operational modules** and **2 inbound business flows** plus direct dispatch:
 
 ### 5 Core Operational Modules
 1. **Dispatch Job and Scheduling**
@@ -55,16 +55,18 @@ Delivery work is organized around **5 core operational modules** and **3 tri-mod
 4. **Crane and Equipment Management**
 5. **Fuel Management**
 
-### 3 Tri-Modal Inbound Business Flows (from Core 1)
+### 2 Inbound Business Flows (from Core 1)
 - **Field Service Flow**: Client service intake to scheduled dispatch, assignment, field lifts, and reports.
 - **Rental Flow**: Equipment rental reservation, condition inspections, operator assignment, checkout/return.
-- **Sales Flow**: Catalog inventory, sales quotes, order reservation, delivery fulfillment, and ownership transfer.
+- **Direct Dispatch**: Manual operational dispatch when no Core 1 handoff exists.
+
+Sales fulfillment is no longer Core 2 roadmap work; the Sales module was removed on 2026-09-25.
 
 Identity, tracking, records, notifications, reports, attachments, GPT, and
 mobile delivery are shared platform services that enable these capabilities.
 
 This module structure supports Core 2's operational processing of Core 1
-service, rental, and sale handoffs. Core 1 owns Sales, CRM, Client, Job Order,
+service and rental handoffs. Core 1 owns Sales, CRM, Client, Job Order,
 Rental, and Project Management and is not built by this project. Only the Core
 2 receiving adapter and downstream delivery/dispatch handoffs are Core 2
 roadmap work; Core 1 commercial screens, contracts, payments, billing, and

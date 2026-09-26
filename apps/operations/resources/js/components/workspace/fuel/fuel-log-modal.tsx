@@ -13,7 +13,18 @@ import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui';
 import { humanize } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
-import type { FuelRequestViewModel } from '@/types/workspace';
+import type {
+    FuelNoReceiptReasonValue,
+    FuelRequestViewModel,
+} from '@/types/workspace';
+
+const NO_RECEIPT_REASONS: { value: FuelNoReceiptReasonValue; label: string }[] =
+    [
+        { value: 'on_site_bowser', label: 'On-site bowser / fuel truck' },
+        { value: 'vendor_no_receipt', label: 'Vendor gave no receipt' },
+        { value: 'receipt_lost', label: 'Receipt lost or damaged' },
+        { value: 'other', label: 'Other' },
+    ];
 
 interface FuelLogModalProps {
     isOpen: boolean;
@@ -45,6 +56,10 @@ function FuelLogModalContent({
     const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
     const [manualTotalCostOverride, setManualTotalCostOverride] =
         useState(false);
+    const [noReceipt, setNoReceipt] = useState(false);
+    const [receiptRuleError, setReceiptRuleError] = useState<string | null>(
+        null,
+    );
 
     const asset = request.asset ?? null;
     const isHourMeter =
@@ -69,6 +84,9 @@ function FuelLogModalContent({
         fuel_station: '',
         remarks: '',
         receipt: null as File | null,
+        receipt_number: '',
+        no_receipt_reason: '' as FuelNoReceiptReasonValue | '',
+        no_receipt_note: '',
     });
 
     useEffect(() => {
@@ -136,7 +154,14 @@ function FuelLogModalContent({
             return;
         }
 
-        form.setData('receipt', file);
+        form.setData((data) => ({
+            ...data,
+            receipt: file,
+            no_receipt_reason: '',
+            no_receipt_note: '',
+        }));
+        setNoReceipt(false);
+        setReceiptRuleError(null);
 
         if (file.type.startsWith('image/')) {
             const reader = new FileReader();
@@ -154,9 +179,44 @@ function FuelLogModalContent({
         setReceiptPreview(null);
     };
 
+    const receiptRuleMessage = (): string | null => {
+        if (form.data.receipt) {
+            return null;
+        }
+
+        if (!noReceipt) {
+            return 'Attach the fuel receipt, or tick "No receipt available" and say why.';
+        }
+
+        if (form.data.no_receipt_reason === '') {
+            return 'Choose why there is no receipt.';
+        }
+
+        if (
+            form.data.no_receipt_reason === 'other' &&
+            form.data.no_receipt_note.trim() === ''
+        ) {
+            return 'Explain why there is no receipt.';
+        }
+
+        return null;
+    };
+
     const submit = (e: FormEvent) => {
         e.preventDefault();
 
+        const ruleError = receiptRuleMessage();
+        setReceiptRuleError(ruleError);
+
+        if (ruleError) {
+            return;
+        }
+
+        form.transform((data) =>
+            data.receipt
+                ? { ...data, no_receipt_reason: '', no_receipt_note: '' }
+                : data,
+        );
         form.post(`/operations/fuel-requests/${request.id}/status`, {
             preserveScroll: true,
             forceFormData: true,
@@ -434,14 +494,15 @@ function FuelLogModalContent({
                     {/* Receipt Attachment */}
                     <div>
                         <label className="block text-xs font-semibold text-ink">
-                            Receipt Photo / Invoice Attachment
+                            Receipt Photo / Invoice Attachment *
                         </label>
                         <p className="mt-0.5 text-xs text-ink-soft">
-                            Attach fuel pump receipt or vendor delivery invoice
+                            Required. Attach the pump receipt or vendor invoice
                             (Max 15MB, PNG/JPEG/PDF).
                         </p>
 
-                        {!form.data.receipt ? (
+                        {!form.data.receipt && noReceipt ? null : !form.data
+                              .receipt ? (
                             <label className="mt-2 flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-line bg-surface-subtle p-5 text-center transition-colors focus-within:border-brand-strong focus-within:ring-2 focus-within:ring-brand-strong/30 hover:border-brand-strong hover:bg-brand-soft/20">
                                 <UploadCloud className="h-7 w-7 text-ink-soft" />
                                 <span className="mt-2 text-xs font-semibold text-ink">
@@ -495,9 +556,136 @@ function FuelLogModalContent({
                                 </button>
                             </div>
                         )}
-                        {form.errors.receipt && (
+                        {!form.data.receipt && (
+                            <div className="mt-3 space-y-3 rounded-xl border border-line bg-surface-subtle p-3">
+                                <label className="flex items-center gap-2 text-xs font-semibold text-ink">
+                                    <input
+                                        type="checkbox"
+                                        checked={noReceipt}
+                                        onChange={(e) => {
+                                            setNoReceipt(e.target.checked);
+                                            setReceiptRuleError(null);
+
+                                            if (!e.target.checked) {
+                                                form.setData((data) => ({
+                                                    ...data,
+                                                    no_receipt_reason: '',
+                                                    no_receipt_note: '',
+                                                }));
+                                            }
+                                        }}
+                                        className="h-4 w-4 rounded border-line-strong accent-brand-strong"
+                                    />
+                                    No receipt available
+                                </label>
+                                {noReceipt && (
+                                    <>
+                                        <p className="text-[11px] text-warning-strong">
+                                            The log will be flagged for office
+                                            review.
+                                        </p>
+                                        <div
+                                            className="grid gap-2 sm:grid-cols-2"
+                                            role="radiogroup"
+                                            aria-label="Why is there no receipt?"
+                                        >
+                                            {NO_RECEIPT_REASONS.map(
+                                                (reason) => (
+                                                    <label
+                                                        key={reason.value}
+                                                        className={cn(
+                                                            'flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-xs transition-colors',
+                                                            form.data
+                                                                .no_receipt_reason ===
+                                                                reason.value
+                                                                ? 'border-brand-strong bg-brand-soft/40 font-semibold text-ink ring-1 ring-brand-strong'
+                                                                : 'border-line-strong bg-surface text-ink hover:bg-surface-subtle',
+                                                        )}
+                                                    >
+                                                        <input
+                                                            type="radio"
+                                                            name="no-receipt-reason"
+                                                            value={reason.value}
+                                                            checked={
+                                                                form.data
+                                                                    .no_receipt_reason ===
+                                                                reason.value
+                                                            }
+                                                            onChange={() => {
+                                                                form.setData(
+                                                                    'no_receipt_reason',
+                                                                    reason.value,
+                                                                );
+                                                                setReceiptRuleError(
+                                                                    null,
+                                                                );
+                                                            }}
+                                                            className="accent-brand-strong"
+                                                        />
+                                                        {reason.label}
+                                                    </label>
+                                                ),
+                                            )}
+                                        </div>
+                                        <textarea
+                                            rows={2}
+                                            aria-label="No receipt explanation"
+                                            value={form.data.no_receipt_note}
+                                            onChange={(e) =>
+                                                form.setData(
+                                                    'no_receipt_note',
+                                                    e.target.value,
+                                                )
+                                            }
+                                            placeholder={
+                                                form.data.no_receipt_reason ===
+                                                'other'
+                                                    ? 'Required: explain why there is no receipt'
+                                                    : 'Optional: bowser sheet number, vendor contact…'
+                                            }
+                                            className="w-full rounded-lg border border-line-strong bg-surface p-3 text-sm text-ink transition-colors placeholder:text-ink-soft focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong/30 focus-visible:outline-hidden"
+                                        />
+                                    </>
+                                )}
+                            </div>
+                        )}
+                        {(receiptRuleError ??
+                            form.errors.receipt ??
+                            form.errors.no_receipt_note) && (
+                            <p
+                                role="alert"
+                                className="mt-1 flex items-center gap-1 text-xs font-medium text-danger"
+                            >
+                                <AlertTriangle className="h-3 w-3 shrink-0" />
+                                {receiptRuleError ??
+                                    form.errors.receipt ??
+                                    form.errors.no_receipt_note}
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Receipt number (from the printed receipt / OR) */}
+                    <div>
+                        <label
+                            htmlFor="fuel-receipt-number"
+                            className="block text-xs font-semibold text-ink"
+                        >
+                            Receipt / OR Number
+                        </label>
+                        <input
+                            id="fuel-receipt-number"
+                            type="text"
+                            maxLength={64}
+                            value={form.data.receipt_number}
+                            onChange={(e) =>
+                                form.setData('receipt_number', e.target.value)
+                            }
+                            placeholder="e.g. OR-448812"
+                            className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 font-mono text-sm text-ink transition-colors placeholder:text-ink-soft focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong/30 focus-visible:outline-hidden sm:w-1/2"
+                        />
+                        {form.errors.receipt_number && (
                             <p className="mt-1 text-xs text-danger">
-                                {form.errors.receipt}
+                                {form.errors.receipt_number}
                             </p>
                         )}
                     </div>

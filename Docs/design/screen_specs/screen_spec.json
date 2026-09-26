@@ -75,12 +75,6 @@
       "flow_name": "Equipment Rental Checkout & Return Flow",
       "roles": ["Field Technician", "Logistics Driver", "Field Inspector"],
       "screens": ["M-RNT-01", "M-RNT-02"]
-    },
-    {
-      "flow_id": "FLOW_06_SALES_FULFILLMENT",
-      "flow_name": "Equipment Sales Delivery & Title Handover Flow",
-      "roles": ["Delivery Driver", "Handover Technician"],
-      "screens": ["M-SAL-01", "M-SAL-02"]
     }
   ],
   "screens": [
@@ -770,79 +764,6 @@
         ]
       },
       "stitch_prompt": "Create an industrial rental return condition diff and check-in screen (390x844). Background is cool slate (#F8FAFC). Top header shows Rental 'RNT-2026-0412' with a gold status badge 'RETURN CONDITION DIFF'. The body features a comparison card with 3 rows comparing 'Checkout Baseline' vs 'Return Actual': 1) Hours: '1,420.5 hrs' ➔ '1,498.2 hrs' (+77.7 hrs, neutral slate); 2) Fuel: '100%' ➔ '65%' (Gold badge: 'Refueling Charge Due'); 3) Body: 'Clean' ➔ 'Dent on right panel' (Red badge: 'Damage Flagged' with 2 photo thumbnails). Action footer: 52px full-width gold button (#FFBF00) 'Finalize Rental Return & Trigger Closeout'. Clear, transparent, dispute-preventing design."
-    },
-    {
-      "screen_id": "M-SAL-01",
-      "flow_id": "FLOW_06_SALES_FULFILLMENT",
-      "name": "Equipment Sales Delivery & VIN / Serial Verification",
-      "role": ["Delivery Driver", "Handover Technician"],
-      "viewport": "390x844 (Mobile Portrait)",
-      "description": "Equipment sales fulfillment and physical delivery screen featuring camera-based VIN/Serial barcode scanning, included accessories checklist, and physical asset verification.",
-      "ui_contract": {
-        "header": {
-          "sales_order_id": "SO-2026-0091",
-          "buyer_name": "Penta-Ocean Construction Pte Ltd",
-          "equipment_model": "Caterpillar 320 GC Excavator",
-          "stage": "Physical Delivery & Serial Verification"
-        },
-        "vin_verification_section": {
-          "expected_vin": "CAT0320GCLTK88912",
-          "scan_status": "Verified via Optical Barcode Scan (Green)",
-          "engine_serial": "C4.4-ENG-90182 (Verified)"
-        },
-        "included_accessories_checklist": [
-          {"name": "Standard Excavator Bucket (1.0m³)", "verified": true},
-          {"name": "Hydraulic Quick Coupler & Pins", "verified": true},
-          {"name": "Master Ignition Keys (2 sets)", "verified": true},
-          {"name": "OEM Operator & Maintenance Manuals", "verified": true},
-          {"name": "Factory CE / EPA Emission Certification", "verified": true}
-        ],
-        "actions": [
-          {
-            "id": "btn_proceed_to_transfer",
-            "label": "All Items Verified • Proceed to Title Transfer",
-            "variant": "primary_action_blue",
-            "min_height": 52
-          }
-        ]
-      },
-      "stitch_prompt": "Create an industrial sales equipment delivery and VIN verification screen (390x844). Cool slate canvas (#F8FAFC). Header shows Sales Order 'SO-2026-0091' for buyer 'Penta-Ocean Construction' and machine 'CAT 320 GC Excavator'. The primary section is a VIN/Serial Verification Card featuring a camera barcode icon, expected VIN 'CAT0320GCLTK88912', and a large green verified chip 'BARCODE MATCHED'. Below is an 'Included Accessories & Rigging' checklist with 5 checked items (Bucket, Quick Coupler, 2x Keys, Manuals, Factory Cert). Full-width 52px Cobalt Blue button (#2563EB) 'All Items Verified • Proceed to Title Transfer'. Clean, crisp, and high precision."
-    },
-    {
-      "screen_id": "M-SAL-02",
-      "flow_id": "FLOW_06_SALES_FULFILLMENT",
-      "name": "Title Handover & Fleet Decommissioning Sign-off",
-      "role": ["Delivery Driver", "Handover Technician"],
-      "viewport": "390x844 (Mobile Portrait)",
-      "description": "Terminal legal title transfer and ownership sign-off screen. Captures buyer signature, applies cryptographic audit record, and triggers automatic fleet de-registration and asset decommissioning.",
-      "ui_contract": {
-        "header": {
-          "sales_order_id": "SO-2026-0091",
-          "buyer_name": "Penta-Ocean Construction Pte Ltd",
-          "title": "Title Transfer & Asset Decommissioning",
-          "legal_warning": "TERMINAL ACTION: Transferring title permanently removes asset from Alibaton operational fleet."
-        },
-        "buyer_verification": {
-          "authorized_signatory": "Engr. Jonathan Lim",
-          "designation": "Director of Plant & Equipment",
-          "nric_last4": "S****891A",
-          "digital_signature_pad": "Digital signature captured"
-        },
-        "audit_metadata": {
-          "timestamp": "2026-08-15 17:30:45 SGT",
-          "geo_coordinates": "1.3048° N, 103.6821° E (Tuas Mega Yard)",
-          "idempotency_hash": "sha256:7e91a0...92b"
-        },
-        "actions": [
-          {
-            "id": "btn_transfer_title_decommission",
-            "label": "Confirm Handover & Decommission from Fleet",
-            "variant": "primary_dark_charcoal",
-            "min_height": 56
-          }
-        ]
-      },
-      "stitch_prompt": "Create an authoritative legal handover and fleet decommissioning screen (390x844). Background is cool slate (#F8FAFC). Top section contains a Gold/Charcoal legal advisory card: 'TERMINAL TRANSACTION: Transferring title permanently transfers ownership and decommissions asset from Alibaton operational fleet.' Body features Buyer Signatory Details (Engr. Jonathan Lim - Director of Plant) and a clean, high-contrast digital signature pad with a bold signature stroke. At the bottom, a metadata chip displays GPS coordinates and timestamp. Action button is a massive 56px Dark Charcoal button (#1E293B) with white text 'Confirm Handover & Decommission from Fleet'. Authoritative, clean, and legally conclusive."
     }
   ]
 }

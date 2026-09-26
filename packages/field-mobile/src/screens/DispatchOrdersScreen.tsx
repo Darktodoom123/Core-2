@@ -5,11 +5,13 @@ import { JobListItemCard } from '../components/cards/JobListItemCard';
 import { Icon } from '../components/common/Icon';
 import { TileScreenHeader } from '../components/layout/tile-screen-header';
 import { colors, shadows } from '../components/nativeStyles';
+import { ReportDelayModal } from '../components/sheets/ReportDelayModal';
 import { useTheme } from '../theme';
 import type {
     DispatchJob,
     DispatchStatus,
     OutboxCommand,
+    ReportDelayPayload,
 } from '../types/index';
 
 export interface DispatchOrdersScreenProps {
@@ -33,8 +35,16 @@ export interface DispatchOrdersScreenProps {
         version: number,
     ) => void;
     onOpenRoutes?: () => void;
+    onOpenDvir?: () => void;
+    /** Delegates delay reporting to a parent that owns its own delay form. */
     onReportDelay?: (job: DispatchJob) => void;
+    /** Submits a delay from this screen's own delay form. */
+    onSubmitDelay?: (
+        jobId: number,
+        payload: ReportDelayPayload,
+    ) => Promise<void> | void;
     conflictedCommands?: OutboxCommand[];
+    outboxCommands?: OutboxCommand[];
     onAcceptServerState?: (commandId: string) => void;
     onRetryNewVersion?: (commandId: string, newVersion: number) => void;
     testID?: string;
@@ -49,8 +59,11 @@ export const DispatchOrdersScreen: React.FC<DispatchOrdersScreenProps> = ({
     onSelectJob,
     onTransitionStatus,
     onOpenRoutes,
+    onOpenDvir,
     onReportDelay,
+    onSubmitDelay,
     conflictedCommands,
+    outboxCommands,
     onAcceptServerState,
     onRetryNewVersion,
     testID = 'dispatch-orders-screen',
@@ -62,9 +75,14 @@ export const DispatchOrdersScreen: React.FC<DispatchOrdersScreenProps> = ({
         (job) => job.my_assignment?.response_status === 'pending',
     );
     const [userTab, setUserTab] = useState<'pending' | 'all' | null>(null);
+    const [delayModalJob, setDelayModalJob] = useState<DispatchJob | null>(
+        null,
+    );
 
     const selectedTab = userTab ?? (pendingJobs.length > 0 ? 'pending' : 'all');
     const displayedJobs = selectedTab === 'pending' ? pendingJobs : jobs;
+    const handleReportDelay =
+        onReportDelay ?? (onSubmitDelay ? setDelayModalJob : undefined);
 
     return (
         <View
@@ -241,6 +259,16 @@ export const DispatchOrdersScreen: React.FC<DispatchOrdersScreenProps> = ({
                                     (!command.jobId && jobs.length === 1),
                             );
 
+                        const queuedDelayCommand = outboxCommands?.find(
+                            (command) =>
+                                command.type === 'report_delay' &&
+                                (command.state === 'queued' ||
+                                    command.state === 'syncing') &&
+                                (command.jobId === job.id ||
+                                    (command.payload as any)
+                                        ?.dispatch_job_id === job.id),
+                        );
+
                         return (
                             <View
                                 key={job.id}
@@ -268,7 +296,8 @@ export const DispatchOrdersScreen: React.FC<DispatchOrdersScreenProps> = ({
                                                 ? undefined
                                                 : onRejectAssignment
                                         }
-                                        onReportDelay={onReportDelay}
+                                        onReportDelay={handleReportDelay}
+                                        queuedDelayCommand={queuedDelayCommand}
                                         onRetryNewVersion={onRetryNewVersion}
                                         onSelectJob={onSelectJob}
                                         onTransitionStatus={onTransitionStatus}
@@ -294,6 +323,19 @@ export const DispatchOrdersScreen: React.FC<DispatchOrdersScreenProps> = ({
                     })
                 )}
             </ScrollView>
+
+            {delayModalJob && onSubmitDelay ? (
+                <ReportDelayModal
+                    job={delayModalJob}
+                    onClose={() => setDelayModalJob(null)}
+                    onNavigateDvir={onOpenDvir}
+                    onSubmit={async (payload) => {
+                        await onSubmitDelay(delayModalJob.id, payload);
+                        setDelayModalJob(null);
+                    }}
+                    visible
+                />
+            ) : null}
         </View>
     );
 };

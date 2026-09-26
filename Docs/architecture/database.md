@@ -1,6 +1,6 @@
 # Core Transaction 2 — Database
 
-**Last updated:** 2026-09-22  
+**Last updated:** 2026-09-25  
 **Source of truth:** Laravel migrations and Eloquent models  
 **Production target:** Managed PostgreSQL 16 (or Supabase) databases (`core2_production` for Operations and `core2_tracking_production` for Tracking), accessed only by persistent Laravel web and worker services
 
@@ -22,12 +22,15 @@ provider, and monitoring vendor remain undecided.
 
 ## Module ownership
 
-The persistence model supports the **5 core operational modules** and the operational data models for the **3 tri-modal inbound business flows**:
+The persistence model supports the **5 core operational modules** and the operational data models for the **2 inbound business flows** (Service and Rental) plus direct dispatch:
 
 Core 1 owns Sales, CRM, Client, Job Order, Rental, and Project Management. Core
-2 receives Core 1 service, rental, and sale handoffs and persists the
+2 receives Core 1 service and rental handoffs and persists the
 operational records needed for readiness, scheduling, fulfillment, dispatch,
-asset state, and audit. The schema contains operational entities for all three inbound flows. Core 1 itself is outside this repository's scope. The
+asset state, and audit. The schema contains operational entities for both inbound flows.
+Core 2 does not receive or fulfill sale handoffs; the former sales tables were
+dropped by `2026_09_25_130000_remove_sales_module.php`, which also converted
+existing sale-sourced dispatches to direct (manual) dispatches. Core 1 itself is outside this repository's scope. The
 Core 2 receiving adapter and delivery handoffs remain unfinished; commercial
 contracts, customer-facing screens, payments, billing, and invoicing remain
 owned by Core 1. See [Alibaton Business Context and CT2 Scope](../product/alibaton-business-scope.md) and
@@ -40,9 +43,8 @@ owned by Core 1. See [Alibaton Business Context and CT2 Scope](../product/alibat
 4. **Crane and Equipment Management** — crane and heavy equipment records, certifications, load charts, and safety inspections.
 5. **Fuel Management** — fuel requests, verified fuel logs, burn rate baselines, and anomaly detection.
 
-### Tri-Modal Inbound Flow Entities
+### Inbound Flow Entities
 - **Rental Operations** — reservations, reservation items, checkout, returns, and condition diff records.
-- **Sales Fulfillment** — catalog items, quotes, orders, inventory ledger, and ownership transfers.
 
 Fleet and Crane/Equipment Management intentionally share the
 `operational_assets` table and Eloquent model. Identity, location, audit,
@@ -88,16 +90,6 @@ erDiagram
     OPERATIONAL_ASSETS ||--o{ RENTAL_RESERVATION_ITEMS : reserved
     RENTAL_RESERVATIONS ||--o| RENTAL_CHECKOUTS : checked_out
     RENTAL_RESERVATIONS ||--o| RENTAL_RETURNS : returned
-    CLIENTS ||--o{ SALES_QUOTES : requests
-    SALES_QUOTES ||--o{ SALES_QUOTE_ITEMS : contains
-    SALES_CATALOG_ITEMS ||--o{ SALES_QUOTE_ITEMS : priced
-    SALES_QUOTES ||--o| SALES_ORDERS : accepted_as
-    SALES_ORDERS ||--o{ SALES_ORDER_ITEMS : contains
-    SALES_CATALOG_ITEMS ||--o{ SALES_ORDER_ITEMS : fulfilled
-    SALES_CATALOG_ITEMS ||--o{ SALES_INVENTORY_LEDGER : records
-    SALES_ORDERS ||--o{ SALES_INVENTORY_LEDGER : commits
-    SALES_ORDER_ITEMS ||--o| OWNERSHIP_TRANSFERS : transfers
-    OPERATIONAL_ASSETS ||--o| OWNERSHIP_TRANSFERS : sold
 ```
 
 ## Table catalog
@@ -197,22 +189,15 @@ Operator HOS minutes remain canonical on `operator_shifts` and `CalculateHosCloc
 - `safety_work_stoppages`: stop-work notice number, dispatch job ID, issuer ID, lifting authorizer ID, imminent danger description, status (`active`, `lifted`), and resumption authorization timestamp.
 - `safety_tower_crane_shift_logs`: tower crane asset, operator ID, anemometer wind speeds, load counts, structural observations, and handover clearance.
 
-### Modules 8-9: Rental and Sales tables
+### Module 8: Rental tables
 
-The following twelve tables are implemented operational mirrors for the partial backend/API slice:
+The following five tables are implemented operational mirrors for the partial backend/API slice:
 
 - `rental_reservations`: unique 48-character reference, client, creator, optional approver/dispatch job, `requested`/`reserved`/`checked_out`/`returned`/`closed` status, inclusive start/end dates, fulfillment mode, location/notes, derived `total_cents`, soft delete, and status/date indexes.
 - `rental_reservation_items`: reservation, physical operational asset, quantity (supported value exactly 1), server-derived rate and line total; asset and reservation index.
 - `rental_operator_assignments`: per-rental-item qualified operator, matched operator type, assigning actor, and half-open active interval bounded by the inclusive rental dates; unique item/operator assignment and operator-window index.
 - `rental_checkouts`: one row per reservation through a unique reservation key, actor/time, nullable legacy `condition_before` JSON, and notes.
 - `rental_returns`: one row per reservation through a unique reservation key, actor/time, nullable legacy `condition_after` JSON, and damage notes.
-- `sales_catalog_items`: unique SKU, name/description, server-authoritative unit price, on-hand/reserved counters, optional unique linked operational asset, status, and status/on-hand index. A linked physical item has exactly one unit.
-- `sales_quotes`: unique 48-character reference, client/creator, draft/accepted/rejected/expired status, currency, derived total, inclusive `valid_until`, and notes.
-- `sales_quote_items`: quote, catalog item, bounded quantity, catalog-derived unit price, and checked line total.
-- `sales_orders`: unique derived reference in a widened 64-character column, client, optional source quote, creator, confirmed/fulfilled/transferred/cancelled status, currency, derived total, and fulfillment time.
-- `sales_order_items`: order, catalog item, quantity, persisted unit price and line total, plus the supporting catalog/order conflict index.
-- `sales_inventory_ledger`: catalog item, optional order, actor, `initial_stock`, `reserve`, or `sale` entry type, signed quantity delta, and safe metadata.
-- `ownership_transfers`: order/order item/catalog item, optional physical asset, actor/time, one unique transfer per order-item/catalog-item pair, and one unique transfer per physical asset. A transferred physical asset remains unavailable.
 
 ### Modules 10-11: Dispatch V2, Reference Sequences, and SOS Safety Tables
 

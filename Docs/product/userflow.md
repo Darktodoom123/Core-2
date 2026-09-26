@@ -13,11 +13,12 @@
 
 Failure paths include invalid credentials, throttling, suspension, and unverified email.
 
-The operational journeys below execute across the **5 Main Operational Business Modules** (1. Dispatch Job and Scheduling [Real-Time Activation], 2. Assign Driver/Operator and Equipment, 3. Fleet Management, 4. Crane and Equipment Management, 5. Fuel Management) and govern the **3 tri-modal business flows** (Service, Rental, and Sales). DVIR, HoS, emergency SOS, statutory safety governance, and GPT advisories operate as integrated sub-features and platform services.
+The operational journeys below execute across the **5 Main Operational Business Modules** (1. Dispatch Job and Scheduling [Real-Time Activation], 2. Assign Driver/Operator and Equipment, 3. Fleet Management, 4. Crane and Equipment Management, 5. Fuel Management) and govern the **2 inbound business flows** (Service and Rental) plus direct dispatch. DVIR, HoS, emergency SOS, statutory safety governance, and GPT advisories operate as integrated sub-features and platform services.
 
 Core 1 is the upstream source for customer, commercial, job-order, rental, and
-project context. Core 2 receives three handoff types from Core 1—service,
-rental, and sale—and performs the operational workflow. Complete commercial
+project context. Core 2 receives two handoff types from Core 1—service and
+rental—and performs the operational workflow. Core 2 does not receive or
+fulfill sale handoffs. Complete commercial
 contracts, customer-facing screens, payments, billing, and invoicing remain in
 Core 1 and are outside this repository's scope. Only the Core 2 receiving
 adapter and downstream operational handoffs are potential Core 2 work. See
@@ -26,7 +27,7 @@ adapter and downstream operational handoffs are potential Core 2 work. See
 The target entry flow is:
 
 ```text
-Core 1 service, rental, or sale transaction
+Core 1 service or rental transaction
     -> authenticated Core 2 receiving boundary
     -> Core 2 validation and operational record
     -> availability/readiness checks
@@ -41,12 +42,11 @@ identifies each incoming handoff, so Core 2 routes it automatically:
 
 1. An eligible Service Request opens the linked service workflow.
 2. An eligible reserved Rental delivery opens the rental handoff workflow.
-3. An eligible confirmed Sales delivery opens the sales handoff workflow.
-4. If no upstream handoff exists, an authorized user can choose **Create
+3. If no upstream handoff exists, an authorized user can choose **Create
    direct dispatch**. This creates a Core 2 operational draft with
    `manual_intake` provenance and does not create a commercial transaction.
 
-Incoming work is shown as a queue of source-specific records, not as three
+Incoming work is shown as a queue of source-specific records, not as
 source categories the user must choose between. Unmatched handoffs are
 reviewed through a separate **Review unmatched handoffs** action. A suggested
 match to a manual draft remains advisory until the user reviews and confirms
@@ -146,7 +146,7 @@ map with freshness filters. The versioned `/api/v1` command flow is implemented
 with expected versions and conflict responses; the 8-hour native field outbox
 and device integration remain planned.
 
-## 5. Tri-Modal Inbound Flow: Rental received from Core 1
+## 5. Inbound Flow: Rental received from Core 1
 
 ```mermaid
 flowchart LR
@@ -177,65 +177,41 @@ future work.
 Every Rental command is a session-authenticated, CSRF-protected JSON request.
 The server derives rental days and totals, requires exact route permission, and
 rechecks the complete asset batch after ascending row locks. A stale asset,
-blocking maintenance/inspection, overlapping active Rental/Dispatch use, or
-committed Sales use fails the whole command with a validation conflict. Checkout
+blocking maintenance/inspection, or overlapping active Rental/Dispatch use
+fails the whole command with a validation conflict. Checkout
 and return require bounded non-empty condition evidence; return preserves a
 more restrictive asset state.
 
-## 6. Tri-Modal Inbound Flow: Sale received from Core 1
+## 6. Module 5: Fuel Management (Fuel Request & Anomaly Tracking)
 
 ```mermaid
 flowchart LR
-    A[Core 1 confirmed sale] --> B[Core 2 receiving boundary]
-    B --> C[Validate operational inventory]
-    C --> D[Reserve inventory]
-    D --> E{Delivery required?}
-    E -->|Yes| F[Create Core 2 dispatch context]
-    E -->|No| G[Fulfill order]
-    F --> G
-    G --> H[Record ownership transfer]
-    H --> I[Linked operational asset unavailable]
-```
-
-Core 1 owns quotations, customer acceptance, commercial pricing, payments,
-taxes, invoicing, and accounting. Core 2 receives confirmed sale work, checks
-operational inventory, reserves and fulfills it, coordinates delivery when
-required, records ownership transfer, and makes a linked operational asset
-unavailable.
-
-Inventory reservation, ledger entries, fulfillment, and ownership transfer
-remain a partial backend/API slice. The Dispatch Workspace now lists confirmed
-delivery orders, accepts a delivery window, and creates an authenticated,
-source-linked dispatch handoff atomically. A linked sale cannot be fulfilled
-while its dispatch is incomplete; pickup and legacy unlinked delivery records
-remain compatible. The Core 1 receiving adapter and complete commercial UI
-remain future work.
-
-Sales commands are also JSON-only on the session boundary. Quote acceptance
-locks and rechecks the quote, catalog rows, and linked assets before creating an
-order, reserving stock, writing the ledger, changing quote state, and auditing.
-Fulfillment rechecks stock and readiness and makes physical linked assets
-unavailable. Confirmed, fulfilled, and transferred order status remains a sale
-commitment; ownership transfer is terminal and cannot be reversed by an
-operational status, inspection, maintenance, or Rental-return path.
-
-## 7. Module 5: Fuel Management (Fuel Request & Anomaly Tracking)
-
-```mermaid
-flowchart LR
-    A[Field user submits] --> B[Manager forwards]
-    B --> C{Manager decision}
-    C -->|Reject| D[Rejected]
-    C -->|Approve| E[Technician verifies]
-    E --> F[Fuel log and receipt recorded]
+    A[Field user submits<br/>urgency, needed-by, tank level] --> B{Office review}
+    A -->|Requester, before decision| W[Withdrawn]
+    B -->|Reject with reason| D[Rejected]
+    B -->|Approve| E[Verified for refuel]
+    E --> F[Refuel logged<br/>receipt or no-receipt reason]
+    F -->|No receipt| G[Receipt exception reviewed]
 ```
 
 The server implements submission, forwarding, approve/reject, verification,
-and final logging. Logging records quantity, price per litre, total cost,
-odometer, hour meter, station, remarks, an optional receipt attachment, and
-audit history.
+withdrawal, and final logging. On the web, a reviewer who holds both forward
+and approve permissions sees one **Review Decision** action; the server still
+records `forwarded` then `approved`/`rejected` in one audited transaction, and
+the requester can never review their own request. Reviewers are notified of
+new submissions; the requester is notified on approval, rejection, and
+verification.
 
-## 8. Module 3 & Module 4: Fleet & Crane/Equipment Inspection and Maintenance Release
+Mobile requests are written to the device outbox first and shown as
+**Waiting to sync**, **Syncing**, or **Needs attention** until the server
+returns a reference. Only a verified request offers **Record refueling**.
+Logging records actual litres (kept separate from the requested litres), the
+asset's meter (engine hours or odometer), PHP cost, station, remarks, an
+optional receipt/OR number, and either a receipt photo or a no-receipt reason.
+Logs without a receipt appear under **Receipt review** on the web until a
+verifier marks the exception reviewed.
+
+## 7. Module 3 & Module 4: Fleet & Crane/Equipment Inspection and Maintenance Release
 
 Fleet vehicles (Module 3) and Crane/Equipment assets (Module 4) are managed through a
 unified operational asset register in the routed workspace:
@@ -249,7 +225,7 @@ unified operational asset register in the routed workspace:
 7. Technician releases the work order.
 8. Asset becomes `ready_for_service` only if no unreleased blocking work remains.
 
-## 9. Shared service: User administration
+## 8. Shared service: User administration
 
 1. System Administrator creates an internal account with one canonical role.
 2. Administrator records personnel availability and credentials where relevant.
@@ -280,7 +256,7 @@ Personnel credentials remain in a separate view. Rigger accounts can sign in
 and are managed under Accounts; their qualifications and credentials are
 managed under Personnel credentials.
 
-## 10. Shared service: GPT-assisted dispatch — current flow
+## 9. Shared service: GPT-assisted dispatch — current flow
 
 1. Authorized office user requests a recommendation using scoped, redacted context.
 2. GPT returns proposed assignments, reasons, assumptions, and conflicts.
@@ -301,7 +277,7 @@ also exposed to authorized users. This is a scoped review workflow, not a
 general chat surface; it does not prove a live-provider-to-field execution
 chain.
 
-## 11. Fleet & Equipment Sub-system: Driver Vehicle Inspection Reports (DVIR)
+## 10. Fleet & Equipment Sub-system: Driver Vehicle Inspection Reports (DVIR)
 
 ```mermaid
 flowchart TD
@@ -326,7 +302,7 @@ flowchart TD
 5. **Corrective Workflow**: Mechanic or Operations Manager reviews defect list, opens linked maintenance work orders, and repairs the issue.
 6. **Sign-Off & Return to Service**: Mechanic certifies repair; subsequent operator reviews prior defect history and signs off before operational handover.
 
-## 12. Driver/Operator Assignment Sub-system: Hours of Service (HoS) & Fatigue Management
+## 11. Driver/Operator Assignment Sub-system: Hours of Service (HoS) & Fatigue Management
 
 ```mermaid
 flowchart LR
@@ -345,7 +321,7 @@ flowchart LR
 4. **Rest Break Logging**: Operator logs `on_break` periods during the shift for fatigue mitigation.
 5. **Log Certification & Edits**: Operator electronically signs duty logs (`operator_duty_logs`); any manual adjustments require a mandatory reason and are logged to an immutable audit trail.
 
-## 13. Statutory Safety Governance (DOLE OSHS Rule 1410 & DO 198-18)
+## 12. Statutory Safety Governance (DOLE OSHS Rule 1410 & DO 198-18)
 
 1. **Toolbox Meeting (TBM)**:
    - Before daily operations, Operator conducts a site briefing.
@@ -364,7 +340,7 @@ flowchart LR
    - Field personnel submit near-miss or hazard reports with severity rating (`low`, `medium`, `high`, `critical`), GPS, and photos.
    - Operations Manager assigns corrective actions and tracks resolution status.
 
-## 14. SOS Emergency Response System
+## 13. SOS Emergency Response System
 
 ```mermaid
 flowchart TD
@@ -386,7 +362,7 @@ flowchart TD
 4. **Escalation Sweep**: If not acknowledged within the escalation threshold, automated scheduler escalates the alert to senior management.
 5. **Resolution**: Responders coordinate assistance, mark the status as resolved using a valid code (`all_clear`, `assistance_rendered`, `evacuated`, `medical_attended`, `false_alarm`), and record detailed notes.
 
-## 15. Dispatch Project Planning & Multi-Crane Allocations
+## 14. Dispatch Project Planning & Multi-Crane Allocations
 
 1. **Project Plan Creation**: Operations Manager creates a multi-day industrial project plan, setting scope, customer, site, and operational dates.
 2. **Phases & Milestones**: Manager defines sequenced phases with predecessor dependencies (e.g. Phase 1: Site Prep & Foundation, Phase 2: Heavy Turbine Lift).

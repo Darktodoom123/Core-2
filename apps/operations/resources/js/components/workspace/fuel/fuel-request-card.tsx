@@ -22,11 +22,20 @@ import type {
 } from '@/types/workspace';
 import { FuelVarianceBadge } from './fuel-variance-badge';
 
+export type FuelReviewDecision = 'approved' | 'rejected';
+
 export interface FuelRequestCardProps {
     request: FuelRequestViewModel;
     capabilities: WorkspaceCapabilities;
     onRecordLog: (request: FuelRequestViewModel) => void;
     onTransition: (requestId: number, status: string, reason?: string) => void;
+    onReview?: (
+        requestId: number,
+        decision: FuelReviewDecision,
+        reason?: string,
+    ) => void;
+    onWithdraw?: (requestId: number, reason?: string) => void;
+    onReviewReceipt?: (logId: number, note?: string) => void;
     pendingActionId?: string | null;
     currentUserId?: number | null;
     isDetail?: boolean;
@@ -34,11 +43,28 @@ export interface FuelRequestCardProps {
     onSelect?: () => void;
 }
 
+const URGENCY_STYLES: Record<string, string> = {
+    critical: 'border-danger/50 bg-danger-soft text-danger-strong',
+    urgent: 'border-warning/50 bg-warning-soft text-warning-strong',
+};
+
+function formatShortDateTime(value: string): string {
+    return new Date(value).toLocaleString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+}
+
 export function FuelRequestCard({
     request,
     capabilities,
     onRecordLog,
     onTransition,
+    onReview,
+    onWithdraw,
+    onReviewReceipt,
     pendingActionId,
     currentUserId,
     isDetail = false,
@@ -46,7 +72,10 @@ export function FuelRequestCard({
     onSelect,
 }: FuelRequestCardProps) {
     const [decisionReason, setDecisionReason] = useState('');
+    const [decisionError, setDecisionError] = useState<string | null>(null);
     const [showDecisionInput, setShowDecisionInput] = useState(false);
+    const [showWithdrawInput, setShowWithdrawInput] = useState(false);
+    const [withdrawReason, setWithdrawReason] = useState('');
     const [viewingReceiptUrl, setViewingReceiptUrl] = useState<string | null>(
         null,
     );
@@ -85,6 +114,45 @@ export function FuelRequestCard({
     const isPendingThisAction = (actionStatus: string) =>
         pendingActionId === `${request.id}:${actionStatus}`;
 
+    // One review step: a manager holding forward + approve decides a submitted
+    // request directly; the server still records both audited stages.
+    const canDecide =
+        (statusVal === 'submitted' &&
+            capabilities.forward_fuel &&
+            capabilities.approve_fuel) ||
+        (statusVal === 'forwarded' && capabilities.approve_fuel);
+    const canForwardOnly =
+        statusVal === 'submitted' &&
+        capabilities.forward_fuel &&
+        !capabilities.approve_fuel;
+    const canWithdraw =
+        Boolean(onWithdraw) &&
+        Boolean(effectiveUserId) &&
+        effectiveUserId === request.requester?.id &&
+        (statusVal === 'submitted' || statusVal === 'forwarded');
+    const urgency = request.urgency;
+    const urgencyStyle = urgency ? URGENCY_STYLES[urgency.value] : undefined;
+
+    const decide = (decision: FuelReviewDecision) => {
+        const reason = decisionReason.trim();
+
+        if (decision === 'rejected' && reason === '') {
+            setDecisionError(
+                'Add a reason so the requester knows why it was declined.',
+            );
+
+            return;
+        }
+
+        setDecisionError(null);
+
+        if (onReview) {
+            onReview(request.id, decision, reason || undefined);
+        } else {
+            onTransition(request.id, decision, reason || undefined);
+        }
+    };
+
     return (
         <li
             onClick={onSelect}
@@ -118,6 +186,28 @@ export function FuelRequestCard({
                                 compact
                             />
                         )}
+
+                        {urgency && urgencyStyle && (
+                            <span
+                                className={cn(
+                                    'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-semibold',
+                                    urgencyStyle,
+                                )}
+                                data-testid="fuel-urgency-badge"
+                            >
+                                <AlertTriangle className="h-3 w-3" />
+                                {urgency.label}
+                            </span>
+                        )}
+
+                        {request.current_fuel_level_percent !== null &&
+                            request.current_fuel_level_percent !==
+                                undefined && (
+                                <span className="inline-flex items-center gap-1 rounded-md border border-line bg-surface-subtle px-2 py-0.5 text-[11px] font-medium text-ink-soft tabular-nums">
+                                    <Gauge className="h-3 w-3 text-brand-strong" />
+                                    Tank {request.current_fuel_level_percent}%
+                                </span>
+                            )}
 
                         {request.shift && (
                             <span className="inline-flex items-center gap-1 rounded-md border border-line bg-surface-subtle px-2 py-0.5 text-[11px] font-medium text-ink-soft tabular-nums">
@@ -156,8 +246,8 @@ export function FuelRequestCard({
 
                 {/* State Transition Actions */}
                 <div className="flex flex-wrap items-center gap-2 self-start">
-                    {/* Forward (Submitted -> Forwarded) */}
-                    {statusVal === 'submitted' && capabilities.forward_fuel && (
+                    {/* Forward only (reviewer without approval authority) */}
+                    {canForwardOnly && (
                         <Button
                             variant="secondary"
                             size="sm"
@@ -173,23 +263,34 @@ export function FuelRequestCard({
                         </Button>
                     )}
 
-                    {/* Review Decision (Forwarded -> Approved / Rejected) */}
-                    {statusVal === 'forwarded' && capabilities.approve_fuel && (
-                        <>
-                            {!showDecisionInput && (
-                                <Button
-                                    variant="primary"
-                                    size="sm"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setShowDecisionInput(true);
-                                    }}
-                                    disabled={Boolean(pendingActionId)}
-                                >
-                                    Review Decision
-                                </Button>
-                            )}
-                        </>
+                    {/* Single review step (Submitted/Forwarded -> Approved / Rejected) */}
+                    {canDecide && !showDecisionInput && (
+                        <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setShowDecisionInput(true);
+                            }}
+                            disabled={Boolean(pendingActionId)}
+                        >
+                            Review Decision
+                        </Button>
+                    )}
+
+                    {/* Requester withdraws before a decision */}
+                    {canWithdraw && !showWithdrawInput && (
+                        <Button
+                            variant="quiet"
+                            size="sm"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setShowWithdrawInput(true);
+                            }}
+                            disabled={Boolean(pendingActionId)}
+                        >
+                            Withdraw request
+                        </Button>
                     )}
 
                     {/* Verify (Approved -> Verified) */}
@@ -229,123 +330,190 @@ export function FuelRequestCard({
                 </div>
             </div>
 
-            {/* Decision Reason Input Box / Self-Review Guard for Forwarded Requests */}
-            {statusVal === 'forwarded' &&
-                capabilities.approve_fuel &&
-                showDecisionInput && (
-                    <div
-                        onClick={(e) => e.stopPropagation()}
-                        className="space-y-3 rounded-lg border border-brand-strong/40 bg-brand-soft/20 p-3 text-xs"
+            {/* Withdraw confirmation (requester only, before a decision) */}
+            {canWithdraw && showWithdrawInput && (
+                <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="space-y-3 rounded-lg border border-line-strong bg-surface-subtle p-3 text-xs"
+                    data-testid="withdraw-panel"
+                >
+                    <label
+                        htmlFor={`fuel-withdraw-reason-${request.id}`}
+                        className="font-medium text-ink"
                     >
-                        {isSelfReview ? (
-                            <div
-                                className="space-y-2 rounded-md border border-warning/40 bg-warning-soft/30 p-3"
-                                data-testid="self-review-guard"
-                            >
-                                <div className="flex items-center gap-1.5 font-semibold text-warning-strong">
-                                    <AlertTriangle className="h-4 w-4 shrink-0" />
-                                    <span>Self-Review Forbidden</span>
-                                </div>
-                                <p className="text-xs text-ink-soft">
-                                    Self-review forbidden: requester cannot
-                                    approve or reject their own request
-                                    (independent review required).
-                                </p>
-                                <div className="flex items-center justify-end gap-2 pt-1">
-                                    <Button
-                                        type="button"
-                                        variant="quiet"
-                                        size="sm"
-                                        onClick={() =>
-                                            setShowDecisionInput(false)
-                                        }
-                                    >
-                                        Close
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="danger"
-                                        size="sm"
-                                        disabled={true}
-                                        title="Requester cannot self-review"
-                                    >
-                                        Reject Request
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="primary"
-                                        size="sm"
-                                        disabled={true}
-                                        title="Requester cannot self-review"
-                                    >
-                                        Approve Request
-                                    </Button>
-                                </div>
-                            </div>
-                        ) : (
-                            <>
-                                <label className="font-medium text-ink">
-                                    Reviewer Justification / Feedback Note:
-                                </label>
-                                <input
-                                    type="text"
-                                    value={decisionReason}
-                                    onChange={(e) =>
-                                        setDecisionReason(e.target.value)
-                                    }
-                                    placeholder="Add reason or guidance (recommended for rejections, optional for approvals)..."
-                                    className="h-9 w-full rounded-lg border border-line-strong bg-surface px-3 text-xs text-ink transition-colors placeholder:text-ink-soft focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong/30 focus-visible:outline-hidden"
-                                />
-                                <div className="flex items-center justify-end gap-2 pt-1">
-                                    <Button
-                                        type="button"
-                                        variant="quiet"
-                                        size="sm"
-                                        onClick={() =>
-                                            setShowDecisionInput(false)
-                                        }
-                                    >
-                                        Cancel
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="danger"
-                                        size="sm"
-                                        onClick={() =>
-                                            onTransition(
-                                                request.id,
-                                                'rejected',
-                                                decisionReason,
-                                            )
-                                        }
-                                        disabled={Boolean(pendingActionId)}
-                                    >
-                                        {isPendingThisAction('rejected')
-                                            ? 'Rejecting…'
-                                            : 'Reject Request'}
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="primary"
-                                        size="sm"
-                                        onClick={() =>
-                                            onTransition(
-                                                request.id,
-                                                'approved',
-                                                decisionReason,
-                                            )
-                                        }
-                                        disabled={Boolean(pendingActionId)}
-                                    >
-                                        {isPendingThisAction('approved')
-                                            ? 'Approving…'
-                                            : 'Approve Request'}
-                                    </Button>
-                                </div>
-                            </>
-                        )}
+                        Why are you withdrawing this request? (optional)
+                    </label>
+                    <input
+                        id={`fuel-withdraw-reason-${request.id}`}
+                        type="text"
+                        value={withdrawReason}
+                        onChange={(e) => setWithdrawReason(e.target.value)}
+                        placeholder="e.g. Refuelled from the site bowser"
+                        className="h-9 w-full rounded-lg border border-line-strong bg-surface px-3 text-xs text-ink transition-colors placeholder:text-ink-soft focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong/30 focus-visible:outline-hidden"
+                    />
+                    <div className="flex items-center justify-end gap-2">
+                        <Button
+                            type="button"
+                            variant="quiet"
+                            size="sm"
+                            onClick={() => setShowWithdrawInput(false)}
+                        >
+                            Keep request
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="danger"
+                            size="sm"
+                            onClick={() =>
+                                onWithdraw?.(
+                                    request.id,
+                                    withdrawReason.trim() || undefined,
+                                )
+                            }
+                            disabled={Boolean(pendingActionId)}
+                        >
+                            {isPendingThisAction('withdrawn')
+                                ? 'Withdrawing…'
+                                : 'Confirm withdraw'}
+                        </Button>
                     </div>
-                )}
+                </div>
+            )}
+
+            {/* Decision Reason Input Box / Self-Review Guard */}
+            {canDecide && showDecisionInput && (
+                <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="space-y-3 rounded-lg border border-brand-strong/40 bg-brand-soft/20 p-3 text-xs"
+                >
+                    {isSelfReview ? (
+                        <div
+                            className="space-y-2 rounded-md border border-warning/40 bg-warning-soft/30 p-3"
+                            data-testid="self-review-guard"
+                        >
+                            <div className="flex items-center gap-1.5 font-semibold text-warning-strong">
+                                <AlertTriangle className="h-4 w-4 shrink-0" />
+                                <span>Self-Review Forbidden</span>
+                            </div>
+                            <p className="text-xs text-ink-soft">
+                                Self-review forbidden: requester cannot approve
+                                or reject their own request (independent review
+                                required).
+                            </p>
+                            <div className="flex items-center justify-end gap-2 pt-1">
+                                <Button
+                                    type="button"
+                                    variant="quiet"
+                                    size="sm"
+                                    onClick={() => setShowDecisionInput(false)}
+                                >
+                                    Close
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="danger"
+                                    size="sm"
+                                    disabled={true}
+                                    title="Requester cannot self-review"
+                                >
+                                    Reject Request
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="primary"
+                                    size="sm"
+                                    disabled={true}
+                                    title="Requester cannot self-review"
+                                >
+                                    Approve Request
+                                </Button>
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            {statusVal === 'submitted' && (
+                                <p className="text-[11px] text-ink-soft">
+                                    Approving records both the forward and
+                                    approval stages in the audit trail.
+                                </p>
+                            )}
+                            <label
+                                htmlFor={`fuel-decision-reason-${request.id}`}
+                                className="font-medium text-ink"
+                            >
+                                Reviewer Justification / Feedback Note:
+                            </label>
+                            <input
+                                id={`fuel-decision-reason-${request.id}`}
+                                type="text"
+                                value={decisionReason}
+                                onChange={(e) => {
+                                    setDecisionReason(e.target.value);
+                                    setDecisionError(null);
+                                }}
+                                aria-invalid={decisionError !== null}
+                                aria-describedby={
+                                    decisionError
+                                        ? `fuel-decision-error-${request.id}`
+                                        : undefined
+                                }
+                                placeholder="Add reason or guidance (required to reject, optional to approve)..."
+                                className={cn(
+                                    'h-9 w-full rounded-lg border bg-surface px-3 text-xs text-ink transition-colors placeholder:text-ink-soft focus-visible:ring-2 focus-visible:outline-hidden',
+                                    decisionError
+                                        ? 'border-danger focus-visible:border-danger focus-visible:ring-danger/30'
+                                        : 'border-line-strong focus-visible:border-brand-strong focus-visible:ring-brand-strong/30',
+                                )}
+                            />
+                            {decisionError && (
+                                <p
+                                    id={`fuel-decision-error-${request.id}`}
+                                    role="alert"
+                                    className="flex items-center gap-1 text-xs font-medium text-danger"
+                                >
+                                    <AlertTriangle className="h-3 w-3 shrink-0" />
+                                    {decisionError}
+                                </p>
+                            )}
+                            <div className="flex items-center justify-end gap-2 pt-1">
+                                <Button
+                                    type="button"
+                                    variant="quiet"
+                                    size="sm"
+                                    onClick={() => {
+                                        setShowDecisionInput(false);
+                                        setDecisionError(null);
+                                    }}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="danger"
+                                    size="sm"
+                                    onClick={() => decide('rejected')}
+                                    disabled={Boolean(pendingActionId)}
+                                >
+                                    {isPendingThisAction('rejected')
+                                        ? 'Rejecting…'
+                                        : 'Reject Request'}
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="primary"
+                                    size="sm"
+                                    onClick={() => decide('approved')}
+                                    disabled={Boolean(pendingActionId)}
+                                >
+                                    {isPendingThisAction('approved')
+                                        ? 'Approving…'
+                                        : 'Approve Request'}
+                                </Button>
+                            </div>
+                        </>
+                    )}
+                </div>
+            )}
 
             {/* Rejection Callout Banner */}
             {statusVal === 'rejected' && (
@@ -382,6 +550,45 @@ export function FuelRequestCard({
                     )}
                 </div>
             )}
+
+            {/* Withdrawn Callout */}
+            {statusVal === 'withdrawn' && (
+                <div
+                    className="rounded-xl border border-line-strong bg-surface-subtle p-4 text-xs"
+                    data-testid="withdrawn-callout"
+                >
+                    <p className="text-sm font-semibold text-ink">
+                        Withdrawn by {request.requester.name}
+                    </p>
+                    <p className="mt-1 text-ink-soft">
+                        {request.withdrawal_reason ? (
+                            <span className="text-ink italic">
+                                "{request.withdrawal_reason}"
+                            </span>
+                        ) : (
+                            'No reason given.'
+                        )}
+                    </p>
+                    {request.withdrawn_at && (
+                        <p className="mt-1 text-[11px] text-ink-soft tabular-nums">
+                            {new Date(request.withdrawn_at).toLocaleString()}
+                        </p>
+                    )}
+                </div>
+            )}
+
+            {/* Needed-by context for requests still in play */}
+            {isDetail &&
+                request.needed_by &&
+                !['logged', 'rejected', 'withdrawn'].includes(statusVal) && (
+                    <p className="flex items-center gap-1.5 text-xs text-ink-soft">
+                        <Clock className="h-3.5 w-3.5 text-brand-strong" />
+                        Needed by{' '}
+                        <strong className="font-semibold text-ink tabular-nums">
+                            {formatShortDateTime(request.needed_by)}
+                        </strong>
+                    </p>
+                )}
 
             {/* Lifecycle Audit Milestones (4 Stages) in Detail View */}
             {isDetail && (
@@ -460,7 +667,9 @@ export function FuelRequestCard({
                                   ? 'Approved'
                                   : statusVal === 'rejected'
                                     ? 'Declined'
-                                    : 'Pending'}
+                                    : statusVal === 'withdrawn'
+                                      ? 'Withdrawn'
+                                      : 'Pending'}
                         </p>
                         <p className="text-[11px] text-ink-soft">
                             {statusVal === 'rejected'
@@ -469,7 +678,9 @@ export function FuelRequestCard({
                                         statusVal,
                                     )
                                   ? 'Authorized'
-                                  : 'Awaiting Review'}
+                                  : statusVal === 'withdrawn'
+                                    ? 'Closed by requester'
+                                    : 'Awaiting Review'}
                         </p>
                     </div>
                     <div>
@@ -488,7 +699,8 @@ export function FuelRequestCard({
                                   })
                                 : statusVal === 'verified'
                                   ? 'Ready to Dispense'
-                                  : statusVal === 'rejected'
+                                  : statusVal === 'rejected' ||
+                                      statusVal === 'withdrawn'
                                     ? 'Closed'
                                     : 'Awaiting'}
                         </p>
@@ -502,7 +714,8 @@ export function FuelRequestCard({
                                 </span>
                             ) : statusVal === 'verified' ? (
                                 'Authorized'
-                            ) : statusVal === 'rejected' ? (
+                            ) : statusVal === 'rejected' ||
+                              statusVal === 'withdrawn' ? (
                                 'No Pump Log'
                             ) : (
                                 'Pending'
@@ -767,6 +980,75 @@ export function FuelRequestCard({
                                 </div>
                             )}
 
+                            {/* Receipt exception: logged without a receipt */}
+                            {log.no_receipt_reason && (
+                                <div
+                                    className={cn(
+                                        'space-y-2 rounded-lg border p-2.5 text-xs',
+                                        log.requires_receipt_review
+                                            ? 'border-warning/50 bg-warning-soft/30'
+                                            : 'border-line bg-surface-subtle',
+                                    )}
+                                    data-testid="receipt-exception"
+                                >
+                                    <p className="flex items-center gap-1.5 font-semibold text-ink">
+                                        <AlertTriangle
+                                            className={cn(
+                                                'h-3.5 w-3.5 shrink-0',
+                                                log.requires_receipt_review
+                                                    ? 'text-warning-strong'
+                                                    : 'text-ink-soft',
+                                            )}
+                                        />
+                                        No receipt:{' '}
+                                        {log.no_receipt_reason.label}
+                                    </p>
+                                    {log.no_receipt_note && (
+                                        <p className="text-ink-soft">
+                                            "{log.no_receipt_note}"
+                                        </p>
+                                    )}
+                                    {log.requires_receipt_review ? (
+                                        capabilities.verify_fuel &&
+                                        onReviewReceipt ? (
+                                            <Button
+                                                type="button"
+                                                variant="secondary"
+                                                size="sm"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onReviewReceipt(log.id);
+                                                }}
+                                                disabled={Boolean(
+                                                    pendingActionId,
+                                                )}
+                                            >
+                                                {pendingActionId ===
+                                                `log:${log.id}:receipt-review`
+                                                    ? 'Saving…'
+                                                    : 'Mark exception reviewed'}
+                                            </Button>
+                                        ) : (
+                                            <p className="text-[11px] text-warning-strong">
+                                                Awaiting office review.
+                                            </p>
+                                        )
+                                    ) : (
+                                        log.receipt_reviewed_at && (
+                                            <p className="text-[11px] text-ink-soft tabular-nums">
+                                                Reviewed{' '}
+                                                {formatShortDateTime(
+                                                    log.receipt_reviewed_at,
+                                                )}
+                                                {log.receipt_review_note
+                                                    ? ` · ${log.receipt_review_note}`
+                                                    : ''}
+                                            </p>
+                                        )
+                                    )}
+                                </div>
+                            )}
+
                             {/* Attachments & Remarks */}
                             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line/60 pt-2 text-xs text-ink-soft">
                                 <div>
@@ -783,6 +1065,14 @@ export function FuelRequestCard({
                                             Recorded by{' '}
                                             <strong className="text-ink">
                                                 {log.recorded_by.name}
+                                            </strong>
+                                        </p>
+                                    )}
+                                    {log.receipt_number && (
+                                        <p className="text-[11px] tabular-nums">
+                                            Receipt no.{' '}
+                                            <strong className="font-mono text-ink">
+                                                {log.receipt_number}
                                             </strong>
                                         </p>
                                     )}

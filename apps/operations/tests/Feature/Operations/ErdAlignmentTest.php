@@ -36,13 +36,6 @@ it('contains the normalized physical mapping for every supplied ERD entity', fun
         'rental_operator_assignments',
         'rental_checkouts',
         'rental_returns',
-        'sales_catalog_items',
-        'sales_quotes',
-        'sales_quote_items',
-        'sales_orders',
-        'sales_order_items',
-        'sales_inventory_ledger',
-        'ownership_transfers',
     ] as $table) {
         expect(Schema::hasTable($table))->toBeTrue("Expected {$table} to exist.");
     }
@@ -56,14 +49,7 @@ it('contains the normalized physical mapping for every supplied ERD entity', fun
         ->and(Schema::hasColumns('rental_reservation_items', ['rental_reservation_id', 'operational_asset_id', 'quantity', 'rate_cents', 'line_total_cents']))->toBeTrue()
         ->and(Schema::hasColumns('rental_operator_assignments', ['rental_reservation_id', 'rental_reservation_item_id', 'user_id', 'operator_type', 'assigned_by', 'active_from', 'active_until']))->toBeTrue()
         ->and(Schema::hasColumns('rental_checkouts', ['rental_reservation_id', 'checked_out_by', 'checked_out_at', 'condition_before', 'notes']))->toBeTrue()
-        ->and(Schema::hasColumns('rental_returns', ['rental_reservation_id', 'returned_by', 'returned_at', 'condition_after', 'damage_notes']))->toBeTrue()
-        ->and(Schema::hasColumns('sales_catalog_items', ['sku', 'name', 'description', 'unit_price_cents', 'quantity_on_hand', 'quantity_reserved', 'operational_asset_id', 'status']))->toBeTrue()
-        ->and(Schema::hasColumns('sales_quotes', ['reference', 'client_id', 'created_by', 'status', 'currency', 'total_cents', 'valid_until', 'notes']))->toBeTrue()
-        ->and(Schema::hasColumns('sales_quote_items', ['sales_quote_id', 'sales_catalog_item_id', 'quantity', 'unit_price_cents', 'line_total_cents']))->toBeTrue()
-        ->and(Schema::hasColumns('sales_orders', ['reference', 'client_id', 'sales_quote_id', 'created_by', 'status', 'currency', 'total_cents', 'fulfilled_at']))->toBeTrue()
-        ->and(Schema::hasColumns('sales_order_items', ['sales_order_id', 'sales_catalog_item_id', 'quantity', 'unit_price_cents', 'line_total_cents']))->toBeTrue()
-        ->and(Schema::hasColumns('sales_inventory_ledger', ['sales_catalog_item_id', 'sales_order_id', 'created_by', 'entry_type', 'quantity_delta', 'metadata']))->toBeTrue()
-        ->and(Schema::hasColumns('ownership_transfers', ['sales_order_id', 'sales_order_item_id', 'sales_catalog_item_id', 'operational_asset_id', 'transferred_by', 'transferred_at']))->toBeTrue();
+        ->and(Schema::hasColumns('rental_returns', ['rental_reservation_id', 'returned_by', 'returned_at', 'condition_after', 'damage_notes']))->toBeTrue();
 
     expect(collect(Schema::getIndexes('rental_reservations'))->pluck('name'))
         ->toContain('rental_reservations_reference_unique')
@@ -72,17 +58,11 @@ it('contains the normalized physical mapping for every supplied ERD entity', fun
         ->and(collect(Schema::getIndexes('rental_checkouts'))->pluck('name'))
         ->toContain('rental_checkouts_rental_reservation_id_unique')
         ->and(collect(Schema::getIndexes('rental_returns'))->pluck('name'))
-        ->toContain('rental_returns_rental_reservation_id_unique')
-        ->and(collect(Schema::getIndexes('sales_catalog_items'))->pluck('name'))
-        ->toContain('sales_catalog_items_sku_unique')
-        ->toContain('sales_catalog_items_operational_asset_id_unique')
-        ->and(collect(Schema::getIndexes('sales_quotes'))->pluck('name'))
-        ->toContain('sales_quotes_reference_unique')
-        ->and(collect(Schema::getIndexes('sales_orders'))->pluck('name'))
-        ->toContain('sales_orders_reference_unique')
-        ->and(collect(Schema::getIndexes('ownership_transfers'))->pluck('name'))
-        ->toContain('ownership_transfers_operational_asset_id_unique')
-        ->toContain('ownership_transfers_sales_order_item_id_sales_catalog_item_id_unique');
+        ->toContain('rental_returns_rental_reservation_id_unique');
+
+    foreach (['sales_catalog_items', 'sales_quotes', 'sales_quote_items', 'sales_orders', 'sales_order_items', 'sales_inventory_ledger', 'ownership_transfers', 'sales_delivery_evidences'] as $table) {
+        expect(Schema::hasTable($table))->toBeFalse("Expected retired {$table} to be dropped.");
+    }
 });
 
 it('creates a client request and linked dispatch without duplicating ERD identity records', function () {

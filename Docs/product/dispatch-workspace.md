@@ -1,6 +1,6 @@
 # Office dispatch workspace
 
-Implemented behavior, updated 2026-09-23.
+Implemented behavior, updated 2026-09-25.
 
 Core 1 owns project management. Core 2 schedules dispatch jobs, assigns eligible
 people and assets, coordinates operational coverage, and follows field execution.
@@ -14,9 +14,9 @@ Creating a local coverage record does not create or synchronize a Core 1 project
    visible. Use the explicit direct dispatch fallback when authorized; unsaved
    drafts retain exit protection.
    Reconciliation marks client-name similarity as a possible draft match and
-   sends unmatched rental and sales handoffs through their review screens before
+   sends unmatched rental handoffs through their review screens before
    conversion. The selected handoff is isolated for review, with a way to show
-   all loaded handoffs. Sales dispatch creation uses the reviewed delivery window.
+   all loaded handoffs.
 2. **Schedule:** the default view starts today. Search and filter permitted jobs,
    select a job, review its requirements and recorded resources, and follow its
    next action. List uses the selected day. Calendar supports day/week/month.

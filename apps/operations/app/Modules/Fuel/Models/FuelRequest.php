@@ -25,6 +25,9 @@ use Illuminate\Support\Carbon;
  * @property string $quantity_litres
  * @property string $fuel_type
  * @property string $purpose
+ * @property string $urgency
+ * @property Carbon|null $needed_by
+ * @property int|null $current_fuel_level_percent
  * @property FuelRequestStatus $status
  * @property int|null $reviewed_by
  * @property int|null $approved_by
@@ -32,6 +35,8 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $reviewed_at
  * @property Carbon|null $approved_at
  * @property Carbon|null $verified_at
+ * @property Carbon|null $withdrawn_at
+ * @property string|null $withdrawal_reason
  * @property string|null $decision_reason
  * @property User $requester
  * @property DispatchJob|null $job
@@ -41,11 +46,20 @@ use Illuminate\Support\Carbon;
  */
 class FuelRequest extends Model
 {
-    protected $fillable = ['reference', 'requester_id', 'dispatch_job_id', 'operational_asset_id', 'operator_shift_id', 'quantity_litres', 'fuel_type', 'purpose', 'status', 'reviewed_by', 'approved_by', 'verified_by', 'reviewed_at', 'approved_at', 'verified_at', 'decision_reason'];
+    protected $fillable = ['reference', 'requester_id', 'dispatch_job_id', 'operational_asset_id', 'operator_shift_id', 'quantity_litres', 'fuel_type', 'purpose', 'urgency', 'needed_by', 'current_fuel_level_percent', 'status', 'reviewed_by', 'approved_by', 'verified_by', 'reviewed_at', 'approved_at', 'verified_at', 'withdrawn_at', 'withdrawal_reason', 'decision_reason'];
 
     protected function casts(): array
     {
-        return ['status' => FuelRequestStatus::class, 'quantity_litres' => 'decimal:2', 'reviewed_at' => 'datetime', 'approved_at' => 'datetime', 'verified_at' => 'datetime'];
+        return [
+            'status' => FuelRequestStatus::class,
+            'quantity_litres' => 'decimal:2',
+            'needed_by' => 'datetime',
+            'current_fuel_level_percent' => 'integer',
+            'reviewed_at' => 'datetime',
+            'approved_at' => 'datetime',
+            'verified_at' => 'datetime',
+            'withdrawn_at' => 'datetime',
+        ];
     }
 
     /** @return BelongsTo<User, $this> */

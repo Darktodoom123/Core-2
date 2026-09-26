@@ -310,6 +310,6 @@ class GenerateReportExportJob implements ShouldQueue
     {
         $desiredDisk = (string) config('filesystems.protected_disk', 'r2-private');
 
-        return app(StorageFallbackServiceInterface::class)->resolveDisk($desiredDisk, 'private');
+        return app(StorageFallbackServiceInterface::class)->resolveProtectedDisk($desiredDisk);
     }
 }

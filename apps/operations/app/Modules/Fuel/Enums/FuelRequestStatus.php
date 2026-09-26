@@ -10,6 +10,7 @@ enum FuelRequestStatus: string
     case Rejected = 'rejected';
     case Verified = 'verified';
     case Logged = 'logged';
+    case Withdrawn = 'withdrawn';
 
     public function label(): string
     {
@@ -20,6 +21,12 @@ enum FuelRequestStatus: string
             self::Rejected => 'Rejected',
             self::Verified => 'Verified',
             self::Logged => 'Logged',
+            self::Withdrawn => 'Withdrawn',
         };
+    }
+
+    public function isAwaitingDecision(): bool
+    {
+        return $this === self::Submitted || $this === self::Forwarded;
     }
 }

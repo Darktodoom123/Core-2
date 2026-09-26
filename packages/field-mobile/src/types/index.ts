@@ -267,7 +267,6 @@ export type OutboxCommandType =
     | 'submit_job_report'
     | 'submit_dvir'
     | 'submit_rental_handover'
-    | 'submit_sales_delivery'
     | 'submit_equipment_inspection'
     | 'submit_maintenance_work_order'
     | 'release_maintenance_work_order'
@@ -278,7 +277,8 @@ export type OutboxCommandType =
     | 'report_safety_hazard'
     | 'issue_work_stoppage'
     | 'submit_fuel_request'
-    | 'record_fuel_log';
+    | 'record_fuel_log'
+    | 'withdraw_fuel_request';
 
 export interface SafetyHazardCommandPayload {
     project_site: string;
@@ -408,23 +408,6 @@ export interface RentalHandoverCommandPayload {
     condition_notes?: string;
     damage_noted?: boolean;
     damage_notes?: string;
-    photos?: Array<{
-        base64?: string;
-        file_path?: string;
-        label?: string;
-    }>;
-    signature?: string;
-    signee_name: string;
-    signee_role: string;
-}
-
-export interface SalesDeliveryCommandPayload {
-    order_id: number;
-    dispatch_job_id?: number | null;
-    operational_asset_id?: number | null;
-    verified_vin: string;
-    accessories_checked?: string[];
-    delivery_notes?: string;
     photos?: Array<{
         base64?: string;
         file_path?: string;

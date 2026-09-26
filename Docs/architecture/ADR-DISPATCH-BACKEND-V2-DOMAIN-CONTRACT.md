@@ -1,7 +1,7 @@
 # ADR: Dispatch Backend V2 Domain Contract
 
 - Status: Implemented backend domain contract and persistence foundation (`/api/v2`)
-- Date: 2026-08-14 (Updated: 2026-08-29)
+- Date: 2026-08-14 (Updated: 2026-09-25)
 - Decision scope: Dispatch Backend V2 Phases 0–6
 - Implementation reference: `app/Modules/Dispatch/Commands/DispatchV2Commands.php`, `app/Modules/Dispatch/Http/Controllers/Api/V2/`, `app/Modules/Assignment/Http/Controllers/Api/V2/`
 
@@ -33,7 +33,7 @@ Capabilities are domain capabilities, not a promise that the current permission 
 | Assigned field worker | Assigned offers and attempts only | No | Accept or reject own offer | No | No | No | Read own audit/evidence |
 | Designated accepted lead | Assigned attempt and required operational context | No plan mutation by virtue of lead status | Own offer already accepted | No | Progress `dispatched -> en_route -> arrived -> working -> completed` for the designated attempt | No, unless separately granted | No | Add operational evidence/report entries |
 | System administrator | Tenant-wide, subject to break-glass controls | Administrative recovery only | No implicit acceptance | Only through explicit audited recovery capability | Only through explicit audited recovery capability | Yes, with break-glass reason and review | Yes, with review; cannot silently rewrite history | Full audit and reconciliation |
-| Rental/Sales/Service source adapter | Its canonical handoff and linked attempts | Create/update source handoff and request an attempt | No | No | No | No | Request cancellation/replacement through domain command | Correlation/audit metadata only |
+| Rental/Service source adapter | Its canonical handoff and linked attempts | Create/update source handoff and request an attempt | No | No | No | No | Request cancellation/replacement through domain command | Correlation/audit metadata only |
 
 The actor who creates an offer is not automatically the accepting actor. An operations coordinator or manager may record a decision for another actor only through an explicit override/approval capability; ordinary assignment acceptance remains the assignee's action.
 
@@ -161,7 +161,7 @@ Plan versions are monotonic per handoff/attempt and are never reused. A material
 
 ## Source retry and replacement-attempt policy
 
-- A rental, sales, or service handoff is the canonical operational source. A dispatch attempt references exactly one handoff and records a stable correlation/idempotency key.
+- A rental or service handoff (or a direct/manual dispatch) is the canonical operational source. Sales handoffs are no longer supported; existing sale-sourced handoffs were converted to manual. A dispatch attempt references exactly one handoff and records a stable correlation/idempotency key.
 - Retrying a failed command or post-commit side effect reuses the same attempt and idempotency key when no new execution attempt is intended.
 - A replacement attempt is a new record with a monotonic sequence and a `replaces_attempt_id`/lineage relation when business rules permit it. The previous attempt must be terminal and remains queryable.
 - Source updates never silently mutate a dispatched or completed attempt. They create a new plan version or replacement attempt according to the command policy.

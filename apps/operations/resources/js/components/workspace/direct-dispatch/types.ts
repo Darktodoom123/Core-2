@@ -4,8 +4,7 @@ import type {
     WorkspaceCapabilities,
 } from '@/types/workspace';
 
-export type DirectDispatchWorkStream =
-    'service' | 'rental' | 'sale' | 'general';
+export type DirectDispatchWorkStream = 'service' | 'rental' | 'general';
 
 export type DirectDispatchEquipmentSubtype =
     'mobile_crane' | 'tower_crane' | 'general_service';

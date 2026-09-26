@@ -37,13 +37,6 @@ export const RENTAL_DELIVERY_REQUIREMENTS = [
     'Require heavy transport lowbed 4-point tie-down inspection',
 ];
 
-export const SALES_TRANSPORT_REQUIREMENTS = [
-    'Require physical VIN & serial number verification against sales order',
-    'Require heavy transport lowbed height & route clearance check',
-    'Require delivery handover inspection & customer sign-off',
-    'Require equipment title & ownership transfer documentation sign-off',
-];
-
 export const GENERAL_OPERATIONAL_REQUIREMENTS = [
     'Require on-site ground bearing & soil stability check',
     'Require outrigger pad clearance & positioning check',
@@ -67,11 +60,6 @@ export const DIRECT_DISPATCH_WORK_TYPES: Array<{
         id: 'rental',
         title: 'Rental delivery',
         description: 'Equipment hire mobilization and preparation',
-    },
-    {
-        id: 'sale',
-        title: 'Sales transport',
-        description: 'Machinery hauling and VIN handover',
     },
     {
         id: 'general',
@@ -107,10 +95,6 @@ export function getRecommendedRequirements(
 
     if (workStream === 'rental') {
         return [...RENTAL_DELIVERY_REQUIREMENTS];
-    }
-
-    if (workStream === 'sale') {
-        return [...SALES_TRANSPORT_REQUIREMENTS];
     }
 
     return [...GENERAL_OPERATIONAL_REQUIREMENTS];
@@ -156,10 +140,6 @@ export function getRequirementHeading(
         return 'Rental preparation and delivery requirements';
     }
 
-    if (workStream === 'sale') {
-        return 'Sales transport and handover requirements';
-    }
-
     return 'Standard operational requirements';
 }
 
@@ -177,10 +157,6 @@ export function getRequirementDescription(
 
     if (workStream === 'rental') {
         return 'Add future job-brief checks for condition evidence, safe release, and delivery handover.';
-    }
-
-    if (workStream === 'sale') {
-        return 'Add future job-brief checks for VIN verification, tie-downs, and ownership transfer.';
     }
 
     return 'Add future job-brief checks for site induction, PPE, traffic control, and permits.';
@@ -206,10 +182,6 @@ export function getTitlePlaceholder(
         return 'e.g. Rough terrain crane rental delivery and setup';
     }
 
-    if (workStream === 'sale') {
-        return 'e.g. Excavator sales transport and handover';
-    }
-
     return 'e.g. Heavy crane lift and transport';
 }
 
@@ -222,10 +194,6 @@ export function getReferencePrefix(
 
     if (workStream === 'rental') {
         return 'DSP-REN';
-    }
-
-    if (workStream === 'sale') {
-        return 'DSP-SAL';
     }
 
     return 'DSP-MAN';

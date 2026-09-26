@@ -47,7 +47,7 @@ async function openTelemetryWorkspace(page: Page): Promise<void> {
 
     await expect(
         page.getByRole('heading', {
-            name: 'Fleet Management',
+            name: 'Fleet & Equipment',
             exact: true,
         }),
     ).toBeVisible({ timeout: 30_000 });
@@ -101,6 +101,6 @@ test('manager can use the telemetry workspace during a Tracking outage', async (
         timeout: 30_000,
     });
     await expect(
-        page.getByRole('heading', { name: 'Fleet Management' }).first(),
+        page.getByRole('heading', { name: 'Fleet & Equipment' }).first(),
     ).toBeVisible({ timeout: 30_000 });
 });

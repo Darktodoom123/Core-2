@@ -1,12 +1,12 @@
 # Deployment & Hosting Architecture
 
-**Last updated:** 2026-09-15
+**Last updated:** 2026-09-25
 **Target Environment:** HostForge Platform  
 **Platform URL:** [https://hostforgeplatform.cloud/platform](https://hostforgeplatform.cloud/platform)  
 **Apex Domain:** `alibaton-ph.com`  
 **Core-2 Subdomain:** `core-2.alibaton-ph.com`  
 
-**Verification status:** The user confirmed that Core-2 is not deployed. HostForge is the intended first-deployment platform. The topology below describes the containerized 2-service monorepo architecture (Operations + Tracking), not verified hosting capabilities. The [microservice restructuring handoff](../microservice/README.md) defines the authoritative service boundary; local verification (Tasks 1–7) is complete. Platform capacity, backup/restore, and independent-release evidence is required before production deployment. No hosting account or production data was accessed.
+**Verification status:** The user confirmed that Core-2 is not deployed. HostForge is the intended first-deployment platform. The topology below describes the containerized 2-service monorepo architecture (Operations + Tracking), not verified hosting capabilities. The [microservice restructuring handoff](../microservice/README.md) defines the authoritative service boundary; local verification (Tasks 1–7) is complete. Platform capacity, backup/restore, and independent-release evidence is required before production deployment. The locally configured Cloudflare R2 storage account was checked during the bucket-isolation work; no HostForge account or production database was accessed.
 
 ---
 
@@ -132,6 +132,17 @@ VITE_MAP_PLAN=starter
 VITE_MAP_USE_CASE=commercial
 VITE_STADIA_MAPS_API_KEY=<restricted-production-browser-key>
 
+# Cloudflare R2: use separate physical buckets
+R2_ACCESS_KEY_ID=<server-only-r2-access-key>
+R2_SECRET_ACCESS_KEY=<server-only-r2-secret>
+R2_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
+R2_PUBLIC_BUCKET=<public-media-bucket>
+R2_PUBLIC_URL=https://<public-media-domain>
+R2_PRIVATE_BUCKET=<different-private-documents-bucket>
+DVIR_PHOTO_DISK=r2
+ATTACHMENTS_DISK=r2-private
+PROTECTED_DOCUMENTS_DISK=r2-private
+
 # Telemetry Ingestion & Tracking Microservice Integration
 # Drivers: 'stream' (Redis Streams, Phase 2 async default) or 'http' (direct RPC)
 TRACKING_SERVICE_DRIVER=stream
@@ -170,6 +181,14 @@ PUSH_QUEUE=default
 RUN_MIGRATIONS=true
 CACHE_CONFIG=true
 ```
+
+### R2 Bucket Isolation and Existing Files
+
+The public media and protected document disk names must point to **different R2 buckets**. Keep both public access methods (`r2.dev` and custom domains) disabled on the private bucket. Cloudflare exposes a public bucket's objects through its public URL, regardless of the `url` value on Laravel's private disk configuration. See [Cloudflare's public bucket documentation](https://developers.cloudflare.com/r2/buckets/public-buckets/).
+
+Attachments (including uploaded PDFs and fuel receipts) use `ATTACHMENTS_DISK`; report PDF and CSV exports use `PROTECTED_DOCUMENTS_DISK`. The storage resolver falls back to local `private` storage when the configured private R2 bucket is missing, unconfigured, or shared with the public R2 disk. Check this before deployment because container-local storage is not the intended durable production destination. Rental handover evidence currently uses the local `public` disk and needs its own storage migration before claiming that all photos are in R2.
+
+If protected files already exist in a shared public bucket, create a private bucket first. Copy the `attachments/` and `exports/` objects into it, verify every destination object, and then change `R2_PRIVATE_BUCKET` and refresh the application configuration. Verify an authorized web attachment download, mobile document download, and report export download before removing the old public-bucket copies. Removing those copies is necessary to close the old public access path; do not remove them until the copy and application reads are confirmed.
 
 ### Tracking Environment Variables
 ```dotenv

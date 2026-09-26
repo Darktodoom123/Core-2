@@ -2,12 +2,10 @@ import { usePage } from '@inertiajs/react';
 import {
     Activity,
     AlertCircle,
-    AlertTriangle,
     ArrowRight,
     Building2,
     CalendarClock,
     CheckCircle2,
-    CircleCheck,
     Clock,
     Cpu,
     Database,
@@ -28,6 +26,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { LiveTrackingPreview } from '@/components/dashboards/live-tracking-preview';
+import { OperationsManagerDashboard } from '@/components/dashboards/manager/manager-dashboard';
 import { Button, EmptyState, Panel } from '@/components/ui';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import { cn } from '@/lib/utils';
@@ -48,15 +47,6 @@ import type {
     WorkspaceUserViewModel,
 } from '@/types/workspace';
 
-type DashboardAction = {
-    title: string;
-    description: string;
-    section: WorkspaceSection;
-    icon: LucideIcon;
-    tone: 'warning' | 'danger' | 'info';
-    category: 'sos' | 'approvals' | 'assets' | 'fuel';
-};
-
 function isFreshLocation(location: LocationUpdateViewModel): boolean {
     return location.freshness_status === 'fresh';
 }
@@ -75,7 +65,11 @@ export interface OperationsOverviewDashboardProps {
     gptRecommendations?: GptRecommendationViewModel[];
     capabilities: WorkspaceCapabilities;
     availableSections: WorkspaceSection[];
+    /** Full count of visible assets; `assets` may be a bounded sample. */
+    assetsTotal?: number;
     refresh?: ScopeRefreshState;
+    /** Workspace-level refresh state, used for the data freshness line. */
+    workspaceRefresh?: ScopeRefreshState;
     realtimeConnected?: boolean;
     onSectionChange: (
         section: WorkspaceSection,
@@ -96,46 +90,40 @@ export function OperationsOverviewDashboard(
     }>().props;
 
     const canonicalRole = auth?.role ?? 'operations_manager';
-    const actionableFuelCount = props.fuelRequests.filter((request) =>
-        canActOnFuelRequest(request, props.capabilities),
-    ).length;
-    const inboundActionCount =
-        actionableFuelCount + (props.activeSosIncidents?.length ?? 0);
+    const isSystemAdmin = canonicalRole === 'system_administrator';
+    const isFieldRole = FIELD_ROLES.includes(canonicalRole);
+
+    if (!isSystemAdmin && !isFieldRole) {
+        // Operations managers and other office roles share the manager view;
+        // it renders its own heading, freshness state, and action queue.
+        return (
+            <div className="workspace-width-contained p-4 md:p-6">
+                <OperationsManagerDashboard {...props} />
+            </div>
+        );
+    }
 
     return (
         <div className="workspace-width-contained">
             {/* Perspective Header */}
             <DashboardHeader
                 role={canonicalRole}
-                roleLabel={auth?.role_label}
-                inboundActionCount={inboundActionCount}
                 onSectionChange={props.onSectionChange}
                 availableSections={props.availableSections}
             />
 
             <div className="space-y-6 p-4 md:p-6">
-                {canonicalRole === 'operations_manager' && (
-                    <OperationsManagerDashboardView {...props} />
-                )}
-                {canonicalRole === 'system_administrator' && (
+                {isSystemAdmin ? (
                     <SystemAdminDashboardView {...props} />
-                )}
-                {['driver', 'crane_operator', 'field_worker'].includes(
-                    canonicalRole,
-                ) && <FieldWorkerDashboardView {...props} />}
-                {![
-                    'operations_manager',
-                    'system_administrator',
-                    'driver',
-                    'crane_operator',
-                    'field_worker',
-                ].includes(canonicalRole) && (
-                    <OperationsManagerDashboardView {...props} />
+                ) : (
+                    <FieldWorkerDashboardView {...props} />
                 )}
             </div>
         </div>
     );
 }
+
+const FIELD_ROLES = ['driver', 'crane_operator', 'field_worker'];
 
 /* =========================================================================
    HEADER
@@ -143,21 +131,16 @@ export function OperationsOverviewDashboard(
 
 function DashboardHeader({
     role,
-    inboundActionCount = 0,
     onSectionChange,
     availableSections,
 }: {
     role: string;
-    roleLabel?: string | null;
-    inboundActionCount?: number;
     onSectionChange: (section: WorkspaceSection) => void;
     availableSections: WorkspaceSection[];
 }) {
     const isSystemAdmin = role === 'system_administrator';
-    const isOperationsManager = role === 'operations_manager';
     const canOpenDispatch = availableSections.includes('dispatch');
     const canOpenUsers = availableSections.includes('users');
-    const canOpenFuel = availableSections.includes('fuel');
 
     return (
         <div className="border-b border-line bg-surface px-5 py-5 lg:px-7">
@@ -169,9 +152,7 @@ function DashboardHeader({
                     <p className="mt-1 text-sm text-ink-soft">
                         {isSystemAdmin
                             ? 'System infrastructure, user access governance, and telemetry health.'
-                            : isOperationsManager
-                              ? 'Live dispatch coordination, equipment readiness, and field authorizations.'
-                              : 'Assigned jobs, equipment status, and active field tasks.'}
+                            : 'Assigned jobs, equipment status, and active field tasks.'}
                     </p>
                 </div>
 
@@ -187,28 +168,6 @@ function DashboardHeader({
                             Manage users
                             <ArrowRight className="h-3.5 w-3.5" />
                         </Button>
-                    ) : isOperationsManager ? (
-                        inboundActionCount > 0 && canOpenFuel ? (
-                            <Button
-                                variant="primary"
-                                size="sm"
-                                onClick={() => onSectionChange('fuel')}
-                                className="gap-1.5 text-xs"
-                            >
-                                Review fuel requests ({inboundActionCount})
-                                <ArrowRight className="h-3.5 w-3.5" />
-                            </Button>
-                        ) : canOpenDispatch ? (
-                            <Button
-                                variant="primary"
-                                size="sm"
-                                onClick={() => onSectionChange('dispatch')}
-                                className="gap-1.5 text-xs"
-                            >
-                                Open dispatch workspace
-                                <ArrowRight className="h-3.5 w-3.5" />
-                            </Button>
-                        ) : null
                     ) : canOpenDispatch ? (
                         <Button
                             variant="primary"
@@ -220,802 +179,6 @@ function DashboardHeader({
                             <ArrowRight className="h-3.5 w-3.5" />
                         </Button>
                     ) : null}
-                </div>
-            </div>
-        </div>
-    );
-}
-
-/* =========================================================================
-   1. OPERATIONS MANAGER DASHBOARD VIEW
-   ========================================================================= */
-
-function OperationsManagerDashboardView({
-    jobs,
-    assets,
-    fuelRequests,
-    locations,
-    activeSosIncidents = [],
-    approvals,
-    gptRecommendations = [],
-    capabilities,
-    availableSections,
-    refresh,
-    realtimeConnected = false,
-    onSectionChange,
-}: OperationsOverviewDashboardProps) {
-    const [actionFilter, setActionFilter] = useState<
-        'all' | 'sos' | 'approvals' | 'assets' | 'fuel'
-    >('all');
-    const [jobFilter, setJobFilter] = useState<
-        'all' | 'active' | 'service' | 'rental' | 'sales'
-    >('all');
-
-    const actions = useMemo(
-        () =>
-            buildDashboardActions({
-                assets,
-                fuelRequests,
-                approvals,
-                activeSosIncidents,
-                capabilities,
-            }),
-        [assets, fuelRequests, approvals, activeSosIncidents, capabilities],
-    );
-
-    const activeJobs = useMemo(
-        () =>
-            jobs.filter((job) =>
-                [
-                    'dispatched',
-                    'accepted',
-                    'en_route',
-                    'arrived',
-                    'working',
-                ].includes(job.status.value),
-            ),
-        [jobs],
-    );
-
-    const serviceJobs = useMemo(
-        () =>
-            jobs.filter(
-                (job) =>
-                    job.source?.type === 'service_request' ||
-                    job.source?.type === 'direct' ||
-                    job.source?.type === 'manual' ||
-                    (!job.source &&
-                        !job.title.toLowerCase().includes('rental') &&
-                        !job.title.toLowerCase().includes('sales')),
-            ),
-        [jobs],
-    );
-
-    const rentalJobs = useMemo(
-        () =>
-            jobs.filter(
-                (job) =>
-                    job.source?.type === 'rental_reservation' ||
-                    job.title.toLowerCase().includes('rental'),
-            ),
-        [jobs],
-    );
-
-    const salesJobs = useMemo(
-        () =>
-            jobs.filter(
-                (job) =>
-                    job.source?.type === 'sales_order' ||
-                    job.title.toLowerCase().includes('sales') ||
-                    job.title.toLowerCase().includes('delivery'),
-            ),
-        [jobs],
-    );
-
-    const filteredJobs = useMemo(() => {
-        let pool = jobs;
-
-        if (jobFilter === 'active') {
-            pool = activeJobs;
-        } else if (jobFilter === 'service') {
-            pool = serviceJobs;
-        } else if (jobFilter === 'rental') {
-            pool = rentalJobs;
-        } else if (jobFilter === 'sales') {
-            pool = salesJobs;
-        } else {
-            pool = jobs.filter(
-                (job) => !['completed', 'cancelled'].includes(job.status.value),
-            );
-        }
-
-        return [...pool]
-            .sort((a, b) => {
-                const aActive = [
-                    'dispatched',
-                    'accepted',
-                    'en_route',
-                    'arrived',
-                    'working',
-                ].includes(a.status.value)
-                    ? 0
-                    : 1;
-                const bActive = [
-                    'dispatched',
-                    'accepted',
-                    'en_route',
-                    'arrived',
-                    'working',
-                ].includes(b.status.value)
-                    ? 0
-                    : 1;
-
-                return aActive - bActive;
-            })
-            .slice(0, 8);
-    }, [jobs, activeJobs, serviceJobs, rentalJobs, salesJobs, jobFilter]);
-
-    const totalAssets = assets.length;
-    const dispatchableAssets = assets.filter((a) => a.is_dispatchable).length;
-    const readinessPercentage =
-        totalAssets > 0
-            ? Math.round((dispatchableAssets / totalAssets) * 100)
-            : null;
-
-    const blockingAssets = assets.filter(
-        (a) => a.blocking_work_orders_count > 0,
-    ).length;
-    const freshLocations = locations.filter(isFreshLocation).length;
-
-    const actionableFuelRequests = fuelRequests.filter((request) =>
-        canActOnFuelRequest(request, capabilities),
-    );
-
-    const activeGptRecommendations = gptRecommendations.filter(
-        (rec) => rec.status === 'pending' || rec.is_advisory,
-    );
-
-    const canOpenDispatch = availableSections.includes('dispatch');
-    const canOpenAssets = availableSections.includes('assets');
-    const canOpenFuel = availableSections.includes('fuel');
-    const canOpenSos = availableSections.includes('sos');
-    const canOpenTracking = availableSections.includes('assets');
-
-    const categoriesInActions = Array.from(
-        new Set(actions.map((a) => a.category)),
-    );
-
-    const filteredActions =
-        actionFilter === 'all'
-            ? actions
-            : actions.filter((a) => a.category === actionFilter);
-
-    const trackingPreview = canOpenTracking ? (
-        <LiveTrackingPreview
-            locations={locations}
-            activeSosIncidents={activeSosIncidents}
-            refresh={refresh}
-            realtimeConnected={realtimeConnected}
-            onOpenTracking={() => onSectionChange('assets')}
-        />
-    ) : null;
-
-    return (
-        <div className="space-y-6">
-            {/* Manager Operational Metrics Strip */}
-            <MetricStrip>
-                <KpiCard
-                    label="Today's Dispatches"
-                    value={`${activeJobs.length}`}
-                    subtext={`${activeJobs.length} active · ${jobs.length} visible`}
-                    icon={Activity}
-                    tone={activeJobs.length > 0 ? 'brand' : 'default'}
-                    onClick={
-                        canOpenDispatch
-                            ? () => onSectionChange('dispatch')
-                            : undefined
-                    }
-                />
-
-                <KpiCard
-                    label="Fleet Readiness"
-                    value={
-                        readinessPercentage === null
-                            ? '—'
-                            : `${readinessPercentage}%`
-                    }
-                    subtext={
-                        readinessPercentage === null
-                            ? 'No assets available'
-                            : `${dispatchableAssets} of ${totalAssets} units ready`
-                    }
-                    icon={Truck}
-                    tone={
-                        readinessPercentage === null
-                            ? 'default'
-                            : readinessPercentage >= 80
-                              ? 'success'
-                              : readinessPercentage >= 60
-                                ? 'warning'
-                                : 'danger'
-                    }
-                    onClick={
-                        canOpenAssets
-                            ? () => onSectionChange('assets')
-                            : undefined
-                    }
-                />
-
-                <KpiCard
-                    label="Field Authorizations"
-                    value={`${actionableFuelRequests.length}`}
-                    subtext={
-                        actionableFuelRequests.length > 0
-                            ? `${actionableFuelRequests.length} fuel authorization(s) pending`
-                            : 'All field requests clear'
-                    }
-                    icon={ShieldCheck}
-                    tone={
-                        actionableFuelRequests.length > 0
-                            ? 'warning'
-                            : 'success'
-                    }
-                    onClick={
-                        actionableFuelRequests.length > 0 && canOpenFuel
-                            ? () => onSectionChange('fuel')
-                            : undefined
-                    }
-                />
-
-                <KpiCard
-                    label="Safety & Grounded Units"
-                    value={`${blockingAssets + activeSosIncidents.length}`}
-                    subtext={
-                        activeSosIncidents.length > 0
-                            ? `${activeSosIncidents.length} active emergency SOS`
-                            : blockingAssets > 0
-                              ? `${blockingAssets} maintenance blocker${blockingAssets === 1 ? '' : 's'}`
-                              : 'All units safe for service'
-                    }
-                    icon={AlertTriangle}
-                    tone={
-                        activeSosIncidents.length > 0
-                            ? 'danger'
-                            : blockingAssets > 0
-                              ? 'warning'
-                              : 'success'
-                    }
-                    onClick={
-                        activeSosIncidents.length > 0 && canOpenSos
-                            ? () => onSectionChange('sos')
-                            : canOpenAssets
-                              ? () => onSectionChange('assets')
-                              : undefined
-                    }
-                />
-            </MetricStrip>
-
-            {actions.length === 0 && trackingPreview}
-
-            {/* Manager Exception & Action Queue */}
-            <section aria-labelledby="manager-queue-heading">
-                <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <h2
-                                id="manager-queue-heading"
-                                className="text-lg font-semibold tracking-tight text-ink"
-                            >
-                                Manager action & exception queue
-                            </h2>
-                            {actions.length > 0 && (
-                                <span className="inline-flex items-center rounded-full bg-warning-soft px-2.5 py-0.5 text-xs font-semibold text-warning-strong">
-                                    {actions.length} action required
-                                </span>
-                            )}
-                        </div>
-                        <p className="mt-1 text-sm text-ink-soft">
-                            Priority dispatches, inbound field fuel requests,
-                            maintenance releases, and emergency SOS alerts.
-                        </p>
-                    </div>
-
-                    {categoriesInActions.length > 1 && (
-                        <div
-                            className="flex flex-wrap items-center gap-1.5 rounded-lg bg-surface-subtle p-1 text-xs"
-                            role="group"
-                            aria-label="Filter action queue"
-                        >
-                            <button
-                                type="button"
-                                aria-pressed={actionFilter === 'all'}
-                                onClick={() => setActionFilter('all')}
-                                className={cn(
-                                    'min-h-8 rounded-md px-2.5 py-1 font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
-                                    actionFilter === 'all'
-                                        ? 'bg-surface font-semibold text-ink shadow-xs'
-                                        : 'text-ink-soft hover:text-ink',
-                                )}
-                            >
-                                All ({actions.length})
-                            </button>
-                            {categoriesInActions.includes('sos') && (
-                                <button
-                                    type="button"
-                                    aria-pressed={actionFilter === 'sos'}
-                                    onClick={() => setActionFilter('sos')}
-                                    className={cn(
-                                        'min-h-8 rounded-md px-2.5 py-1 font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
-                                        actionFilter === 'sos'
-                                            ? 'bg-surface font-semibold text-danger-strong shadow-xs'
-                                            : 'text-danger hover:text-danger-strong',
-                                    )}
-                                >
-                                    Emergency SOS (
-                                    {countByCategory(actions, 'sos')})
-                                </button>
-                            )}
-                            {categoriesInActions.includes('approvals') && (
-                                <button
-                                    type="button"
-                                    aria-pressed={actionFilter === 'approvals'}
-                                    onClick={() => setActionFilter('approvals')}
-                                    className={cn(
-                                        'min-h-8 rounded-md px-2.5 py-1 font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
-                                        actionFilter === 'approvals'
-                                            ? 'bg-surface font-semibold text-ink shadow-xs'
-                                            : 'text-ink-soft hover:text-ink',
-                                    )}
-                                >
-                                    Approvals (
-                                    {countByCategory(actions, 'approvals')})
-                                </button>
-                            )}
-                            {categoriesInActions.includes('assets') && (
-                                <button
-                                    type="button"
-                                    aria-pressed={actionFilter === 'assets'}
-                                    onClick={() => setActionFilter('assets')}
-                                    className={cn(
-                                        'min-h-8 rounded-md px-2.5 py-1 font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
-                                        actionFilter === 'assets'
-                                            ? 'bg-surface font-semibold text-ink shadow-xs'
-                                            : 'text-ink-soft hover:text-ink',
-                                    )}
-                                >
-                                    Assets &amp; Safety (
-                                    {countByCategory(actions, 'assets')})
-                                </button>
-                            )}
-                            {categoriesInActions.includes('fuel') && (
-                                <button
-                                    type="button"
-                                    aria-pressed={actionFilter === 'fuel'}
-                                    onClick={() => setActionFilter('fuel')}
-                                    className={cn(
-                                        'min-h-8 rounded-md px-2.5 py-1 font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
-                                        actionFilter === 'fuel'
-                                            ? 'bg-surface font-semibold text-ink shadow-xs'
-                                            : 'text-ink-soft hover:text-ink',
-                                    )}
-                                >
-                                    Fuel ({countByCategory(actions, 'fuel')})
-                                </button>
-                            )}
-                        </div>
-                    )}
-                </div>
-
-                <Panel className="overflow-hidden">
-                    {filteredActions.length === 0 ? (
-                        <EmptyState
-                            compact
-                            icon={CircleCheck}
-                            title="No operational blockers requiring attention"
-                            message="All inbound field requests, equipment safety releases, and approvals are clear."
-                        />
-                    ) : (
-                        <ul className="divide-y divide-line">
-                            {filteredActions.map((action) => (
-                                <DashboardActionRow
-                                    key={`${action.section}-${action.title}`}
-                                    action={action}
-                                    onClick={() =>
-                                        onSectionChange(action.section)
-                                    }
-                                />
-                            ))}
-                        </ul>
-                    )}
-                </Panel>
-            </section>
-
-            {actions.length > 0 && trackingPreview}
-
-            {/* Grid Layout: Tri-Modal Schedule & Side Governance */}
-            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.9fr)]">
-                {/* Tri-Modal Work Schedule */}
-                <section
-                    className="min-w-0"
-                    aria-labelledby="manager-schedule-heading"
-                >
-                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                        <div>
-                            <h2
-                                id="manager-schedule-heading"
-                                className="text-lg font-semibold tracking-tight text-ink"
-                            >
-                                Dispatch overview &amp; tri-modal schedule
-                            </h2>
-                            <p className="mt-1 text-sm text-ink-soft">
-                                Active workload tracking across Service, Rental,
-                                and Sales dispatches.
-                            </p>
-                        </div>
-                        <div
-                            className="flex flex-wrap gap-1 rounded-lg bg-surface-subtle p-1 text-xs"
-                            role="group"
-                            aria-label="Filter schedule"
-                        >
-                            <button
-                                type="button"
-                                aria-pressed={jobFilter === 'all'}
-                                onClick={() => setJobFilter('all')}
-                                className={cn(
-                                    'min-h-8 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                                    jobFilter === 'all'
-                                        ? 'bg-surface font-semibold text-ink shadow-xs'
-                                        : 'text-ink-soft hover:text-ink',
-                                )}
-                            >
-                                All ({jobs.length})
-                            </button>
-                            <button
-                                type="button"
-                                aria-pressed={jobFilter === 'active'}
-                                onClick={() => setJobFilter('active')}
-                                className={cn(
-                                    'min-h-8 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                                    jobFilter === 'active'
-                                        ? 'bg-surface font-semibold text-brand-strong shadow-xs'
-                                        : 'text-ink-soft hover:text-ink',
-                                )}
-                            >
-                                Active ({activeJobs.length})
-                            </button>
-                            {serviceJobs.length > 0 && (
-                                <button
-                                    type="button"
-                                    aria-pressed={jobFilter === 'service'}
-                                    onClick={() => setJobFilter('service')}
-                                    className={cn(
-                                        'min-h-8 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                                        jobFilter === 'service'
-                                            ? 'bg-surface font-semibold text-ink shadow-xs'
-                                            : 'text-ink-soft hover:text-ink',
-                                    )}
-                                >
-                                    Service ({serviceJobs.length})
-                                </button>
-                            )}
-                            {rentalJobs.length > 0 && (
-                                <button
-                                    type="button"
-                                    aria-pressed={jobFilter === 'rental'}
-                                    onClick={() => setJobFilter('rental')}
-                                    className={cn(
-                                        'min-h-8 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                                        jobFilter === 'rental'
-                                            ? 'bg-surface font-semibold text-ink shadow-xs'
-                                            : 'text-ink-soft hover:text-ink',
-                                    )}
-                                >
-                                    Rental ({rentalJobs.length})
-                                </button>
-                            )}
-                            {salesJobs.length > 0 && (
-                                <button
-                                    type="button"
-                                    aria-pressed={jobFilter === 'sales'}
-                                    onClick={() => setJobFilter('sales')}
-                                    className={cn(
-                                        'min-h-8 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                                        jobFilter === 'sales'
-                                            ? 'bg-surface font-semibold text-ink shadow-xs'
-                                            : 'text-ink-soft hover:text-ink',
-                                    )}
-                                >
-                                    Sales ({salesJobs.length})
-                                </button>
-                            )}
-                        </div>
-                    </div>
-
-                    <Panel className="overflow-hidden">
-                        {jobs.length === 0 ? (
-                            <div className="p-6 text-center md:p-8">
-                                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-brand-soft text-brand-strong">
-                                    <CalendarClock className="h-6 w-6" />
-                                </div>
-                                <h3 className="mt-3 text-base font-bold text-ink">
-                                    No active dispatches scheduled
-                                </h3>
-                                <p className="mx-auto mt-1 max-w-md text-xs text-ink-soft">
-                                    Deploy crane equipment, dispatch rigging
-                                    crews, or mobilize rental units across
-                                    Service, Rental, and Hauling modes.
-                                </p>
-
-                                <div className="mt-5 grid grid-cols-1 gap-2.5 text-left sm:grid-cols-3">
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            onSectionChange('dispatch')
-                                        }
-                                        className="group rounded-lg border border-line bg-surface-subtle p-3 text-left transition-colors hover:border-brand-strong/40 hover:bg-brand-soft/20"
-                                    >
-                                        <span className="text-xs font-bold text-ink group-hover:text-brand-strong">
-                                            Crane Service
-                                        </span>
-                                        <p className="mt-0.5 text-[11px] text-ink-soft">
-                                            Direct crane &amp; crew job dispatch
-                                        </p>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            onSectionChange('dispatch')
-                                        }
-                                        className="group rounded-lg border border-line bg-surface-subtle p-3 text-left transition-colors hover:border-brand-strong/40 hover:bg-brand-soft/20"
-                                    >
-                                        <span className="text-xs font-bold text-ink group-hover:text-brand-strong">
-                                            Rental Mobilization
-                                        </span>
-                                        <p className="mt-0.5 text-[11px] text-ink-soft">
-                                            Bare &amp; manned rental handoffs
-                                        </p>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            onSectionChange('dispatch')
-                                        }
-                                        className="group rounded-lg border border-line bg-surface-subtle p-3 text-left transition-colors hover:border-brand-strong/40 hover:bg-brand-soft/20"
-                                    >
-                                        <span className="text-xs font-bold text-ink group-hover:text-brand-strong">
-                                            Transport &amp; Haul
-                                        </span>
-                                        <p className="mt-0.5 text-[11px] text-ink-soft">
-                                            Lowboy &amp; flatbed freight
-                                            delivery
-                                        </p>
-                                    </button>
-                                </div>
-
-                                {canOpenDispatch && (
-                                    <div className="mt-5">
-                                        <Button
-                                            variant="primary"
-                                            size="sm"
-                                            onClick={() =>
-                                                onSectionChange('dispatch')
-                                            }
-                                        >
-                                            <CalendarClock className="mr-1.5 h-4 w-4" />
-                                            Launch New Dispatch
-                                        </Button>
-                                    </div>
-                                )}
-                            </div>
-                        ) : filteredJobs.length === 0 ? (
-                            <EmptyState
-                                compact
-                                icon={CalendarClock}
-                                title="No scheduled work matches filter"
-                                message="Try switching your filter above to view other dispatch modes."
-                                primaryAction={
-                                    <Button
-                                        variant="secondary"
-                                        size="sm"
-                                        onClick={() => setJobFilter('all')}
-                                    >
-                                        Show all dispatches ({jobs.length})
-                                    </Button>
-                                }
-                            />
-                        ) : (
-                            <ul className="divide-y divide-line">
-                                {filteredJobs.map((job) => (
-                                    <JobOverviewRow
-                                        key={job.id}
-                                        job={job}
-                                        onClick={() =>
-                                            onSectionChange('dispatch')
-                                        }
-                                    />
-                                ))}
-                            </ul>
-                        )}
-                    </Panel>
-                </section>
-
-                {/* Governance & GPT Assistant Panel */}
-                <div className="space-y-6">
-                    <section aria-labelledby="manager-readiness-heading">
-                        <div className="mb-3">
-                            <h2
-                                id="manager-readiness-heading"
-                                className="text-lg font-semibold tracking-tight text-ink"
-                            >
-                                Governance &amp; Fleet Breakdown
-                            </h2>
-                            <p className="mt-1 text-sm text-ink-soft">
-                                Safety and resource status breakdown.
-                            </p>
-                        </div>
-                        <Panel className="divide-y divide-line">
-                            {/* Readiness Progress Bar Header */}
-                            <div className="bg-surface-subtle/50 px-4 py-3">
-                                <div className="flex items-center justify-between text-xs font-semibold">
-                                    <span className="text-ink">
-                                        Operational Readiness
-                                    </span>
-                                    <span
-                                        className={cn(
-                                            'font-bold',
-                                            readinessPercentage === null
-                                                ? 'text-ink-soft'
-                                                : readinessPercentage >= 80
-                                                  ? 'text-success-strong'
-                                                  : readinessPercentage >= 60
-                                                    ? 'text-warning-strong'
-                                                    : 'text-danger-strong',
-                                        )}
-                                    >
-                                        {readinessPercentage === null
-                                            ? '0%'
-                                            : `${readinessPercentage}%`}
-                                    </span>
-                                </div>
-                                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-line">
-                                    <div
-                                        className={cn(
-                                            'h-full rounded-full transition-all duration-500',
-                                            readinessPercentage === null ||
-                                                readinessPercentage === 0
-                                                ? 'bg-transparent'
-                                                : readinessPercentage >= 80
-                                                  ? 'bg-success'
-                                                  : readinessPercentage >= 60
-                                                    ? 'bg-warning'
-                                                    : 'bg-danger',
-                                        )}
-                                        style={{
-                                            width: `${readinessPercentage ?? 0}%`,
-                                        }}
-                                    />
-                                </div>
-                                <p className="mt-1.5 text-[10px] text-ink-soft">
-                                    {dispatchableAssets} of {totalAssets} units
-                                    cleared with passing pre-shift safety
-                                    inspections.
-                                </p>
-                            </div>
-
-                            <ReadinessRow
-                                label="Fleet Available"
-                                value={`${dispatchableAssets} / ${totalAssets}`}
-                                detail={
-                                    readinessPercentage === null
-                                        ? 'No assets available'
-                                        : `${readinessPercentage}% ready for deployment`
-                                }
-                                icon={Truck}
-                                tone={
-                                    readinessPercentage &&
-                                    readinessPercentage >= 80
-                                        ? 'success'
-                                        : 'default'
-                                }
-                                onClick={
-                                    canOpenAssets
-                                        ? () => onSectionChange('assets')
-                                        : undefined
-                                }
-                            />
-                            <ReadinessRow
-                                label="Safety Maintenance Blockers"
-                                value={String(blockingAssets)}
-                                detail={
-                                    blockingAssets === 0
-                                        ? 'No active maintenance blocks'
-                                        : `${blockingAssets} asset${blockingAssets === 1 ? '' : 's'} require release`
-                                }
-                                icon={ShieldCheck}
-                                tone={
-                                    blockingAssets > 0 ? 'warning' : 'default'
-                                }
-                                onClick={
-                                    canOpenAssets
-                                        ? () => onSectionChange('assets')
-                                        : undefined
-                                }
-                            />
-                            {activeSosIncidents.length > 0 && (
-                                <ReadinessRow
-                                    label="Active Emergency SOS"
-                                    value={String(activeSosIncidents.length)}
-                                    detail="Critical field emergencies reported"
-                                    icon={AlertTriangle}
-                                    tone="warning"
-                                    onClick={
-                                        canOpenSos
-                                            ? () => onSectionChange('sos')
-                                            : undefined
-                                    }
-                                />
-                            )}
-                            <ReadinessRow
-                                label="Telemetry Connection"
-                                value={`${freshLocations} fresh pings`}
-                                detail={`${locations.length} total active devices`}
-                                icon={Radio}
-                                tone={
-                                    freshLocations > 0 ? 'success' : 'default'
-                                }
-                                onClick={
-                                    canOpenTracking
-                                        ? () => onSectionChange('assets')
-                                        : undefined
-                                }
-                            />
-                        </Panel>
-                    </section>
-
-                    {/* GPT Advisory Assistant Panel */}
-                    {activeGptRecommendations.length > 0 && (
-                        <section aria-labelledby="gpt-advisory-heading">
-                            <div className="mb-3 flex items-center justify-between">
-                                <h2
-                                    id="gpt-advisory-heading"
-                                    className="flex items-center gap-2 text-base font-semibold tracking-tight text-ink"
-                                >
-                                    <Sparkles
-                                        className="h-4 w-4 text-muted"
-                                        aria-hidden="true"
-                                    />
-                                    AI Resource Advisory
-                                </h2>
-                            </div>
-                            <Panel className="space-y-3 p-4">
-                                {activeGptRecommendations
-                                    .slice(0, 3)
-                                    .map((rec) => (
-                                        <div
-                                            key={rec.id}
-                                            className="space-y-1.5 rounded-lg bg-surface-subtle p-3 text-xs"
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <span className="font-semibold text-ink">
-                                                    {rec.purpose.replace(
-                                                        '_',
-                                                        ' ',
-                                                    )}
-                                                </span>
-                                                <span className="text-muted">
-                                                    Model: {rec.model}
-                                                </span>
-                                            </div>
-                                            <p className="line-clamp-2 text-ink-soft">
-                                                {rec.prompt_summary ??
-                                                    rec.response_summary ??
-                                                    'Recommendation pending review'}
-                                            </p>
-                                        </div>
-                                    ))}
-                            </Panel>
-                        </section>
-                    )}
                 </div>
             </div>
         </div>
@@ -2617,54 +1780,6 @@ function KpiCard({
     );
 }
 
-function DashboardActionRow({
-    action,
-    onClick,
-}: {
-    action: DashboardAction;
-    onClick: () => void;
-}) {
-    const Icon = action.icon;
-
-    return (
-        <li>
-            <button
-                type="button"
-                onClick={onClick}
-                className="group flex min-h-16 w-full items-center gap-3.5 px-4 py-3 text-left transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
-            >
-                <span
-                    className={cn(
-                        'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
-                        action.tone === 'danger'
-                            ? 'bg-danger-soft text-danger-strong'
-                            : action.tone === 'warning'
-                              ? 'bg-warning-soft text-warning-strong'
-                              : 'bg-surface-subtle text-ink-soft',
-                    )}
-                >
-                    <Icon className="h-4 w-4" aria-hidden="true" />
-                </span>
-                <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-semibold text-ink transition-colors group-hover:text-brand-strong">
-                        {action.title}
-                    </span>
-                    <span className="mt-0.5 block text-xs leading-normal text-ink-soft">
-                        {action.description}
-                    </span>
-                </span>
-                <span className="flex items-center gap-1 text-xs font-medium text-ink-soft group-hover:text-ink">
-                    Resolve
-                    <ArrowRight
-                        className="h-3.5 w-3.5 shrink-0 transition-transform group-hover:translate-x-0.5"
-                        aria-hidden="true"
-                    />
-                </span>
-            </button>
-        </li>
-    );
-}
-
 function JobOverviewRow({
     job,
     onClick,
@@ -2688,11 +1803,9 @@ function JobOverviewRow({
             ? 'Service'
             : job.source?.type === 'rental_reservation'
               ? 'Rental'
-              : job.source?.type === 'sales_order'
-                ? 'Sales'
-                : job.source?.type === 'manual'
-                  ? 'Manual'
-                  : null);
+              : job.source?.type === 'manual'
+                ? 'Manual'
+                : null);
 
     return (
         <li>
@@ -2724,9 +1837,7 @@ function JobOverviewRow({
                                         job.source?.type ===
                                             'rental_reservation'
                                             ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300'
-                                            : job.source?.type === 'sales_order'
-                                              ? 'bg-purple-500/10 text-purple-700 dark:text-purple-300'
-                                              : 'bg-amber-500/10 text-amber-800 dark:text-brand',
+                                            : 'bg-amber-500/10 text-amber-800 dark:text-brand',
                                     )}
                                 >
                                     {sourceLabel}
@@ -2839,124 +1950,6 @@ function ReadinessRow({
                 {value}
             </span>
         </Component>
-    );
-}
-
-function buildDashboardActions({
-    assets,
-    fuelRequests,
-    approvals,
-    activeSosIncidents = [],
-    capabilities,
-}: {
-    assets: AssetViewModel[];
-    fuelRequests: FuelRequestViewModel[];
-    approvals: ApprovalViewModel[];
-    activeSosIncidents?: SosIncidentViewModel[];
-    capabilities: WorkspaceCapabilities;
-}): DashboardAction[] {
-    const actions: DashboardAction[] = [];
-    const decisionReadyApprovals = approvals.filter((a) => a.can_decide);
-    const blockedAssets = assets.filter(
-        (a) => a.blocking_work_orders_count > 0,
-    );
-    const actionableFuelRequests = fuelRequests.filter((request) =>
-        canActOnFuelRequest(request, capabilities),
-    );
-    const anomalyFuelLogs = fuelRequests.flatMap(
-        (request) => request.logs?.filter((log) => log.is_anomaly) ?? [],
-    );
-
-    // 1. Emergency SOS incidents (highest priority)
-    if (activeSosIncidents.length > 0) {
-        actions.push({
-            title: `${activeSosIncidents.length} active emergency SOS incident${activeSosIncidents.length === 1 ? '' : 's'}`,
-            description:
-                'Critical field emergency reported. Acknowledge and dispatch emergency response immediately.',
-            section: 'sos',
-            icon: AlertTriangle,
-            tone: 'danger',
-            category: 'sos',
-        });
-    }
-
-    // 2. Approvals requiring manager decision
-    if (approvals.length > 0) {
-        const canDecideApproval = decisionReadyApprovals.length > 0;
-
-        actions.push({
-            title: canDecideApproval
-                ? `${decisionReadyApprovals.length} approval${decisionReadyApprovals.length === 1 ? '' : 's'} need your decision`
-                : `${approvals.length} approval${approvals.length === 1 ? '' : 's'} awaiting review`,
-            description: canDecideApproval
-                ? 'Review priority override, resource qualifications, and operational consequences before deciding.'
-                : (approvals[0]?.decision_blocker ??
-                  'An authorized manager must decide this request.'),
-            section: 'dispatch',
-            icon: ShieldCheck,
-            tone: canDecideApproval ? 'warning' : 'info',
-            category: 'approvals',
-        });
-    }
-
-    // 3. Grounded / Maintenance blocked equipment
-    if (blockedAssets.length > 0) {
-        actions.push({
-            title: `${blockedAssets.length} asset${blockedAssets.length === 1 ? '' : 's'} blocked from dispatch`,
-            description:
-                'Safety evidence or post-repair maintenance sign-off is required before release.',
-            section: 'assets',
-            icon: AlertTriangle,
-            tone: 'danger',
-            category: 'assets',
-        });
-    }
-
-    // 4. Inbound Fuel Authorization requests
-    if (actionableFuelRequests.length > 0) {
-        actions.push({
-            title: `${actionableFuelRequests.length} fuel request${actionableFuelRequests.length === 1 ? '' : 's'} ready for authorization`,
-            description:
-                'Authorize fuel volume/budget before field pump release and vendor verification.',
-            section: 'fuel',
-            icon: Fuel,
-            tone: 'warning',
-            category: 'fuel',
-        });
-    }
-
-    // 5. Fuel anomalies
-    if (anomalyFuelLogs.length > 0) {
-        actions.push({
-            title: `${anomalyFuelLogs.length} fuel consumption anomal${anomalyFuelLogs.length === 1 ? 'y' : 'ies'} detected`,
-            description:
-                'Excessive variance or high burn rate requires operational review.',
-            section: 'fuel',
-            icon: Fuel,
-            tone: 'danger',
-            category: 'fuel',
-        });
-    }
-
-    return actions;
-}
-
-function countByCategory(
-    actions: DashboardAction[],
-    category: DashboardAction['category'],
-) {
-    return actions.filter((a) => a.category === category).length;
-}
-
-function canActOnFuelRequest(
-    request: FuelRequestViewModel,
-    capabilities: WorkspaceCapabilities,
-) {
-    return (
-        (request.status.value === 'submitted' && capabilities.forward_fuel) ||
-        (request.status.value === 'forwarded' && capabilities.approve_fuel) ||
-        (request.status.value === 'approved' && capabilities.verify_fuel) ||
-        (request.status.value === 'verified' && capabilities.record_fuel)
     );
 }
 

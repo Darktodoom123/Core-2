@@ -116,7 +116,6 @@ function createCapabilities(
         create_service_request: true,
         convert_service_request: true,
         create_rental_dispatch: true,
-        create_sales_dispatch: true,
         share_location: true,
         view_tracking: true,
         request_fuel: true,
@@ -312,7 +311,7 @@ describe('Phase 2 Lead Integration: LiveWorkspaceSection Screen Coordination', (
         expect(
             screen.getByRole('heading', {
                 level: 1,
-                name: /fleet management/i,
+                name: /fleet (management|& equipment)/i,
             }),
         ).toBeInTheDocument();
         expect(screen.getAllByText('CRN-501').length).toBeGreaterThanOrEqual(1);
@@ -353,7 +352,7 @@ describe('Phase 2 Lead Integration: LiveWorkspaceSection Screen Coordination', (
         expect(
             screen.getByRole('heading', {
                 level: 1,
-                name: /fleet management/i,
+                name: /fleet (management|& equipment)/i,
             }),
         ).toBeInTheDocument();
         expect(
@@ -482,7 +481,7 @@ describe('Phase 2 Lead Integration: LiveWorkspaceSection Screen Coordination', (
         expect(
             screen.getByRole('heading', {
                 level: 1,
-                name: /fleet management/i,
+                name: /fleet (management|& equipment)/i,
             }),
         ).toBeInTheDocument();
         expect(screen.getAllByText('CRN-999').length).toBeGreaterThanOrEqual(1);

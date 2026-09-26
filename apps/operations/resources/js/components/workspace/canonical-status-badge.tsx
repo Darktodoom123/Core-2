@@ -26,6 +26,7 @@ export const statusTones: Record<CanonicalStatusValue, StatusTone> = {
     submitted: 'neutral',
     queued: 'neutral',
     expired: 'neutral',
+    withdrawn: 'neutral',
 
     // Brand / Assignment (Internal dispatch staging)
     scheduled: 'brand',

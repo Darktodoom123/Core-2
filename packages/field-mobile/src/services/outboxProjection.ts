@@ -286,22 +286,6 @@ export function getHumanReadableActionType(cmd: OutboxCommand): {
             break;
         }
 
-        case 'submit_sales_delivery': {
-            const orderId = payload.order_id ?? cmd.jobId;
-            title = 'Sales Equipment Delivery';
-            reference = orderId ? `Order SO-${orderId}` : 'Sales Order';
-            subtitle =
-                typeof payload.verified_vin === 'string'
-                    ? `VIN: ${payload.verified_vin}`
-                    : 'Delivery acceptance proof';
-
-            if (Array.isArray(payload.photos)) {
-                attachmentCount = payload.photos.length;
-            }
-
-            break;
-        }
-
         case 'report_delay': {
             const stage =
                 typeof payload.delay_stage === 'string'
@@ -337,6 +321,17 @@ export function getHumanReadableActionType(cmd: OutboxCommand): {
                 typeof quantity === 'number' || typeof quantity === 'string'
                     ? `${quantity} L requested`
                     : 'Fuel request for office approval';
+            break;
+        }
+
+        case 'withdraw_fuel_request': {
+            title = 'Withdraw Fuel Request';
+            const requestId = payload.fuel_request_id;
+            reference = requestId ? `Request #${requestId}` : 'Fuel Management';
+            subtitle =
+                typeof payload.reason === 'string' && payload.reason !== ''
+                    ? payload.reason
+                    : 'Cancel before office decision';
             break;
         }
 
@@ -502,8 +497,7 @@ export function isCommandDiscardable(
 
     // Signed customer handovers cannot be discarded
     if (
-        (command.type === 'submit_rental_handover' ||
-            command.type === 'submit_sales_delivery') &&
+        command.type === 'submit_rental_handover' &&
         Boolean(
             payload.signee_name ||
             payload.signature_image_path ||

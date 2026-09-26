@@ -22,6 +22,12 @@ use Illuminate\Support\Carbon;
  * @property string|null $fuel_station
  * @property string|null $remarks
  * @property string|null $receipt_path
+ * @property string|null $receipt_number
+ * @property string|null $no_receipt_reason
+ * @property string|null $no_receipt_note
+ * @property int|null $receipt_reviewed_by
+ * @property Carbon|null $receipt_reviewed_at
+ * @property string|null $receipt_review_note
  * @property string|null $variance_litres
  * @property string|null $variance_percentage
  * @property string|null $effective_burn_rate
@@ -41,6 +47,12 @@ class FuelLog extends Model
         'odometer_km',
         'hour_meter',
         'receipt_path',
+        'receipt_number',
+        'no_receipt_reason',
+        'no_receipt_note',
+        'receipt_reviewed_by',
+        'receipt_reviewed_at',
+        'receipt_review_note',
         'recorded_at',
         'price_per_litre',
         'total_cost',
@@ -66,6 +78,7 @@ class FuelLog extends Model
             'effective_burn_rate' => 'decimal:2',
             'is_anomaly' => 'boolean',
             'recorded_at' => 'datetime',
+            'receipt_reviewed_at' => 'datetime',
         ];
     }
 
@@ -108,6 +121,17 @@ class FuelLog extends Model
     public function recorder(): BelongsTo
     {
         return $this->belongsTo(User::class, 'recorded_by');
+    }
+
+    public function requiresReceiptReview(): bool
+    {
+        return $this->no_receipt_reason !== null && $this->receipt_reviewed_at === null;
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function receiptReviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'receipt_reviewed_by');
     }
 
     /** @return MorphMany<Attachment, $this> */

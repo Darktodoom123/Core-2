@@ -3,7 +3,6 @@
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Fuel\ViewModels\FuelWorkspaceViewModel;
 use App\Modules\Rental\ViewModels\RentalHandoffViewModel;
-use App\Modules\Sales\ViewModels\SalesHandoffViewModel;
 use App\Shared\Assets\Services\OperationalAssetAvailability;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Artisan;
@@ -56,22 +55,16 @@ test('legacy polymorphic type names resolve to the modular model classes', funct
         ->toBe(DispatchJob::class);
 });
 
-test('Rental and Sales keep the Shared asset usage boundary one directional', function (): void {
+test('the retired Sales module is fully removed and Rental no longer references it', function (): void {
+    expect(is_dir(app_path('Modules/Sales')))->toBeFalse();
+
     $rentalFiles = collect(iterator_to_array(new RecursiveIteratorIterator(new RecursiveDirectoryIterator(app_path('Modules/Rental')))))
-        ->filter(fn (SplFileInfo $file): bool => $file->isFile() && $file->getExtension() === 'php');
-    $salesFiles = collect(iterator_to_array(new RecursiveIteratorIterator(new RecursiveDirectoryIterator(app_path('Modules/Sales')))))
         ->filter(fn (SplFileInfo $file): bool => $file->isFile() && $file->getExtension() === 'php');
 
     foreach ($rentalFiles as $file) {
         $contents = file_get_contents($file->getPathname());
         expect($contents)->not->toContain('App\\Modules\\Sales\\')
             ->and($contents)->not->toMatch('/sales_[a-z0-9_]+/i');
-    }
-
-    foreach ($salesFiles as $file) {
-        $contents = file_get_contents($file->getPathname());
-        expect($contents)->not->toContain('App\\Modules\\Rental\\')
-            ->and($contents)->not->toMatch('/rental_[a-z0-9_]+/i');
     }
 });
 
@@ -81,14 +74,13 @@ test('Shared Assets does not import product module models and checkers remain ow
 
     foreach ($sharedFiles as $file) {
         $contents = file_get_contents($file->getPathname());
-        expect($contents)->not->toMatch('/^use\\s+App\\\\Modules\\\\(?:Rental|Sales|Assignment|Dispatch)\\\\.*Models\\\\/m');
+        expect($contents)->not->toMatch('/^use\\s+App\\\\Modules\\\\(?:Rental|Assignment|Dispatch)\\\\.*Models\\\\/m');
     }
 
     $checkerFiles = collect(iterator_to_array(new RecursiveIteratorIterator(new RecursiveDirectoryIterator(app_path('Modules')))))
         ->filter(fn (SplFileInfo $file): bool => $file->isFile() && str_ends_with($file->getFilename(), 'AssetUsageConflictChecker.php'));
     $allowed = array_map(static fn (string $path): string => str_replace('/', DIRECTORY_SEPARATOR, $path), [
         app_path('Modules/Rental/Services/RentalAssetUsageConflictChecker.php'),
-        app_path('Modules/Sales/Services/SalesAssetUsageConflictChecker.php'),
         app_path('Modules/Assignment/Services/DispatchAssetUsageConflictChecker.php'),
     ]);
 
@@ -99,7 +91,7 @@ test('all tagged asset usage checkers and their providers are registered', funct
     $providers = file_get_contents(base_path('bootstrap/providers.php'));
 
     expect($providers)->toContain('RentalServiceProvider::class')
-        ->and($providers)->toContain('SalesServiceProvider::class')
+        ->and($providers)->not->toContain('SalesServiceProvider::class')
         ->and($providers)->toContain('AssignmentServiceProvider::class');
 
     expect(app()->make(OperationalAssetAvailability::class))->toBeInstanceOf(OperationalAssetAvailability::class);
@@ -107,6 +99,5 @@ test('all tagged asset usage checkers and their providers are registered', funct
 
 test('domain modules encapsulate their own workspace view models', function (): void {
     expect(class_exists(RentalHandoffViewModel::class))->toBeTrue()
-        ->and(class_exists(SalesHandoffViewModel::class))->toBeTrue()
         ->and(class_exists(FuelWorkspaceViewModel::class))->toBeTrue();
 });

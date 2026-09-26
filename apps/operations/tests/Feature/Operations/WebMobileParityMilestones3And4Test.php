@@ -102,6 +102,7 @@ test('fuel request passes through 5-stage lifecycle with monotonic meter enforce
     // 5. Attempt Log with Monotonic Violation (entered meter < asset meter: 1400 < 1500)
     $response = $this->actingAs($operator)->post("/operations/fuel-requests/{$fuel->id}/status", [
         'status' => 'logged',
+        'no_receipt_reason' => 'on_site_bowser',
         'quantity_litres' => 100,
         'hour_meter' => 1400.0, // Less than current 1500.0
         'fuel_station' => 'Shell Subic',
@@ -167,6 +168,7 @@ test('fuel logging calculates consumption variance and flags anomalies', functio
     // Actual dispensed = 50 L. Variance = (50 - 20) / 20 = +150% (>= 15% threshold!).
     $response = $this->actingAs($operator)->post("/operations/fuel-requests/{$fuel->id}/status", [
         'status' => 'logged',
+        'no_receipt_reason' => 'on_site_bowser',
         'quantity_litres' => 50,
         'hour_meter' => 102.0,
         'fuel_station' => 'Petron Depot',

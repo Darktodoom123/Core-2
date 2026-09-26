@@ -13,7 +13,6 @@ final class ManualDispatchReferenceGenerator
         $prefix = match (strtolower((string) $stream)) {
             'service', 'srv' => 'SRV',
             'rental', 'ren' => 'REN',
-            'sale', 'sales', 'sal' => 'SAL',
             default => 'MAN',
         };
 

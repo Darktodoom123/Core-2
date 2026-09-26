@@ -2,10 +2,12 @@
 
 namespace App\Modules\Fuel\Http\Requests;
 
+use App\Modules\Fuel\Enums\FuelNoReceiptReason;
 use App\Modules\Fuel\Models\FuelRequest;
 use App\Platform\Attachments\Services\AttachmentFilePolicy;
 use App\Platform\Identity\Enums\PermissionName;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 final class StoreMobileFuelLog extends FormRequest
@@ -31,8 +33,20 @@ final class StoreMobileFuelLog extends FormRequest
             'total_cost' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
             'fuel_station' => ['nullable', 'string', 'max:255'],
             'remarks' => ['nullable', 'string', 'max:2000'],
-            'receipt' => ['nullable', 'file', 'max:15360'],
+            'receipt' => ['required_without:no_receipt_reason', 'nullable', 'file', 'max:15360'],
+            'receipt_number' => ['nullable', 'string', 'max:64'],
+            'no_receipt_reason' => ['nullable', Rule::enum(FuelNoReceiptReason::class)],
+            'no_receipt_note' => ['nullable', 'required_if:no_receipt_reason,other', 'string', 'max:2000'],
             'receipt_path' => ['prohibited'],
+        ];
+    }
+
+    /** @return array<string, string> */
+    public function messages(): array
+    {
+        return [
+            'receipt.required_without' => 'Attach the fuel receipt, or choose why there is no receipt.',
+            'no_receipt_note.required_if' => 'Explain why there is no receipt.',
         ];
     }
 

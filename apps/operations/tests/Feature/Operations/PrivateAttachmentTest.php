@@ -79,6 +79,42 @@ it('allows uploading a valid attachment and computes sha256 checksum', function 
     expect(AuditEvent::query()->where('action', 'attachment.uploaded')->exists())->toBeTrue();
 });
 
+it('keeps protected uploads off a public R2 bucket when both disk aliases target it', function (): void {
+    config([
+        'attachments.disk' => 'r2-private',
+        'filesystems.disks.r2.bucket' => 'shared-bucket',
+        'filesystems.disks.r2.endpoint' => 'https://account.r2.cloudflarestorage.com',
+        'filesystems.disks.r2-private.bucket' => 'shared-bucket',
+        'filesystems.disks.r2-private.endpoint' => 'https://account.r2.cloudflarestorage.com',
+        'filesystems.disks.r2-private.key' => 'test-key',
+        'filesystems.disks.r2-private.secret' => 'test-secret',
+    ]);
+
+    $user = createAttachUser(RoleName::OperationsManager);
+    $job = DispatchJob::query()->create([
+        'reference' => 'DSP-ATT-PRIVATE-R2',
+        'client' => 'Attachment Client',
+        'title' => 'Private storage test',
+        'site' => 'Site A',
+        'status' => DispatchStatus::Draft,
+        'priority' => DispatchPriority::Routine,
+        'scheduled_start' => now()->addHour(),
+        'scheduled_end' => now()->addHours(4),
+        'created_by' => $user->id,
+        'version' => 1,
+    ]);
+
+    $this->actingAs($user)->postJson('/operations/attachments', [
+        'file' => UploadedFile::fake()->create('private.pdf', 1, 'application/pdf'),
+        'owner_type' => 'dispatch_job',
+        'owner_id' => $job->id,
+    ])->assertCreated();
+
+    $attachment = Attachment::query()->sole();
+    expect($attachment->disk)->toBe('private');
+    Storage::disk('private')->assertExists($attachment->path);
+});
+
 it('rejects invalid upload types and oversized files', function (): void {
     $user = createAttachUser(RoleName::OperationsManager);
     $job = DispatchJob::query()->create([

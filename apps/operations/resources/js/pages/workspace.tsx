@@ -50,7 +50,6 @@ const SECTION_PROPS: Record<WorkspaceSection, string[]> = {
         'clients',
         'serviceRequests',
         'rentalHandoffs',
-        'salesHandoffs',
         'incoming_total',
         'assets',
         'assets_total',
@@ -138,8 +137,8 @@ export default function Workspace(props: WorkspacePageProps) {
             : section === 'notifications'
               ? 'notifications'
               : props.navigation.some((item) => item.id === section)
-              ? section
-              : (props.navigation[0]?.id ?? null);
+                ? section
+                : (props.navigation[0]?.id ?? null);
 
     const beginRefresh = useCallback(
         (scope: RefreshScope, mode: RefreshMode) => {
@@ -330,10 +329,7 @@ export default function Workspace(props: WorkspacePageProps) {
 
                 router.replaceProp('notifications', payload.data ?? []);
                 router.replaceProp('notifications_total', payload.total);
-                router.replaceProp(
-                    'notifications_has_more',
-                    payload.has_more,
-                );
+                router.replaceProp('notifications_has_more', payload.has_more);
                 router.replaceProp(
                     'badges.unread_notifications',
                     payload.unread_count,
@@ -876,6 +872,7 @@ export default function Workspace(props: WorkspacePageProps) {
                         clients={props.clients ?? []}
                         serviceRequests={props.serviceRequests ?? []}
                         assets={props.assets ?? []}
+                        assetsTotal={props.assets_total}
                         fuelRequests={props.fuelRequests ?? []}
                         locations={props.locations ?? []}
                         activeSosIncidents={props.activeSosIncidents}
@@ -888,6 +885,7 @@ export default function Workspace(props: WorkspacePageProps) {
                             (item) => item.id,
                         )}
                         refresh={refreshState.tracking}
+                        workspaceRefresh={refreshState.workspace}
                         realtimeConnected={wsState === 'connected'}
                         onSectionChange={changeSection}
                     />
@@ -898,7 +896,6 @@ export default function Workspace(props: WorkspacePageProps) {
                         clients={props.clients ?? []}
                         serviceRequests={props.serviceRequests ?? []}
                         rentalHandoffs={props.rentalHandoffs ?? []}
-                        salesHandoffs={props.salesHandoffs ?? []}
                         incomingTotal={props.incoming_total ?? 0}
                         assets={props.assets ?? []}
                         approvals={props.approvals ?? []}
@@ -930,9 +927,7 @@ export default function Workspace(props: WorkspacePageProps) {
                         reportExports={props.reportExports}
                         notifications={props.notifications}
                         notificationsTotal={props.notifications_total}
-                        notificationsHasMore={
-                            props.notifications_has_more
-                        }
+                        notificationsHasMore={props.notifications_has_more}
                         unreadNotificationCount={unreadNotificationCount}
                         archivedJobs={props.archivedJobs}
                         gptRecommendations={props.gptRecommendations}

@@ -4,7 +4,11 @@ import { JobListItemCard } from '../components/cards/JobListItemCard';
 import { DispatchIntakeSheet } from '../components/sheets/DispatchIntakeSheet';
 import { ReportDelayModal } from '../components/sheets/ReportDelayModal';
 import { DispatchOrdersScreen } from '../screens/DispatchOrdersScreen';
-import type { DispatchJob, ReportDelayPayload } from '../types/index';
+import type {
+    DispatchJob,
+    OutboxCommand,
+    ReportDelayPayload,
+} from '../types/index';
 
 const mockMultiAssetJob: DispatchJob = {
     id: 101,
@@ -350,6 +354,75 @@ describe('Job Delay Reporting Mobile Components', () => {
 
             await fireEvent.press(reportBtn);
             expect(onReportDelay).toHaveBeenCalledWith(mockWorkingJob);
+        });
+
+        it('opens its own delay form and submits the report when given onSubmitDelay', async () => {
+            const onSubmitDelay = jest.fn().mockResolvedValue(undefined);
+
+            const view = await render(
+                <DispatchOrdersScreen
+                    jobs={[mockWorkingJob]}
+                    onSubmitDelay={onSubmitDelay}
+                />,
+            );
+
+            await fireEvent.press(view.getByTestId('report-delay-btn-102'));
+            expect(view.getByText('Report Operational Delay')).toBeTruthy();
+
+            await fireEvent.press(
+                view.getByTestId('delay-reason-site_not_ready'),
+            );
+            await fireEvent.press(view.getByTestId('submit-delay-btn'));
+
+            expect(onSubmitDelay).toHaveBeenCalledTimes(1);
+            const [jobId, payload] = onSubmitDelay.mock.calls[0] as [
+                number,
+                ReportDelayPayload,
+            ];
+            expect(jobId).toBe(102);
+            expect(payload.reason).toBe('site_not_ready');
+            expect(view.queryByText('Report Operational Delay')).toBeNull();
+        });
+
+        it('hides the Report Delay button when no delay handler is provided', async () => {
+            const view = await render(
+                <DispatchOrdersScreen jobs={[mockWorkingJob]} />,
+            );
+
+            expect(view.queryByTestId('report-delay-btn-102')).toBeNull();
+        });
+
+        it('shows a queued delay banner for delay reports waiting to sync', async () => {
+            const queuedDelay: OutboxCommand = {
+                id: 'c2b1f7de-9a57-4f63-9d0b-9a1e1a0f4b21',
+                actorId: 1,
+                type: 'report_delay',
+                jobId: 102,
+                payload: {
+                    dispatch_job_id: 102,
+                    reason: 'site_not_ready',
+                    reason_label: 'Site Not Prepared',
+                    estimated_minutes: 30,
+                },
+                payloadHash: 'queued-delay-hash',
+                state: 'queued',
+                createdAt: '2026-09-25T00:00:00.000Z',
+                updatedAt: '2026-09-25T00:00:00.000Z',
+                attempts: 0,
+            };
+
+            const view = await render(
+                <DispatchOrdersScreen
+                    jobs={[mockWorkingJob]}
+                    onSubmitDelay={jest.fn()}
+                    outboxCommands={[queuedDelay]}
+                />,
+            );
+
+            expect(view.getByTestId('queued-delay-banner-102')).toBeTruthy();
+            expect(
+                view.getByText(/Queued Delay: Site Not Prepared \(\+30m\)/),
+            ).toBeTruthy();
         });
 
         it('forwards onReportDelay through DispatchIntakeSheet', async () => {

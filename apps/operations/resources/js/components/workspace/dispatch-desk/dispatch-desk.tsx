@@ -77,7 +77,6 @@ const SOURCE_FILTERS: Array<{ value: DispatchSourceFilter; label: string }> = [
     { value: 'all', label: 'All sources' },
     { value: 'service_request', label: 'Service request' },
     { value: 'rental_reservation', label: 'Rental delivery' },
-    { value: 'sales_order', label: 'Sales delivery' },
     { value: 'manual', label: 'Manual intake' },
 ];
 
@@ -213,7 +212,6 @@ export function DispatchDesk({
     clients,
     serviceRequests,
     rentalHandoffs,
-    salesHandoffs,
     incomingTotal = 0,
     assets = [],
     approvals = [],
@@ -774,7 +772,6 @@ export function DispatchDesk({
                                     clients={clients}
                                     serviceRequests={serviceRequests}
                                     rentalHandoffs={rentalHandoffs}
-                                    salesHandoffs={salesHandoffs}
                                     incomingTotal={incomingTotal}
                                     onIncomingTotalChange={setIncomingCount}
                                     jobs={jobs}

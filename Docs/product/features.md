@@ -12,18 +12,16 @@ Core Transaction 2 delivers the complete operational backbone for heavy equipmen
 - **Direct Manual Operational Intake**:
   - Direct draft dispatch creation with explicit `[Manual • manual_intake]` provenance.
   - Site instructions, priority tagging (`routine`, `priority`, `emergency`), ground bearing assessment, outrigger pad clearance, power line clearance, and municipal permit checklists.
-  - Operates independently without requiring upstream Core 1 commercial quotation or sales order creation.
+  - Operates independently without requiring an upstream Core 1 handoff.
 - **Service Request Intake & Multi-Draft Conversion**:
   - Service demand handoff with customer, location, and requirement capture.
   - Multi-dispatch conversion enabling a single service demand to be staged into multiple specialized dispatch drafts (e.g. site prep, crane delivery, operation, demobilization).
 - **Rental Reservation Delivery Handoffs**:
   - Direct intake of rental reservation dispatches with reservation window tracking, equipment condition checklists, and operator assignment context.
-- **Sales Order Delivery Handoffs**:
-  - Logistics fulfillment intake with order value, delivery vs pickup mode, and precise geo-coordinates.
 - **Unlinked Handoff Queue & Intelligent Draft Reconciliation**:
   - Staging queue for unlinked Core 1 commercial transactions with automated matching against existing manual drafts to avoid duplicate executions.
 - **Unified Multi-Source Dispatch Board**:
-  - Filterable by source (`all`, `service_request`, `rental_reservation`, `sales_order`, `manual`), status, priority, and date.
+  - Filterable by source (`all`, `service_request`, `rental_reservation`, `manual`), status, priority, and date.
   - Shared Day, Week, and Month multi-scale schedule calendar boards with conflict detection.
 - **Long-Term Project Plans in Dispatch**:
   - Expandable multi-phase timelines with equipment reservations, maintenance windows, and linked weekly shift dispatches.

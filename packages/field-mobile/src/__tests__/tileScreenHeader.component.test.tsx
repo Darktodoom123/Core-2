@@ -92,11 +92,11 @@ describe('TileScreenHeader Component', () => {
             <ThemeProvider initialMode="dark_hud">
                 <TileScreenHeader
                     backTestID="dark-back-btn"
-                    category="Equipment Sales"
+                    category="Equipment Rental"
                     onBack={jest.fn()}
-                    subtitle="Sales Order #SO-9921"
+                    subtitle="Reservation #REN-9921"
                     testID="custom-header-id"
-                    title="Equipment Sales Delivery"
+                    title="Rental Handover"
                     titleTestID="custom-title-id"
                 />
             </ThemeProvider>,
@@ -104,10 +104,10 @@ describe('TileScreenHeader Component', () => {
 
         const headerRoot = view.getByTestId('custom-header-id');
         expect(headerRoot).toBeTruthy();
-        expect(view.getByText('Equipment Sales')).toBeTruthy();
+        expect(view.getByText('Equipment Rental')).toBeTruthy();
         expect(view.getByTestId('custom-title-id')).toBeTruthy();
-        expect(view.getByText('Equipment Sales Delivery')).toBeTruthy();
-        expect(view.getByText('Sales Order #SO-9921')).toBeTruthy();
+        expect(view.getByText('Rental Handover')).toBeTruthy();
+        expect(view.getByText('Reservation #REN-9921')).toBeTruthy();
         expect(view.getByTestId('dark-back-btn')).toBeTruthy();
     });
 

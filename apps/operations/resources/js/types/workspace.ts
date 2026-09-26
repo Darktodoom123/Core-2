@@ -15,7 +15,18 @@ export type DispatchPriorityValue = 'routine' | 'priority' | 'emergency';
 export type ServiceRequestStatusValue = 'submitted' | 'dispatching';
 
 export type FuelRequestStatusValue =
-    'submitted' | 'forwarded' | 'approved' | 'rejected' | 'verified' | 'logged';
+    | 'submitted'
+    | 'forwarded'
+    | 'approved'
+    | 'rejected'
+    | 'verified'
+    | 'logged'
+    | 'withdrawn';
+
+export type FuelUrgencyValue = 'normal' | 'urgent' | 'critical';
+
+export type FuelNoReceiptReasonValue =
+    'on_site_bowser' | 'vendor_no_receipt' | 'receipt_lost' | 'other';
 
 export type AssetStatusValue =
     | 'available'
@@ -100,11 +111,7 @@ export interface PlannedCraneSlotViewModel {
 }
 
 export type DispatchSourceType =
-    | 'direct'
-    | 'service_request'
-    | 'rental_reservation'
-    | 'sales_order'
-    | 'manual';
+    'direct' | 'service_request' | 'rental_reservation' | 'manual';
 
 export interface DispatchRequirementItem {
     id: string;
@@ -118,13 +125,6 @@ export interface RentalItemContext {
     name: string;
     quantity: number;
     condition_notes?: string | null;
-}
-
-export interface SalesOrderItemContext {
-    id: number;
-    name: string;
-    quantity: number;
-    sku?: string | null;
 }
 
 export interface GeoCoordinates {
@@ -151,14 +151,11 @@ export interface DispatchSourceViewModel {
     condition_requirements?: string[];
     operator_required?: boolean;
     operator_context?: string | null;
-    order_items?: SalesOrderItemContext[];
-    delivery_destination_coordinates?: GeoCoordinates | null;
-    total_cents?: number | null;
 }
 
 export interface UnlinkedHandoffItem {
     id: number;
-    source_type: 'service' | 'rental' | 'sale';
+    source_type: 'service' | 'rental';
     source_label: string;
     reference: string;
     client: {
@@ -171,12 +168,9 @@ export interface UnlinkedHandoffItem {
     scheduled_date?: string | null;
     start_date?: string | null;
     end_date?: string | null;
-    total_cents?: number | null;
     fulfillment_mode?: 'delivery' | 'pickup' | null;
     requirements?: string[];
     rental_items?: RentalItemContext[];
-    order_items?: SalesOrderItemContext[];
-    destination_coordinates?: GeoCoordinates | null;
     dispatch_job_id: number | null;
     matched_draft_job_id?: number | null;
     matched_draft_reference?: string | null;
@@ -259,15 +253,6 @@ export interface RentalDispatchHandoffViewModel extends CommercialDispatchHandof
     evidence_signee?: string | null;
     evidence_submitted_at?: string | null;
     evidence_type?: string | null;
-}
-
-export interface SalesDispatchHandoffViewModel extends CommercialDispatchHandoffViewModel {
-    total_cents: number;
-    order_items?: SalesOrderItemContext[];
-    destination_coordinates?: GeoCoordinates | null;
-    has_evidence?: boolean;
-    evidence_signee?: string | null;
-    evidence_submitted_at?: string | null;
 }
 
 export type InspectionTypeValue =
@@ -577,6 +562,15 @@ export interface FuelLogViewModel {
     anomaly_reason?: string | null;
     receipt_path: string | null;
     receipt_url?: string | null;
+    receipt_number?: string | null;
+    no_receipt_reason?: {
+        value: FuelNoReceiptReasonValue;
+        label: string;
+    } | null;
+    no_receipt_note?: string | null;
+    requires_receipt_review?: boolean;
+    receipt_reviewed_at?: string | null;
+    receipt_review_note?: string | null;
     recorded_by: {
         id: number;
         name: string;
@@ -617,6 +611,14 @@ export interface FuelRequestViewModel {
     quantity_litres: string;
     fuel_type: string;
     purpose: string;
+    urgency?: {
+        value: FuelUrgencyValue;
+        label: string;
+    };
+    needed_by?: string | null;
+    current_fuel_level_percent?: number | null;
+    withdrawn_at?: string | null;
+    withdrawal_reason?: string | null;
     status: StatusViewModel<FuelRequestStatusValue>;
     decision_reason?: string | null;
     created_at?: string | null;
@@ -952,7 +954,6 @@ export interface WorkspaceCapabilities {
     create_service_request: boolean;
     convert_service_request: boolean;
     create_rental_dispatch: boolean;
-    create_sales_dispatch: boolean;
     share_location: boolean;
     view_tracking: boolean;
     request_fuel: boolean;
@@ -1173,6 +1174,7 @@ export interface FuelRequestStatsViewModel {
     verified: number;
     logged: number;
     anomalies: number;
+    receipt_review?: number;
 }
 
 export interface JobReportStatsViewModel {
@@ -1188,7 +1190,6 @@ export interface WorkspacePageProps {
     clients?: ClientViewModel[];
     serviceRequests?: ServiceRequestViewModel[];
     rentalHandoffs?: RentalDispatchHandoffViewModel[];
-    salesHandoffs?: SalesDispatchHandoffViewModel[];
     incoming_total?: number;
     assets?: AssetViewModel[];
     assets_total?: number;
@@ -1398,7 +1399,7 @@ export interface DispatchExecutionReportViewModel {
 }
 
 export interface DispatchHandoffEvidenceViewModel {
-    type: 'rental' | 'sales';
+    type: 'rental';
     source_id: number;
     source_reference: string;
     handover_type?: 'checkout' | 'return' | null;
@@ -1420,9 +1421,6 @@ export interface DispatchHandoffEvidenceViewModel {
     condition_notes?: string | null;
     damage_noted?: boolean;
     damage_notes?: string | null;
-    verified_vin?: string;
-    accessories_checked?: string[];
-    delivery_notes?: string | null;
     photos: Array<{
         path: string;
         url?: string;
@@ -1434,7 +1432,6 @@ export interface DispatchHandoffEvidenceViewModel {
     managerial_status_label: string;
     can_checkout?: boolean;
     can_return?: boolean;
-    can_fulfill?: boolean;
 }
 
 export interface DispatchExecutionDelayViewModel {

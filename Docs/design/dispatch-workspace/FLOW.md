@@ -1,6 +1,6 @@
 # Office dispatch decision flow
 
-Last reviewed: 2026-09-23.
+Last reviewed: 2026-09-25.
 
 This is the target interaction map for the office Dispatch desk. Core 1 owns
 commercial work and projects. Core 2 owns operational dispatch, resource
@@ -46,7 +46,7 @@ retain a visible warning and a retry path before an operational decision.
 
 1. Align the dispatcher entry route and preserve the explicit classic route.
 2. Make incoming queue, attention filters, calendar, and resource date scopes clear.
-3. Put possible-draft review and a confirmed sales delivery window before conversion.
+3. Put possible-draft review before conversion.
 4. Resolve keyboard structure and selection feedback; review desktop and phone layouts.
 5. Validate the complete journey with dispatcher-role tests, large queues and periods,
    stale/error states, keyboard navigation, and live phone walkthroughs.

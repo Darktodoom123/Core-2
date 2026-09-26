@@ -45,7 +45,7 @@ class ReportExportController extends Controller
         Gate::authorize('download', $export);
 
         $targetDisk = (string) config('filesystems.protected_disk', 'r2-private');
-        $resolvedDisk = app(StorageFallbackServiceInterface::class)->resolveDisk($targetDisk, 'private');
+        $resolvedDisk = app(StorageFallbackServiceInterface::class)->resolveProtectedDisk($targetDisk);
         $activeDisk = Storage::disk($resolvedDisk)->exists((string) $export->file_path)
             ? $resolvedDisk
             : (Storage::disk('private')->exists((string) $export->file_path)

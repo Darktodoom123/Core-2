@@ -8,9 +8,6 @@ use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Rental\Enums\RentalReservationStatus;
 use App\Modules\Rental\Models\RentalReservation;
 use App\Modules\Rental\Models\RentalReservationItem;
-use App\Modules\Sales\Enums\SalesOrderStatus;
-use App\Modules\Sales\Models\SalesCatalogItem;
-use App\Modules\Sales\Models\SalesOrder;
 use App\Platform\Identity\Models\User;
 use App\Shared\Assets\Data\AssetUsageRequest;
 use App\Shared\Assets\Data\AssetUsageSource;
@@ -37,33 +34,6 @@ function r2Client(): Client
 {
     return Client::query()->create(['code' => 'R2-'.fake()->unique()->numerify('#####'), 'company_name' => 'R2 client', 'status' => 'active']);
 }
-
-it('uses committed sales order status rather than quantity_reserved as the sale blocker', function (): void {
-    $actor = User::factory()->create();
-    $asset = r2Asset('R2-SALE-STATUS');
-    $catalog = SalesCatalogItem::query()->create([
-        'sku' => 'R2-SALE-STATUS',
-        'name' => 'R2 physical item',
-        'unit_price_cents' => 100,
-        'quantity_on_hand' => 0,
-        'quantity_reserved' => 0,
-        'operational_asset_id' => $asset->id,
-        'status' => 'active',
-    ]);
-    $order = SalesOrder::query()->create([
-        'reference' => 'R2-SO-STATUS',
-        'client_id' => r2Client()->id,
-        'created_by' => $actor->id,
-        'status' => SalesOrderStatus::Fulfilled,
-        'currency' => 'PHP',
-        'total_cents' => 100,
-    ]);
-    $order->items()->create(['sales_catalog_item_id' => $catalog->id, 'quantity' => 1, 'unit_price_cents' => 100, 'line_total_cents' => 100]);
-
-    $assessment = app(OperationalAssetAvailability::class)->assess(new AssetUsageRequest($asset->id, AssetUsageType::SalesAccept));
-
-    expect(collect($assessment->conflicts)->pluck('code')->all())->toContain('sales.order_committed');
-});
 
 it('excludes only the typed current rental source and keeps exact dispatch boundaries open', function (): void {
     $actor = User::factory()->create();

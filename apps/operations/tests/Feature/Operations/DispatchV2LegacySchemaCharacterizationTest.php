@@ -21,7 +21,7 @@ it('characterizes the legacy dispatch persistence contract before the V2 foundat
     expect(Schema::hasColumn('dispatch_personnel_assignments', 'response_status'))->toBeTrue()
         ->and(Schema::hasColumn('dispatch_personnel_assignments', 'responded_at'))->toBeTrue()
         ->and(Schema::hasColumn('dispatch_personnel_assignments', 'active_until'))->toBeTrue()
-        ->and(Schema::hasColumn('sales_orders', 'reference'))->toBeTrue()
+        ->and(Schema::hasTable('sales_orders'))->toBeFalse()
         ->and(DispatchStatus::Accepted->value)->toBe('accepted');
 });
 

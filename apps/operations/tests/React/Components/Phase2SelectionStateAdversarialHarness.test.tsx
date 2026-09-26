@@ -130,7 +130,6 @@ function createCapabilities(
         create_service_request: true,
         convert_service_request: true,
         create_rental_dispatch: true,
-        create_sales_dispatch: true,
         share_location: true,
         view_tracking: true,
         request_fuel: true,
@@ -664,9 +663,7 @@ describe('Empirical Adversarial Stress Harness: Selection Invariants & State Iso
                 name: /overview & specs/i,
             });
             fireEvent.click(specsTab);
-            expect(
-                screen.getByText(/Rated capacity/),
-            ).toBeInTheDocument();
+            expect(screen.getByText(/Rated capacity/)).toBeInTheDocument();
 
             // Inspections tab works
             const inspectionsTab = screen.getByRole('tab', {

@@ -7,6 +7,7 @@ use App\Modules\Fleet\Models\AssetDocument;
 use App\Modules\HoursOfService\Enums\ShiftStatus;
 use App\Modules\HoursOfService\Models\OperatorShift;
 use App\Platform\Audit\Models\AuditEvent;
+use App\Platform\Audit\Relations\AuditSubjectMorphOne;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
 use App\Shared\Assets\Enums\AssetStatus;
@@ -15,7 +16,6 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -110,10 +110,19 @@ class OperationalAsset extends Model
             ->latestOfMany();
     }
 
-    /** @return MorphOne<AuditEvent, $this> */
-    public function latestStatusChange(): MorphOne
+    /** @return AuditSubjectMorphOne<AuditEvent, $this> */
+    public function latestStatusChange(): AuditSubjectMorphOne
     {
-        return $this->morphOne(AuditEvent::class, 'subject')
+        $instance = $this->newRelatedInstance(AuditEvent::class);
+        $table = $instance->getTable();
+
+        return (new AuditSubjectMorphOne(
+            $instance->newQuery(),
+            $this,
+            $table.'.subject_type',
+            $table.'.subject_id',
+            $this->getKeyName(),
+        ))
             ->where('action', 'asset.status_updated')
             ->latestOfMany('occurred_at');
     }

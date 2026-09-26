@@ -42,7 +42,7 @@ import {
     localDateKey,
     shiftLocalDate,
 } from '@/lib/date-utils';
-import { formatCurrency, formatDateTime, humanize } from '@/lib/formatters';
+import { formatDateTime, humanize } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import type { Auth } from '@/types/auth';
 import type {
@@ -55,7 +55,6 @@ import type {
     DispatchSourceViewModel,
     GptRecommendationViewModel,
     RentalDispatchHandoffViewModel,
-    SalesDispatchHandoffViewModel,
     ServiceRequestViewModel,
     WorkspaceCapabilities,
 } from '@/types/workspace';
@@ -301,7 +300,6 @@ export function LiveDispatchWorkspace({
     clients,
     serviceRequests,
     rentalHandoffs,
-    salesHandoffs,
     assets = [],
     approvals = [],
     users = [],
@@ -315,7 +313,6 @@ export function LiveDispatchWorkspace({
     clients: ClientViewModel[];
     serviceRequests: ServiceRequestViewModel[];
     rentalHandoffs: RentalDispatchHandoffViewModel[];
-    salesHandoffs: SalesDispatchHandoffViewModel[];
     assets?: AssetViewModel[];
     approvals?: ApprovalViewModel[];
     users?: DispatchResourceUserViewModel[];
@@ -329,11 +326,7 @@ export function LiveDispatchWorkspace({
     const returnTo = currentWorkspaceUrl || '/?view=dispatch';
     const [query, setQuery] = useState('');
     const [sourceFilter, setSourceFilter] = useState<
-        | 'all'
-        | 'service_request'
-        | 'rental_reservation'
-        | 'sales_order'
-        | 'manual'
+        'all' | 'service_request' | 'rental_reservation' | 'manual'
     >('all');
     const [statusFilter, setStatusFilter] = useState<
         'all' | 'draft' | 'scheduled' | 'active' | 'completed'
@@ -356,11 +349,6 @@ export function LiveDispatchWorkspace({
                           .filter((handoff) => !handoff.dispatch_job_id)
                           .map((handoff) => `rental:${handoff.id}`)
                     : []),
-                ...(capabilities.create_sales_dispatch
-                    ? salesHandoffs
-                          .filter((handoff) => !handoff.dispatch_job_id)
-                          .map((handoff) => `sale:${handoff.id}`)
-                    : []),
             ]
                 .filter(Boolean)
                 .filter(
@@ -370,11 +358,9 @@ export function LiveDispatchWorkspace({
                 .join('|'),
         [
             rentalHandoffs,
-            salesHandoffs,
             serviceRequests,
             capabilities.convert_service_request,
             capabilities.create_rental_dispatch,
-            capabilities.create_sales_dispatch,
         ],
     );
     const incomingWorkCount = incomingHandoffKey
@@ -1013,7 +999,6 @@ export function LiveDispatchWorkspace({
                             clients={clients}
                             serviceRequests={serviceRequests}
                             rentalHandoffs={rentalHandoffs}
-                            salesHandoffs={salesHandoffs}
                             jobs={jobs}
                             capabilities={capabilities}
                             initialRequestId={initialServiceRequestId}
@@ -1606,9 +1591,6 @@ export function LiveDispatchWorkspace({
                                                 </option>
                                                 <option value="rental_reservation">
                                                     Rental reservations
-                                                </option>
-                                                <option value="sales_order">
-                                                    Sales delivery orders
                                                 </option>
                                                 <option value="manual">
                                                     Manual source ·
@@ -2956,7 +2938,6 @@ function SourceRequirementsPanel({ job }: { job: DispatchJobViewModel }) {
         Boolean(source.manual_intake);
     const isService = source?.type === 'service_request';
     const isRental = source?.type === 'rental_reservation';
-    const isSale = source?.type === 'sales_order';
 
     // Manual direct dispatches have no upstream order requirements; provenance is already in the header & context.
     if (isManual) {
@@ -3056,59 +3037,6 @@ function SourceRequirementsPanel({ job }: { job: DispatchJobViewModel }) {
                                 <li>
                                     Maintenance &amp; test certificates attached
                                     to job
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                )}
-
-                {/* 4. SALES ORDER SPECIFICS */}
-                {isSale && (
-                    <div className="space-y-3 text-xs">
-                        <div className="grid gap-3 sm:grid-cols-2">
-                            <div className="rounded-lg border border-line bg-surface p-3">
-                                <p className="text-[10px] font-semibold text-ink-soft uppercase">
-                                    Sales Delivery Destination
-                                </p>
-                                <p className="mt-1 font-semibold text-ink">
-                                    {source?.location || job.site}
-                                </p>
-                                <p className="mt-0.5 font-mono text-[11px] text-ink-soft">
-                                    Coordinates: 1.290270° N, 103.851959° E
-                                </p>
-                            </div>
-                            <div className="rounded-lg border border-line bg-surface p-3">
-                                <p className="text-[10px] font-semibold text-ink-soft uppercase">
-                                    Order Value &amp; Fulfillment
-                                </p>
-                                <p className="mt-1 font-semibold text-ink">
-                                    {source?.total_cents
-                                        ? formatCurrency(
-                                              source.total_cents / 100,
-                                          )
-                                        : 'Commercial Delivery'}
-                                </p>
-                                <p className="mt-0.5 text-ink-soft">
-                                    Mode:{' '}
-                                    {humanize(
-                                        source?.fulfillment_mode || 'delivery',
-                                    )}
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="rounded-lg border border-success/30 bg-success-soft/30 p-3">
-                            <p className="text-[10px] font-semibold text-success-strong uppercase">
-                                Order Handover Checklist
-                            </p>
-                            <ul className="mt-1.5 list-disc space-y-1 pl-4 text-ink-soft">
-                                <li>
-                                    Item packaging, serial numbers, and warranty
-                                    documentation verified
-                                </li>
-                                <li>
-                                    Client site delivery coordinates confirmed
-                                    with transport team
                                 </li>
                             </ul>
                         </div>
@@ -4122,15 +4050,12 @@ function DispatchSourceBadge({
     }
 
     const isRental = source.type === 'rental_reservation';
-    const isSale = source.type === 'sales_order';
 
     const tone = isRental
         ? 'border-warning/30 bg-warning-soft text-warning-strong'
-        : isSale
-          ? 'border-success/30 bg-success-soft text-success-strong'
-          : 'border-brand-strong/30 bg-brand-soft text-brand-strong';
+        : 'border-brand-strong/30 bg-brand-soft text-brand-strong';
 
-    const label = isRental ? 'Rental' : isSale ? 'Sale' : 'Service';
+    const label = isRental ? 'Rental' : 'Service';
 
     return (
         <span

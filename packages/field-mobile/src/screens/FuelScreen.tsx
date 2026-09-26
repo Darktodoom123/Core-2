@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
+    BackHandler,
     KeyboardAvoidingView,
     Platform,
     RefreshControl,
@@ -9,17 +10,22 @@ import {
     View,
 } from 'react-native';
 import {
+    FuelBanner,
     FuelButton,
-    FuelField,
     fuelStyles,
 } from '../components/fuel/fuel-controls';
 import { FuelLogForm } from '../components/fuel/fuel-log-form';
+import {
+    FuelRequestDetail,
+    FuelRequestListItem,
+    QueuedFuelRequestItem,
+} from '../components/fuel/fuel-request-detail';
+import { FuelRequestForm } from '../components/fuel/fuel-request-form';
 import { TileScreenHeader } from '../components/layout/tile-screen-header';
 import { useFuelManagement } from '../hooks/useFuelManagement';
 import type { FuelCommandQueue } from '../hooks/useFuelManagement';
 import type { FuelDraftStore } from '../storage/fuelDraftStore';
 import { useTheme } from '../theme';
-import { fuelStatusLabels } from '../types/fuel';
 import type { FuelApi, MobileFuelRequest } from '../types/fuel';
 
 export interface FuelScreenProps {
@@ -31,6 +37,8 @@ export interface FuelScreenProps {
     syncQueue: () => Promise<unknown>;
     onBack: () => void;
     draftStore?: FuelDraftStore;
+    /** Opens this request directly, e.g. from a fuel notification tap. */
+    initialRequestId?: number | null;
 }
 
 export function FuelScreen({
@@ -42,6 +50,7 @@ export function FuelScreen({
     syncQueue,
     onBack,
     draftStore,
+    initialRequestId = null,
 }: FuelScreenProps) {
     const { theme } = useTheme();
     const fuel = useFuelManagement(
@@ -55,12 +64,52 @@ export function FuelScreen({
     );
     const [tab, setTab] = useState<'requests' | 'logs'>('requests');
     const [creating, setCreating] = useState(false);
-    const [selectedId, setSelectedId] = useState<number | null>(null);
+    const [selectedId, setSelectedId] = useState<number | null>(
+        initialRequestId,
+    );
     const [logging, setLogging] = useState(false);
+    // Only show the pull-to-refresh spinner for user pulls; background loads use
+    // the inline loading text so the spinner never covers the "Request fuel" CTA.
+    const [pulling, setPulling] = useState(false);
+    const scrollRef = useRef<ScrollView>(null);
     const selected = fuel.requests.find((request) => request.id === selectedId);
     const draft = fuel.draft;
     const locked = fuel.busy || !!draft.pending || !fuel.draftReady;
-    const textStyle = [fuelStyles.body, { color: theme.textPrimary }];
+
+    useEffect(() => {
+        if (initialRequestId !== null) {
+            queueMicrotask(() => {
+                setSelectedId(initialRequestId);
+                setCreating(false);
+            });
+        }
+    }, [initialRequestId]);
+
+    // Hardware back steps out of the form/detail before leaving Fuel. Re-registering
+    // on each change keeps this handler ahead of the navigator's.
+    useEffect(() => {
+        if (!creating && selectedId === null) {
+            return;
+        }
+
+        const subscription = BackHandler.addEventListener(
+            'hardwareBackPress',
+            () => {
+                if (!fuel.busy) {
+                    if (logging) {
+                        setLogging(false);
+                    } else {
+                        setSelectedId(null);
+                        setCreating(false);
+                    }
+                }
+
+                return true;
+            },
+        );
+
+        return () => subscription.remove();
+    }, [creating, selectedId, logging, fuel.busy]);
 
     const showRequest = (request: MobileFuelRequest) => {
         setSelectedId(request.id);
@@ -68,10 +117,23 @@ export function FuelScreen({
         setLogging(false);
     };
     const leaveDetail = () => {
+        if (logging) {
+            setLogging(false);
+
+            return;
+        }
+
         setSelectedId(null);
         setLogging(false);
         setCreating(false);
     };
+
+    const visible = fuel.requests.filter(
+        (request) => tab === 'requests' || request.logs.length > 0,
+    );
+    const ready = visible.filter((request) => request.status === 'verified');
+    const others = visible.filter((request) => request.status !== 'verified');
+    const hasDraft = Boolean(draft.quantity || draft.purpose || draft.pending);
 
     return (
         <KeyboardAvoidingView
@@ -80,8 +142,9 @@ export function FuelScreen({
             testID="fuel-management-screen"
         >
             <TileScreenHeader
+                category="Fuel"
                 title="Fuel Management"
-                subtitle="Requests, approvals and recorded refueling"
+                subtitle="Request fuel, refuel, capture the receipt"
                 onBack={
                     fuel.busy
                         ? undefined
@@ -91,395 +154,156 @@ export function FuelScreen({
                 }
             />
             <ScrollView
+                ref={scrollRef}
                 contentContainerStyle={{
                     paddingHorizontal: 16,
+                    paddingTop: 12,
                     paddingBottom: 36,
+                    gap: 12,
                 }}
                 keyboardShouldPersistTaps="handled"
                 refreshControl={
                     <RefreshControl
-                        refreshing={fuel.loading}
-                        onRefresh={() => void fuel.refresh()}
+                        refreshing={pulling}
+                        onRefresh={() => {
+                            setPulling(true);
+                            void fuel
+                                .refresh()
+                                .finally(() => setPulling(false));
+                        }}
                         enabled={isOnline === true && !fuel.busy}
                     />
                 }
             >
-                {isOnline !== true && (
-                    <Text style={[textStyle, { paddingVertical: 12 }]}>
-                        {isOnline === false
-                            ? 'Offline. Fuel requests and logs can be queued on this device; they sync when the connection returns.'
-                            : 'Checking connection…'}
-                    </Text>
+                {isOnline === false && (
+                    <FuelBanner
+                        tone="info"
+                        title="You are offline"
+                        message="Requests and refuel logs are saved on this device and sync when the connection returns."
+                    />
                 )}
                 {!isOutboxReady && (
-                    <Text style={[textStyle, { paddingVertical: 12 }]}>
-                        Preparing secure on-device fuel sync…
-                    </Text>
+                    <FuelBanner
+                        tone="info"
+                        message="Preparing secure on-device fuel sync…"
+                    />
                 )}
                 {fuel.error && (
-                    <View
-                        accessibilityRole="alert"
-                        style={{ paddingVertical: 12, gap: 8 }}
-                    >
-                        <Text style={textStyle}>{fuel.error}</Text>
-                        <FuelButton
-                            title="Refresh fuel records"
-                            onPress={() => void fuel.refresh()}
-                            disabled={isOnline !== true || fuel.busy}
-                        />
-                    </View>
-                )}
-                {fuel.notice && (
-                    <Text
-                        accessibilityLiveRegion="polite"
-                        style={[textStyle, { paddingVertical: 12 }]}
-                        testID="fuel-notice"
-                    >
-                        {fuel.notice}
-                    </Text>
-                )}
-
-                {creating ? (
-                    <View style={fuelStyles.section}>
-                        <Text
-                            style={[
-                                fuelStyles.title,
-                                { color: theme.textPrimary },
-                            ]}
-                        >
-                            Request fuel
-                        </Text>
-                        <Text style={textStyle}>{fuel.draftNotice}</Text>
-                        {draft.pending && (
-                            <Text style={textStyle}>
-                                Submission needs confirmation. Retry this saved
-                                request to avoid creating a duplicate.
-                            </Text>
-                        )}
-                        <Text style={textStyle}>Equipment (optional)</Text>
-                        <View style={fuelStyles.row}>
+                    <FuelBanner tone="danger" message={fuel.error}>
+                        {!creating && isOnline === true && (
                             <FuelButton
-                                title="No equipment"
-                                selected={draft.assetId === null}
-                                onPress={() =>
-                                    fuel.updateDraft({
-                                        assetId: null,
-                                        jobId: null,
-                                    })
-                                }
-                                disabled={locked}
-                            />
-                            {fuel.options?.assets.map((asset) => (
-                                <FuelButton
-                                    key={asset.id}
-                                    title={`${asset.code} · ${asset.name}`}
-                                    selected={draft.assetId === asset.id}
-                                    onPress={() =>
-                                        fuel.updateDraft({
-                                            assetId: asset.id,
-                                            jobId: null,
-                                        })
-                                    }
-                                    disabled={locked}
-                                    testID={`fuel-asset-${asset.id}`}
-                                />
-                            ))}
-                        </View>
-                        {fuel.options?.assets.length === 0 && (
-                            <Text style={textStyle}>
-                                No equipment is currently assigned. You can
-                                submit a general request and describe the need.
-                            </Text>
-                        )}
-                        <Text style={textStyle}>Job (optional)</Text>
-                        <View style={fuelStyles.row}>
-                            <FuelButton
-                                title="No job"
-                                selected={draft.jobId === null}
-                                onPress={() =>
-                                    fuel.updateDraft({ jobId: null })
-                                }
-                                disabled={locked}
-                            />
-                            {fuel.options?.jobs
-                                .filter(
-                                    (job) =>
-                                        !draft.assetId ||
-                                        job.operational_asset_ids.includes(
-                                            draft.assetId,
-                                        ),
-                                )
-                                .map((job) => (
-                                    <FuelButton
-                                        key={job.id}
-                                        title={job.reference}
-                                        selected={draft.jobId === job.id}
-                                        onPress={() =>
-                                            fuel.updateDraft({ jobId: job.id })
-                                        }
-                                        disabled={locked}
-                                    />
-                                ))}
-                        </View>
-                        <FuelField
-                            label="Requested quantity (liters)"
-                            value={draft.quantity}
-                            onChangeText={(quantity) =>
-                                fuel.updateDraft({ quantity })
-                            }
-                            keyboardType="decimal-pad"
-                            editable={!locked}
-                        />
-                        <Text style={textStyle}>Fuel type</Text>
-                        <View style={fuelStyles.row}>
-                            {(['diesel', 'gasoline'] as const).map((type) => (
-                                <FuelButton
-                                    key={type}
-                                    title={
-                                        type === 'diesel'
-                                            ? 'Diesel'
-                                            : 'Gasoline'
-                                    }
-                                    selected={draft.fuelType === type}
-                                    onPress={() =>
-                                        fuel.updateDraft({ fuelType: type })
-                                    }
-                                    disabled={locked}
-                                />
-                            ))}
-                        </View>
-                        <FuelField
-                            label="Purpose"
-                            value={draft.purpose}
-                            onChangeText={(purpose) =>
-                                fuel.updateDraft({ purpose })
-                            }
-                            maxLength={2000}
-                            multiline
-                            editable={!locked}
-                        />
-                        <FuelButton
-                            title={
-                                fuel.busy
-                                    ? 'Submitting…'
-                                    : draft.pending
-                                      ? 'Retry saved request'
-                                      : 'Submit fuel request'
-                            }
-                            primary
-                            disabled={
-                                fuel.busy ||
-                                !fuel.draftReady ||
-                                !isOutboxReady ||
-                                !fuel.options?.can_request
-                            }
-                            onPress={() => {
-                                void fuel.submit().then((result) => {
-                                    if (result?.request) {
-                                        showRequest(result.request);
-                                    }
-                                });
-                            }}
-                            testID="fuel-submit-request-button"
-                        />
-                        <FuelButton
-                            title="Back to requests"
-                            onPress={() => setCreating(false)}
-                            disabled={fuel.busy}
-                        />
-                    </View>
-                ) : selected ? (
-                    <View style={fuelStyles.section}>
-                        <Text
-                            style={[
-                                fuelStyles.title,
-                                { color: theme.textPrimary },
-                            ]}
-                        >
-                            {selected.reference}
-                        </Text>
-                        <Text style={textStyle}>
-                            {fuelStatusLabels[selected.status]}
-                        </Text>
-                        <Text style={textStyle}>
-                            {selected.quantity_litres} L · {selected.fuel_type}{' '}
-                            · {selected.asset?.code ?? 'General request'}
-                        </Text>
-                        {selected.job?.reference && (
-                            <Text style={textStyle}>
-                                Job: {selected.job.reference}
-                            </Text>
-                        )}
-                        <Text style={textStyle}>{selected.purpose}</Text>
-                        {selected.decision_reason && (
-                            <Text style={textStyle}>
-                                Office note: {selected.decision_reason}
-                            </Text>
-                        )}
-                        <View style={{ gap: 6 }}>
-                            <Text style={textStyle}>
-                                Submitted: {formatDate(selected.created_at)}
-                            </Text>
-                            {selected.reviewed_at && (
-                                <Text style={textStyle}>
-                                    Forwarded:{' '}
-                                    {formatDate(selected.reviewed_at)}
-                                </Text>
-                            )}
-                            {selected.approved_at && (
-                                <Text style={textStyle}>
-                                    {selected.status === 'rejected'
-                                        ? 'Decision'
-                                        : 'Approved'}
-                                    : {formatDate(selected.approved_at)}
-                                </Text>
-                            )}
-                            {selected.verified_at && (
-                                <Text style={textStyle}>
-                                    Verified: {formatDate(selected.verified_at)}
-                                </Text>
-                            )}
-                        </View>
-                        {selected.status === 'rejected' && (
-                            <View style={{ gap: 8, paddingVertical: 8 }}>
-                                <Text
-                                    style={[
-                                        textStyle,
-                                        {
-                                            color: '#EF4444',
-                                            fontWeight: 'bold',
-                                        },
-                                    ]}
-                                >
-                                    This fuel request was declined by dispatch.
-                                </Text>
-                                <FuelButton
-                                    title="Revise & Resubmit"
-                                    primary
-                                    onPress={() => {
-                                        fuel.updateDraft({
-                                            quantity: String(
-                                                selected.quantity_litres,
-                                            ),
-                                            purpose: selected.purpose,
-                                            fuelType: selected.fuel_type,
-                                            assetId:
-                                                selected.operational_asset_id,
-                                            jobId: selected.dispatch_job_id,
-                                        });
-                                        setCreating(true);
-                                        setSelectedId(null);
-                                    }}
-                                    disabled={fuel.busy}
-                                />
-                            </View>
-                        )}
-                        {selected.can_record && !logging && (
-                            <FuelButton
-                                title="Record refueling"
-                                primary
-                                onPress={() => setLogging(true)}
+                                title="Refresh fuel records"
+                                onPress={() => void fuel.refresh()}
                                 disabled={fuel.busy}
                             />
                         )}
-                        {!selected.can_record &&
-                            selected.status !== 'logged' &&
-                            selected.status !== 'rejected' && (
-                                <Text style={textStyle}>
-                                    The office must complete approval and
-                                    verification before refueling can be
-                                    recorded.
-                                </Text>
-                            )}
-                        {logging && selected.can_record && (
-                            <FuelLogForm
-                                key={selected.id}
-                                request={selected}
-                                busy={fuel.busy}
-                                isOnline={isOnline === true}
-                                outboxReady={isOutboxReady}
-                                onCancel={() => setLogging(false)}
-                                onSave={async (payload, receipt) => {
-                                    const saved = await fuel.record(
-                                        selected.id,
-                                        payload,
-                                        receipt,
-                                    );
+                    </FuelBanner>
+                )}
+                {fuel.notice && (
+                    <FuelBanner
+                        tone={
+                            fuel.notice.includes('on this device') ||
+                            fuel.notice.includes('queue')
+                                ? 'info'
+                                : 'success'
+                        }
+                        message={fuel.notice}
+                        testID="fuel-notice"
+                    />
+                )}
+                {fuel.cacheNotice && (
+                    <FuelBanner tone="warning" message={fuel.cacheNotice} />
+                )}
 
-                                    if (saved) {
-                                        setLogging(false);
-                                    }
+                {creating ? (
+                    <FuelRequestForm
+                        draft={draft}
+                        options={fuel.options}
+                        fieldErrors={fuel.fieldErrors}
+                        restoredDraft={fuel.restoredDraft}
+                        locked={locked}
+                        busy={fuel.busy}
+                        isOnline={isOnline === true}
+                        canSubmit={
+                            fuel.draftReady &&
+                            isOutboxReady &&
+                            fuel.options?.can_request === true
+                        }
+                        onChange={fuel.updateDraft}
+                        onDiscardDraft={() => void fuel.discardDraft()}
+                        onSubmit={() => {
+                            void fuel.submit().then((result) => {
+                                if (result?.request) {
+                                    showRequest(result.request);
+                                } else if (result) {
+                                    setCreating(false);
+                                }
+                            });
+                        }}
+                        onCancel={() => setCreating(false)}
+                    />
+                ) : selected && logging && selected.can_record ? (
+                    <FuelLogForm
+                        key={selected.id}
+                        request={selected}
+                        busy={fuel.busy}
+                        isOnline={isOnline === true}
+                        outboxReady={isOutboxReady}
+                        onCancel={() => setLogging(false)}
+                        onSave={async (payload, receipt) => {
+                            const saved = await fuel.record(
+                                selected.id,
+                                payload,
+                                receipt,
+                            );
 
-                                    return saved;
-                                }}
-                            />
+                            if (saved) {
+                                setLogging(false);
+                            }
+
+                            return saved;
+                        }}
+                    />
+                ) : selected ? (
+                    <FuelRequestDetail
+                        request={selected}
+                        busy={fuel.busy}
+                        withdrawPending={fuel.pendingWithdrawIds.includes(
+                            selected.id,
                         )}
-                        {selected.logs.map((log) => (
-                            <View
-                                key={log.id}
-                                style={{
-                                    gap: 6,
-                                    borderTopWidth: 1,
-                                    borderColor: theme.border,
-                                    paddingTop: 16,
-                                }}
-                            >
-                                <Text
-                                    style={[
-                                        fuelStyles.title,
-                                        { color: theme.textPrimary },
-                                    ]}
-                                >
-                                    {log.quantity_litres} L recorded
-                                </Text>
-                                <Text style={textStyle}>
-                                    {formatDate(log.recorded_at)}
-                                </Text>
-                                {log.total_cost !== null && (
-                                    <Text style={textStyle}>
-                                        PHP {Number(log.total_cost).toFixed(2)}
-                                    </Text>
-                                )}
-                                {log.odometer_km !== null && (
-                                    <Text style={textStyle}>
-                                        Odometer: {log.odometer_km} km
-                                    </Text>
-                                )}
-                                {log.hour_meter !== null && (
-                                    <Text style={textStyle}>
-                                        Engine hours: {log.hour_meter}
-                                    </Text>
-                                )}
-                                {log.fuel_station && (
-                                    <Text style={textStyle}>
-                                        {log.fuel_station}
-                                    </Text>
-                                )}
-                                <Text style={textStyle}>
-                                    {log.has_receipt
-                                        ? 'Receipt attached'
-                                        : 'No receipt attached'}
-                                </Text>
-                                {log.is_anomaly && (
-                                    <Text style={textStyle}>
-                                        Needs review:{' '}
-                                        {log.anomaly_reason ??
-                                            'Consumption variance flagged.'}
-                                    </Text>
-                                )}
-                            </View>
-                        ))}
-                        <FuelButton
-                            title="Back to requests"
-                            onPress={leaveDetail}
-                            disabled={fuel.busy}
-                        />
-                    </View>
+                        logPending={fuel.pendingLogIds.includes(selected.id)}
+                        onRecord={() => {
+                            fuel.dismissNotice();
+                            setLogging(true);
+                            scrollRef.current?.scrollTo({
+                                y: 0,
+                                animated: false,
+                            });
+                        }}
+                        onWithdraw={(reason) =>
+                            void fuel.withdraw(selected.id, reason)
+                        }
+                        onResubmit={() => {
+                            fuel.updateDraft({
+                                quantity: String(selected.quantity_litres),
+                                purpose: selected.purpose,
+                                fuelType: selected.fuel_type,
+                                assetId: selected.operational_asset_id,
+                                jobId: selected.dispatch_job_id,
+                                urgency: selected.urgency ?? 'normal',
+                                levelPercent:
+                                    selected.current_fuel_level_percent ?? null,
+                            });
+                            setCreating(true);
+                            setSelectedId(null);
+                        }}
+                        onBack={leaveDetail}
+                    />
                 ) : (
-                    <View style={fuelStyles.section}>
+                    <View style={{ gap: 12 }}>
                         <FuelButton
                             title={
-                                draft.quantity || draft.purpose || draft.pending
+                                hasDraft
                                     ? 'Continue fuel draft'
                                     : 'Request fuel'
                             }
@@ -493,14 +317,23 @@ export function FuelScreen({
                                     !draft.pending)
                             }
                         />
-                        {fuel.draftNotice && (
-                            <Text style={textStyle}>{fuel.draftNotice}</Text>
-                        )}
-                        {fuel.options?.can_request === false && (
-                            <Text style={textStyle}>
-                                Your account cannot submit fuel requests.
+                        {hasDraft && fuel.draftNotice ? (
+                            <Text
+                                style={[
+                                    fuelStyles.body,
+                                    { color: theme.textSecondary },
+                                ]}
+                            >
+                                {fuel.draftNotice}
                             </Text>
+                        ) : null}
+                        {fuel.options?.can_request === false && (
+                            <FuelBanner
+                                tone="warning"
+                                message="Your account cannot submit fuel requests."
+                            />
                         )}
+
                         <View style={fuelStyles.row}>
                             <FuelButton
                                 title="Requests"
@@ -513,60 +346,81 @@ export function FuelScreen({
                                 onPress={() => setTab('logs')}
                             />
                         </View>
+
+                        {tab === 'requests' &&
+                            fuel.queuedRequests.map((queued) => (
+                                <QueuedFuelRequestItem
+                                    key={queued.commandId}
+                                    queued={queued}
+                                />
+                            ))}
+
                         {fuel.loading && fuel.requests.length === 0 && (
                             <ActivityIndicator accessibilityLabel="Loading fuel requests" />
                         )}
+
                         {!fuel.loading &&
                             !fuel.error &&
-                            fuel.requests.filter(
-                                (request) =>
-                                    tab === 'requests' ||
-                                    request.logs.length > 0,
-                            ).length === 0 && (
-                                <Text style={textStyle}>
+                            visible.length === 0 &&
+                            (tab === 'logs' ||
+                                fuel.queuedRequests.length === 0) && (
+                                <Text
+                                    style={[
+                                        fuelStyles.body,
+                                        { color: theme.textSecondary },
+                                    ]}
+                                >
                                     {isOnline === true
                                         ? tab === 'requests'
-                                            ? 'No fuel requests yet. Submit your first request above.'
-                                            : 'No fuel logs in the loaded requests.'
-                                        : 'No fuel records loaded. Reconnect to view history.'}
+                                            ? 'No fuel requests yet. Tap "Request fuel" to start one.'
+                                            : 'No refuels recorded yet.'
+                                        : 'No fuel records saved on this device yet. Reconnect to load your history.'}
                                 </Text>
                             )}
-                        {fuel.requests
-                            .filter(
-                                (request) =>
-                                    tab === 'requests' ||
-                                    request.logs.length > 0,
-                            )
-                            .map((request) => (
-                                <View
-                                    key={request.id}
-                                    style={{
-                                        paddingVertical: 14,
-                                        gap: 8,
-                                        borderBottomWidth: 1,
-                                        borderColor: theme.border,
-                                    }}
-                                >
-                                    <Text style={textStyle}>
-                                        {request.reference} ·{' '}
-                                        {fuelStatusLabels[request.status]}
-                                    </Text>
-                                    <Text style={textStyle}>
-                                        {request.asset?.code ??
-                                            'General request'}{' '}
-                                        · {request.quantity_litres} L{' '}
-                                        {request.fuel_type}
-                                    </Text>
-                                    <Text style={textStyle}>
-                                        {formatDate(request.created_at)}
-                                    </Text>
-                                    <FuelButton
-                                        title={`View ${request.reference}`}
-                                        onPress={() => showRequest(request)}
-                                        testID={`fuel-view-request-${request.id}`}
-                                    />
-                                </View>
-                            ))}
+
+                        {ready.length > 0 && (
+                            <Text
+                                style={{
+                                    color: theme.textPrimary,
+                                    fontWeight: '700',
+                                    fontSize: 15,
+                                }}
+                            >
+                                Ready to refuel
+                            </Text>
+                        )}
+                        {ready.map((request) => (
+                            <FuelRequestListItem
+                                key={request.id}
+                                request={request}
+                                onPress={() => {
+                                    fuel.dismissNotice();
+                                    showRequest(request);
+                                }}
+                            />
+                        ))}
+                        {ready.length > 0 && others.length > 0 && (
+                            <Text
+                                style={{
+                                    color: theme.textPrimary,
+                                    fontWeight: '700',
+                                    fontSize: 15,
+                                }}
+                            >
+                                Other requests
+                            </Text>
+                        )}
+                        {others.map((request) => (
+                            <FuelRequestListItem
+                                key={request.id}
+                                request={request}
+                                onPress={() => {
+                                    fuel.dismissNotice();
+                                    showRequest(request);
+                                }}
+                            />
+                        ))}
+
                         {fuel.nextPage && (
                             <FuelButton
                                 title="Load older requests"
@@ -574,18 +428,9 @@ export function FuelScreen({
                                 disabled={fuel.loading || isOnline !== true}
                             />
                         )}
-                        <FuelButton
-                            title="Refresh"
-                            onPress={() => void fuel.refresh()}
-                            disabled={fuel.loading || isOnline !== true}
-                        />
                     </View>
                 )}
             </ScrollView>
         </KeyboardAvoidingView>
     );
-}
-
-function formatDate(value: string | null): string {
-    return value ? new Date(value).toLocaleString() : 'Not recorded';
 }

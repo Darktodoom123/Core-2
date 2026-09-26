@@ -59,8 +59,6 @@ import type {
     RentalReturnData,
 } from '../screens/RentalHandoverScreen';
 import { RentalHandoverScreen } from '../screens/RentalHandoverScreen';
-import type { SalesDeliveryData } from '../screens/SalesDeliveryScreen';
-import { SalesDeliveryScreen } from '../screens/SalesDeliveryScreen';
 import { ApiClientError } from '../services/apiClient';
 import {
     CommandOutboxManager,
@@ -564,10 +562,12 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         | 'hos'
         | 'routes'
         | 'rental'
-        | 'sales'
         | 'dispatch'
         | 'profile'
     >('main');
+    const [fuelFocusRequestId, setFuelFocusRequestId] = useState<number | null>(
+        null,
+    );
     const [shiftInfo, setShiftInfo] = useState<ShiftInfo>({
         status: 'off_shift',
         dutyStatus: 'off_duty',
@@ -977,6 +977,20 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                         );
                     }
                 }
+
+                return;
+            }
+
+            // Fuel decisions open the request in Fuel Management, not Dispatch.
+            if (event === 'fuel.status_changed') {
+                const fuelRequestId = Number(data.fuel_request_id);
+
+                setFuelFocusRequestId(
+                    Number.isInteger(fuelRequestId) && fuelRequestId > 0
+                        ? fuelRequestId
+                        : null,
+                );
+                setActiveAppView('fuel');
 
                 return;
             }
@@ -2232,111 +2246,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         ],
     );
 
-    const handleSalesDelivery = useCallback(
-        async (data: SalesDeliveryData) => {
-            const linkedJob =
-                (data.jobId ? jobs.find((j) => j.id === data.jobId) : null) ??
-                (activeJob?.source?.type === 'sales_order' ? activeJob : null);
-
-            const orderId =
-                data.orderId ??
-                (linkedJob?.source?.type === 'sales_order'
-                    ? linkedJob.source.id
-                    : null);
-
-            if (!orderId) {
-                const error = new Error(
-                    'Explicit sales order must be selected before submitting delivery evidence.',
-                );
-                await handleRequestFailure(
-                    error,
-                    'Please select an active sales delivery job.',
-                );
-
-                throw error;
-            }
-
-            const assignments = linkedJob?.asset_assignments ?? [];
-            const requestedAssetId = data.assetId ?? selectedAssetId;
-            const assetId =
-                assignments.length === 0
-                    ? (requestedAssetId ?? null)
-                    : requestedAssetId !== null &&
-                        requestedAssetId !== undefined &&
-                        assignments.some(
-                            (assignment) =>
-                                assignment.operational_asset_id ===
-                                requestedAssetId,
-                        )
-                      ? requestedAssetId
-                      : assignments.length === 1
-                        ? assignments[0].operational_asset_id
-                        : null;
-
-            if (assignments.length > 1 && assetId === null) {
-                const error = new Error(
-                    'Multiple assets are assigned to this job. Select the asset covered by the sales delivery before submitting.',
-                );
-                await handleRequestFailure(
-                    error,
-                    'Please select the assigned asset covered by this delivery.',
-                );
-
-                throw error;
-            }
-
-            const photosPayload = (data.photos || []).map((p) => ({
-                base64:
-                    p.base64 ||
-                    (p.uri?.startsWith('data:') ? p.uri : undefined),
-                file_path: p.uri,
-                label: p.fileName || 'delivery_proof',
-            }));
-
-            let queued = false;
-
-            try {
-                await commandOutbox.enqueueSubmitSalesDelivery({
-                    order_id: Number(orderId),
-                    dispatch_job_id: linkedJob?.id ?? null,
-                    operational_asset_id:
-                        assetId !== null ? Number(assetId) : null,
-                    verified_vin: data.verifiedVin,
-                    accessories_checked: data.accessoriesChecked,
-                    delivery_notes: data.notes,
-                    photos: photosPayload,
-                    signature: data.signatureBase64,
-                    signee_name: data.signeeName,
-                    signee_role: data.signeeRole,
-                });
-                queued = true;
-
-                await syncQueue();
-            } catch (error: unknown) {
-                await handleRequestFailure(
-                    error,
-                    'Sales delivery evidence queued locally.',
-                );
-
-                if (!queued) {
-                    throw error;
-                }
-            }
-
-            if (queued) {
-                setActiveAppView('main');
-            }
-        },
-        [
-            activeJob,
-            commandOutbox,
-            handleRequestFailure,
-            jobs,
-            selectedAssetId,
-            syncQueue,
-        ],
-    );
-
     const handleSaveInspection = useCallback(
         async (
             checks: TechnicianInspectionCheck[],
@@ -2971,7 +2880,11 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 commandOutbox={commandOutbox}
                                 isOutboxReady={isOutboxReady}
                                 syncQueue={() => syncQueue(false)}
-                                onBack={() => setActiveAppView('main')}
+                                initialRequestId={fuelFocusRequestId}
+                                onBack={() => {
+                                    setFuelFocusRequestId(null);
+                                    setActiveAppView('main');
+                                }}
                             />
                         ) : activeAppView === 'inspection' ? (
                             <EquipmentInspectionScreen
@@ -3112,32 +3025,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                     resolvedJobReference
                                 }
                             />
-                        ) : activeAppView === 'sales' ? (
-                            <SalesDeliveryScreen
-                                assignedAssets={activeJob?.asset_assignments}
-                                actorId={user?.id}
-                                assetId={currentAsset?.operational_asset_id}
-                                clientName={
-                                    activeJob?.client || resolvedClientName
-                                }
-                                equipmentName={
-                                    currentAsset?.asset_name ||
-                                    resolvedAssetName
-                                }
-                                jobId={activeJob?.id}
-                                onBack={() => setActiveAppView('main')}
-                                onCompleteDelivery={handleSalesDelivery}
-                                orderId={
-                                    activeJob?.source?.type === 'sales_order'
-                                        ? activeJob.source.id
-                                        : undefined
-                                }
-                                orderReference={
-                                    activeJob?.source?.reference ||
-                                    activeJob?.reference ||
-                                    resolvedJobReference
-                                }
-                            />
                         ) : activeAppView === 'dispatch' ? (
                             <DispatchOrdersScreen
                                 conflictedCommands={outboxCommands?.filter(
@@ -3147,11 +3034,14 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 onAcceptAssignment={handleAcceptAssignment}
                                 onAcceptServerState={handleAcceptServerState}
                                 onBack={() => setActiveAppView('main')}
+                                onOpenDvir={() => setActiveAppView('dvir')}
                                 onOpenRoutes={() => setActiveAppView('routes')}
                                 onRejectAssignment={handleRejectAssignment}
                                 onRetryNewVersion={handleRetryNewVersion}
                                 onSelectJob={handleSelectJob}
+                                onSubmitDelay={handleReportDelay}
                                 onTransitionStatus={handleTransitionStatus}
+                                outboxCommands={outboxCommands}
                             />
                         ) : activeAppView === 'profile' ? (
                             <>
@@ -3329,9 +3219,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                     }
                                     onOpenRoutes={() =>
                                         setActiveAppView('routes')
-                                    }
-                                    onOpenSales={() =>
-                                        setActiveAppView('sales')
                                     }
                                     onOpenVehicle={() =>
                                         setActiveAppView('inspection')

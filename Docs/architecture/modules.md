@@ -99,15 +99,12 @@ Core Transaction 2 is structured as a two-service monorepo:
 
 ---
 
-### B. Tri-Modal Business Flow Adapters (Core 1 Ingestion)
+### B. Inbound Business Flow Adapters (Core 1 Ingestion)
 - **Rental Flow Adapter (`apps/operations/app/Modules/Rental/`)**:
   - Controller: `RentalReservationController`.
   - Models: `RentalReservation`, `RentalReservationItem`, `RentalOperatorAssignment`, `RentalCheckout`, `RentalReturnRecord`.
   - Scope: Rental reservations, equipment availability locking, operator assignment, checkout/return condition diffs, and return check-ins.
-- **Sales Flow Adapter (`apps/operations/app/Modules/Sales/`)**:
-  - Controllers: `SalesCatalogController`, `SalesOrderController`, `SalesQuoteController`.
-  - Models: `SalesCatalogItem`, `SalesQuote`, `SalesQuoteItem`, `SalesOrder`, `SalesOrderItem`.
-  - Scope: Sales catalog items, quote reservations, transport fulfillment, serial/VIN verification, inventory ledger, and ownership transfer.
+- Service requests are handled by the Dispatch module; direct (manual) dispatch needs no inbound handoff. Core 2 no longer has a Sales module and does not receive or fulfill sale handoffs.
 
 ---
 
@@ -164,7 +161,7 @@ Core Transaction 2 is structured as a two-service monorepo:
 - `dispatch-desk/`: Primary modern dispatch desk implementation (`dispatch-desk.tsx`, `dispatch-resources.tsx`, `use-dispatch-search.ts`, `use-dispatch-desk-state.ts`, etc.) supporting paginated search, selection, and resource inspection.
 - `direct-dispatch/`: Direct manual operational dispatch creation modals and summaries.
 - `live-dispatch-workspace.tsx`: Incumbent dispatch board preserved for compatibility (`dispatch_workspace=classic` or operator field mode).
-- `live-dispatch-intake.tsx`: Multi-stream intake hub (Manual, Service Request, Rental, Sales Order).
+- `live-dispatch-intake.tsx`: Multi-stream intake hub (Manual, Service Request, Rental).
 - `schedule-board-week-view.tsx` & `schedule-board-month-view.tsx`: Multi-scale schedule calendar boards.
 - `project-planning-workspace.tsx` & `project-planning/`: Resource coverage timeline, phase reservations, weekly shift rostering, and allocation preview.
 - `tracking-workspace-section.tsx`: Real-time MapLibre tracking, weather telemetry, and fleet telemetry view.
@@ -202,7 +199,7 @@ Core Transaction 2 is structured as a two-service monorepo:
 - `FuelScreen.tsx`: Mobile fuel requests, dispensed liters, meter readings, receipt photo capture.
 - `EquipmentInspectionScreen.tsx`: 5-tab inspection suite (Checklist, Maintenance Work Order, Safe-Release Certificate, Fuel Receipt, Custody Handover).
 - `OperatorDashboardScreen.tsx`: Operator overview, active equipment binding, and telemetry state.
-- `RentalHandoverScreen.tsx` & `SalesDeliveryScreen.tsx`: Equipment condition checkout/return and sales delivery handovers.
+- `RentalHandoverScreen.tsx`: Equipment condition checkout/return handovers.
 - `DocumentsWalletScreen.tsx`: Digital credentials, licenses, certifications, and compliance wallet.
 
 ### C. Core Cards & Safety Panels (`src/components/cards/`, `src/components/panels/`, `src/components/inspection/`)

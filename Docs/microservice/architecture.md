@@ -1,6 +1,6 @@
 # Target architecture and shared invariants (Plan A: 2-Service Model)
 
-Status: implemented 2-service architecture specification; local verification complete, production deployment pending. Updated: 2026-09-15.
+Status: implemented 2-service architecture specification; local verification complete, production deployment pending. Updated: 2026-09-25.
 
 ## 1. Service Ownership & Boundaries
 
@@ -8,7 +8,7 @@ The approved architecture is **Plan A: The Pragmatic 2-Service Model**, comprisi
 
 | Service / Component | Authoritative Data & Domain Responsibilities |
 | --- | --- |
-| **Core Operations Service**<br>(`apps/operations`) | **Stack:** Laravel 13 + Inertia 3 + PostgreSQL (`core2_ms_operations`).<br>**Authoritative Domain:** Users, authentication (Sanctum tokens, sessions, CSRF), roles & permissions (Spatie), dispatch planning & approvals, crane and heavy equipment management, fleet assets, crew/driver assignments, Hours of Service (HoS) & statutory DOLE 10h fatigue rules, DVIR walkaround inspections & immediate critical defect safety lockouts, fuel requests & logs, rental agreements & reservations, sales orders, safety & SOS incidents, business attachments, field job reports and meter updates, operational audit, Web & Mobile Backend-For-Frontend (BFF), and Reverb real-time workspace updates.<br>**Internal Queue Workers:** Dedicated worker pools for OpenRouter AI recommendations (`ai` queue) and compliance reporting (`reports` queue). |
+| **Core Operations Service**<br>(`apps/operations`) | **Stack:** Laravel 13 + Inertia 3 + PostgreSQL (`core2_ms_operations`).<br>**Authoritative Domain:** Users, authentication (Sanctum tokens, sessions, CSRF), roles & permissions (Spatie), dispatch planning & approvals, crane and heavy equipment management, fleet assets, crew/driver assignments, Hours of Service (HoS) & statutory DOLE 10h fatigue rules, DVIR walkaround inspections & immediate critical defect safety lockouts, fuel requests & logs, rental agreements & reservations, safety & SOS incidents, business attachments, field job reports and meter updates, operational audit, Web & Mobile Backend-For-Frontend (BFF), and Reverb real-time workspace updates.<br>**Internal Queue Workers:** Dedicated worker pools for OpenRouter AI recommendations (`ai` queue) and compliance reporting (`reports` queue). |
 | **Tracking & Telemetry Microservice**<br>(`apps/tracking`) | **Stack:** Dedicated high-throughput service + isolated storage (Redis / partitioned PostgreSQL / TimescaleDB) (`core2_ms_tracking`).<br>**Authoritative Domain:** High-frequency mobile GPS sample ingestion, live position caching for dispatch maps, historical coordinate tracking, automated 30-day coordinate privacy pruning, ingestion command receipts, and local telemetry audit.<br>**Isolation Purpose:** Isolates heavy mobile GPS write traffic from the primary dispatch database. |
 
 ### Client Applications Topology

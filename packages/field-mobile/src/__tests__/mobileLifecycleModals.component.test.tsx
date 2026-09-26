@@ -9,6 +9,7 @@ import {
     ReliefHandoverModal,
 } from '../components/index';
 import { AssignedJobsListScreen } from '../screens/AssignedJobsListScreen';
+import { DispatchOrdersScreen } from '../screens/DispatchOrdersScreen';
 import { HosScreen } from '../screens/HosScreen';
 import { OperatorDashboardScreen } from '../screens/OperatorDashboardScreen';
 import type { DispatchJob } from '../types/index';
@@ -320,20 +321,34 @@ describe('Mobile Lifecycle Modals & Operational Safeguards', () => {
             ).toBeNull();
         });
 
-        it('keeps delay evidence visible when the parent cannot enqueue it', async () => {
-            const onReportDelay = jest
-                .fn()
-                .mockRejectedValue(new Error('Outbox unavailable.'));
-
+        it('keeps the home dashboard free of full dispatch job cards', async () => {
             const view = await render(
                 <AssignedJobsListScreen
                     isLoading={false}
                     jobs={[mockAcceptedJob]}
                     onRefresh={jest.fn()}
-                    onReportDelay={onReportDelay}
                     onSelectJob={jest.fn()}
                     onSosHoldComplete={jest.fn()}
                     outboxCommands={[]}
+                />,
+            );
+
+            expect(view.queryByTestId('job-card-101')).toBeNull();
+            expect(view.queryByTestId('report-delay-btn-101')).toBeNull();
+            expect(view.getByTestId('hero-active-dispatch')).toHaveTextContent(
+                'Ref: DISP-LIFECYCLE-101 · C-5 Station Foundation Lift',
+            );
+        });
+
+        it('keeps delay evidence visible when the parent cannot enqueue it', async () => {
+            const onSubmitDelay = jest
+                .fn()
+                .mockRejectedValue(new Error('Outbox unavailable.'));
+
+            const view = await render(
+                <DispatchOrdersScreen
+                    jobs={[mockAcceptedJob]}
+                    onSubmitDelay={onSubmitDelay}
                 />,
             );
 
@@ -343,7 +358,7 @@ describe('Mobile Lifecycle Modals & Operational Safeguards', () => {
             );
             await fireEvent.press(view.getByTestId('submit-delay-btn'));
 
-            expect(onReportDelay).toHaveBeenCalledTimes(1);
+            expect(onSubmitDelay).toHaveBeenCalledTimes(1);
             expect(view.getByTestId('report-delay-modal')).toBeTruthy();
             expect(view.getByText('Outbox unavailable.')).toBeTruthy();
         });
@@ -713,7 +728,6 @@ describe('Mobile Lifecycle Modals & Operational Safeguards', () => {
                     onOpenForms={jest.fn()}
                     onOpenRental={jest.fn()}
                     onOpenRoutes={jest.fn()}
-                    onOpenSales={jest.fn()}
                     onOpenVehicle={jest.fn()}
                     onRefresh={jest.fn()}
                     onReleaseUnit={onReleaseUnit}

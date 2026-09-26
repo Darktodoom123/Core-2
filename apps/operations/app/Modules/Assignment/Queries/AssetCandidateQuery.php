@@ -8,8 +8,6 @@ use App\Modules\Assignment\Models\DispatchAssetAssignment;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Rental\Enums\RentalReservationStatus;
 use App\Modules\Rental\Models\RentalReservationItem;
-use App\Modules\Sales\Enums\SalesOrderStatus;
-use App\Modules\Sales\Models\SalesOrderItem;
 use App\Shared\Assets\Models\Inspection;
 use App\Shared\Assets\Models\MaintenanceWorkOrder;
 use App\Shared\Assets\Models\OperationalAsset;
@@ -58,7 +56,7 @@ final class AssetCandidateQuery
      * Batch the same evidence used by canonical dispatch assignment checks.
      *
      * @param  list<int>  $assetIds
-     * @return array<int, array{maintenance: int, inspections: Collection<int, Inspection>, dispatch: Collection<int, DispatchAssetAssignment>, rentals: Collection<int, object>, sales: Collection<int, object>}>
+     * @return array<int, array{maintenance: int, inspections: Collection<int, Inspection>, dispatch: Collection<int, DispatchAssetAssignment>, rentals: Collection<int, object>}>
      */
     public function evidence(array $assetIds, DispatchJob $job, bool $excludeCurrentJob = false): array
     {
@@ -126,29 +124,11 @@ final class AssetCandidateQuery
             ])
             ->groupBy('operational_asset_id');
 
-        $sales = SalesOrderItem::query()
-            ->join('sales_catalog_items', 'sales_catalog_items.id', '=', 'sales_order_items.sales_catalog_item_id')
-            ->join('sales_orders', 'sales_orders.id', '=', 'sales_order_items.sales_order_id')
-            ->whereIn('sales_catalog_items.operational_asset_id', $assetIds)
-            ->whereIn('sales_orders.status', [
-                SalesOrderStatus::Confirmed->value,
-                SalesOrderStatus::Fulfilled->value,
-                SalesOrderStatus::Transferred->value,
-            ])
-            ->get([
-                'sales_catalog_items.operational_asset_id',
-                'sales_orders.id as order_id',
-                'sales_orders.reference',
-                'sales_orders.status',
-            ])
-            ->groupBy('operational_asset_id');
-
         return collect($assetIds)->mapWithKeys(fn (int $assetId): array => [$assetId => [
             'maintenance' => $maintenance->get($assetId, collect())->count(),
             'inspections' => $inspections->get($assetId, collect()),
             'dispatch' => $dispatch->where('operational_asset_id', $assetId)->values(),
             'rentals' => $rentals->get($assetId, collect()),
-            'sales' => $sales->get($assetId, collect()),
         ]])->all();
     }
 
@@ -177,7 +157,7 @@ final class AssetCandidateQuery
     }
 
     /**
-     * @param  array<int, array{maintenance: int, inspections: Collection<int, Inspection>, dispatch: Collection<int, DispatchAssetAssignment>, rentals: Collection<int, object>, sales: Collection<int, object>}>  $evidence
+     * @param  array<int, array{maintenance: int, inspections: Collection<int, Inspection>, dispatch: Collection<int, DispatchAssetAssignment>, rentals: Collection<int, object>}>  $evidence
      * @return array{id: int, code: string, name: string, assignment_type: string, assignment_label: string, eligible: bool, reasons: list<string>, readiness: array{value: string, label: string}, blocking_maintenance_count: int, schedule_conflicts: list<array{id: int, reference: string, scheduled_start: string|null, scheduled_end: string|null}>, already_assigned: bool}
      */
     public function assess(OperationalAsset $asset, DispatchJob $job, array $evidence): array
@@ -187,7 +167,6 @@ final class AssetCandidateQuery
             'inspections' => collect(),
             'dispatch' => collect(),
             'rentals' => collect(),
-            'sales' => collect(),
         ];
         $reasons = [];
         $conflicts = [];
@@ -222,9 +201,6 @@ final class AssetCandidateQuery
         }
         foreach ($facts['rentals'] as $rental) {
             $reasons[] = 'The asset is committed to another active rental reservation.';
-        }
-        foreach ($facts['sales'] as $sale) {
-            $reasons[] = 'The asset is committed to another sales order.';
         }
 
         return [

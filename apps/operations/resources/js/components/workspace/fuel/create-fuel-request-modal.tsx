@@ -4,7 +4,45 @@ import type { FormEvent } from 'react';
 import { useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui';
 import { humanize } from '@/lib/formatters';
-import type { AssetViewModel } from '@/types/workspace';
+import { cn } from '@/lib/utils';
+import type { AssetViewModel, FuelUrgencyValue } from '@/types/workspace';
+
+const TANK_LEVELS = [
+    { value: '0', label: 'Empty (0%)' },
+    { value: '10', label: 'Reserve (10%)' },
+    { value: '25', label: 'Quarter (25%)' },
+    { value: '50', label: 'Half (50%)' },
+    { value: '75', label: 'Three-quarter (75%)' },
+];
+
+const URGENCY_OPTIONS: {
+    value: FuelUrgencyValue;
+    label: string;
+    hint: string;
+    selectedClass: string;
+}[] = [
+    {
+        value: 'normal',
+        label: 'Normal',
+        hint: 'Planned refuel',
+        selectedClass:
+            'border-brand-strong bg-brand-soft/40 text-ink ring-1 ring-brand-strong',
+    },
+    {
+        value: 'urgent',
+        label: 'Urgent',
+        hint: 'Needed this shift',
+        selectedClass:
+            'border-warning bg-warning-soft text-warning-strong ring-1 ring-warning',
+    },
+    {
+        value: 'critical',
+        label: 'Critical',
+        hint: 'Work is stopped',
+        selectedClass:
+            'border-danger bg-danger-soft text-danger-strong ring-1 ring-danger',
+    },
+];
 
 interface CreateFuelRequestModalProps {
     isOpen: boolean;
@@ -37,6 +75,9 @@ function CreateFuelRequestModalContent({
         quantity_litres: '',
         fuel_type: 'diesel',
         purpose: '',
+        urgency: 'normal' as FuelUrgencyValue,
+        needed_by: '',
+        current_fuel_level_percent: '',
     });
 
     useEffect(() => {
@@ -73,6 +114,13 @@ function CreateFuelRequestModalContent({
         event.preventDefault();
         form.transform((data) => ({
             ...data,
+            needed_by: data.needed_by
+                ? new Date(data.needed_by).toISOString()
+                : null,
+            current_fuel_level_percent:
+                data.current_fuel_level_percent === ''
+                    ? null
+                    : Number(data.current_fuel_level_percent),
             purpose:
                 data.purpose.trim() !== ''
                     ? data.purpose
@@ -265,6 +313,118 @@ function CreateFuelRequestModalContent({
                             )}
                         </div>
                     </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <div>
+                            <label
+                                htmlFor="fuel-tank-level"
+                                className="block text-xs font-semibold text-ink"
+                            >
+                                Current Tank Level
+                            </label>
+                            <select
+                                id="fuel-tank-level"
+                                value={form.data.current_fuel_level_percent}
+                                onChange={(e) =>
+                                    form.setData(
+                                        'current_fuel_level_percent',
+                                        e.target.value,
+                                    )
+                                }
+                                className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong/30 focus-visible:outline-hidden"
+                            >
+                                <option value="">Not reported</option>
+                                {TANK_LEVELS.map((level) => (
+                                    <option
+                                        key={level.value}
+                                        value={level.value}
+                                    >
+                                        {level.label}
+                                    </option>
+                                ))}
+                            </select>
+                            {form.errors.current_fuel_level_percent && (
+                                <p className="mt-1 text-xs text-danger">
+                                    {form.errors.current_fuel_level_percent}
+                                </p>
+                            )}
+                        </div>
+
+                        <div>
+                            <label
+                                htmlFor="fuel-needed-by"
+                                className="block text-xs font-semibold text-ink"
+                            >
+                                Needed By
+                            </label>
+                            <input
+                                id="fuel-needed-by"
+                                type="datetime-local"
+                                value={form.data.needed_by}
+                                onChange={(e) =>
+                                    form.setData('needed_by', e.target.value)
+                                }
+                                className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink tabular-nums transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong/30 focus-visible:outline-hidden"
+                            />
+                            {form.errors.needed_by && (
+                                <p className="mt-1 text-xs text-danger">
+                                    {form.errors.needed_by}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+
+                    <fieldset>
+                        <legend className="block text-xs font-semibold text-ink">
+                            Urgency
+                        </legend>
+                        <div
+                            className="mt-1.5 grid grid-cols-3 gap-2"
+                            role="radiogroup"
+                        >
+                            {URGENCY_OPTIONS.map((option) => {
+                                const selected =
+                                    form.data.urgency === option.value;
+
+                                return (
+                                    <label
+                                        key={option.value}
+                                        className={cn(
+                                            'flex min-h-10 cursor-pointer flex-col justify-center rounded-lg border px-3 py-2 text-xs transition-colors focus-within:ring-2 focus-within:ring-brand-strong/40',
+                                            selected
+                                                ? option.selectedClass
+                                                : 'border-line-strong bg-surface text-ink hover:bg-surface-subtle',
+                                        )}
+                                    >
+                                        <input
+                                            type="radio"
+                                            name="fuel-urgency"
+                                            value={option.value}
+                                            checked={selected}
+                                            onChange={() =>
+                                                form.setData(
+                                                    'urgency',
+                                                    option.value,
+                                                )
+                                            }
+                                            className="sr-only"
+                                        />
+                                        <span className="font-semibold">
+                                            {option.label}
+                                        </span>
+                                        <span className="text-[11px] opacity-80">
+                                            {option.hint}
+                                        </span>
+                                    </label>
+                                );
+                            })}
+                        </div>
+                        {form.errors.urgency && (
+                            <p className="mt-1 text-xs text-danger">
+                                {form.errors.urgency}
+                            </p>
+                        )}
+                    </fieldset>
 
                     <div>
                         <label className="block text-xs font-semibold text-ink">

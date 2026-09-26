@@ -2,14 +2,19 @@ import { router } from '@inertiajs/react';
 import { CheckCircle2, LoaderCircle } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui';
+import { cn } from '@/lib/utils';
 import type { SosIncidentViewModel } from '@/types/workspace';
 
 interface SosAcknowledgeControlProps {
     incident: SosIncidentViewModel;
+    size?: 'sm' | 'md';
+    className?: string;
 }
 
 export function SosAcknowledgeControl({
     incident,
+    size = 'md',
+    className,
 }: SosAcknowledgeControlProps) {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -43,9 +48,10 @@ export function SosAcknowledgeControl({
         <div className="space-y-2">
             <Button
                 variant="primary"
+                size={size}
                 onClick={acknowledge}
                 disabled={submitting}
-                className="w-full sm:w-auto"
+                className={cn('w-full sm:w-auto', className)}
             >
                 {submitting ? (
                     <LoaderCircle

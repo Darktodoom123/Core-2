@@ -5,7 +5,6 @@ export * from './EquipmentInspectionScreen';
 export * from './HosScreen';
 export * from './OperatorDashboardScreen';
 export * from './RentalHandoverScreen';
-export * from './SalesDeliveryScreen';
 export * from './HeavyCraneDriveModeScreen';
 export * from './DispatchOrdersScreen';
 export * from './profile/ProfileScreen';

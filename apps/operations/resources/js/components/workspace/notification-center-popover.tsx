@@ -606,6 +606,28 @@ export function presentNotification(
         };
     }
 
+    if (event === 'fuel.submitted') {
+        const urgency = stringValue(notification.data.urgency);
+
+        return {
+            title:
+                urgency === 'critical'
+                    ? 'Critical Fuel Request'
+                    : urgency === 'urgent'
+                      ? 'Urgent Fuel Request'
+                      : 'New Fuel Request',
+            message,
+            tone:
+                urgency === 'critical'
+                    ? 'critical'
+                    : urgency === 'urgent'
+                      ? 'warning'
+                      : 'info',
+            category: 'fuel',
+            Icon: Fuel,
+        };
+    }
+
     if (category === 'fuel') {
         return {
             title: 'Fuel Request Update',

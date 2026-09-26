@@ -48,7 +48,7 @@ it('returns stable checker conflicts and lets callers choose the validation key'
     };
 
     $availability = new OperationalAssetAvailability([$checker]);
-    $request = new AssetUsageRequest(1, AssetUsageType::SalesTransfer);
+    $request = new AssetUsageRequest(1, AssetUsageType::AssetStatusChange);
 
     expect($availability->assess($request)->conflicts)->toHaveCount(1)
         ->and($availability->assess($request)->conflicts[0]->code)->toBe('rental.reservation_overlap');

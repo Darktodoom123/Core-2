@@ -1,6 +1,6 @@
 # Core-2 Documentation
 
-Last reviewed: 2026-09-16.
+Last reviewed: 2026-09-25.
 
 Core-2 is organized as an isolated two-service monorepo:
 - `apps/operations/`: Operations Monolith & BFF (Laravel 13, Inertia 3, React 19, Vite 8, Tailwind CSS v4, Pest 4) with dedicated queue workers (`operational`, `ai`, `reports`, `emergency`).
@@ -36,7 +36,7 @@ Technical specifications describing backend patterns, database models, API contr
 
 | Document | Purpose & Scope |
 | :--- | :--- |
-| [Architecture.md](architecture/Architecture.md) | High-level system architecture, 5 operational modules, 3 canonical roles, tri-modal business flows, and platform services. |
+| [Architecture.md](architecture/Architecture.md) | High-level system architecture, 5 operational modules, 3 canonical roles, inbound Service/Rental business flows, and platform services. |
 | [modular-monolith.md](architecture/modular-monolith.md) | Architectural rules and boundaries for the Operations Monolith (`apps/operations`). |
 | [modules.md](architecture/modules.md) | Comprehensive module catalog: controllers, actions, commands, services, and models across the 5 operational modules. |
 | [database.md](architecture/database.md) | Relational database schema, table relationships, Supavisor connection pooling, and multi-database isolation. |
@@ -120,6 +120,7 @@ Strategic planning documents, feature roadmaps, and UX plans:
 | :--- | :--- | :--- |
 | [Roadmap.md](plans/Roadmap.md) | Active | Feature delivery sequence and outcome gates. |
 | [fleet-fuel-reports-ux-plan.md](plans/fleet-fuel-reports-ux-plan.md) | Active | Web UX plan for Fleet, Fuel, and Job Reports parity. |
+| [fuel-management-ui-ux-plan.md](plans/fuel-management-ui-ux-plan.md) | Proposed | Connected mobile fuel request, receipt, and web Fuel Management screen plan with concept images. |
 | [employee-asset-picker-design.md](plans/employee-asset-picker-design.md) | Active | Dispatch resource assignment picker design. |
 | [resource-picker-refinement.md](plans/resource-picker-refinement.md) | Active | Candidate filtering and conflict detection UX. |
 | [field-execution-view.md](plans/field-execution-view.md) | Active | Field execution view model and telemetry indicators. |

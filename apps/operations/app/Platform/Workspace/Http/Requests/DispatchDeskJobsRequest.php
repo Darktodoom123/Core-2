@@ -26,7 +26,7 @@ final class DispatchDeskJobsRequest extends FormRequest
         return [
             'view' => ['required', Rule::in(['schedule', 'in-progress', 'history'])],
             'q' => ['nullable', 'string', 'max:200'],
-            'source' => ['sometimes', Rule::in(['all', 'manual', 'service_request', 'rental_reservation', 'sales_order'])],
+            'source' => ['sometimes', Rule::in(['all', 'manual', 'service_request', 'rental_reservation'])],
             'page' => ['sometimes', 'integer', 'min:1', 'max:1000000'],
             'attention' => ['sometimes', 'boolean'],
             'needs_assignment' => ['sometimes', 'boolean'],

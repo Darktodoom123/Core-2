@@ -72,6 +72,7 @@ it('aggregates all fuel counts in a single query while preserving status definit
         'reference' => 'FUEL-1005',
         'requester_id' => $driver->id,
         'status' => 'logged',
+        'no_receipt_reason' => 'on_site_bowser',
         'fuel_type' => 'diesel',
         'quantity_litres' => 90,
         'purpose' => 'Job 5',
@@ -89,6 +90,7 @@ it('aggregates all fuel counts in a single query while preserving status definit
         'reference' => 'FUEL-1006',
         'requester_id' => $driver->id,
         'status' => 'logged',
+        'no_receipt_reason' => 'on_site_bowser',
         'fuel_type' => 'diesel',
         'quantity_litres' => 100,
         'purpose' => 'Job 6',
@@ -144,6 +146,7 @@ it('aggregates all fuel counts in a single query while preserving status definit
             'verified' => 1,
             'logged' => 2,
             'anomalies' => 1,
+            'receipt_review' => 0,
         ]);
 });
 
@@ -180,5 +183,6 @@ it('scopes fuel statistics to the current user when lacking FuelViewAll permissi
         'verified' => 0,
         'logged' => 0,
         'anomalies' => 0,
+        'receipt_review' => 0,
     ]);
 });

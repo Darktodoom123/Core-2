@@ -63,12 +63,6 @@ enum PermissionName: string
     case RentalCheckout = 'rental.checkout';
     case RentalOperate = 'rental.operate';
     case RentalReturn = 'rental.return';
-    case SalesView = 'sales.view';
-    case SalesCatalogManage = 'sales.catalog_manage';
-    case SalesCreateQuote = 'sales.create_quote';
-    case SalesApproveOrder = 'sales.approve_order';
-    case SalesFulfill = 'sales.fulfill';
-    case SalesTransferOwnership = 'sales.transfer_ownership';
     case SosTrigger = 'sos.trigger';
     case SosView = 'sos.view';
     case SosRespond = 'sos.respond';

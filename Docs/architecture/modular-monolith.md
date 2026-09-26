@@ -1,6 +1,6 @@
 # Core Transaction 2 — Operations Modular Monolith Architecture
 
-**Last updated:** 2026-09-16  
+**Last updated:** 2026-09-25  
 **Status:** Implemented application boundary
 
 The Core Transaction 2 Operations service (`apps/operations`) is structured as a pragmatic modular monolith with dedicated queue worker pools (`operational`, `ai`, `reports`). It coordinates with the extracted Tracking microservice (`apps/tracking/`) via HMAC-signed internal APIs.
@@ -16,11 +16,10 @@ The Core Transaction 2 Operations service (`apps/operations`) is structured as a
 | `apps/operations/app/Modules/CraneEquipment` | Crane/equipment specifications, certifications, load capacities, rigging gear inspections, and pre-use safety |
 | `apps/operations/app/Modules/Fuel` | Fuel-request lifecycle, independent approval, and verified fuel logs |
 
-### Tri-Modal Inbound Business Flow Adapters (Core 1 Ingestion)
+### Inbound Business Flow Adapters (Core 1 Ingestion)
 | Path | Flow Adapter Scope |
 | --- | --- |
 | `apps/operations/app/Modules/Rental` | Rental reservation lifecycle, condition evidence diffs, and Rental-owned asset conflict checks |
-| `apps/operations/app/Modules/Sales` | Catalog, quote, order, inventory reservation, ownership lifecycle, and Sales-owned asset conflict checks |
 
 ### Shared Platforms & Kernels
 | Path | Platform Scope |
@@ -33,20 +32,20 @@ The Core Transaction 2 Operations service (`apps/operations`) is structured as a
 Fleet and Crane/Equipment intentionally share the asset kernel while their
 records use the common `operational_assets` table. New fleet- or equipment-
 specific behavior belongs to its business module; only genuinely generic asset
-behavior belongs in `Shared/Assets`. Rental and Sales serve as specialized operational
-flow adapters that bridge Core 1 commercial pipelines into the 5 main operational modules.
+behavior belongs in `Shared/Assets`. Rental serves as a specialized operational
+flow adapter that bridge Core 1 commercial pipelines into the 5 main operational modules.
 
 ## Rules
 
 1. A module owns its actions, policies, models, requests, resources, and route files.
-2. Cross-module calls use public contracts, DTOs, model IDs, or events; modules do not call another module's controller. Rental and Sales do not import or query each other's internals.
+2. Cross-module calls use public contracts, DTOs, model IDs, or events; modules do not call another module's controller. Flow adapters such as Rental do not import or query other modules' internals.
 3. Existing cross-module Eloquent relationships remain valid during the transition, but new business behavior should not reach into another module's internals.
 4. Actions remain transaction boundaries. Events and queued jobs are reserved for after-commit side effects.
 5. `Platform` is limited to cross-cutting capabilities and must not become a catch-all business module.
 6. Polymorphic database values retain their historical type names through a morph map so existing records remain readable after namespace moves.
 7. `Shared/Assets` exposes the typed `AssetUsageConflictChecker` contract,
-   request/source/conflict DTOs, and `OperationalAssetAvailability`. Rental,
-   Sales, and Assignment register their own tagged checkers; Shared combines
+   request/source/conflict DTOs, and `OperationalAssetAvailability`. Rental
+   and Assignment register their own tagged checkers; Shared combines
    safe results and locks affected asset rows in ascending ID order but does not
    import product-module models.
 8. External Tracking integration routes through `Platform/Tracking/` using `TrackingClientInterface` (`HttpTrackingClient` for remote microservice, `FakeTrackingClient` for tests).
@@ -72,7 +71,7 @@ Crane/Equipment own filtered asset catalogs at `/operations/fleet/assets`,
 `/operations/equipment/assets`, `/api/v1/fleet/assets`, and
 `/api/v1/equipment/assets`; generic registration, inspection, maintenance, and
 status commands remain in `Shared/Assets` while the single asset table is
-shared. Rental and Sales are intentionally session-authenticated JSON-only
+shared. Rental is an intentionally session-authenticated JSON-only
 transitional backend/API slices; they are not routed UI or Core 1 receiving
 endpoints. React/Inertia code is deliberately not required to mirror backend
 modules; frontend features remain organized by user workflow and screen

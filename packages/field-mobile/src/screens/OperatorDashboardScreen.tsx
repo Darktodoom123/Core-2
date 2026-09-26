@@ -12,9 +12,7 @@ import { AssetVehicleCard } from '../components/cards/AssetVehicleCard';
 import { Icon } from '../components/common/Icon';
 import type { IconName } from '../components/common/Icon';
 import { FieldBottomNav } from '../components/layout/field-bottom-nav';
-import type {
-    FieldScreen,
-} from '../components/layout/field-bottom-nav';
+import type { FieldScreen } from '../components/layout/field-bottom-nav';
 import { colors, shadows } from '../components/nativeStyles';
 import { DispatchIntakeSheet } from '../components/sheets/DispatchIntakeSheet';
 import { DutyStatusSelectorModal } from '../components/sheets/DutyStatusSelectorModal';
@@ -55,7 +53,6 @@ export interface OperatorDashboardScreenProps {
     onOpenVehicle: () => void;
     onOpenForms?: () => void;
     onOpenRental?: () => void;
-    onOpenSales?: () => void;
     onAcceptAssignment?: (
         jobId: number,
         assignmentId: number,
@@ -98,8 +95,7 @@ interface DashboardTileConfig {
         | 'documents'
         | 'vehicle'
         | 'forms'
-        | 'rental'
-        | 'sales';
+        | 'rental';
     title: string;
     iconName: IconName;
     bgColor: string;
@@ -141,7 +137,6 @@ export const OperatorDashboardScreen: React.FC<
     onOpenVehicle,
     onOpenForms,
     onOpenRental,
-    onOpenSales,
     onAcceptAssignment,
     onRejectAssignment,
     onTransitionStatus,
@@ -362,25 +357,12 @@ export const OperatorDashboardScreen: React.FC<
                 darkIconColor: '#818CF8',
                 darkHaloBg: 'rgba(129, 140, 248, 0.15)',
             },
-            {
-                id: 'sales',
-                title: 'Sales\nDelivery',
-                sublabel: 'Handover & VIN',
-                iconName: 'signature',
-                bgColor: '#E11D48',
-                lightHaloBg: 'rgba(225, 29, 72, 0.12)',
-                lightIconColor: '#E11D48',
-                darkBgColor: '#1E293B',
-                darkBorderColor: 'rgba(251, 113, 133, 0.45)',
-                darkIconColor: '#FB7185',
-                darkHaloBg: 'rgba(251, 113, 133, 0.15)',
-            },
         ],
         [jobs.length, pendingResponseCount],
     );
 
-    // 2x4 Layout: 4 columns of 2 tiles each, horizontally swipeable
-    // Col 1: HOS & Documents | Col 2: DVIR & Vehicle | Col 3: Routes & Dispatch | Col 4: Rental & Sales
+    // 2x3 Layout: 3 columns of 2 tiles each. Drive Routes tile is hidden (unused).
+    // Col 1: HOS & Documents | Col 2: DVIR & Vehicle | Col 3: Dispatch & Rental
     const TILE_COLUMNS: DashboardTileConfig[][] = useMemo(() => {
         const byId = (id: DashboardTileConfig['id']) =>
             DASHBOARD_TILES.find((t) => t.id === id)!;
@@ -388,8 +370,7 @@ export const OperatorDashboardScreen: React.FC<
         return [
             [byId('hos'), byId('documents')],
             [byId('dvir'), byId('vehicle')],
-            [byId('routes'), byId('forms')],
-            [byId('rental'), byId('sales')],
+            [byId('forms'), byId('rental')],
         ];
     }, [DASHBOARD_TILES]);
 
@@ -421,9 +402,6 @@ export const OperatorDashboardScreen: React.FC<
                 break;
             case 'rental':
                 onOpenRental?.();
-                break;
-            case 'sales':
-                onOpenSales?.();
                 break;
         }
     };

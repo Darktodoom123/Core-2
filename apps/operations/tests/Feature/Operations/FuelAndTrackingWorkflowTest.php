@@ -117,6 +117,7 @@ it('enforces the submitted forwarded approved verified logged fuel workflow end-
     $this->actingAs($driver)
         ->post("/operations/fuel-requests/{$fuel->id}/status", [
             'status' => 'logged',
+            'no_receipt_reason' => 'on_site_bowser',
             'quantity_litres' => 120,
             'odometer_km' => 45000,
             'hour_meter' => 1250.5,
@@ -253,7 +254,7 @@ it('prevents skipped stages in fuel request workflow', function () {
         ->assertSessionHasErrors('status');
 
     // Submitted -> Logged (skipping all intermediate stages)
-    $this->actingAs($driver)->post("/operations/fuel-requests/{$id}/status", ['status' => 'logged'])
+    $this->actingAs($driver)->post("/operations/fuel-requests/{$id}/status", ['status' => 'logged', 'no_receipt_reason' => 'on_site_bowser'])
         ->assertSessionHasErrors('status');
 });
 
@@ -271,11 +272,11 @@ it('prevents duplicate logging of a fuel request', function () {
     $this->actingAs($verifier)->post("/operations/fuel-requests/{$id}/status", ['status' => 'verified'])->assertRedirect('/');
 
     // First logging attempt -> succeeds
-    $this->actingAs($driver)->post("/operations/fuel-requests/{$id}/status", ['status' => 'logged', 'quantity_litres' => 100])->assertRedirect('/');
+    $this->actingAs($driver)->post("/operations/fuel-requests/{$id}/status", ['status' => 'logged', 'no_receipt_reason' => 'on_site_bowser', 'quantity_litres' => 100])->assertRedirect('/');
     expect(FuelRequest::findOrFail($id)->status)->toBe(FuelRequestStatus::Logged);
 
     // Second logging attempt -> fails
-    $this->actingAs($driver)->post("/operations/fuel-requests/{$id}/status", ['status' => 'logged', 'quantity_litres' => 100])
+    $this->actingAs($driver)->post("/operations/fuel-requests/{$id}/status", ['status' => 'logged', 'no_receipt_reason' => 'on_site_bowser', 'quantity_litres' => 100])
         ->assertSessionHasErrors('status');
 });
 

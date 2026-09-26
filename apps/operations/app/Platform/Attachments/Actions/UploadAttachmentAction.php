@@ -7,6 +7,7 @@ use App\Platform\Attachments\Services\AttachmentFilePolicy;
 use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Identity\Models\User;
 use App\Platform\Safety\Models\SiteHazardTicket;
+use App\Platform\Storage\Contracts\StorageFallbackServiceInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
@@ -18,6 +19,8 @@ use InvalidArgumentException;
 
 final class UploadAttachmentAction
 {
+    public function __construct(private readonly StorageFallbackServiceInterface $storageFallback) {}
+
     public function execute(
         User $uploader,
         Model $owner,
@@ -36,7 +39,7 @@ final class UploadAttachmentAction
 
         Gate::forUser($uploader)->authorize('view', $owner);
 
-        $disk = (string) config('attachments.disk');
+        $disk = $this->storageFallback->resolveProtectedDisk((string) config('attachments.disk'));
         $storedPath = null;
         $requestId = request()->header('X-Request-ID');
         if (! is_string($requestId) || ! Str::isUuid($requestId)) {

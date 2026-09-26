@@ -22,9 +22,8 @@ use App\Modules\Dispatch\Models\DispatchPlanApproval;
 use App\Modules\Dispatch\Models\DispatchPlanVersion;
 use App\Modules\Dispatch\Models\DispatchReconciliationFinding;
 use App\Modules\Dispatch\Models\DispatchReconciliationRun;
-use App\Modules\Sales\Enums\SalesFulfillmentMode;
-use App\Modules\Sales\Enums\SalesOrderStatus;
-use App\Modules\Sales\Models\SalesOrder;
+use App\Modules\Rental\Enums\RentalReservationStatus;
+use App\Modules\Rental\Models\RentalReservation;
 use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Idempotency\Models\CommandLog;
 use App\Platform\Identity\Models\User;
@@ -127,21 +126,23 @@ it('enforces canonical ownership, attempt cardinality, and protected legacy line
         ->toThrow(QueryException::class);
 });
 
-it('reconciles a long Sales reference and preserves source, plan, offer, approval, idempotency, and audit lineage', function (): void {
+it('reconciles a maximum-length Rental reference and preserves source, plan, offer, approval, idempotency, and audit lineage', function (): void {
     $actor = User::factory()->create();
     $client = Client::query()->create([
         'code' => 'CLI-V2-FOUNDATION',
         'company_name' => 'V2 Foundation Customer',
         'status' => 'active',
     ]);
-    $reference = str_repeat('S', 64);
-    $order = SalesOrder::query()->create([
+    $reference = str_repeat('R', 48);
+    $reservation = RentalReservation::query()->create([
         'reference' => $reference,
         'client_id' => $client->id,
         'created_by' => $actor->id,
-        'status' => SalesOrderStatus::Confirmed,
-        'fulfillment_mode' => SalesFulfillmentMode::Delivery,
-        'currency' => 'PHP',
+        'status' => RentalReservationStatus::Reserved,
+        'start_date' => now()->addDay()->toDateString(),
+        'end_date' => now()->addDays(2)->toDateString(),
+        'delivery_location' => 'Foundation site',
+        'fulfillment_mode' => 'delivery',
         'total_cents' => 100,
     ]);
     $job = DispatchJob::query()->create([
@@ -154,11 +155,11 @@ it('reconciles a long Sales reference and preserves source, plan, offer, approva
         'priority' => DispatchPriority::Routine,
         'status' => DispatchStatus::Draft,
         'created_by' => $actor->id,
-        'source_type' => DispatchSourceType::SalesOrder,
-        'source_id' => $order->id,
-        'source_reference' => substr($reference, 0, 48),
+        'source_type' => DispatchSourceType::RentalReservation,
+        'source_id' => $reservation->id,
+        'source_reference' => $reference,
     ]);
-    $order->update(['dispatch_job_id' => $job->id]);
+    $reservation->update(['dispatch_job_id' => $job->id]);
     $assignment = DispatchPersonnelAssignment::query()->create([
         'dispatch_job_id' => $job->id,
         'user_id' => $actor->id,

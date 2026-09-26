@@ -19,9 +19,7 @@ final class StoreFuelRequest extends FormRequest
             'dispatch_job_id' => ['nullable', 'integer', 'exists:dispatch_jobs,id'],
             'operational_asset_id' => ['nullable', 'integer', 'exists:operational_assets,id'],
             'operator_shift_id' => ['nullable', 'integer', 'exists:operator_shifts,id'],
-            'quantity_litres' => ['required', 'numeric', 'min:0.01', 'max:100000'],
-            'fuel_type' => ['required', 'string', 'in:diesel,gasoline'],
-            'purpose' => ['required', 'string', 'max:2000'],
+            ...FuelRequestContextRules::requestDetails(),
         ];
     }
 }

@@ -5,6 +5,7 @@ import {
     Droplets,
     Fuel,
     Plus,
+    ReceiptText,
     Search,
     SearchX,
     Truck,
@@ -26,6 +27,7 @@ import { CreateFuelRequestModal } from './create-fuel-request-modal';
 import { FuelLogModal } from './fuel-log-modal';
 import { FuelRecordsPanel } from './fuel-records-panel';
 import { FuelRequestCard } from './fuel-request-card';
+import type { FuelReviewDecision } from './fuel-request-card';
 import { FuelVarianceBadge } from './fuel-variance-badge';
 
 interface FuelSurfaceProps {
@@ -53,7 +55,13 @@ export function FuelSurface({
         useState<FuelRequestViewModel | null>(null);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [filterStatus, setFilterStatus] = useState<
-        'all' | 'pending' | 'approved' | 'verified' | 'logged' | 'anomalies'
+        | 'all'
+        | 'pending'
+        | 'approved'
+        | 'verified'
+        | 'logged'
+        | 'anomalies'
+        | 'receipt_review'
     >('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedRequestId, setSelectedRequestId] = useState<number | null>(
@@ -78,6 +86,48 @@ export function FuelSurface({
         );
     };
 
+    const handleReview = (
+        requestId: number,
+        decision: FuelReviewDecision,
+        reason?: string,
+    ) => {
+        const actionId = `${requestId}:${decision}`;
+        router.post(
+            `/operations/fuel-requests/${requestId}/review`,
+            { decision, reason },
+            {
+                preserveScroll: true,
+                onStart: () => setPendingActionId(actionId),
+                onFinish: () => setPendingActionId(null),
+            },
+        );
+    };
+
+    const handleWithdraw = (requestId: number, reason?: string) => {
+        router.post(
+            `/operations/fuel-requests/${requestId}/withdraw`,
+            { reason },
+            {
+                preserveScroll: true,
+                onStart: () => setPendingActionId(`${requestId}:withdrawn`),
+                onFinish: () => setPendingActionId(null),
+            },
+        );
+    };
+
+    const handleReviewReceipt = (logId: number, note?: string) => {
+        router.post(
+            `/operations/fuel-logs/${logId}/receipt-review`,
+            { note },
+            {
+                preserveScroll: true,
+                onStart: () =>
+                    setPendingActionId(`log:${logId}:receipt-review`),
+                onFinish: () => setPendingActionId(null),
+            },
+        );
+    };
+
     const kpis = useMemo(() => {
         let pending = 0;
         let approved = 0;
@@ -86,6 +136,7 @@ export function FuelSurface({
         let totalRequestedLitres = 0;
         let totalDispensedLitres = 0;
         let anomalies = 0;
+        let receiptReview = 0;
         let evaluatedLogsCount = 0;
 
         for (const req of requests) {
@@ -101,6 +152,10 @@ export function FuelSurface({
                 verified += 1;
             } else if (v === 'logged') {
                 logged += 1;
+            }
+
+            if (req.logs?.some((log) => log.requires_receipt_review)) {
+                receiptReview += 1;
             }
 
             if (req.logs && req.logs.length > 0) {
@@ -128,6 +183,7 @@ export function FuelSurface({
             verified,
             logged,
             anomalies,
+            receiptReview,
             evaluatedLogsCount,
             totalRequestedLitres,
             totalDispensedLitres,
@@ -154,7 +210,13 @@ export function FuelSurface({
                             ? v === 'logged'
                             : filterStatus === 'anomalies'
                               ? hasAnomaly
-                              : true;
+                              : filterStatus === 'receipt_review'
+                                ? Boolean(
+                                      req.logs?.some(
+                                          (l) => l.requires_receipt_review,
+                                      ),
+                                  )
+                                : true;
 
             const matchesQuery =
                 q === '' ||
@@ -360,6 +422,29 @@ export function FuelSurface({
                                         ({kpis.anomalies})
                                     </span>
                                 </button>
+                                <button
+                                    type="button"
+                                    aria-pressed={
+                                        filterStatus === 'receipt_review'
+                                    }
+                                    onClick={() =>
+                                        setFilterStatus('receipt_review')
+                                    }
+                                    className={cn(
+                                        'inline-flex min-h-8 items-center rounded-lg px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
+                                        filterStatus === 'receipt_review'
+                                            ? 'border border-warning/50 bg-warning-soft font-semibold text-warning-strong'
+                                            : kpis.receiptReview > 0
+                                              ? 'border border-warning/30 bg-warning-soft/50 text-warning-strong hover:bg-warning-soft'
+                                              : 'border border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
+                                    )}
+                                >
+                                    <ReceiptText className="mr-1.5 h-3.5 w-3.5 shrink-0" />
+                                    <span>Receipt review</span>{' '}
+                                    <span className="ml-1 tabular-nums opacity-80">
+                                        ({kpis.receiptReview})
+                                    </span>
+                                </button>
                             </div>
 
                             {/* Search Field */}
@@ -558,6 +643,28 @@ export function FuelSurface({
                                                                         req.status
                                                                     }
                                                                 />
+                                                                {req.urgency &&
+                                                                    req.urgency
+                                                                        .value !==
+                                                                        'normal' && (
+                                                                        <span
+                                                                            className={cn(
+                                                                                'rounded-md border px-1.5 py-0.5 text-[10px] font-semibold uppercase',
+                                                                                req
+                                                                                    .urgency
+                                                                                    .value ===
+                                                                                    'critical'
+                                                                                    ? 'border-danger/50 bg-danger-soft text-danger-strong'
+                                                                                    : 'border-warning/50 bg-warning-soft text-warning-strong',
+                                                                            )}
+                                                                        >
+                                                                            {
+                                                                                req
+                                                                                    .urgency
+                                                                                    .value
+                                                                            }
+                                                                        </span>
+                                                                    )}
                                                             </div>
 
                                                             {primaryLog && (
@@ -686,6 +793,11 @@ export function FuelSurface({
                                                     setLogModalRequest(r)
                                                 }
                                                 onTransition={handleTransition}
+                                                onReview={handleReview}
+                                                onWithdraw={handleWithdraw}
+                                                onReviewReceipt={
+                                                    handleReviewReceipt
+                                                }
                                                 pendingActionId={
                                                     pendingActionId
                                                 }

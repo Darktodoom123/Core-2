@@ -19,8 +19,6 @@ use App\Modules\HoursOfService\Models\OperatorDutyLog;
 use App\Modules\HoursOfService\Queries\CalculateHosClocksQuery;
 use App\Modules\Rental\Models\RentalReservation;
 use App\Modules\Rental\ViewModels\RentalHandoffViewModel;
-use App\Modules\Sales\Models\SalesOrder;
-use App\Modules\Sales\ViewModels\SalesHandoffViewModel;
 use App\Platform\Attachments\Models\Attachment;
 use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Gpt\Enums\GptRecommendationStatus;
@@ -98,15 +96,6 @@ final class OperationsWorkspaceViewModel
     public static function rentalHandoffs(Collection $reservations): array
     {
         return RentalHandoffViewModel::collection($reservations);
-    }
-
-    /**
-     * @param  Collection<int, SalesOrder>  $orders
-     * @return array<int, array<string, mixed>>
-     */
-    public static function salesHandoffs(Collection $orders): array
-    {
-        return SalesHandoffViewModel::collection($orders);
     }
 
     /**
@@ -329,7 +318,7 @@ final class OperationsWorkspaceViewModel
     public static function assets(Collection $assets): array
     {
         $assetIds = $assets
-            ->map(static fn (OperationalAsset $asset): int => (int) $asset->getKey())
+            ->map(static fn (OperationalAsset $asset): string => (string) $asset->getKey())
             ->values();
         $relationLoaded = $assets->first()?->relationLoaded('latestStatusChange') ?? false;
         $latestStatusChanges = $relationLoaded
@@ -918,7 +907,7 @@ final class OperationsWorkspaceViewModel
             ],
             [
                 'id' => 'assets',
-                'label' => $fieldRole ? self::fieldAssetLabel($user) : 'Fleet Management',
+                'label' => $fieldRole ? self::fieldAssetLabel($user) : 'Fleet & Equipment',
                 'permissions' => [
                     PermissionName::FleetViewAll,
                     PermissionName::FleetViewAssigned,
@@ -993,8 +982,6 @@ final class OperationsWorkspaceViewModel
             'convert_service_request' => $user->can(PermissionName::DispatchCreate->value),
             'create_rental_dispatch' => $user->can(PermissionName::DispatchCreate->value)
                 && $user->can(PermissionName::RentalView->value),
-            'create_sales_dispatch' => $user->can(PermissionName::DispatchCreate->value)
-                && $user->can(PermissionName::SalesView->value),
             'share_location' => $user->can(PermissionName::TrackingShareOwn->value),
             'view_tracking' => $user->can(PermissionName::TrackingViewAll->value) || $user->can(PermissionName::TrackingShareOwn->value),
             'request_fuel' => $user->can(PermissionName::FuelRequest->value),

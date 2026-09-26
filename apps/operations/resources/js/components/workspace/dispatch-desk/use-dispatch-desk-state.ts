@@ -60,7 +60,6 @@ function parseSource(value: string | null): DispatchSourceFilter {
     if (
         value === 'service_request' ||
         value === 'rental_reservation' ||
-        value === 'sales_order' ||
         value === 'manual'
     ) {
         return value;
@@ -72,7 +71,7 @@ function parseSource(value: string | null): DispatchSourceFilter {
 function parseIntakeMode(
     value: string | null,
 ): DispatchDeskUrlState['intakeMode'] {
-    if (value === 'service' || value === 'rental' || value === 'sale') {
+    if (value === 'service' || value === 'rental') {
         return value;
     }
 

@@ -75,8 +75,7 @@ export function FieldExecutionWorkspace({
                     Execution
                 </a>
                 {(execution.handoff_evidence ||
-                    job.source?.type === 'rental_reservation' ||
-                    job.source?.type === 'sales_order') && (
+                    job.source?.type === 'rental_reservation') && (
                     <a
                         href="#handoff-evidence"
                         className="rounded px-1.5 py-0.5 text-ink-soft underline-offset-4 hover:text-ink hover:underline focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
@@ -199,8 +198,7 @@ export function FieldExecutionWorkspace({
                         <HandoffEvidencePanel
                             evidence={execution.handoff_evidence}
                         />
-                    ) : job.source?.type === 'rental_reservation' ||
-                      job.source?.type === 'sales_order' ? (
+                    ) : job.source?.type === 'rental_reservation' ? (
                         <Panel
                             id="handoff-evidence"
                             className="overflow-hidden border-line"
@@ -780,18 +778,14 @@ function HandoffEvidencePanel({
 }) {
     const [actionPending, setActionPending] = useState(false);
 
-    const handleAuthoritativeAction = (
-        action: 'checkout' | 'return' | 'fulfill',
-    ) => {
+    const handleAuthoritativeAction = (action: 'checkout' | 'return') => {
         setActionPending(true);
         let url = '';
 
         if (action === 'checkout') {
             url = `/operations/rental-reservations/${evidence.source_id}/checkout`;
-        } else if (action === 'return') {
-            url = `/operations/rental-reservations/${evidence.source_id}/return`;
         } else {
-            url = `/operations/sales/orders/${evidence.source_id}/fulfill`;
+            url = `/operations/rental-reservations/${evidence.source_id}/return`;
         }
 
         router.post(
@@ -802,21 +796,17 @@ function HandoffEvidencePanel({
                       notes: evidence.condition_notes || undefined,
                       damage_notes: evidence.damage_notes || undefined,
                   }
-                : action === 'return'
-                  ? {
-                        condition: [evidence.damage_noted ? 'damaged' : 'good'],
-                        notes: evidence.condition_notes || undefined,
-                        damage_notes: evidence.damage_notes || undefined,
-                    }
-                  : {},
+                : {
+                      condition: [evidence.damage_noted ? 'damaged' : 'good'],
+                      notes: evidence.condition_notes || undefined,
+                      damage_notes: evidence.damage_notes || undefined,
+                  },
             {
                 preserveScroll: true,
                 onFinish: () => setActionPending(false),
             },
         );
     };
-
-    const isRental = evidence.type === 'rental';
 
     return (
         <Panel
@@ -832,18 +822,12 @@ function HandoffEvidencePanel({
                                     className="size-3.5"
                                     aria-hidden="true"
                                 />
-                                {isRental
-                                    ? `Rental Handover Evidence (${evidence.handover_type === 'return' ? 'Return' : 'Checkout'})`
-                                    : 'Sales Delivery Evidence'}
+                                {`Rental Handover Evidence (${evidence.handover_type === 'return' ? 'Return' : 'Checkout'})`}
                             </span>
                             <a
-                                href={
-                                    isRental
-                                        ? '/operations/rental-reservations'
-                                        : '/operations/sales/orders'
-                                }
+                                href="/operations/rental-reservations"
                                 className="font-mono text-xs text-ink-soft underline decoration-dotted hover:text-brand-strong"
-                                title={`Open commercial ${isRental ? 'rental' : 'sales'} orders workspace`}
+                                title="Open commercial rental orders workspace"
                             >
                                 {evidence.source_reference}{' '}
                                 <span aria-hidden="true">↗</span>
@@ -921,107 +905,69 @@ function HandoffEvidencePanel({
                 </div>
 
                 {/* Rental Metrics */}
-                {isRental && (
-                    <div className="rounded-lg border border-line bg-surface p-3 sm:p-4">
-                        <h3 className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
-                            Asset Condition &amp; Telemetry at Handover
-                        </h3>
-                        <dl className="mt-2 grid gap-3 sm:grid-cols-3">
-                            <DataPair
-                                label="Hour Meter"
-                                value={
-                                    evidence.hour_meter !== undefined
-                                        ? `${evidence.hour_meter} hrs`
-                                        : 'Not recorded'
-                                }
-                            />
-                            <DataPair
-                                label="Fuel Level"
-                                value={
-                                    evidence.fuel_percent !== undefined
-                                        ? `${evidence.fuel_percent}%`
-                                        : 'Not recorded'
-                                }
-                            />
-                            <DataPair
-                                label="Condition Assessment"
-                                value={
-                                    evidence.condition_assessment ? (
-                                        <span className="font-medium text-ink capitalize">
-                                            {evidence.condition_assessment}
-                                        </span>
-                                    ) : (
-                                        'Standard'
-                                    )
-                                }
-                            />
-                        </dl>
-                        {evidence.condition_notes && (
-                            <div className="mt-3 text-xs">
-                                <span className="font-semibold text-ink-soft">
-                                    Condition Notes:{' '}
-                                </span>
-                                <span className="text-ink">
-                                    {evidence.condition_notes}
-                                </span>
-                            </div>
-                        )}
+                <div className="rounded-lg border border-line bg-surface p-3 sm:p-4">
+                    <h3 className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
+                        Asset Condition &amp; Telemetry at Handover
+                    </h3>
+                    <dl className="mt-2 grid gap-3 sm:grid-cols-3">
+                        <DataPair
+                            label="Hour Meter"
+                            value={
+                                evidence.hour_meter !== undefined
+                                    ? `${evidence.hour_meter} hrs`
+                                    : 'Not recorded'
+                            }
+                        />
+                        <DataPair
+                            label="Fuel Level"
+                            value={
+                                evidence.fuel_percent !== undefined
+                                    ? `${evidence.fuel_percent}%`
+                                    : 'Not recorded'
+                            }
+                        />
+                        <DataPair
+                            label="Condition Assessment"
+                            value={
+                                evidence.condition_assessment ? (
+                                    <span className="font-medium text-ink capitalize">
+                                        {evidence.condition_assessment}
+                                    </span>
+                                ) : (
+                                    'Standard'
+                                )
+                            }
+                        />
+                    </dl>
+                    {evidence.condition_notes && (
+                        <div className="mt-3 text-xs">
+                            <span className="font-semibold text-ink-soft">
+                                Condition Notes:{' '}
+                            </span>
+                            <span className="text-ink">
+                                {evidence.condition_notes}
+                            </span>
+                        </div>
+                    )}
 
-                        {evidence.damage_noted && (
-                            <div className="mt-3 flex items-start gap-2 rounded-md border border-warning/40 bg-warning-soft p-3 text-xs text-warning-strong">
-                                <AlertTriangle
-                                    className="mt-0.5 size-4 shrink-0"
-                                    aria-hidden="true"
-                                />
-                                <div>
-                                    <p className="font-semibold">
-                                        Damage Noted During Handover
-                                    </p>
-                                    <p className="mt-0.5">
-                                        {evidence.damage_notes ||
-                                            'No specific damage description provided.'}
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {/* Sales Metrics */}
-                {!isRental && (
-                    <div className="rounded-lg border border-line bg-surface p-3 sm:p-4">
-                        <h3 className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
-                            Delivery Verification &amp; Handover Details
-                        </h3>
-                        <dl className="mt-2 grid gap-3 sm:grid-cols-2">
-                            <DataPair
-                                label="Verified Serial / VIN"
-                                value={evidence.verified_vin || 'Pending'}
+                    {evidence.damage_noted && (
+                        <div className="mt-3 flex items-start gap-2 rounded-md border border-warning/40 bg-warning-soft p-3 text-xs text-warning-strong">
+                            <AlertTriangle
+                                className="mt-0.5 size-4 shrink-0"
+                                aria-hidden="true"
                             />
-                            <DataPair
-                                label="Accessories Verified"
-                                value={
-                                    evidence.accessories_checked &&
-                                    evidence.accessories_checked.length > 0
-                                        ? evidence.accessories_checked.join(
-                                              ', ',
-                                          )
-                                        : 'None recorded'
-                                }
-                            />
-                        </dl>
-                        {evidence.delivery_notes && (
-                            <div className="mt-3 text-xs">
-                                <span className="font-semibold text-ink-soft">
-                                    Delivery Notes:{' '}
-                                </span>
-                                <span className="text-ink">
-                                    {evidence.delivery_notes}
-                                </span>
+                            <div>
+                                <p className="font-semibold">
+                                    Damage Noted During Handover
+                                </p>
+                                <p className="mt-0.5">
+                                    {evidence.damage_notes ||
+                                        'No specific damage description provided.'}
+                                </p>
                             </div>
-                        )}
-                    </div>
-                )}
+                        </div>
+                    )}
+                </div>
 
                 {/* Photos */}
                 {evidence.photos && evidence.photos.length > 0 && (
@@ -1123,21 +1069,6 @@ function HandoffEvidencePanel({
                                 {actionPending
                                     ? 'Processing…'
                                     : 'Process Authoritative Return'}
-                            </Button>
-                        )}
-                        {evidence.can_fulfill && (
-                            <Button
-                                type="button"
-                                variant="primary"
-                                size="sm"
-                                disabled={actionPending}
-                                onClick={() =>
-                                    handleAuthoritativeAction('fulfill')
-                                }
-                            >
-                                {actionPending
-                                    ? 'Processing…'
-                                    : 'Process Authoritative Fulfillment'}
                             </Button>
                         )}
                     </div>

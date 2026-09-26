@@ -799,7 +799,7 @@ describe('Milestone 6 Closure: Command-Specific Discard Rules & Attachment Prote
         assert.equal(manager.getCommand('eq-passed'), undefined);
     });
 
-    test('blocks discard for signed rental handovers and sales deliveries', async () => {
+    test('blocks discard for signed rental handovers', async () => {
         const repo = new MemoryOutboxRepository();
         const manager = new CommandOutboxManager({
             repository: repo,
@@ -820,27 +820,16 @@ describe('Milestone 6 Closure: Command-Specific Discard Rules & Attachment Prote
             type: 'submit_rental_handover',
             payload: { notes: 'Draft handover' },
         });
-        const signedSales = createCommandFixture({
-            id: 'sales-signed',
-            type: 'submit_sales_delivery',
-            payload: { signature: 'sig.png' },
-        });
 
         await repo.save(signedHandover);
         await repo.save(unsignedHandover);
-        await repo.save(signedSales);
         await manager.activateActor(101);
 
         assert.equal(isCommandDiscardable(signedHandover).canDiscard, false);
-        assert.equal(isCommandDiscardable(signedSales).canDiscard, false);
         assert.equal(isCommandDiscardable(unsignedHandover).canDiscard, true);
 
         await assert.rejects(
             () => manager.discardCommand('handover-signed'),
-            /Signed custody handovers cannot be discarded/i,
-        );
-        await assert.rejects(
-            () => manager.discardCommand('sales-signed'),
             /Signed custody handovers cannot be discarded/i,
         );
 

@@ -404,6 +404,23 @@ export class FieldApiClient {
         return this.handleResponse<MobileFuelRequest>(response);
     }
 
+    public async withdrawFuelRequest(
+        id: number,
+        reason?: string,
+        commandId?: string,
+    ): Promise<MobileFuelRequest> {
+        const response = await this.fetchFn(
+            `${this.baseUrl}/api/v1/fuel-requests/${id}/withdraw`,
+            {
+                method: 'POST',
+                headers: this.getHeaders(commandId),
+                body: JSON.stringify(reason ? { reason } : {}),
+            },
+        );
+
+        return this.handleResponse<MobileFuelRequest>(response);
+    }
+
     public async fetchMe(): Promise<User> {
         const url = `${this.baseUrl}/api/v1/auth/me`;
         const response = await this.fetchFn(url, {
@@ -1536,35 +1553,6 @@ export class FieldApiClient {
         data?: unknown;
     }> {
         const url = `${this.baseUrl}/api/v1/rentals/${reservationId}/handover`;
-        const body = commandId
-            ? { ...payload, command_id: commandId }
-            : payload;
-
-        const response = await this.fetchFn(url, {
-            method: 'POST',
-            headers: this.getHeaders(commandId),
-            body: JSON.stringify(body),
-        });
-
-        return this.handleResponse<{
-            success: boolean;
-            evidence_id: number;
-            message: string;
-            data?: unknown;
-        }>(response);
-    }
-
-    public async submitSalesDelivery(
-        orderId: number,
-        payload: Record<string, unknown>,
-        commandId?: string,
-    ): Promise<{
-        success: boolean;
-        evidence_id: number;
-        message: string;
-        data?: unknown;
-    }> {
-        const url = `${this.baseUrl}/api/v1/sales-orders/${orderId}/delivery`;
         const body = commandId
             ? { ...payload, command_id: commandId }
             : payload;

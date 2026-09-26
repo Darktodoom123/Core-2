@@ -60,7 +60,7 @@ class PruneExpiredExportsJob implements ShouldQueue
             }
 
             $targetDisk = (string) config('filesystems.protected_disk', 'r2-private');
-            $resolvedDisk = app(StorageFallbackServiceInterface::class)->resolveDisk($targetDisk, 'private');
+            $resolvedDisk = app(StorageFallbackServiceInterface::class)->resolveProtectedDisk($targetDisk);
             foreach (array_unique([$resolvedDisk, 'private']) as $disk) {
                 if ($export->file_path !== null && Storage::disk($disk)->exists($export->file_path)) {
                     Storage::disk($disk)->delete($export->file_path);

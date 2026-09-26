@@ -105,15 +105,26 @@ test.describe('UI-2 Complete Dispatch Lifecycle & Scheduling Journeys', () => {
             }),
         ).toBeVisible();
 
-        const approvalAction = page.getByRole('button', {
-            name: /approval.*(need your decision|awaiting review)/i,
+        const queue = page.getByRole('region', {
+            name: 'Manager action & exception queue',
         });
         await expect(
-            page.getByRole('button', { name: /Approvals \(\d+\)/i }),
+            queue.getByRole('button', { name: /Approvals \(\d+\)/i }),
         ).toBeVisible();
-        await expect(approvalAction).toBeVisible();
+
+        // The queue row deep-links to the dispatch detail page, which owns the decision.
+        const approvalAction = queue.locator(
+            `a[href^="/operations/dispatch-jobs/${fixtures.approval_job_id}?"]`,
+        );
+        await expect(approvalAction).toHaveAccessibleName(
+            /^Review approval for /,
+        );
         await approvalAction.click();
-        await expect(page).toHaveURL(/view=dispatch/);
+        await expect(page).toHaveURL(
+            new RegExp(
+                `/operations/dispatch-jobs/${fixtures.approval_job_id}\\?return_to=`,
+            ),
+        );
 
         await page.goto(
             `/?view=dispatch&dispatch_job=${fixtures.approval_job_id}`,

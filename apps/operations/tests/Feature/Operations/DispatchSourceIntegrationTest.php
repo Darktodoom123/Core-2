@@ -91,7 +91,7 @@ it('rejects a source type that does not match the source model', function (): vo
     expect(fn () => app(CreateDispatchFromSource::class)->handle(
         $dispatcher,
         $reservation,
-        DispatchSourceType::SalesOrder,
+        DispatchSourceType::ServiceRequest,
         [
             'reference' => 'DSP-SRC-MISMATCH',
             'client' => $client->company_name,

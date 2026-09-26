@@ -46,7 +46,8 @@ final class StorageFallbackService implements StorageFallbackServiceInterface
         }
 
         if ($driver === 's3') {
-            return $this->isConfiguredS3($disk, $diskConfig);
+            return $this->isConfiguredS3($disk, $diskConfig)
+                && ! $this->sharesPublicR2Bucket($disk, $diskConfig);
         }
 
         return true;
@@ -125,7 +126,47 @@ final class StorageFallbackService implements StorageFallbackServiceInterface
     {
         $desiredDisk = $desired ?? (string) $this->config->get('filesystems.protected_disk', 'r2-private');
 
+        /** @var array<string, mixed>|null $diskConfig */
+        $diskConfig = $this->config->get("filesystems.disks.{$desiredDisk}");
+        if (is_array($diskConfig) && ($diskConfig['visibility'] ?? null) === 'public') {
+            $this->logger->warning('Protected storage disk is public; using protected fallback storage.', [
+                'desired_disk' => $desiredDisk,
+                'fallback_disk' => $fallback,
+            ]);
+
+            return $fallback;
+        }
+
         return $this->resolveDisk($desiredDisk, $fallback);
+    }
+
+    /** @param array<string, mixed> $privateConfig */
+    private function sharesPublicR2Bucket(string $disk, array $privateConfig): bool
+    {
+        if ($disk !== 'r2-private') {
+            return false;
+        }
+
+        $privateBucket = $privateConfig['bucket'] ?? null;
+        $privateEndpoint = $privateConfig['endpoint'] ?? null;
+        if (! is_string($privateBucket) || ! is_string($privateEndpoint)) {
+            return false;
+        }
+
+        foreach (['r2', 'r2-public'] as $publicDisk) {
+            /** @var array<string, mixed>|null $publicConfig */
+            $publicConfig = $this->config->get("filesystems.disks.{$publicDisk}");
+            if (! is_array($publicConfig)) {
+                continue;
+            }
+
+            if (trim($privateBucket) === trim((string) ($publicConfig['bucket'] ?? ''))
+                && rtrim($privateEndpoint, '/') === rtrim((string) ($publicConfig['endpoint'] ?? ''), '/')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

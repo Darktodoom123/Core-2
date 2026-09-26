@@ -118,7 +118,7 @@ it('serves canonical live dispatch view models and capability navigation', funct
             ->where('navigation.1.id', 'dispatch')
             ->where('navigation.1.label', 'Dispatch workspace')
             ->where('navigation.2.id', 'assets')
-            ->where('navigation.2.label', 'Fleet Management')
+            ->where('navigation.2.label', 'Fleet & Equipment')
             ->where('navigation.3.id', 'fuel')
             ->where('navigation.3.label', 'Fuel Management')
             ->where('navigation.4.id', 'reports')

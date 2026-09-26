@@ -6,9 +6,6 @@ use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Rental\Models\RentalHandoverEvidence;
 use App\Modules\Rental\Models\RentalReservation;
-use App\Modules\Sales\Enums\SalesOrderStatus;
-use App\Modules\Sales\Models\SalesDeliveryEvidence;
-use App\Modules\Sales\Models\SalesOrder;
 use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
@@ -36,14 +33,14 @@ final class DispatchExecutionViewModel
     {
         $reopenedAt = AuditEvent::query()
             ->where('subject_type', $job->getMorphClass())
-            ->where('subject_id', $job->getKey())
+            ->where('subject_id', (string) $job->getKey())
             ->where('action', 'dispatch.reopened')
             ->latest('occurred_at')
             ->value('occurred_at');
 
         $statusEvents = AuditEvent::query()
             ->where('subject_type', $job->getMorphClass())
-            ->where('subject_id', $job->getKey())
+            ->where('subject_id', (string) $job->getKey())
             ->whereIn('action', ['dispatch.status_updated', 'dispatch.activated'])
             ->when($reopenedAt !== null, fn ($query) => $query->where('occurred_at', '>=', $reopenedAt))
             ->latest('occurred_at')
@@ -353,8 +350,6 @@ final class DispatchExecutionViewModel
             $sourceId = $job->source_id ?? ($handoff !== null ? $handoff->source_id : null) ?? $job->service_request_id;
             if ($type === 'rental_reservation') {
                 $source = RentalReservation::query()->find($sourceId);
-            } elseif ($type === 'sales_order') {
-                $source = SalesOrder::query()->find($sourceId);
             }
         }
 
@@ -362,11 +357,6 @@ final class DispatchExecutionViewModel
             $rentalEvidence = RentalHandoverEvidence::query()->where('dispatch_job_id', $job->id)->latest('submitted_at')->first();
             if ($rentalEvidence !== null) {
                 $source = $rentalEvidence->reservation;
-            } else {
-                $salesEvidence = SalesDeliveryEvidence::query()->where('dispatch_job_id', $job->id)->latest('submitted_at')->first();
-                if ($salesEvidence !== null) {
-                    $source = $salesEvidence->order;
-                }
             }
         }
 
@@ -440,46 +430,6 @@ final class DispatchExecutionViewModel
                     'managerial_status_label' => str($status->value)->replace('_', ' ')->title()->toString(),
                     'can_checkout' => $user->can(PermissionName::RentalCheckout->value) && $status->canCheckout(),
                     'can_return' => $user->can(PermissionName::RentalReturn->value) && $status->canReturn(),
-                    'asset' => $assetContext,
-                ];
-            }
-        }
-
-        // Check if sales order
-        if ($source instanceof SalesOrder) {
-            $latest = $source->latestDeliveryEvidence;
-            if ($latest === null) {
-                $latest = SalesDeliveryEvidence::query()
-                    ->where('sales_order_id', $source->id)
-                    ->orWhere('dispatch_job_id', $job->id)
-                    ->latest('submitted_at')
-                    ->first();
-            }
-
-            if ($latest !== null) {
-                $status = $source->status;
-
-                return [
-                    'type' => 'sales',
-                    'source_id' => (int) $source->id,
-                    'source_reference' => $source->reference,
-                    'submitted_at' => $latest->submitted_at?->toIso8601String(),
-                    'received_at' => $latest->created_at?->toIso8601String(),
-                    'submitted_by' => $latest->submitter ? [
-                        'id' => (int) $latest->submitter->id,
-                        'name' => $latest->submitter->name,
-                    ] : null,
-                    'signee_name' => $latest->signee_name,
-                    'signee_role' => $latest->signee_role,
-                    'verified_vin' => $latest->verified_vin,
-                    'accessories_checked' => $latest->accessories_checked ?? [],
-                    'delivery_notes' => $latest->delivery_notes,
-                    'photos' => $mapPhotos($latest->photos),
-                    'signature_path' => $latest->signature_path,
-                    'signature_url' => $latest->signature_url,
-                    'managerial_status' => $status->value,
-                    'managerial_status_label' => str($status->value)->replace('_', ' ')->title()->toString(),
-                    'can_fulfill' => $user->can(PermissionName::SalesFulfill->value) && $status === SalesOrderStatus::Confirmed,
                     'asset' => $assetContext,
                 ];
             }

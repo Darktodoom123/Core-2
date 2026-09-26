@@ -7,7 +7,6 @@ import type {
     DispatchResourceUserViewModel,
     GptRecommendationViewModel,
     RentalDispatchHandoffViewModel,
-    SalesDispatchHandoffViewModel,
     ServiceRequestViewModel,
     WorkspaceCapabilities,
 } from '@/types/workspace';
@@ -20,14 +19,13 @@ export type DispatchDeskMode = 'list' | 'calendar' | 'resources';
 export type DispatchDeskPeriod = 'day' | 'week' | 'month';
 
 export type DispatchSourceFilter =
-    'all' | 'service_request' | 'rental_reservation' | 'sales_order' | 'manual';
+    'all' | 'service_request' | 'rental_reservation' | 'manual';
 
 export interface DispatchDeskProps {
     jobs: DispatchJobViewModel[];
     clients: ClientViewModel[];
     serviceRequests: ServiceRequestViewModel[];
     rentalHandoffs: RentalDispatchHandoffViewModel[];
-    salesHandoffs: SalesDispatchHandoffViewModel[];
     incomingTotal?: number;
     assets?: AssetViewModel[];
     approvals?: ApprovalViewModel[];
@@ -52,5 +50,5 @@ export interface DispatchDeskUrlState {
     needsAssignmentOnly: boolean;
     selectedJobId: number | null;
     showIntake: boolean;
-    intakeMode: 'service' | 'rental' | 'sale' | null;
+    intakeMode: 'service' | 'rental' | null;
 }

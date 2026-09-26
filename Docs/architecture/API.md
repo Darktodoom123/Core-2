@@ -1,7 +1,7 @@
 # Core Transaction 2 — HTTP API
 
-**Last updated:** 2026-09-16  
-**Current style:** Inertia page delivery with redirect/error/typed-flash mutations for the live workspace slice; REST API v2 (`/api/v2`) for next-gen dispatch domain commands; REST API v1 (`/api/v1`) for field mobile clients; Rental/Sales unrouted `/operations` controllers are transitional session-authenticated JSON-only boundaries.
+**Last updated:** 2026-09-25  
+**Current style:** Inertia page delivery with redirect/error/typed-flash mutations for the live workspace slice; REST API v2 (`/api/v2`) for next-gen dispatch domain commands; REST API v1 (`/api/v1`) for field mobile clients; Rental unrouted `/operations` controllers are transitional session-authenticated JSON-only boundaries.
 
 ## Conventions
 
@@ -39,7 +39,7 @@ workspace job view model and existing assignment visibility restrictions.
 
 Parameters: `view` (`schedule`, `in-progress`, `history`), optional `q` (at most
 200 characters), `source` (`all`, `manual`, `service_request`,
-`rental_reservation`, `sales_order`), and `page` (1–1,000,000). Schedule requires
+`rental_reservation`), and `page` (1–1,000,000). Schedule requires
 timezone-qualified ISO timestamps `ends_after` and `starts_before`, with the
 latter strictly later. Jobs must overlap that interval, except fully undated
 preparation work. Search and source filtering precede pagination; sorting is
@@ -55,13 +55,13 @@ Invalid credentials use a generic response and do not reveal whether a username 
 
 ## Core 1 integration boundary
 
-Core 2 is a downstream operational system. Core 1 owns Sales, CRM, Client, Job Order, Rental, and Project Management and sends Core 2 three transaction types: **service, rental, and sale**. The incoming handoff carries the Core 1 transaction type, unique source reference, client reference, job/project reference when applicable, requested equipment or catalog items, schedule and location, requirements, source status/timestamp, and an idempotency key.
+Core 2 is a downstream operational system. Core 1 owns Sales, CRM, Client, Job Order, Rental, and Project Management and sends Core 2 two transaction types: **service and rental**. Core 1 commercial sales are outside Core 2; Core 2 does not receive or fulfill sale handoffs. The incoming handoff carries the Core 1 transaction type, unique source reference, client reference, job/project reference when applicable, requested equipment, schedule and location, requirements, source status/timestamp, and an idempotency key.
 
 Core 2 validates every handoff against its own authorization, asset readiness, availability, qualification, conflict, approval, concurrency, and audit rules. Direct session-authenticated creation routes in `/operations` are transitional compatibility paths.
 
 ## Operations endpoints
 
-The operations routes implement the **5 core operational modules** and **3 tri-modal inbound business flows** through a shared session-authenticated Laravel boundary:
+The operations routes implement the **5 core operational modules** and **2 inbound business flows** (Service and Rental, plus direct dispatch) through a shared session-authenticated Laravel boundary:
 
 ### 5 Core Operational Modules
 - **Dispatch Job and Scheduling (Real-Time Activation)** (`app/Modules/Dispatch`) — clients, service requests, dispatch jobs, approvals, activation, geospatial coordination, project planning, and status progression.
@@ -70,9 +70,8 @@ The operations routes implement the **5 core operational modules** and **3 tri-m
 - **Crane and Equipment Management** (`app/Modules/CraneEquipment`) — mobile cranes, crawler cranes, boom extensions, load charts, safety certifications, and pre-lift inspections.
 - **Fuel Management** (`app/Modules/Fuel`) — fuel requests, ordered status transitions, verified fuel logs, burn rate baselines, variance calculation, and automated anomaly detection.
 
-### Tri-Modal Inbound Business Flow Adapters
+### Inbound Business Flow Adapters
 - **Rental Operations Flow** (`app/Modules/Rental`) — reservation creation, approval, operator assignment, checkout/return condition diffs, and return check-in.
-- **Sales Operations Flow** (`app/Modules/Sales`) — catalog, quote, order, delivery fulfillment, inventory ledger, and terminal ownership transfer.
 
 ### Module 1: Dispatch Job and Scheduling — intake
 
@@ -154,12 +153,15 @@ requests fail without assignment or audit partial state.
 | Method | Path | Access | Request highlights |
 | --- | --- | --- | --- |
 | GET | `/operations/fuel-requests` | Own/all fuel policy | 25/page |
-| POST | `/operations/fuel-requests` | `fuel.request` | Optional job/asset, quantity, diesel/gasoline, purpose |
-| POST | `/operations/fuel-requests/{fuelRequest}/status` | Stage permission | status, optional reason |
+| POST | `/operations/fuel-requests` | `fuel.request` | Optional job/asset, quantity, diesel/gasoline, purpose, urgency (`normal`/`urgent`/`critical`), needed_by (≤30 days), current_fuel_level_percent (0–100) |
+| POST | `/operations/fuel-requests/{fuelRequest}/status` | Stage permission | status, optional reason; for `logged`: receipt **or** no_receipt_reason (+ no_receipt_note when `other`), optional receipt_number |
+| POST | `/operations/fuel-requests/{fuelRequest}/review` | `fuel.approve` (+ `fuel.forward` when `submitted`); not the requester | decision `approved`/`rejected`; reason required for rejection. Records forward + decision atomically |
+| POST | `/operations/fuel-requests/{fuelRequest}/withdraw` | Requester only, `submitted`/`forwarded` | optional reason |
+| POST | `/operations/fuel-logs/{fuelLog}/receipt-review` | `fuel.verify` | optional note; clears a pending no-receipt exception |
 | GET | `/operations/locations` | `tracking.view_all` | Latest with user, 100/page |
 | POST | `/operations/locations` | `tracking.share_own` | Asset?, coordinates, accuracy?, captured time, sharing flag |
 
-Fuel command targets supported today are `forwarded`, `approved`, `rejected`, `verified`, and `logged`. The `logged` transition creates a `FuelLog` record with quantity, price per litre, total cost, odometer, hour meter, station, remarks, receipt attachment, and audit trail.
+Fuel command targets supported today are `forwarded`, `approved`, `rejected`, `verified`, and `logged` (`withdrawn` is reachable only through the withdraw endpoint). The `logged` transition creates a `FuelLog` record with quantity, price per litre, total cost, odometer, hour meter, station, remarks, receipt attachment, and audit trail.
 
 ### Modules 3–4: Fleet and crane/equipment management
 
@@ -182,7 +184,7 @@ duplicating the shared asset registry commands:
 | GET | `/operations/equipment/assets` | Equipment own/all visibility | Cranes and equipment only |
 | GET | `/operations/equipment/assets/{operationalAsset}` | Equipment own/all visibility | One crane or equipment record only |
 
-### Modules 6-7: Rental and Sales Management
+### Module 6: Rental Management
 
 These session-authenticated routes are implemented backend/API slices. They
 reuse the existing client, operational-asset, permission, transaction, and
@@ -208,14 +210,6 @@ requests return `429`.
 | POST | `/operations/rental-reservations/{rentalReservation}/checkout` | `rental.checkout` | Record bounded checkout evidence | `200` |
 | POST | `/operations/rental-reservations/{rentalReservation}/return` | `rental.return` | Record bounded return evidence | `200` |
 | POST | `/operations/rental-reservations/{rentalReservation}/operation-authorization` | `rental.operate` | Recheck checkout, assignment, qualification, asset state, and rental-window eligibility for the authenticated operator | `200` |
-| GET | `/operations/sales/catalog` | `sales.view` | List active saleable catalog items | `200` |
-| POST | `/operations/sales/catalog` | `sales.catalog_manage` | Create an operational catalog item and opening ledger row | `201` |
-| GET | `/operations/sales/quotes` | `sales.view` | List authorized sales quotes | `200` |
-| POST | `/operations/sales/quotes` | `sales.create_quote` | Create a quote with server-derived prices/totals | `201` |
-| POST | `/operations/sales/quotes/{salesQuote}/accept` | `sales.approve_order` | Convert a valid draft quote into a committed order | `201` |
-| GET | `/operations/sales/orders` | `sales.view` | List authorized sales orders | `200` |
-| POST | `/operations/sales/orders/{salesOrder}/fulfill` | `sales.fulfill` | Fulfill after locked stock/readiness re-check | `200` |
-| POST | `/operations/sales/orders/{salesOrder}/transfer-ownership` | `sales.transfer_ownership` | Perform terminal ownership transfer | `200` |
 
 Successful responses use the current envelope `{"data": <model-or-paginator>}`.
 List responses put Laravel's paginator object under `data` (including its
@@ -242,15 +236,8 @@ and the inclusive rental date window. The server rechecks the operator account,
 availability, and credential at operation time; assignment or operation
 permission alone never bypasses the item and time-window checks.
 
-Sales catalog and quote requests bound batches to 100 items, prices/quantities
-to the signed 32-bit persistence maximum, quote references to 48 characters,
-notes/descriptions to 5,000 characters, and require exactly one unit for a
-physical linked catalog item. Quote acceptance accepts only a non-expired
-`draft`; supported source transitions are `confirmed -> fulfilled` and
-`fulfilled -> transferred`.
-
-The server ignores client attempts to provide protected rental/sales derived
-prices, days, totals, stock counters, or ownership state. Exact route
+The server ignores client attempts to provide protected rental derived
+prices, days, or totals. Exact route
 permissions are rechecked inside transaction-owning actions. Cross-module
 asset conflicts use the Shared typed availability contract, and supported
 mutations write their audit event in the same transaction as the business
@@ -417,6 +404,10 @@ The `/api/v1` prefix is composed from module- and platform-owned route files. Al
 
 ### Fuel & Telemetry
 - `GET /api/v1/fuel-requests`, `GET /api/v1/fuel-requests/{fuelRequest}`: Worker fuel requests.
+- `GET /api/v1/fuel-options`: Requestable assets/jobs plus `defaults` (active shift asset/job, else a single assignment).
+- `POST /api/v1/fuel-requests` (`throttle:30,1`, `X-Command-Id`): Submit with `client_request_id`, quantity, fuel type, purpose, optional urgency/needed_by/current_fuel_level_percent.
+- `POST /api/v1/fuel-requests/{fuelRequest}/logs` (`throttle:30,1`, `X-Command-Id`): Record a verified request; multipart `receipt` or `no_receipt_reason` (+ `no_receipt_note` for `other`), optional `receipt_number`.
+- `POST /api/v1/fuel-requests/{fuelRequest}/withdraw` (`throttle:30,1`, `X-Command-Id`): Requester withdrawal while `submitted`/`forwarded`; idempotent.
 - `POST /api/v1/locations` (`throttle:location`): High-frequency GPS telemetry sharing pings (lat, lng, speed, heading, accuracy).
 - `GET /api/v1/dispatch/jobs/{id}/weather`: Real-time weather and wind telemetry for lift site.
 - `POST /api/v1/dispatch/jobs/{id}/weather-standby`: Report weather hold / high wind safety delay.
@@ -483,11 +474,10 @@ The Tracking microservice exposes high-throughput GPS ingestion and query endpoi
 - **Dispatch execution status**: `draft`, `dispatched`, `en_route`, `arrived`, `working`, `completed`, `cancelled`.
 - **Assignment offer status**: `proposed`, `offered`, `accepted`, `rejected`, `withdrawn`, `expired`, `ended`.
 - **Plan approval status**: `draft`, `submitted`, `approved`, `rejected`, `superseded`.
-- **Fuel status**: `submitted`, `forwarded`, `approved`, `rejected`, `verified`, `logged`.
+- **Fuel status**: `submitted`, `forwarded`, `approved`, `rejected`, `verified`, `logged`, `withdrawn`.
 - **Asset status**: `available`, `assigned`, `working`, `under_inspection`, `under_maintenance`, `awaiting_parts`, `ready_for_service`, `unavailable`.
 - **DVIR inspection status**: `passed`, `defects_identified`, `critical_safety_lockout`.
 - **HoS duty status**: `operating`, `driving`, `standby`, `on_break`, `off_duty`.
 - **Project plan status**: `draft`, `submitted`, `approved`, `rejected`, `superseded`.
 - **SOS status**: `triggered`, `acknowledged`, `escalated`, `resolved`, `cancelled`.
 - **Rental reservation status**: `requested`, `reserved`, `checked_out`, `returned`, `closed`.
-- **Sales order status**: `confirmed`, `fulfilled`, `transferred`, `cancelled`.

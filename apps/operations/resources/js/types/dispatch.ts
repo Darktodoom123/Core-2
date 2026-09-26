@@ -1,11 +1,7 @@
 ﻿import type { DispatchPriorityValue, StatusViewModel } from './workspace';
 
 export type DispatchSourceType =
-    | 'direct'
-    | 'service_request'
-    | 'rental_reservation'
-    | 'sales_order'
-    | 'manual';
+    'direct' | 'service_request' | 'rental_reservation' | 'manual';
 
 export interface DispatchRequirementItem {
     id: string;
@@ -19,13 +15,6 @@ export interface RentalItemContext {
     name: string;
     quantity: number;
     condition_notes?: string | null;
-}
-
-export interface SalesOrderItemContext {
-    id: number;
-    name: string;
-    quantity: number;
-    sku?: string | null;
 }
 
 export interface GeoCoordinates {
@@ -52,14 +41,11 @@ export interface DispatchSourceViewModel {
     condition_requirements?: string[];
     operator_required?: boolean;
     operator_context?: string | null;
-    order_items?: SalesOrderItemContext[];
-    delivery_destination_coordinates?: GeoCoordinates | null;
-    total_cents?: number | null;
 }
 
 export interface UnlinkedHandoffItem {
     id: number;
-    source_type: 'service' | 'rental' | 'sale';
+    source_type: 'service' | 'rental';
     source_label: string;
     reference: string;
     client: {
@@ -72,12 +58,9 @@ export interface UnlinkedHandoffItem {
     scheduled_date?: string | null;
     start_date?: string | null;
     end_date?: string | null;
-    total_cents?: number | null;
     fulfillment_mode?: 'delivery' | 'pickup' | null;
     requirements?: string[];
     rental_items?: RentalItemContext[];
-    order_items?: SalesOrderItemContext[];
-    destination_coordinates?: GeoCoordinates | null;
     dispatch_job_id: number | null;
     matched_draft_job_id?: number | null;
     matched_draft_reference?: string | null;

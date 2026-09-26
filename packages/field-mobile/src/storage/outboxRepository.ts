@@ -40,7 +40,6 @@ const commandTypes: OutboxCommandType[] = [
     'submit_job_report',
     'submit_dvir',
     'submit_rental_handover',
-    'submit_sales_delivery',
     'submit_equipment_inspection',
     'submit_maintenance_work_order',
     'start_hos_shift',
@@ -49,6 +48,7 @@ const commandTypes: OutboxCommandType[] = [
     'report_delay',
     'submit_fuel_request',
     'record_fuel_log',
+    'withdraw_fuel_request',
 ];
 const commandStates: OutboxCommandState[] = [
     'queued',

@@ -76,6 +76,7 @@ describe('Empirical Challenger: 5-Stage State Machine & Factual Truth Invariants
         // 4. ADVERSARIAL ATTEMPT: Attempt to record fuel log directly from "approved" (bypassing "verified")
         $this->actingAs($driver)->post("/operations/fuel-requests/{$fuel->id}/status", [
             'status' => 'logged',
+            'no_receipt_reason' => 'on_site_bowser',
             'quantity_litres' => 150,
             'hour_meter' => 510.0,
             'price_per_litre' => 65.0,
@@ -98,6 +99,7 @@ describe('Empirical Challenger: 5-Stage State Machine & Factual Truth Invariants
         // 6. Now logging from verified SUCCEEDS
         $this->actingAs($driver)->post("/operations/fuel-requests/{$fuel->id}/status", [
             'status' => 'logged',
+            'no_receipt_reason' => 'on_site_bowser',
             'quantity_litres' => 150,
             'hour_meter' => 510.0,
             'price_per_litre' => 65.0,
@@ -212,7 +214,7 @@ describe('Empirical Challenger: 5-Stage State Machine & Factual Truth Invariants
             ->assertSessionHasErrors('status');
         $this->actingAs($manager)->post("/operations/fuel-requests/{$fuel->id}/status", ['status' => 'verified'])
             ->assertSessionHasErrors('status');
-        $this->actingAs($driver)->post("/operations/fuel-requests/{$fuel->id}/status", ['status' => 'logged'])
+        $this->actingAs($driver)->post("/operations/fuel-requests/{$fuel->id}/status", ['status' => 'logged', 'no_receipt_reason' => 'on_site_bowser'])
             ->assertSessionHasErrors('status');
 
         // Transition to FORWARDED
@@ -224,7 +226,7 @@ describe('Empirical Challenger: 5-Stage State Machine & Factual Truth Invariants
         // Attempt jump to: verified (fail), logged (fail), submitted (fail)
         $this->actingAs($manager)->post("/operations/fuel-requests/{$fuel->id}/status", ['status' => 'verified'])
             ->assertSessionHasErrors('status');
-        $this->actingAs($driver)->post("/operations/fuel-requests/{$fuel->id}/status", ['status' => 'logged'])
+        $this->actingAs($driver)->post("/operations/fuel-requests/{$fuel->id}/status", ['status' => 'logged', 'no_receipt_reason' => 'on_site_bowser'])
             ->assertSessionHasErrors('status');
 
         // Transition to APPROVED
@@ -238,6 +240,7 @@ describe('Empirical Challenger: 5-Stage State Machine & Factual Truth Invariants
         // Attempt jump to: logged directly (fail), forwarded (fail), submitted (fail)
         $this->actingAs($driver)->post("/operations/fuel-requests/{$fuel->id}/status", [
             'status' => 'logged',
+            'no_receipt_reason' => 'on_site_bowser',
             'quantity_litres' => 100,
         ])->assertSessionHasErrors('status');
 
@@ -254,6 +257,7 @@ describe('Empirical Challenger: 5-Stage State Machine & Factual Truth Invariants
         // Transition to LOGGED
         $this->actingAs($driver)->post("/operations/fuel-requests/{$fuel->id}/status", [
             'status' => 'logged',
+            'no_receipt_reason' => 'on_site_bowser',
             'quantity_litres' => 100,
         ])->assertRedirect('/');
         $fuel->refresh();
@@ -263,6 +267,7 @@ describe('Empirical Challenger: 5-Stage State Machine & Factual Truth Invariants
         // Attempt any transition: logged again (duplicate log fail), verified (fail), approved (fail)
         $this->actingAs($driver)->post("/operations/fuel-requests/{$fuel->id}/status", [
             'status' => 'logged',
+            'no_receipt_reason' => 'on_site_bowser',
             'quantity_litres' => 100,
         ])->assertSessionHasErrors('status');
         $this->actingAs($manager)->post("/operations/fuel-requests/{$fuel->id}/status", ['status' => 'verified'])

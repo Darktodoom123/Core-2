@@ -3,15 +3,17 @@
 namespace App\Modules\Fuel\Actions;
 
 use App\Modules\Fuel\Enums\FuelRequestStatus;
+use App\Modules\Fuel\Enums\FuelUrgency;
 use App\Modules\Fuel\Models\FuelRequest;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Models\User;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 final class SubmitMobileFuelRequest
 {
-    public function __construct(private RecordAuditEvent $audit) {}
+    public function __construct(private RecordAuditEvent $audit, private FuelNotifier $notifier) {}
 
     /** @param array<string, mixed> $data */
     public function handle(User $actor, array $data): FuelRequest
@@ -20,6 +22,7 @@ final class SubmitMobileFuelRequest
         foreach (['operational_asset_id', 'dispatch_job_id', 'operator_shift_id'] as $key) {
             $data[$key] = isset($data[$key]) ? (int) $data[$key] : null;
         }
+        // Hash only what the client sent so replays of older submissions still match.
         ksort($data);
         $hash = hash('sha256', json_encode($data, JSON_THROW_ON_ERROR));
 
@@ -32,11 +35,19 @@ final class SubmitMobileFuelRequest
                 return $existing;
             }
             $fuel = new FuelRequest;
-            $fuel->fill([...$data, 'reference' => 'FUEL-'.now()->format('YmdHis').'-'.Str::lower(Str::random(8)), 'requester_id' => $actor->id, 'status' => FuelRequestStatus::Submitted]);
+            $fuel->fill([
+                ...$data,
+                'urgency' => $data['urgency'] ?? FuelUrgency::Normal->value,
+                'needed_by' => isset($data['needed_by']) ? Carbon::parse((string) $data['needed_by']) : null,
+                'reference' => 'FUEL-'.now()->format('YmdHis').'-'.Str::lower(Str::random(8)),
+                'requester_id' => $actor->id,
+                'status' => FuelRequestStatus::Submitted,
+            ]);
             $fuel->setAttribute('client_request_id', $data['client_request_id']);
             $fuel->setAttribute('client_payload_hash', $hash);
             $fuel->save();
-            $this->audit->handle($actor, $fuel, 'fuel.requested', null, $fuel->only(['reference', 'requester_id', 'quantity_litres', 'fuel_type', 'status']));
+            $this->audit->handle($actor, $fuel, 'fuel.requested', null, $fuel->only(['reference', 'requester_id', 'quantity_litres', 'fuel_type', 'urgency', 'status']));
+            $this->notifier->submitted($fuel);
 
             return $fuel;
         });

@@ -7,7 +7,6 @@ enum DispatchSourceType: string
     case Manual = 'manual';
     case ServiceRequest = 'service_request';
     case RentalReservation = 'rental_reservation';
-    case SalesOrder = 'sales_order';
 
     public function label(): string
     {
@@ -15,7 +14,6 @@ enum DispatchSourceType: string
             self::Manual => 'Manual',
             self::ServiceRequest => 'Service',
             self::RentalReservation => 'Rental',
-            self::SalesOrder => 'Sale',
         };
     }
 }

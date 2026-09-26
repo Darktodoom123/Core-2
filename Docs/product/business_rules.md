@@ -1,13 +1,13 @@
 # Core Transaction 2 — Business Rules
 
-Alibaton's heavy-equipment rental, sales, and service lines provide the
-business context. External Core 1 owns Sales, CRM, Client, Job Order, Rental,
+Alibaton's heavy-equipment rental and service lines provide the
+business context for Core 2. External Core 1 owns Sales, CRM, Client, Job Order, Rental,
 and Project Management. These rules govern Core 2 operational processing of
-service, rental, and sale handoffs; they do not authorize Core 1 customer or
+service and rental handoffs and direct dispatch; they do not authorize Core 1 customer or
 commercial workflows. See [Alibaton Business Context and CT2 Scope](./alibaton-business-scope.md)
 for Core 1 commercial transaction boundaries.
 
-**Last updated:** 2026-09-16
+**Last updated:** 2026-09-25
 
 ## Identity and authorization
 
@@ -23,7 +23,7 @@ for Core 1 commercial transaction boundaries.
 
 - **BR-007:** Core 1 is external to this repository and remains authoritative
   for customer, commercial, job-order, rental, and project transactions.
-- **BR-008:** Core 2 receives only service, rental, and sale handoffs and must
+- **BR-008:** Core 2 receives only service and rental handoffs and must
   preserve the Core 1 source reference when it creates operational records.
 - **BR-009:** A Core 1 handoff never bypasses Core 2 authentication, validation,
   authorization, availability, readiness, qualification, conflict,
@@ -48,7 +48,7 @@ for Core 1 commercial transaction boundaries.
 - **BR-015:** Assets are assignable only when `available` or `ready_for_service`.
 - **BR-016:** An asset with unreleased dispatch-blocking maintenance cannot be assigned or activated.
 - **BR-017:** An asset cannot have an overlapping active dispatch assignment.
-- **BR-018:** All dispatch assignments (routine, priority, and emergency) across tri-modal workflows require independent Operations approval.
+- **BR-018:** All dispatch assignments (routine, priority, and emergency) across service, rental, and direct dispatch workflows require independent Operations approval.
 - **BR-019:** An approval requester cannot decide the same approval, and only pending approvals are decidable.
 - **BR-020:** Activation rejects stale versions and increments the version when successful.
 - **BR-020A:** Activation requires at least one active personnel assignment and
@@ -100,10 +100,29 @@ for Core 1 commercial transaction boundaries.
 - **BR-041:** Supported transitions are `submitted` → `forwarded`;
   `forwarded` → `approved`/`rejected`; `approved` → `verified`; and
   `verified` → `logged`.
+- **BR-041A:** A reviewer holding both `fuel.forward` and `fuel.approve` may
+  record a single review decision on a `submitted` request. The server still
+  persists and audits `forwarded` followed by `approved`/`rejected` in one
+  transaction. Rejection requires a reason. Verification remains a separate
+  step.
+- **BR-041B:** Only the requester may withdraw a request, and only while it is
+  `submitted` or `forwarded`. `withdrawn` is terminal; withdrawal is audited and
+  idempotent.
+- **BR-041C:** Requests may carry urgency (`normal`, `urgent`, `critical`;
+  default `normal`), an optional needed-by time within 30 days, and an optional
+  current tank level (0–100%). Pending queues sort by urgency.
 - **BR-042:** Each transition requires its corresponding permission.
 - **BR-043:** The requester cannot approve their own request.
 - **BR-044:** A wrong-stage or unsupported transition is rejected. The
   `logged` transition creates one `FuelLog`; duplicate logging is rejected.
+- **BR-044A:** Every fuel log needs a receipt image or a no-receipt reason
+  (`on_site_bowser`, `vendor_no_receipt`, `receipt_lost`, `other`); `other`
+  also needs a note. An optional receipt/OR number (max 64 characters) may be
+  stored. A log without a receipt stays flagged for receipt review until a
+  `fuel.verify` holder marks the exception reviewed. An attached receipt is
+  evidence, not verification.
+- **BR-044B:** The requester is notified when a request is approved, rejected,
+  or verified; users holding `fuel.forward` are notified of new submissions.
 - **BR-045:** Price, total cost, odometer, and hour-meter values cannot be negative.
 - **BR-046:** Operational assets maintain an authoritative baseline burn rate (`baseline_burn_rate >= 0`) and unit (`L/hr` or `km/L`).
 - **BR-047:** Effective burn rate is computed between sequential verified fuel logs using differential meter values.
@@ -139,7 +158,7 @@ for Core 1 commercial transaction boundaries.
   return records evidence and does not overwrite a stricter operational state.
 - **BR-083:** Rental creation, approval, and checkout lock all affected asset
   rows in ascending ID order before rechecking asset status, maintenance,
-  inspection, overlapping Rental/Dispatch use, and committed Sales use. A typed
+  inspection, and overlapping Rental/Dispatch use. A typed
   Rental source may exclude only the current reservation during revalidation.
 - **BR-084:** Rental line quantity is exactly one. Rental item lists are bounded
   to 100 entries, rates and totals are non-negative signed 32-bit persisted
@@ -152,7 +171,7 @@ for Core 1 commercial transaction boundaries.
 - **BR-086:** Rental checkout and return are session-authenticated, CSRF-
   protected JSON commands. Server-derived days, rates, line totals, and total
   cents are authoritative; client attempts cannot replace them.
-- **BR-087:** A losing concurrent Rental, Sales, or Dispatch use returns a safe
+- **BR-087:** A losing concurrent Rental or Dispatch use returns a safe
   domain validation conflict and leaves no partial reservation, evidence, asset
   status, or success audit.
 - **BR-088:** A rental operator assignment belongs to one rental item and uses
@@ -166,43 +185,13 @@ for Core 1 commercial transaction boundaries.
   availability, and credential check. The server rechecks the exact
   `rental.operate` permission and records the authorization audit event.
 
-## Inbound Commercial Flow: Sales Operations Flow
+## Retired: Sales Operations Flow
 
-- **BR-090:** A quote is accepted only from `draft`. A locked quote whose
-  inclusive `valid_until` is before today in the application timezone is rejected
-  with the quote still in `draft`; equality with today is valid.
-- **BR-091:** Quote acceptance locks the quote, catalog rows, and linked assets,
-  then validates the full batch before creating the order, reserving stock,
-  writing reserve-ledger rows, changing quote status, and writing both success
-  audit events in one transaction.
-- **BR-092:** Catalog prices are the source for quote/order line prices and
-  totals. Quote and catalog lists are bounded to 100 entries; quantities, cents,
-  and checked products fit the signed 32-bit persistence maximum; physical
-  linked catalog stock is exactly one.
-- **BR-093:** `confirmed`, `fulfilled`, and `transferred` Sales orders commit a
-  linked physical asset. The conflict checker uses order status rather than
-  `quantity_reserved`, so fulfillment cannot reopen the asset for reuse.
-- **BR-094:** Fulfillment is allowed only from `confirmed`, locks and rechecks
-  every inventory row and linked asset, decrements on-hand/reserved counters,
-  writes sale-ledger rows, marks linked assets `unavailable`, and audits the
-  state change atomically.
-- **BR-095:** Ownership transfer is allowed only from `fulfilled`, creates at
-  most one transfer per physical asset/order item, changes the order to terminal
-  `transferred`, and preserves `unavailable`. Duplicate and unique-race failures
-  are translated into domain validation errors.
-- **BR-096:** No generic status, inspection, maintenance, Rental return, or other
-  runtime path may restore a transferred asset to an operational status. A
-  confirmed sale blocks dispatchable use; fulfillment and transfer require the
-  asset to remain unavailable.
-- **BR-097:** Sales mutation permissions are exact and are rechecked inside the
-  transaction. Client-provided prices, totals, stock counters, ownership IDs,
-  and derived references are ignored or rejected rather than trusted.
-- **BR-098:** Multi-line Sales actions validate every line before persisting any
-  row. Audit failure or a later-line failure rolls back orders, counters, ledger
-  rows, ownership rows, asset changes, and success audits together.
-- **BR-099:** The derived `SO-<quote reference>` reference fits the widened
-  64-character order column. Any future derivation overflow returns a stable
-  validation error instead of a raw database exception.
+- **BR-090 to BR-099:** Retired on 2026-09-25. Core 2 no longer receives or
+  fulfills sale handoffs; the Sales module, its tables, and all `sales.*`
+  permissions were removed by `2026_09_25_130000_remove_sales_module.php`.
+  Existing sale-sourced dispatches were converted to direct (manual)
+  dispatches. These rule IDs are not reused.
 
 ## Shared reporting, audit, and AI services
 

@@ -415,7 +415,7 @@ export function FleetSurface({
     return (
         <div>
             <PageHeading
-                title="Fleet Management"
+                title="Fleet & Equipment"
                 description="Asset types, GPS freshness, dispatch readiness, specifications, inspections, and maintenance work orders."
             />
             <div className="space-y-6 p-4 md:p-6">

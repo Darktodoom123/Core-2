@@ -32,10 +32,13 @@ final class WorkspaceFuelRequestsQuery
 
         $status = $filters['status'] ?? 'all';
         if ($status === 'pending') {
-            $query->whereIn('status', ['submitted', 'forwarded']);
+            $query->whereIn('status', ['submitted', 'forwarded'])
+                ->orderByRaw("CASE urgency WHEN 'critical' THEN 0 WHEN 'urgent' THEN 1 ELSE 2 END");
         } elseif ($status === 'anomalies') {
             $query->whereHas('logs', fn (Builder $q) => $q->where('is_anomaly', true));
-        } elseif (in_array($status, ['submitted', 'forwarded', 'approved', 'verified', 'logged', 'rejected'], true)) {
+        } elseif ($status === 'receipt_review') {
+            $query->whereHas('logs', fn (Builder $q) => $q->whereNotNull('no_receipt_reason')->whereNull('receipt_reviewed_at'));
+        } elseif (in_array($status, ['submitted', 'forwarded', 'approved', 'verified', 'logged', 'rejected', 'withdrawn'], true)) {
             $query->where('status', $status);
         }
 
@@ -76,7 +79,7 @@ final class WorkspaceFuelRequestsQuery
     }
 
     /**
-     * @return array{total: int, pending: int, approved: int, verified: int, logged: int, anomalies: int}
+     * @return array{total: int, pending: int, approved: int, verified: int, logged: int, anomalies: int, receipt_review: int}
      */
     public function counts(User $user): array
     {
@@ -88,10 +91,11 @@ final class WorkspaceFuelRequestsQuery
                 'verified' => 0,
                 'logged' => 0,
                 'anomalies' => 0,
+                'receipt_review' => 0,
             ];
         }
 
-        /** @var object{total?: int|string|null, pending?: int|string|null, approved?: int|string|null, verified?: int|string|null, logged?: int|string|null, anomalies?: int|string|null}|null $stats */
+        /** @var object{total?: int|string|null, pending?: int|string|null, approved?: int|string|null, verified?: int|string|null, logged?: int|string|null, anomalies?: int|string|null, receipt_review?: int|string|null}|null $stats */
         $stats = FuelRequest::query()
             ->visibleTo($user)
             ->toBase()
@@ -105,7 +109,13 @@ final class WorkspaceFuelRequestsQuery
                     SELECT 1 FROM fuel_logs
                     WHERE fuel_logs.fuel_request_id = fuel_requests.id
                       AND fuel_logs.is_anomaly = ?
-                ) THEN 1 END) AS anomalies
+                ) THEN 1 END) AS anomalies,
+                COUNT(CASE WHEN EXISTS (
+                    SELECT 1 FROM fuel_logs
+                    WHERE fuel_logs.fuel_request_id = fuel_requests.id
+                      AND fuel_logs.no_receipt_reason IS NOT NULL
+                      AND fuel_logs.receipt_reviewed_at IS NULL
+                ) THEN 1 END) AS receipt_review
             ", [true])
             ->first();
 
@@ -116,6 +126,7 @@ final class WorkspaceFuelRequestsQuery
             'verified' => (int) ($stats->verified ?? 0),
             'logged' => (int) ($stats->logged ?? 0),
             'anomalies' => (int) ($stats->anomalies ?? 0),
+            'receipt_review' => (int) ($stats->receipt_review ?? 0),
         ];
     }
 }

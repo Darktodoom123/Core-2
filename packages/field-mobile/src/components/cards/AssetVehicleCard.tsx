@@ -225,6 +225,22 @@ export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
                         >
                             {assetName}
                         </Text>
+                        {activeJob ? (
+                            <Text
+                                numberOfLines={1}
+                                style={[
+                                    styles.heroDispatchText,
+                                    isDarkHud && styles.darkHeroDispatchText,
+                                ]}
+                                testID="hero-active-dispatch"
+                            >
+                                {dispatchPrefix}
+                                <Text style={styles.heroDispatchRef}>
+                                    {activeJob.reference}
+                                </Text>
+                                {activeJob.title ? ` · ${activeJob.title}` : ''}
+                            </Text>
+                        ) : null}
                     </View>
                 </View>
 
@@ -976,6 +992,19 @@ const styles = StyleSheet.create({
     },
     darkHeroModelText: {
         color: colors.hudText,
+    },
+    heroDispatchText: {
+        color: colors.muted,
+        fontSize: 12.5,
+        fontWeight: '600',
+        marginTop: 4,
+    },
+    darkHeroDispatchText: {
+        color: colors.hudTextDim,
+    },
+    heroDispatchRef: {
+        fontFamily: 'monospace',
+        fontWeight: '700',
     },
     heroDivider: {
         backgroundColor: colors.borderSubtle,

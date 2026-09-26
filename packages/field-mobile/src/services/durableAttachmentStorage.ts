@@ -36,43 +36,147 @@ export interface FileSystemLike {
 
 let cachedFileSystem: FileSystemLike | null = null;
 
+/** The photo could not be written to durable device storage. */
+export class AttachmentStorageError extends Error {
+    constructor(detail: string) {
+        super(`Could not save the photo on this device: ${detail}`);
+        this.name = 'AttachmentStorageError';
+    }
+}
+
+/**
+ * Adapter over the modern expo-file-system API (File/Directory/Paths). Since
+ * SDK 54 the legacy functions live in `expo-file-system/legacy`, and on
+ * Android the legacy native module may be absent, so the modern API is used
+ * whenever it exists.
+ */
+export function modernFileSystem(fsModule: any): FileSystemLike | null {
+    const { File, Directory, Paths } = fsModule ?? {};
+
+    if (!File || !Directory || !Paths?.document?.uri) {
+        return null;
+    }
+
+    const isBase64 = (encoding: unknown) =>
+        encoding === 'base64' || encoding === fsModule.EncodingType?.Base64;
+
+    return {
+        documentDirectory: Paths.document.uri,
+        EncodingType: { Base64: 'base64', UTF8: 'utf8' },
+        makeDirectoryAsync: async (path, options) => {
+            new Directory(path).create({
+                intermediates: options?.intermediates ?? false,
+                idempotent: true,
+            });
+        },
+        copyAsync: async ({ from, to }) => {
+            await new File(from).copy(new File(to));
+        },
+        writeAsStringAsync: async (path, contents, options) => {
+            new File(path).write(contents, {
+                encoding: isBase64(options?.encoding) ? 'base64' : 'utf8',
+            });
+        },
+        readAsStringAsync: async (path, options) => {
+            const file = new File(path);
+
+            return isBase64(options?.encoding) ? file.base64() : file.text();
+        },
+        getInfoAsync: async (path) => {
+            const file = new File(path);
+
+            if (file.exists) {
+                return {
+                    exists: true,
+                    size: file.size ?? 0,
+                    isDirectory: false,
+                };
+            }
+
+            const directory = new Directory(path);
+
+            return { exists: directory.exists, isDirectory: directory.exists };
+        },
+        deleteAsync: async (path, options) => {
+            const file = new File(path);
+            const directory = new Directory(path);
+            const target = file.exists
+                ? file
+                : directory.exists
+                  ? directory
+                  : null;
+
+            if (target) {
+                target.delete();
+            } else if (!options?.idempotent) {
+                throw new Error(`File not found: ${path}`);
+            }
+        },
+    };
+}
+
+/**
+ * Loads a module synchronously. Metro bundles these literal `require` calls;
+ * lazy `import()` fails in the Android dev client ("Cannot read property
+ * 'reload' of undefined"), which left every durable save unwritten. Under the
+ * plain Node unit runner the modules are unavailable and this returns null.
+ */
+function loadModule(name: 'expo-file-system' | 'expo-file-system/legacy'): any {
+    try {
+        if (name === 'expo-file-system') {
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            return require('expo-file-system');
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        return require('expo-file-system/legacy');
+    } catch {
+        return null;
+    }
+}
+
+/** True inside the React Native runtime (device, emulator, or Jest RN preset). */
+function isReactNativeRuntime(): boolean {
+    return (
+        typeof navigator !== 'undefined' &&
+        (navigator as { product?: string }).product === 'ReactNative'
+    );
+}
+
+/** Test seam: lets tests supply a file system adapter directly. */
+export function setFileSystemForTesting(fs: FileSystemLike | null): void {
+    cachedFileSystem = fs;
+}
+
 async function resolveFileSystem(): Promise<FileSystemLike | null> {
     if (cachedFileSystem !== null) {
         return cachedFileSystem;
     }
 
     try {
-        let fsModule: any;
+        const modern = modernFileSystem(loadModule('expo-file-system'));
 
-        try {
-            fsModule = await import('expo-file-system/legacy');
-        } catch {
-            fsModule = await import('expo-file-system');
+        if (modern) {
+            cachedFileSystem = modern;
+
+            return cachedFileSystem;
         }
 
-        if (
-            fsModule &&
-            (fsModule.documentDirectory || fsModule.Paths?.document)
-        ) {
+        const legacy: any = loadModule('expo-file-system/legacy');
+
+        if (legacy?.documentDirectory && legacy.copyAsync) {
             cachedFileSystem = {
-                documentDirectory:
-                    fsModule.documentDirectory ||
-                    (fsModule.Paths?.document?.uri ?? null),
-                EncodingType: fsModule.EncodingType || {
+                documentDirectory: legacy.documentDirectory,
+                EncodingType: legacy.EncodingType || {
                     Base64: 'base64',
                     UTF8: 'utf8',
                 },
-                makeDirectoryAsync:
-                    fsModule.makeDirectoryAsync || (async () => undefined),
-                copyAsync: fsModule.copyAsync || (async () => undefined),
-                writeAsStringAsync:
-                    fsModule.writeAsStringAsync || (async () => undefined),
-                readAsStringAsync:
-                    fsModule.readAsStringAsync || (async () => ''),
-                getInfoAsync:
-                    fsModule.getInfoAsync ||
-                    (async (uri: string) => ({ exists: true, size: 0, uri })),
-                deleteAsync: fsModule.deleteAsync || (async () => undefined),
+                makeDirectoryAsync: legacy.makeDirectoryAsync,
+                copyAsync: legacy.copyAsync,
+                writeAsStringAsync: legacy.writeAsStringAsync,
+                readAsStringAsync: legacy.readAsStringAsync,
+                getInfoAsync: legacy.getInfoAsync,
+                deleteAsync: legacy.deleteAsync,
             };
 
             return cachedFileSystem;
@@ -149,6 +253,10 @@ export class DurableAttachmentStorage {
 
                 const info = await fs.getInfoAsync(destUri);
 
+                if (!info.exists) {
+                    throw new Error('The copied file was not found.');
+                }
+
                 return {
                     uri: destUri,
                     fileName,
@@ -157,19 +265,19 @@ export class DurableAttachmentStorage {
                             ? (info.size as number)
                             : undefined,
                 };
-            } catch {
-                // If FileSystem native operation fails, fallback to simulated storage
-                this.inMemoryStorage.set(destUri, {
-                    content: source.base64,
-                    size: source.base64?.length || 1024,
-                });
-
-                return {
-                    uri: destUri,
-                    fileName,
-                    fileSize: source.base64?.length || 1024,
-                };
+            } catch (error) {
+                // A native write failed. Surface it: returning a path that was
+                // never written would queue an upload that can never succeed.
+                throw new AttachmentStorageError(
+                    error instanceof Error ? error.message : String(error),
+                );
             }
+        }
+
+        if (isReactNativeRuntime()) {
+            // On a device a missing file system means the photo cannot be
+            // kept; fail instead of queueing an upload with no file behind it.
+            throw new AttachmentStorageError('file storage is unavailable.');
         }
 
         // Pure Node / Unit test runner fallback

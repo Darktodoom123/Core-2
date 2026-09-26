@@ -6,9 +6,6 @@ use App\Modules\Dispatch\Models\ServiceRequest;
 use App\Modules\Rental\Enums\RentalFulfillmentMode;
 use App\Modules\Rental\Models\RentalReservation;
 use App\Modules\Rental\ViewModels\RentalHandoffViewModel;
-use App\Modules\Sales\Enums\SalesFulfillmentMode;
-use App\Modules\Sales\Models\SalesOrder;
-use App\Modules\Sales\ViewModels\SalesHandoffViewModel;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
 use App\Platform\Workspace\ViewModels\OperationsWorkspaceViewModel;
@@ -22,10 +19,9 @@ final class DispatchDeskIncomingQuery
 
     /**
      * @return array{
-     *     items: list<array{key: string, mode: 'service'|'rental'|'sale', sourceLabel: string, reference: string, client: string, detail: string, status: string, sourceId: int, hasEvidence?: bool, evidenceSignee?: string|null}>,
+     *     items: list<array{key: string, mode: 'service'|'rental', sourceLabel: string, reference: string, client: string, detail: string, status: string, sourceId: int, hasEvidence?: bool, evidenceSignee?: string|null}>,
      *     service_requests: list<array<string, mixed>>,
      *     rental_handoffs: list<array<string, mixed>>,
-     *     sales_handoffs: list<array<string, mixed>>,
      *     total: int,
      *     current_page: int,
      *     last_page: int,
@@ -65,10 +61,8 @@ final class DispatchDeskIncomingQuery
             }
         }
         $rentalHandoffs = $this->rentalHandoffs($idsBySource->get('rental', []));
-        $salesHandoffs = $this->salesHandoffs($idsBySource->get('sale', []));
         $serviceById = collect($serviceRequests)->keyBy('id');
         $rentalById = collect($rentalHandoffs)->keyBy('id');
-        $salesById = collect($salesHandoffs)->keyBy('id');
 
         $items = [];
         foreach ($rows as $row) {
@@ -76,7 +70,6 @@ final class DispatchDeskIncomingQuery
             $item = match ($row->source_type) {
                 'service' => $this->serviceItem($serviceById->get($id)),
                 'rental' => $this->rentalItem($rentalById->get($id)),
-                'sale' => $this->salesItem($salesById->get($id)),
                 default => null,
             };
 
@@ -89,7 +82,6 @@ final class DispatchDeskIncomingQuery
             'items' => $items,
             'service_requests' => $serviceRequests,
             'rental_handoffs' => $rentalHandoffs,
-            'sales_handoffs' => $salesHandoffs,
             'total' => $total,
             'current_page' => $currentPage,
             'last_page' => $lastPage,
@@ -97,7 +89,7 @@ final class DispatchDeskIncomingQuery
         ];
     }
 
-    /** @return array{total: int, by_source: array{service: int, rental: int, sale: int}} */
+    /** @return array{total: int, by_source: array{service: int, rental: int}} */
     public function counts(User $user): array
     {
         $counts = [];
@@ -105,7 +97,7 @@ final class DispatchDeskIncomingQuery
             $counts[$source] = (int) DB::query()->fromSub($query, 'incoming_source')->count();
         }
 
-        $counts += ['service' => 0, 'rental' => 0, 'sale' => 0];
+        $counts += ['service' => 0, 'rental' => 0];
 
         return [
             'total' => array_sum($counts),
@@ -143,16 +135,6 @@ final class DispatchDeskIncomingQuery
                 ->where('incoming.fulfillment_mode', RentalFulfillmentMode::Delivery->value)
                 ->whereNull('incoming.dispatch_job_id')
                 ->selectRaw("'rental' as source_type, incoming.id, incoming.created_at");
-        }
-
-        if ($user->can(PermissionName::SalesView->value)) {
-            $queries['sale'] = DB::table('sales_orders as incoming')
-                ->join('clients as client', 'client.id', '=', 'incoming.client_id')
-                ->whereNull('client.deleted_at')
-                ->where('incoming.status', 'confirmed')
-                ->where('incoming.fulfillment_mode', SalesFulfillmentMode::Delivery->value)
-                ->whereNull('incoming.dispatch_job_id')
-                ->selectRaw("'sale' as source_type, incoming.id, incoming.created_at");
         }
 
         return $queries;
@@ -209,23 +191,6 @@ final class DispatchDeskIncomingQuery
         return array_values(RentalHandoffViewModel::collection($reservations));
     }
 
-    /** @param list<int> $ids
-     * @return list<array<string, mixed>>
-     */
-    private function salesHandoffs(array $ids): array
-    {
-        if ($ids === []) {
-            return [];
-        }
-
-        $orders = SalesOrder::query()
-            ->with(['client:id,code,company_name', 'latestDeliveryEvidence'])
-            ->whereKey($ids)
-            ->get();
-
-        return array_values(SalesHandoffViewModel::collection($orders));
-    }
-
     /** @param array<string, mixed>|null $request
      * @return array{key: string, mode: 'service', sourceLabel: string, reference: string, client: string, detail: string, status: string, sourceId: int}|null
      */
@@ -260,29 +225,6 @@ final class DispatchDeskIncomingQuery
             'key' => 'rental-'.$handoff['id'],
             'mode' => 'rental',
             'sourceLabel' => 'Rental delivery',
-            'reference' => $handoff['reference'],
-            'client' => $handoff['client']['company_name'],
-            'detail' => $handoff['location'] ?: 'Delivery location needs review',
-            'status' => $handoff['status']['label'],
-            'sourceId' => $handoff['id'],
-            'hasEvidence' => $handoff['has_evidence'],
-            'evidenceSignee' => $handoff['evidence_signee'],
-        ];
-    }
-
-    /** @param array<string, mixed>|null $handoff
-     * @return array{key: string, mode: 'sale', sourceLabel: string, reference: string, client: string, detail: string, status: string, sourceId: int, hasEvidence: bool, evidenceSignee: string|null}|null
-     */
-    private function salesItem(?array $handoff): ?array
-    {
-        if ($handoff === null) {
-            return null;
-        }
-
-        return [
-            'key' => 'sale-'.$handoff['id'],
-            'mode' => 'sale',
-            'sourceLabel' => 'Sales delivery',
             'reference' => $handoff['reference'],
             'client' => $handoff['client']['company_name'],
             'detail' => $handoff['location'] ?: 'Delivery location needs review',

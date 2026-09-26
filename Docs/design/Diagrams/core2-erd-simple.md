@@ -1,6 +1,6 @@
 # Core-2: Simplified ERD
 
-Last updated: 2026-09-17.
+Last updated: 2026-09-25.
 
 The finalized ERD fits on one A3 landscape page. It shows all five operational modules, AI inside Operations, and GPS records in the separate Tracking database. Each of the 14 selected tables appears once.
 
@@ -41,7 +41,7 @@ The service boundaries follow the [two-service architecture](../../microservice/
 
 PK marks a primary key; FK a declared foreign key; UK a unique column; REF an application reference with no FK constraint. A question mark indicates a nullable column. Crow's-foot endpoint symbols distinguish exactly one, zero or one, and zero or many related records. Solid lines are declared database foreign keys. Dashed lines are application references, including cross-service IDs and polymorphic subjects.
 
-The sheet omits secondary tables, extra fields, and additional relationships. It does not change the database schema. The detailed companion retains the broader operational model, including project planning, operator hours, rental and sales records.
+The sheet omits secondary tables, extra fields, and additional relationships. It does not change the database schema. The detailed companion retains the broader operational model, including project planning, operator hours, and rental records.
 
 The one-page diagram contains ten drawn FK relationships and six drawn application references. The builder checks selected fields and FK targets against the current migrations, rejects FK links across the two services, and verifies that reference-only columns have no declared FK. The PDF was rendered and the page was visually reviewed.
 

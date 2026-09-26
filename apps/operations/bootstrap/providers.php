@@ -8,7 +8,6 @@ use App\Modules\Fleet\FleetServiceProvider;
 use App\Modules\Fuel\FuelServiceProvider;
 use App\Modules\HoursOfService\HoursOfServiceServiceProvider;
 use App\Modules\Rental\RentalServiceProvider;
-use App\Modules\Sales\SalesServiceProvider;
 use App\Platform\PlatformServiceProvider;
 use App\Platform\Safety\SafetyServiceProvider;
 use App\Platform\Tracking\TrackingServiceProvider;
@@ -20,7 +19,6 @@ return [
     DispatchServiceProvider::class,
     AssignmentServiceProvider::class,
     RentalServiceProvider::class,
-    SalesServiceProvider::class,
     FleetServiceProvider::class,
     CraneEquipmentServiceProvider::class,
     FuelServiceProvider::class,

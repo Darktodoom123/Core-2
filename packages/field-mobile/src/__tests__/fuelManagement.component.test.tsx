@@ -7,6 +7,7 @@ import {
 } from '@testing-library/react-native/pure';
 import * as ImagePicker from 'expo-image-picker';
 import React from 'react';
+import { QueuedFuelRequestItem } from '../components/fuel/fuel-request-detail';
 import type { FuelCommandQueue } from '../hooks/useFuelManagement';
 import { EquipmentInspectionScreen } from '../screens/EquipmentInspectionScreen';
 import { FuelScreen } from '../screens/FuelScreen';
@@ -486,11 +487,36 @@ it('records actual liters and engine hours only for a verified request', async (
     await fireEvent.press(
         screen.getByRole('button', { name: 'Record refueling' }),
     );
+    // The log form replaces the detail, so the entry action is not repeated,
+    // and cancelling returns to the same request.
+    expect(
+        screen.queryByRole('button', { name: 'Record refueling' }),
+    ).toBeNull();
+    expect(screen.getByText(/Requested 50\.00 L diesel/)).toBeTruthy();
+    await fireEvent.press(
+        screen.getByRole('button', { name: 'Cancel logging' }),
+    );
+    await fireEvent.press(
+        screen.getByRole('button', { name: 'Record refueling' }),
+    );
     await fireEvent.changeText(
         screen.getByLabelText('Actual quantity (liters)'),
         '49',
     );
     await fireEvent.changeText(screen.getByLabelText('Engine hours'), '100.5');
+    await fireEvent.press(
+        screen.getByRole('button', { name: 'Save refueling' }),
+    );
+    // A receipt (or a stated reason for not having one) is required.
+    expect(
+        screen.getByText(
+            'Attach the receipt photo, or choose why there is no receipt.',
+        ),
+    ).toBeTruthy();
+    expect(api.recordFuel).not.toHaveBeenCalled();
+
+    await fireEvent.press(screen.getByTestId('fuel-no-receipt-toggle'));
+    await fireEvent.press(screen.getByTestId('fuel-no-receipt-on_site_bowser'));
     await fireEvent.press(
         screen.getByRole('button', { name: 'Save refueling' }),
     );
@@ -501,7 +527,11 @@ it('records actual liters and engine hours only for a verified request', async (
     );
     expect(api.recordFuel).toHaveBeenCalledWith(
         10,
-        { quantity_litres: 49, hour_meter: 100.5 },
+        {
+            quantity_litres: 49,
+            hour_meter: 100.5,
+            no_receipt_reason: 'on_site_bowser',
+        },
         undefined,
         expect.any(String),
     );
@@ -563,6 +593,73 @@ it('uploads a selected receipt from the canonical Fuel Management screen', async
             String((logCommand?.payload.receipt as { uri: string }).uri),
         ),
     ).toBe(true);
+});
+
+it('shows an attached receipt with retake and remove, and requires a note for "Other"', async () => {
+    const { api, store, commandOutbox, syncQueue } = setup([
+        { ...request, status: 'verified', can_record: true },
+    ]);
+    const screen = await renderFuelScreen({
+        api,
+        store,
+        commandOutbox,
+        syncQueue,
+        isOnline: true,
+    });
+    await waitFor(() =>
+        expect(
+            screen.getByRole('button', { name: 'View FUEL-10' }),
+        ).toBeTruthy(),
+    );
+    await fireEvent.press(screen.getByRole('button', { name: 'View FUEL-10' }));
+    await fireEvent.press(
+        screen.getByRole('button', { name: 'Record refueling' }),
+    );
+    await fireEvent.press(
+        screen.getByTestId('fuel-receipt-picker-choose-gallery'),
+    );
+    await waitFor(() =>
+        expect(
+            screen.getByText('Photo attached · fuel-receipt.jpg'),
+        ).toBeTruthy(),
+    );
+    expect(screen.getByTestId('fuel-receipt-retake')).toBeTruthy();
+    // The no-receipt path is hidden while a photo is attached.
+    expect(screen.queryByTestId('fuel-no-receipt-toggle')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('fuel-receipt-remove'));
+    await fireEvent.press(screen.getByTestId('fuel-no-receipt-toggle'));
+    await fireEvent.press(screen.getByTestId('fuel-no-receipt-other'));
+    expect(screen.getByText('No receipt: Other')).toBeTruthy();
+
+    await fireEvent.changeText(
+        screen.getByLabelText('Actual quantity (liters)'),
+        '49',
+    );
+    await fireEvent.changeText(screen.getByLabelText('Engine hours'), '100.5');
+    await fireEvent.press(screen.getByTestId('fuel-save-log-button'));
+
+    expect(screen.getByText('Explain why there is no receipt.')).toBeTruthy();
+    expect(api.recordFuel).not.toHaveBeenCalled();
+
+    await fireEvent.changeText(
+        screen.getByLabelText('Explain (required)'),
+        'Pump printer offline',
+    );
+    await fireEvent.press(screen.getByTestId('fuel-save-log-button'));
+    await waitFor(() =>
+        expect(api.recordFuel).toHaveBeenCalledWith(
+            10,
+            {
+                quantity_litres: 49,
+                hour_meter: 100.5,
+                no_receipt_reason: 'other',
+                no_receipt_note: 'Pump printer offline',
+            },
+            undefined,
+            expect.any(String),
+        ),
+    );
 });
 
 it('keeps an offline fuel log and its receipt in the durable outbox', async () => {
@@ -632,3 +729,349 @@ it('routes equipment fuel to the live workflow instead of sample logs', async ()
     );
     expect(open).toHaveBeenCalledTimes(1);
 });
+
+it('defaults a new request to the current unit and job', async () => {
+    const { api, store, commandOutbox, syncQueue } = setup();
+    const otherAsset = {
+        id: 7,
+        code: 'CRN-7',
+        name: 'Crane 7',
+        meter_type: null,
+    };
+    api.fetchFuelOptions.mockResolvedValue({
+        can_request: true,
+        assets: [request.asset!, otherAsset],
+        jobs: [
+            {
+                id: 40,
+                reference: 'JOB-40',
+                title: 'Lift',
+                operational_asset_ids: [7],
+            },
+            {
+                id: 41,
+                reference: 'JOB-41',
+                title: 'Haul',
+                operational_asset_ids: [2],
+            },
+        ],
+        defaults: { operational_asset_id: 7, dispatch_job_id: 40 },
+    });
+    const screen = await renderFuelScreen({
+        api,
+        store,
+        commandOutbox,
+        syncQueue,
+        isOnline: true,
+    });
+    await waitFor(() =>
+        expect(
+            screen.getByRole('button', { name: 'Request fuel' }),
+        ).toBeEnabled(),
+    );
+    await fireEvent.press(screen.getByRole('button', { name: 'Request fuel' }));
+
+    await waitFor(() =>
+        expect(
+            screen.getByRole('button', {
+                name: 'Equipment: CRN-7 · Crane 7',
+            }),
+        ).toBeTruthy(),
+    );
+    expect(screen.getByText('Your current unit')).toBeTruthy();
+    expect(
+        screen.getByRole('button', { name: 'Job: JOB-40 · Lift' }),
+    ).toBeTruthy();
+
+    // The job sheet only offers jobs linked to the selected unit.
+    await fireEvent.press(screen.getByTestId('fuel-job-picker'));
+    expect(
+        screen.getByRole('button', { name: 'JOB-40' }).props.accessibilityState
+            ?.selected,
+    ).toBe(true);
+    expect(screen.queryByRole('button', { name: 'JOB-41' })).toBeNull();
+});
+
+it('marks the chosen needed-by quick pick as selected', async () => {
+    const { api, store, commandOutbox, syncQueue } = setup();
+    const screen = await renderFuelScreen({
+        api,
+        store,
+        commandOutbox,
+        syncQueue,
+        isOnline: true,
+    });
+    await waitFor(() =>
+        expect(
+            screen.getByRole('button', { name: 'Request fuel' }),
+        ).toBeEnabled(),
+    );
+    await fireEvent.press(screen.getByRole('button', { name: 'Request fuel' }));
+    await waitFor(() => screen.getByTestId('fuel-needed-by-picker'));
+    await fireEvent.press(screen.getByTestId('fuel-needed-by-picker'));
+
+    expect(
+        screen.getByTestId('fuel-needed-by-none').props.accessibilityState
+            ?.selected,
+    ).toBe(true);
+
+    await fireEvent.press(screen.getByTestId('fuel-needed-by-3h'));
+
+    // The sheet closes and the row shows the chosen time.
+    await waitFor(() =>
+        expect(screen.queryByTestId('fuel-needed-by-3h')).toBeNull(),
+    );
+    expect(
+        screen.queryByRole('button', {
+            name: 'Needed by: Choose date & time',
+        }),
+    ).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('fuel-needed-by-picker'));
+    expect(
+        screen.getByTestId('fuel-needed-by-3h').props.accessibilityState
+            ?.selected,
+    ).toBe(true);
+    expect(
+        screen.getByTestId('fuel-needed-by-none').props.accessibilityState
+            ?.selected,
+    ).toBe(false);
+});
+
+it('keeps a persistent banner for a restored draft that targets another unit, and can discard it', async () => {
+    const { api, store, drafts, commandOutbox, syncQueue } = setup();
+    api.fetchFuelOptions.mockResolvedValue({
+        can_request: true,
+        assets: [
+            request.asset!,
+            { id: 7, code: 'CRN-7', name: 'Crane 7', meter_type: null },
+        ],
+        jobs: [],
+        defaults: { operational_asset_id: 7, dispatch_job_id: null },
+    });
+    drafts.set(3, {
+        ...emptyFuelDraft(),
+        quantity: '40',
+        purpose: 'Old draft',
+        assetId: 2,
+        savedAt: '2026-09-24T08:00:00Z',
+    });
+    const screen = await renderFuelScreen({
+        api,
+        store,
+        commandOutbox,
+        syncQueue,
+        isOnline: true,
+    });
+    await waitFor(() =>
+        expect(
+            screen.getByRole('button', { name: 'Continue fuel draft' }),
+        ).toBeEnabled(),
+    );
+    await fireEvent.press(
+        screen.getByRole('button', { name: 'Continue fuel draft' }),
+    );
+
+    await waitFor(() =>
+        expect(screen.getByTestId('fuel-restored-draft-banner')).toBeTruthy(),
+    );
+    expect(screen.getByText(/but your current unit is CRN-7/)).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId('fuel-discard-draft'));
+    await waitFor(() =>
+        expect(screen.queryByTestId('fuel-restored-draft-banner')).toBeNull(),
+    );
+    expect(screen.getByLabelText('Purpose').props.value).toBe('');
+    expect(
+        screen.getByRole('button', { name: 'Equipment: CRN-7 · Crane 7' }),
+    ).toBeTruthy();
+    expect(store.remove).toHaveBeenCalledWith(3);
+});
+
+it('shows field-level errors instead of submitting an incomplete request', async () => {
+    const { api, store, commandOutbox, syncQueue } = setup();
+    const screen = await renderFuelScreen({
+        api,
+        store,
+        commandOutbox,
+        syncQueue,
+        isOnline: true,
+    });
+    await waitFor(() =>
+        expect(
+            screen.getByRole('button', { name: 'Request fuel' }),
+        ).toBeEnabled(),
+    );
+    await fireEvent.press(screen.getByRole('button', { name: 'Request fuel' }));
+    await fireEvent.press(
+        screen.getByRole('button', { name: 'Submit fuel request' }),
+    );
+
+    expect(
+        screen.getByText('Enter the litres you need (0.01 – 100,000).'),
+    ).toBeTruthy();
+    expect(screen.getByText('Say what the fuel is for.')).toBeTruthy();
+    expect(commandOutbox.enqueueSubmitFuelRequest).not.toHaveBeenCalled();
+});
+
+it('shows an offline request in the list as waiting to sync and sends urgency and tank level', async () => {
+    const { api, store, commandOutbox, syncQueue } = setup();
+    const screen = await renderFuelScreen({
+        api,
+        store,
+        commandOutbox,
+        syncQueue,
+        isOnline: false,
+    });
+    await waitFor(() =>
+        expect(
+            screen.getByRole('button', { name: 'Request fuel' }),
+        ).toBeEnabled(),
+    );
+    await fireEvent.press(screen.getByRole('button', { name: 'Request fuel' }));
+    await fireEvent.changeText(
+        screen.getByLabelText('Requested quantity (liters)'),
+        '60',
+    );
+    await fireEvent.changeText(
+        screen.getByLabelText('Current fuel level'),
+        '10',
+    );
+    await fireEvent.press(screen.getByTestId('fuel-urgency-critical'));
+    await fireEvent.changeText(
+        screen.getByLabelText('Purpose'),
+        'Crane stopped',
+    );
+    await fireEvent.press(
+        screen.getByRole('button', { name: 'Submit fuel request' }),
+    );
+
+    await waitFor(() =>
+        expect(screen.getByText('Waiting to sync')).toBeTruthy(),
+    );
+    expect(commandOutbox.getCommands()[0]?.payload).toEqual(
+        expect.objectContaining({
+            quantity_litres: 60,
+            urgency: 'critical',
+            current_fuel_level_percent: 10,
+            operational_asset_id: 2,
+        }),
+    );
+    expect(api.createFuelRequest).not.toHaveBeenCalled();
+});
+
+it('withdraws a request through the outbox and shows the new status', async () => {
+    const { api, store, commandOutbox, syncQueue } = setup([
+        { ...request, can_withdraw: true },
+    ]);
+    const withdrawn: MobileFuelRequest = {
+        ...request,
+        status: 'withdrawn',
+        can_withdraw: false,
+        withdrawal_reason: 'Used bowser',
+    };
+    api.fetchFuelRequest.mockResolvedValue(withdrawn);
+    const completed: OutboxCommand = {
+        id: '00000000-0000-4000-8000-00000000abcd',
+        actorId: 3,
+        type: 'withdraw_fuel_request',
+        payload: { fuel_request_id: 10, reason: 'Used bowser' },
+        payloadHash: 'withdraw',
+        state: 'completed',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        attempts: 1,
+    };
+    const enqueueWithdraw = jest.fn(async () => completed);
+    const queue: FuelCommandQueue = {
+        ...commandOutbox,
+        enqueueWithdrawFuelRequest: enqueueWithdraw,
+        getCommand: jest.fn((id: string) =>
+            id === completed.id ? completed : commandOutbox.getCommand(id),
+        ),
+    };
+    const screen = await renderFuelScreen({
+        api,
+        store,
+        commandOutbox: queue,
+        syncQueue,
+        isOnline: true,
+    });
+    await waitFor(() =>
+        expect(
+            screen.getByRole('button', { name: 'View FUEL-10' }),
+        ).toBeTruthy(),
+    );
+    await fireEvent.press(screen.getByRole('button', { name: 'View FUEL-10' }));
+    await fireEvent.press(screen.getByTestId('fuel-withdraw-request'));
+    await fireEvent.changeText(
+        screen.getByLabelText('Why are you withdrawing? (optional)'),
+        'Used bowser',
+    );
+    await fireEvent.press(screen.getByTestId('fuel-confirm-withdraw'));
+
+    await waitFor(() =>
+        expect(screen.getByText('FUEL-10 was withdrawn.')).toBeTruthy(),
+    );
+    expect(enqueueWithdraw).toHaveBeenCalledWith({
+        fuel_request_id: 10,
+        reason: 'Used bowser',
+    });
+    expect(screen.getByText('You withdrew this request')).toBeTruthy();
+});
+
+it('opens the request named by a fuel notification', async () => {
+    const { api, store, commandOutbox, syncQueue } = setup([
+        { ...request, status: 'verified', can_record: true },
+    ]);
+    const screen = await render(
+        <FuelScreen
+            actorId={3}
+            apiClient={api}
+            commandOutbox={commandOutbox}
+            draftStore={store}
+            isOnline
+            isOutboxReady
+            onBack={jest.fn()}
+            syncQueue={syncQueue}
+            initialRequestId={10}
+        />,
+    );
+
+    await waitFor(() =>
+        expect(screen.getByTestId('fuel-request-detail')).toBeTruthy(),
+    );
+    expect(
+        screen.getByRole('button', { name: 'Record refueling' }),
+    ).toBeTruthy();
+});
+
+it.each([
+    ['queued', 'Waiting to sync', 'Saved on this device.'],
+    ['syncing', 'Syncing', 'Not yet confirmed.'],
+    ['failed', 'Needs attention', 'Purpose is required.'],
+] as const)(
+    'labels a %s request command without claiming office receipt',
+    async (state, label, detail) => {
+        const screen = await render(
+            <QueuedFuelRequestItem
+                queued={{
+                    commandId: 'cmd-1',
+                    state,
+                    payload: {
+                        client_request_id: 'client-1',
+                        quantity_litres: 40,
+                        fuel_type: 'diesel',
+                        purpose: 'Lift',
+                    },
+                    error: state === 'failed' ? 'Purpose is required.' : null,
+                    createdAt: '2026-09-25T00:00:00Z',
+                }}
+            />,
+        );
+
+        expect(screen.getByText(label)).toBeTruthy();
+        expect(screen.getByText(new RegExp(detail))).toBeTruthy();
+        expect(screen.queryByText(/Submitted/)).toBeNull();
+    },
+);

@@ -1,9 +1,9 @@
 # Core Transaction 2 — Data Flow Diagram (DFD)
 
-**Last updated:** 2026-08-13  
+**Last updated:** 2026-09-25  
 **Status:** Visual DFD reference for system data flow, processes, data stores, and external entities
 
-This document provides Level 0 (Context Diagram), Level 1 (Modular System DFD), and Level 2 (Detailed Workflow DFDs) data flow diagrams for **Core Transaction 2**. It visualizes how Core 1 sends service, rental, and sale handoffs into Core 2, how external entities interact with Core 2 processes, and how transformed data flows reach relational data stores.
+This document provides Level 0 (Context Diagram), Level 1 (Modular System DFD), and Level 2 (Detailed Workflow DFDs) data flow diagrams for **Core Transaction 2**. It visualizes how Core 1 sends service and rental handoffs into Core 2, how external entities interact with Core 2 processes, and how transformed data flows reach relational data stores.
 
 For authoritative system definitions, consult [Architecture.md](../../architecture/Architecture.md), [modules.md](../../architecture/modules.md), [business_rules.md](../../product/business_rules.md), and [database.md](../../architecture/database.md).
 
@@ -29,7 +29,7 @@ flowchart TD
 
     %% Data Flows to/from Client
     CLIENT <-->|"Customer and commercial interaction"| CORE1
-    CORE1 -.->|"Planned Service / Rental / Sale Handoff"| CT2
+    CORE1 -.->|"Planned Service / Rental Handoff"| CT2
 
     %% Data Flows to/from Office Staff
     OFFICE -->|"Draft Job, Schedule & Priority"| CT2
@@ -59,7 +59,7 @@ flowchart TD
 
 ## 2. Level 1 DFD — Decomposed Modular Data Flow
 
-Level 1 decomposes the system into the 5 core operational modules (Dispatch, Assignment, Fleet, Cranes, Fuel), the 3 tri-modal inbound business flows (Service, Rental, Sales), and shared platform services, detailing interactions with canonical data stores. Core 1 is external and is not built by the Core 2 project.
+Level 1 decomposes the system into the 5 core operational modules (Dispatch, Assignment, Fleet, Cranes, Fuel), the 2 inbound business flows (Service and Rental) plus direct dispatch, and shared platform services, detailing interactions with canonical data stores. Core 1 is external and is not built by the Core 2 project.
 
 ```mermaid
 flowchart TB
@@ -80,7 +80,6 @@ flowchart TB
     D8[("D8: Location History & Outbox")]
     D9[("D9: Audit Trail & Notifications")]
     D10[("D10: Rental Operations")]
-    D11[("D11: Sales Fulfillment")]
 
     %% Processes
     P0(("0.0 Planned Core 2 Receiving Boundary"))
@@ -89,15 +88,13 @@ flowchart TB
     P3_P4(("3.0 & 4.0 Asset Management (Fleet & Cranes)"))
     P5(("5.0 Fuel Request & Authorization"))
     P6(("6.0 Rental Operations"))
-    P7(("7.0 Sales Fulfillment"))
-    P8(("8.0 Field Execution & Tracking"))
-    P9(("9.0 Auth, RBAC & Audit Engine"))
+    P7(("7.0 Field Execution & Tracking"))
+    P8(("8.0 Auth, RBAC & Audit Engine"))
 
     %% Data Flow Connections: Receiving boundary
-    E_CORE1 -.->|"Service / Rental / Sale Handoff"| P0
+    E_CORE1 -.->|"Service / Rental Handoff"| P0
     P0 -.->|"Service"| P1
     P0 -.->|"Rental"| P6
-    P0 -.->|"Sale"| P7
 
     %% Data Flow Connections: Process 1.0
     E_OFFICE -->|"Draft Job & Schedule"| P1
@@ -107,11 +104,9 @@ flowchart TB
     P1 -->|"Log Approval Decision"| D2
     P1 -->|"Emit Audit Log"| D9
 
-    %% Data Flow Connections: Rental and Sales
+    %% Data Flow Connections: Rental
     P6 -->|"Reservation, Checkout, Return, Condition"| D10
-    P7 -->|"Inventory Reservation, Fulfillment, Ownership"| D11
     P6 -.->|"Delivery or Collection if Required"| P1
-    P7 -.->|"Delivery if Required"| P1
 
     %% Data Flow Connections: Process 2.0
     P1 -->|"Trigger Assignment Check"| P2
@@ -135,21 +130,21 @@ flowchart TB
     E_APPROVER -->|"Fuel Approval Decision"| P5
     P5 -->|"Record Fuel Log & Receipts"| D7
 
-    %% Data Flow Connections: Process 6.0
-    P2 -->|"Dispatch Push"| P8
-    P8 -->|"Send Assignment Notification"| E_FIELD
-    E_FIELD -->|"Response (Accept/Reject)"| P8
-    P8 -->|"Update Response State"| D4
-    E_FIELD -->|"Status Transition (Dispatched -> Completed)"| P8
-    P8 -->|"Update Job Field Status"| D2
-    E_FIELD -->|"GPS Location Pings"| P8
-    P8 -->|"Store Location History"| D8
+    %% Data Flow Connections: Process 7.0
+    P2 -->|"Dispatch Push"| P7
+    P7 -->|"Send Assignment Notification"| E_FIELD
+    E_FIELD -->|"Response (Accept/Reject)"| P7
+    P7 -->|"Update Response State"| D4
+    E_FIELD -->|"Status Transition (Dispatched -> Completed)"| P7
+    P7 -->|"Update Job Field Status"| D2
+    E_FIELD -->|"GPS Location Pings"| P7
+    P7 -->|"Store Location History"| D8
 
-    %% Data Flow Connections: Process 7.0 (Platform)
-    P9 -->|"Authorize User Action"| D3
-    P9 -->|"Write Audit Trail"| D9
-    D2 -.->|"Read Active Jobs"| P9
-    P9 -.->|"Live Map / Tracking Feed"| E_OFFICE
+    %% Data Flow Connections: Process 8.0 (Platform)
+    P8 -->|"Authorize User Action"| D3
+    P8 -->|"Write Audit Trail"| D9
+    D2 -.->|"Read Active Jobs"| P8
+    P8 -.->|"Live Map / Tracking Feed"| E_OFFICE
 ```
 
 ---

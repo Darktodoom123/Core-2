@@ -1,6 +1,6 @@
 # Core Transaction 2 — Product Design
 
-**Last updated:** 2026-09-04  
+**Last updated:** 2026-09-25  
 **Authority:** Canonical product and interface design specification; informed by the current workspace and interactive prototype
 
 ## Experience direction
@@ -8,8 +8,8 @@
 Core Transaction 2 should feel like a dependable operations instrument: decisive, accountable, calm, information-rich, and safety-conscious. It is light-first for bright dispatch offices and outdoor field use.
 
 Core 1 is an external upstream system and is not designed or built in this
-repository. Core 2 interfaces present the operational processing of service,
-rental, and sale handoffs; they must not imitate or claim Core 1 customer-facing
+repository. Core 2 interfaces present the operational processing of service
+and rental handoffs; they must not imitate or claim Core 1 customer-facing
 CRM, sales, rental-contract, billing, or project-management screens.
 
 Avoid decorative dashboard card grids, purple gradients, sparkle/AI branding, sci-fi control rooms, neon maps, ornamental motion, and language suggesting GPT automatically applied a decision.
@@ -32,24 +32,24 @@ The operational backbone is built upon the **5 Main Operational Business Modules
 4. **Crane and Equipment Management** (including load charts and crane safety)
 5. **Fuel Management** (bowsers, logs, and anomaly detection)
 
-Tracking, reports, administration, audit, notifications, attachments, and GPT assistance are shared platform services rather than separate business modules. Upstream Core 1 transactions flow in via the 3 Tri-Modal Inbound Flows (Service, Rental, and Sales). Navigation is permission-filtered, but Laravel remains authoritative. See [Top-level modules](../architecture/modules.md) and [Core 1 involvement in Core 2](../README.md).
+Tracking, reports, administration, audit, notifications, attachments, and GPT assistance are shared platform services rather than separate business modules. Upstream Core 1 transactions flow in via 2 inbound flows (Service and Rental); Core 2 does not receive or fulfill sale handoffs. Navigation is permission-filtered, but Laravel remains authoritative. See [Top-level modules](../architecture/modules.md) and [Core 1 involvement in Core 2](../README.md).
 
-Service, rental, and sale handoffs use one shared Dispatch Workspace and one
+Service and rental handoffs use one shared Dispatch Workspace and one
 shared dispatch execution backbone. They all use the same scheduling,
 personnel and asset availability, qualification, conflict, assignment,
-approval, activation, tracking, and field-progression patterns. Rental and
-sale records add source-specific requirements and completion evidence, but
-they are not separate dispatch products or separate field execution shells.
+approval, activation, tracking, and field-progression patterns. Rental
+records add source-specific requirements and completion evidence, but
+they are not a separate dispatch product or separate field execution shells.
 Core 2 receives these operational handoffs from Core 1 and does not recreate
 the originating commercial transaction. Authorized users may also use manual
-intake for Service, Rental, or Sale when a Core 1 handoff is not yet available.
+intake for Service or Rental when a Core 1 handoff is not yet available.
 Manual intake creates a clearly labelled draft operational dispatch with
 `manual_intake` provenance; it does not create a commercial transaction. A
 later Core 1 handoff must be linked or reconciled instead of creating a
 duplicate dispatch.
 
 - The office **New dispatch** action opens an incoming-work queue. Core 1 source
-  metadata routes each item to the Service, Rental, or Sales workflow without
+  metadata routes each item to the Service or Rental workflow without
   asking the user to choose among those categories.
 - **Create direct dispatch** is the explicit fallback for work without a Core 1
   handoff. It creates a manual operational draft and preserves

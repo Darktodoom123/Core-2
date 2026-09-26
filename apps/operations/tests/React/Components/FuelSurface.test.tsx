@@ -97,7 +97,6 @@ function createCapabilities(
         create_service_request: true,
         convert_service_request: true,
         create_rental_dispatch: true,
-        create_sales_dispatch: true,
         share_location: true,
         view_tracking: true,
         request_fuel: true,
@@ -360,35 +359,214 @@ describe('FuelSurface & 5-Stage Workflow Verifications', () => {
     });
 
     describe('Task 2: Strict 5-Stage State Machine Enforcement & Self-Review Guard', () => {
-        it('strictly enforces submitted -> forwarded transition and prevents skipping to approved or logged', () => {
+        it('lets a reviewer without approval authority only forward a submitted request', () => {
             const submittedReq = createSampleRequests()[0]; // status: submitted
             const onTransition = vi.fn();
-            const onRecordLog = vi.fn();
 
             render(
                 <FuelRequestCard
                     request={submittedReq}
-                    capabilities={createCapabilities()}
+                    capabilities={createCapabilities({ approve_fuel: false })}
                     onTransition={onTransition}
-                    onRecordLog={onRecordLog}
+                    onRecordLog={vi.fn()}
                 />,
             );
 
-            // Shows "Forward for Review"
-            const forwardBtn = screen.getByRole('button', {
-                name: /forward for review/i,
-            });
-            expect(forwardBtn).toBeInTheDocument();
-            fireEvent.click(forwardBtn);
+            fireEvent.click(
+                screen.getByRole('button', { name: /forward for review/i }),
+            );
             expect(onTransition).toHaveBeenCalledWith(101, 'forwarded');
-
-            // CANNOT jump straight to Verify or Record Fuel Log
+            expect(
+                screen.queryByRole('button', { name: /review decision/i }),
+            ).not.toBeInTheDocument();
             expect(
                 screen.queryByRole('button', { name: /verify allocation/i }),
             ).not.toBeInTheDocument();
             expect(
                 screen.queryByRole('button', { name: /record fuel log/i }),
             ).not.toBeInTheDocument();
+        });
+
+        it('decides a submitted request in one review step when the reviewer can forward and approve', () => {
+            const submittedReq = createSampleRequests()[0];
+            const onTransition = vi.fn();
+            const onReview = vi.fn();
+
+            render(
+                <FuelRequestCard
+                    request={submittedReq}
+                    capabilities={createCapabilities()}
+                    onTransition={onTransition}
+                    onReview={onReview}
+                    onRecordLog={vi.fn()}
+                    currentUserId={1}
+                />,
+            );
+
+            expect(
+                screen.queryByRole('button', { name: /forward for review/i }),
+            ).not.toBeInTheDocument();
+            fireEvent.click(
+                screen.getByRole('button', { name: /review decision/i }),
+            );
+            expect(
+                screen.getByText(/records both the forward and approval/i),
+            ).toBeInTheDocument();
+            fireEvent.click(
+                screen.getByRole('button', { name: /approve request/i }),
+            );
+
+            expect(onReview).toHaveBeenCalledWith(101, 'approved', undefined);
+            expect(onTransition).not.toHaveBeenCalled();
+        });
+
+        it('explains that a rejection needs a reason instead of silently rejecting', () => {
+            const onReview = vi.fn();
+
+            render(
+                <FuelRequestCard
+                    request={createSampleRequests()[1]}
+                    capabilities={createCapabilities()}
+                    onTransition={vi.fn()}
+                    onReview={onReview}
+                    onRecordLog={vi.fn()}
+                    currentUserId={99}
+                />,
+            );
+
+            fireEvent.click(
+                screen.getByRole('button', { name: /review decision/i }),
+            );
+            fireEvent.click(
+                screen.getByRole('button', { name: /reject request/i }),
+            );
+
+            expect(screen.getByRole('alert')).toHaveTextContent(
+                /add a reason/i,
+            );
+            expect(onReview).not.toHaveBeenCalled();
+
+            fireEvent.change(
+                screen.getByPlaceholderText(/add reason or guidance/i),
+                { target: { value: 'Duplicate of FUEL-REQ-099' } },
+            );
+            fireEvent.click(
+                screen.getByRole('button', { name: /reject request/i }),
+            );
+            expect(onReview).toHaveBeenCalledWith(
+                102,
+                'rejected',
+                'Duplicate of FUEL-REQ-099',
+            );
+        });
+
+        it('lets only the requester withdraw a request awaiting a decision', () => {
+            const onWithdraw = vi.fn();
+            const submittedReq = createSampleRequests()[0]; // requester 10
+
+            const { rerender } = render(
+                <FuelRequestCard
+                    request={submittedReq}
+                    capabilities={createCapabilities()}
+                    onTransition={vi.fn()}
+                    onWithdraw={onWithdraw}
+                    onRecordLog={vi.fn()}
+                    currentUserId={1}
+                />,
+            );
+            expect(
+                screen.queryByRole('button', { name: /withdraw request/i }),
+            ).not.toBeInTheDocument();
+
+            rerender(
+                <FuelRequestCard
+                    request={submittedReq}
+                    capabilities={createCapabilities()}
+                    onTransition={vi.fn()}
+                    onWithdraw={onWithdraw}
+                    onRecordLog={vi.fn()}
+                    currentUserId={10}
+                />,
+            );
+            fireEvent.click(
+                screen.getByRole('button', { name: /withdraw request/i }),
+            );
+            fireEvent.change(
+                screen.getByLabelText(/why are you withdrawing/i),
+                { target: { value: 'Refuelled from bowser' } },
+            );
+            fireEvent.click(
+                screen.getByRole('button', { name: /confirm withdraw/i }),
+            );
+            expect(onWithdraw).toHaveBeenCalledWith(
+                101,
+                'Refuelled from bowser',
+            );
+        });
+
+        it('flags a no-receipt log and lets a verifier mark the exception reviewed', () => {
+            const onReviewReceipt = vi.fn();
+            const logged = createSampleRequests()[4];
+            const request: FuelRequestViewModel = {
+                ...logged,
+                logs: [
+                    {
+                        ...logged.logs![0],
+                        receipt_path: null,
+                        receipt_url: null,
+                        receipt_number: null,
+                        no_receipt_reason: {
+                            value: 'on_site_bowser',
+                            label: 'On-site bowser / fuel truck',
+                        },
+                        no_receipt_note: 'Bowser sheet #22',
+                        requires_receipt_review: true,
+                    },
+                ],
+            };
+
+            render(
+                <FuelRequestCard
+                    request={request}
+                    capabilities={createCapabilities()}
+                    onTransition={vi.fn()}
+                    onReviewReceipt={onReviewReceipt}
+                    onRecordLog={vi.fn()}
+                />,
+            );
+
+            expect(screen.getByTestId('receipt-exception')).toHaveTextContent(
+                /no receipt: on-site bowser/i,
+            );
+            fireEvent.click(
+                screen.getByRole('button', {
+                    name: /mark exception reviewed/i,
+                }),
+            );
+            expect(onReviewReceipt).toHaveBeenCalledWith(1001);
+        });
+
+        it('shows urgency and tank level on the request', () => {
+            render(
+                <FuelRequestCard
+                    request={{
+                        ...createSampleRequests()[0],
+                        urgency: {
+                            value: 'critical',
+                            label: 'Critical — work stopped',
+                        },
+                        current_fuel_level_percent: 10,
+                    }}
+                    capabilities={createCapabilities()}
+                    onTransition={vi.fn()}
+                    onRecordLog={vi.fn()}
+                />,
+            );
+
+            expect(screen.getByTestId('fuel-urgency-badge')).toHaveTextContent(
+                /critical/i,
+            );
+            expect(screen.getByText(/tank 10%/i)).toBeInTheDocument();
         });
 
         it('guards self-review: requester cannot approve or reject their own forwarded request', () => {
@@ -771,7 +949,11 @@ describe('Fuel Management sections', () => {
             id: 199,
             reference: 'FUEL-REQ-REJECTED-99',
             requester: { id: 10, name: 'Operator Bob' },
-            job: { id: 88, reference: 'DISP-8801', title: 'Precast Girder Haul' },
+            job: {
+                id: 88,
+                reference: 'DISP-8801',
+                title: 'Precast Girder Haul',
+            },
             asset: null,
             quantity_litres: '50.00',
             fuel_type: 'diesel',
@@ -796,11 +978,19 @@ describe('Fuel Management sections', () => {
         // Detail pane should show prominent rejection callout
         const rejectionCallout = screen.getByTestId('rejection-callout');
         expect(rejectionCallout).toBeInTheDocument();
-        expect(screen.getByText('Fuel Request Rejected by Operations')).toBeInTheDocument();
-        expect(rejectionCallout).toHaveTextContent('Exceeds authorized weekly allocation quota');
+        expect(
+            screen.getByText('Fuel Request Rejected by Operations'),
+        ).toBeInTheDocument();
+        expect(rejectionCallout).toHaveTextContent(
+            'Exceeds authorized weekly allocation quota',
+        );
 
         // Detail pane should show unlinked asset warning because asset is null
-        expect(screen.getByText('Unlinked General Request (No Equipment Assigned)')).toBeInTheDocument();
+        expect(
+            screen.getByText(
+                'Unlinked General Request (No Equipment Assigned)',
+            ),
+        ).toBeInTheDocument();
     });
 
     it('opens receipt lightbox modal when clicking inspect receipt', () => {
@@ -846,19 +1036,84 @@ describe('Fuel Management sections', () => {
             />,
         );
 
-        const inspectBtn = screen.getByRole('button', { name: /inspect station receipt photo in lightbox/i });
+        const inspectBtn = screen.getByRole('button', {
+            name: /inspect station receipt photo in lightbox/i,
+        });
         expect(inspectBtn).toBeInTheDocument();
 
         fireEvent.click(inspectBtn);
 
         // Lightbox dialog should appear
-        expect(screen.getByRole('dialog', { name: /station receipt inspection lightbox/i })).toBeInTheDocument();
-        expect(screen.getByText(/Station Receipt Audit · FUEL-REQ-RECEIPT-01/i)).toBeInTheDocument();
+        expect(
+            screen.getByRole('dialog', {
+                name: /station receipt inspection lightbox/i,
+            }),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByText(/Station Receipt Audit · FUEL-REQ-RECEIPT-01/i),
+        ).toBeInTheDocument();
 
         // Close lightbox
-        const closeBtn = screen.getByRole('button', { name: /close receipt inspection/i });
+        const closeBtn = screen.getByRole('button', {
+            name: /close receipt inspection/i,
+        });
         fireEvent.click(closeBtn);
 
-        expect(screen.queryByRole('dialog', { name: /station receipt inspection lightbox/i })).not.toBeInTheDocument();
+        expect(
+            screen.queryByRole('dialog', {
+                name: /station receipt inspection lightbox/i,
+            }),
+        ).not.toBeInTheDocument();
+    });
+});
+
+describe('Fuel log receipt rule', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('blocks submission without a receipt until a no-receipt reason is chosen', () => {
+        render(
+            <FuelLogModal
+                isOpen={true}
+                onClose={vi.fn()}
+                request={createSampleRequests()[3]}
+            />,
+        );
+
+        fireEvent.change(screen.getByPlaceholderText(/min: 2800/i), {
+            target: { value: '2850' },
+        });
+        fireEvent.click(
+            screen.getByRole('button', { name: /submit refueling log/i }),
+        );
+
+        expect(screen.getByRole('alert')).toHaveTextContent(
+            /attach the fuel receipt/i,
+        );
+        expect(mockPost).not.toHaveBeenCalled();
+
+        fireEvent.click(screen.getByLabelText(/no receipt available/i));
+        fireEvent.click(
+            screen.getByRole('button', { name: /submit refueling log/i }),
+        );
+        expect(screen.getByRole('alert')).toHaveTextContent(
+            /choose why there is no receipt/i,
+        );
+        expect(mockPost).not.toHaveBeenCalled();
+
+        fireEvent.click(screen.getByLabelText(/on-site bowser/i));
+        fireEvent.change(screen.getByLabelText(/receipt \/ or number/i), {
+            target: { value: 'BWS-22' },
+        });
+        fireEvent.click(
+            screen.getByRole('button', { name: /submit refueling log/i }),
+        );
+
+        expect(mockPost).toHaveBeenCalledWith(
+            '/operations/fuel-requests/104/status',
+            expect.objectContaining({ forceFormData: true }),
+        );
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
 });

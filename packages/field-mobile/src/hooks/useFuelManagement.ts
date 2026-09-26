@@ -2,10 +2,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { ApiClientError } from '../services/apiClient';
 import { createCommandId } from '../services/commandOutbox';
-import { durableAttachmentStorage } from '../services/durableAttachmentStorage';
+import {
+    AttachmentStorageError,
+    durableAttachmentStorage,
+} from '../services/durableAttachmentStorage';
 import { emptyFuelDraft, fuelDraftStore } from '../storage/fuelDraftStore';
 import type { FuelDraft, FuelDraftStore } from '../storage/fuelDraftStore';
 import type {
+    CreateFuelPayload,
     FuelApi,
     FuelLogCommandPayload,
     FuelOfflineSnapshot,
@@ -13,19 +17,20 @@ import type {
     FuelReceiptUpload,
     MobileFuelRequest,
     RecordFuelPayload,
+    WithdrawFuelPayload,
 } from '../types/fuel';
 import type { OutboxCommand } from '../types/index';
 
 export interface FuelCommandQueue {
-    enqueueSubmitFuelRequest(payload: {
-        client_request_id: string;
-        quantity_litres: number;
-        fuel_type: 'diesel' | 'gasoline';
-        purpose: string;
-        operational_asset_id?: number;
-        dispatch_job_id?: number;
-    }): Promise<OutboxCommand>;
-    enqueueRecordFuelLog(payload: FuelLogCommandPayload): Promise<OutboxCommand>;
+    enqueueSubmitFuelRequest(
+        payload: CreateFuelPayload,
+    ): Promise<OutboxCommand>;
+    enqueueRecordFuelLog(
+        payload: FuelLogCommandPayload,
+    ): Promise<OutboxCommand>;
+    enqueueWithdrawFuelRequest?(
+        payload: WithdrawFuelPayload,
+    ): Promise<OutboxCommand>;
     getCommand(id: string): OutboxCommand | undefined;
     getCommands(): OutboxCommand[];
     subscribe(listener: (commands: OutboxCommand[]) => void): () => void;
@@ -35,6 +40,20 @@ export interface FuelSubmitResult {
     status: 'queued';
     commandId: string;
     request: MobileFuelRequest | null;
+}
+
+/** A request that is still in the on-device outbox and not yet on the server. */
+export interface QueuedFuelRequest {
+    commandId: string;
+    state: OutboxCommand['state'];
+    payload: CreateFuelPayload;
+    error: string | null;
+    createdAt: string;
+}
+
+export interface FuelFieldErrors {
+    quantity?: string;
+    purpose?: string;
 }
 
 export function fuelErrorMessage(error: unknown): string {
@@ -51,6 +70,10 @@ export function fuelErrorMessage(error: unknown): string {
         );
     }
 
+    if (error instanceof AttachmentStorageError) {
+        return error.message;
+    }
+
     return 'Could not reach the server. Check your connection and retry.';
 }
 
@@ -61,6 +84,81 @@ function isActionableOutboxState(state: OutboxCommand['state'] | undefined) {
         state === 'unresolved' ||
         state === 'expired'
     );
+}
+
+const FUEL_COMMAND_TYPES = new Set<OutboxCommand['type']>([
+    'submit_fuel_request',
+    'record_fuel_log',
+    'withdraw_fuel_request',
+]);
+
+const DEVICE_QUEUE_NOTICE_MARKER = 'on this device';
+
+function hasDraftContent(draft: FuelDraft): boolean {
+    return Boolean(draft.quantity || draft.purpose || draft.pending);
+}
+
+/**
+ * Picks the operator's current unit and job: the server-resolved active
+ * assignment first, otherwise the only assigned unit/job.
+ */
+export function defaultFuelContext(options: FuelOptions | null): {
+    assetId: number | null;
+    jobId: number | null;
+} {
+    if (!options) {
+        return { assetId: null, jobId: null };
+    }
+
+    const assetIds = options.assets.map((asset) => asset.id);
+    const serverAsset = options.defaults?.operational_asset_id ?? null;
+    const assetId =
+        serverAsset !== null && assetIds.includes(serverAsset)
+            ? serverAsset
+            : assetIds.length === 1
+              ? assetIds[0]
+              : null;
+    const jobs = options.jobs.filter(
+        (job) =>
+            assetId === null || job.operational_asset_ids.includes(assetId),
+    );
+    const serverJob = options.defaults?.dispatch_job_id ?? null;
+    const jobId =
+        serverJob !== null && jobs.some((job) => job.id === serverJob)
+            ? serverJob
+            : jobs.length === 1
+              ? jobs[0].id
+              : null;
+
+    return { assetId, jobId };
+}
+
+function queuedFromCommands(commands: OutboxCommand[]): QueuedFuelRequest[] {
+    return commands
+        .filter(
+            (command) =>
+                command.type === 'submit_fuel_request' &&
+                command.state !== 'completed',
+        )
+        .map((command) => ({
+            commandId: command.id,
+            state: command.state,
+            payload: command.payload as unknown as CreateFuelPayload,
+            error: command.error?.message ?? null,
+            createdAt: command.createdAt,
+        }));
+}
+
+function pendingIdsFor(
+    commands: OutboxCommand[],
+    type: OutboxCommand['type'],
+): number[] {
+    return commands
+        .filter(
+            (command) => command.type === type && command.state !== 'completed',
+        )
+        .map((command) => Number(command.payload.fuel_request_id))
+        .filter((id) => Number.isFinite(id));
 }
 
 export function useFuelManagement(
@@ -77,13 +175,20 @@ export function useFuelManagement(
     const [draft, setDraft] = useState<FuelDraft>(emptyFuelDraft);
     const [draftReady, setDraftReady] = useState(false);
     const [draftNotice, setDraftNotice] = useState('Loading saved draft…');
+    const [restoredDraft, setRestoredDraft] = useState<{
+        savedAt: string | null;
+    } | null>(null);
     const [cacheNotice, setCacheNotice] = useState<string | null>(null);
     const [cacheWritableReady, setCacheWritableReady] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [fieldErrors, setFieldErrors] = useState<FuelFieldErrors>({});
     const [notice, setNotice] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [busy, setBusy] = useState(false);
     const [nextPage, setNextPage] = useState<number | null>(null);
+    const [outboxCommands, setOutboxCommands] = useState<OutboxCommand[]>(() =>
+        commandOutbox.getCommands(),
+    );
     const mounted = useRef(true);
     const requestVersion = useRef(0);
     const mutationLock = useRef(false);
@@ -98,8 +203,15 @@ export function useFuelManagement(
                 if (!ignore) {
                     setDraft(saved ?? emptyFuelDraft());
                     setDraftReady(true);
+                    setRestoredDraft(
+                        saved && hasDraftContent(saved)
+                            ? { savedAt: saved.savedAt ?? null }
+                            : null,
+                    );
                     setDraftNotice(
-                        saved ? 'Draft restored from this device.' : '',
+                        saved && hasDraftContent(saved)
+                            ? 'Draft restored from this device.'
+                            : '',
                     );
                 }
             })
@@ -141,6 +253,39 @@ export function useFuelManagement(
         };
     }, [actorId, store]);
 
+    // Fill the operator's current unit/job into an untouched draft. A draft the
+    // operator edited (or restored) is never overwritten.
+    useEffect(() => {
+        if (!draftReady || !options) {
+            return;
+        }
+
+        queueMicrotask(() => {
+            setDraft((value) => {
+                if (
+                    hasDraftContent(value) ||
+                    value.savedAt ||
+                    value.assetId !== null ||
+                    value.jobId !== null
+                ) {
+                    return value;
+                }
+
+                const defaults = defaultFuelContext(options);
+
+                if (defaults.assetId === null && defaults.jobId === null) {
+                    return value;
+                }
+
+                return {
+                    ...value,
+                    assetId: defaults.assetId,
+                    jobId: defaults.jobId,
+                };
+            });
+        });
+    }, [draftReady, options]);
+
     useEffect(() => {
         if (!draftReady) {
             return;
@@ -153,7 +298,7 @@ export function useFuelManagement(
                 .then(() => {
                     if (!ignore) {
                         setDraftNotice(
-                            draft.quantity || draft.purpose || draft.pending
+                            hasDraftContent(draft)
                                 ? 'Draft saved on this device.'
                                 : '',
                         );
@@ -255,8 +400,7 @@ export function useFuelManagement(
                 .getCommands()
                 .filter(
                     (command) =>
-                        (command.type === 'submit_fuel_request' ||
-                            command.type === 'record_fuel_log') &&
+                        FUEL_COMMAND_TYPES.has(command.type) &&
                         command.state === 'completed',
                 )
                 .map((command) => command.id),
@@ -267,13 +411,25 @@ export function useFuelManagement(
 
             for (const command of commands) {
                 if (
-                    (command.type === 'submit_fuel_request' ||
-                        command.type === 'record_fuel_log') &&
+                    FUEL_COMMAND_TYPES.has(command.type) &&
                     command.state === 'completed' &&
                     !completedFuelCommands.has(command.id)
                 ) {
                     completedFuelCommands.add(command.id);
                     shouldRefresh = true;
+                }
+            }
+
+            if (mounted.current) {
+                setOutboxCommands(commands);
+
+                if (shouldRefresh) {
+                    // "Saved on this device" is no longer true once the command synced.
+                    setNotice((current) =>
+                        current?.includes(DEVICE_QUEUE_NOTICE_MARKER)
+                            ? 'Synced with the office.'
+                            : current,
+                    );
                 }
             }
 
@@ -320,7 +476,52 @@ export function useFuelManagement(
             return;
         }
 
-        setDraft((value) => ({ ...value, ...patch }));
+        setFieldErrors((current) => ({
+            ...current,
+            ...('quantity' in patch ? { quantity: undefined } : {}),
+            ...('purpose' in patch ? { purpose: undefined } : {}),
+        }));
+        setDraft((value) => ({
+            ...value,
+            ...patch,
+            savedAt: new Date().toISOString(),
+        }));
+    };
+
+    const discardDraft = async () => {
+        if (mutationLock.current || draft.pending) {
+            return;
+        }
+
+        const defaults = defaultFuelContext(options);
+        setDraft({
+            ...emptyFuelDraft(),
+            assetId: defaults.assetId,
+            jobId: defaults.jobId,
+        });
+        setRestoredDraft(null);
+        setFieldErrors({});
+        await store.remove(actorId).catch(() => undefined);
+    };
+
+    const validateDraft = (): FuelFieldErrors => {
+        const errors: FuelFieldErrors = {};
+        const quantity = Number(draft.quantity);
+
+        if (
+            draft.quantity.trim() === '' ||
+            !Number.isFinite(quantity) ||
+            quantity <= 0 ||
+            quantity > 100000
+        ) {
+            errors.quantity = 'Enter the litres you need (0.01 – 100,000).';
+        }
+
+        if (!draft.purpose.trim()) {
+            errors.purpose = 'Say what the fuel is for.';
+        }
+
+        return errors;
     };
 
     const submit = async (): Promise<FuelSubmitResult | null> => {
@@ -333,25 +534,21 @@ export function useFuelManagement(
             return null;
         }
 
-        const quantity = Number(draft.quantity);
+        if (!draft.pending) {
+            const errors = validateDraft();
 
-        if (
-            !draft.pending &&
-            (!Number.isFinite(quantity) ||
-                quantity <= 0 ||
-                quantity > 100000 ||
-                !draft.purpose.trim())
-        ) {
-            setError(
-                'Enter a quantity between 0.01 and 100,000 liters and a purpose.',
-            );
+            if (errors.quantity || errors.purpose) {
+                setFieldErrors(errors);
+                setError('Check the highlighted fields.');
 
-            return null;
+                return null;
+            }
         }
 
         mutationLock.current = true;
         setBusy(true);
         setError(null);
+        setFieldErrors({});
         setNotice(null);
         let snapshot = draft;
 
@@ -360,13 +557,21 @@ export function useFuelManagement(
                 ...draft,
                 pending: draft.pending ?? {
                     client_request_id: await createCommandId(),
-                    quantity_litres: quantity,
+                    quantity_litres: Number(draft.quantity),
                     fuel_type: draft.fuelType,
                     purpose: draft.purpose.trim(),
                     ...(draft.assetId
                         ? { operational_asset_id: draft.assetId }
                         : {}),
                     ...(draft.jobId ? { dispatch_job_id: draft.jobId } : {}),
+                    ...(draft.urgency && draft.urgency !== 'normal'
+                        ? { urgency: draft.urgency }
+                        : {}),
+                    ...(draft.neededBy ? { needed_by: draft.neededBy } : {}),
+                    ...(draft.levelPercent !== null &&
+                    draft.levelPercent !== undefined
+                        ? { current_fuel_level_percent: draft.levelPercent }
+                        : {}),
                 },
             };
             await store.write(actorId, snapshot);
@@ -382,7 +587,13 @@ export function useFuelManagement(
             await store.remove(actorId);
 
             if (mounted.current) {
-                setDraft(emptyFuelDraft());
+                const defaults = defaultFuelContext(options);
+                setDraft({
+                    ...emptyFuelDraft(),
+                    assetId: defaults.assetId,
+                    jobId: defaults.jobId,
+                });
+                setRestoredDraft(null);
                 setNotice('Fuel request saved to the on-device sync queue.');
             }
 
@@ -403,19 +614,21 @@ export function useFuelManagement(
                             ) ?? null;
                         setRequests((items) => [
                             ...(request ? [request] : []),
-                            ...items.filter(
-                                (item) => item.id !== request?.id,
-                            ),
+                            ...items.filter((item) => item.id !== request?.id),
                         ]);
                         setNextPage(page.nextPage);
 
                         if (request) {
-                            setNotice(`${request.reference} submitted to the office.`);
+                            setNotice(
+                                `${request.reference} submitted to the office.`,
+                            );
                         }
                     } else if (isActionableOutboxState(state?.state)) {
+                        // The queued item card shows the server's reason next to
+                        // the request; the banner only points to it.
+                        setNotice(null);
                         setError(
-                            state?.error?.message ??
-                                'The fuel request needs attention in Sync status.',
+                            'The office could not accept this request. See the item marked "Needs attention" below.',
                         );
                     }
                 } catch {
@@ -471,6 +684,14 @@ export function useFuelManagement(
             return false;
         }
 
+        if (!receipt && !payload.no_receipt_reason) {
+            setError(
+                'Capture the fuel receipt, or choose why there is no receipt.',
+            );
+
+            return false;
+        }
+
         mutationLock.current = true;
         setBusy(true);
         setError(null);
@@ -501,7 +722,9 @@ export function useFuelManagement(
                 setNotice(
                     isOnline === true
                         ? 'Fuel log queued for synchronization.'
-                        : 'Fuel log and receipt saved on this device. They will sync when the connection returns.',
+                        : durableReceipt
+                          ? 'Fuel log and receipt saved on this device. They will sync when the connection returns.'
+                          : 'Fuel log saved on this device. It will sync when the connection returns.',
                 );
             }
 
@@ -513,7 +736,9 @@ export function useFuelManagement(
                     if (state?.state === 'completed') {
                         const updated = await api.fetchFuelRequest(id);
                         setRequests((items) =>
-                            items.map((item) => (item.id === id ? updated : item)),
+                            items.map((item) =>
+                                item.id === id ? updated : item,
+                            ),
                         );
 
                         if (updated.status === 'logged') {
@@ -557,22 +782,107 @@ export function useFuelManagement(
         }
     };
 
+    const withdraw = async (id: number, reason?: string): Promise<boolean> => {
+        if (
+            mutationLock.current ||
+            !isOutboxReady ||
+            !commandOutbox.enqueueWithdrawFuelRequest
+        ) {
+            return false;
+        }
+
+        const request = requests.find((item) => item.id === id);
+
+        if (!request?.can_withdraw) {
+            setError(
+                'This request can no longer be withdrawn. Refresh to see its latest status.',
+            );
+
+            return false;
+        }
+
+        mutationLock.current = true;
+        setBusy(true);
+        setError(null);
+        setNotice(null);
+
+        try {
+            const command = await commandOutbox.enqueueWithdrawFuelRequest({
+                fuel_request_id: id,
+                ...(reason?.trim() ? { reason: reason.trim() } : {}),
+            });
+
+            if (isOnline === true) {
+                try {
+                    await syncQueue();
+                    const state = commandOutbox.getCommand(command.id);
+
+                    if (state?.state === 'completed') {
+                        const updated = await api.fetchFuelRequest(id);
+                        setRequests((items) =>
+                            items.map((item) =>
+                                item.id === id ? updated : item,
+                            ),
+                        );
+                        setNotice(`${updated.reference} was withdrawn.`);
+                    } else if (isActionableOutboxState(state?.state)) {
+                        setError(
+                            state?.error?.message ??
+                                'The withdrawal needs attention in Sync status.',
+                        );
+                    }
+                } catch {
+                    // The durable command remains queued for the normal retry loop.
+                }
+            } else if (mounted.current) {
+                setNotice(
+                    'Withdrawal saved on this device. It will sync when the connection returns.',
+                );
+            }
+
+            return true;
+        } catch (e) {
+            if (mounted.current) {
+                setError(fuelErrorMessage(e));
+            }
+
+            return false;
+        } finally {
+            mutationLock.current = false;
+
+            if (mounted.current) {
+                setBusy(false);
+            }
+        }
+    };
+
     return {
         requests,
         options,
         draft,
         draftReady,
         draftNotice,
+        restoredDraft,
         cacheNotice,
         error,
+        fieldErrors,
         notice,
         loading,
         busy,
         nextPage,
+        queuedRequests: queuedFromCommands(outboxCommands),
+        pendingWithdrawIds: pendingIdsFor(
+            outboxCommands,
+            'withdraw_fuel_request',
+        ),
+        pendingLogIds: pendingIdsFor(outboxCommands, 'record_fuel_log'),
         refresh,
         loadMore,
         updateDraft,
+        discardDraft,
         submit,
         record,
+        withdraw,
+        dismissNotice: () => setNotice(null),
     };
 }

@@ -787,50 +787,101 @@ describe('CommandOutboxManager', () => {
         assert.equal(submittedPayload?.fuel_percent, 90);
     });
 
-    test('durably enqueues and syncs sales delivery evidence command', async () => {
-        const outbox = await createOutbox(5);
-        let submittedOrderId: number | null = null;
-        let submittedPayload: any = null;
-        let submittedCommandId: string | null = null;
+    test('persisted legacy submit_sales_delivery commands are quarantined without network replay and can be discarded', async () => {
+        const directory = await mkdtemp(
+            join(tmpdir(), 'core2-outbox-legacy-sales-'),
+        );
+        const databasePath = join(directory, 'field-outbox.sqlite');
 
-        const apiClient = {
-            submitSalesDelivery: async (
-                orderId: number,
-                payload: Record<string, unknown>,
-                commandId?: string,
-            ) => {
-                submittedOrderId = orderId;
-                submittedPayload = payload;
-                submittedCommandId = commandId ?? null;
+        try {
+            // Simulate a device that queued a sales delivery before the Sales feature was removed.
+            const bootstrapDb = new DatabaseSync(databasePath);
+            await new SqliteOutboxRepository(
+                async () => new NodeSqliteDatabase(bootstrapDb),
+            ).initialize();
+            const legacyCmdId = 'legacy-sales-delivery-88';
+            bootstrapDb
+                .prepare(
+                    `
+                INSERT INTO field_command_outbox (
+                    id, actor_id, command_type, job_id, assignment_id,
+                    payload_json, payload_hash, expected_version, state,
+                    attempts, error_json, created_at, updated_at,
+                    last_attempt_at, next_attempt_at, completed_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `,
+                )
+                .run(
+                    legacyCmdId,
+                    26,
+                    'submit_sales_delivery',
+                    15,
+                    null,
+                    JSON.stringify({
+                        order_id: 88,
+                        dispatch_job_id: 15,
+                        verified_vin: 'CAT320GC12345',
+                        signature: 'data:image/png;base64,AAAA',
+                        signee_name: 'Receiving Officer',
+                        signee_role: 'Warehouse Manager',
+                    }),
+                    'legacy-sales-hash',
+                    null,
+                    'queued',
+                    0,
+                    null,
+                    '2026-08-01T00:00:00.000Z',
+                    '2026-08-01T00:00:00.000Z',
+                    null,
+                    null,
+                    null,
+                );
+            bootstrapDb.close();
 
-                return {
-                    success: true,
-                    evidence_id: 202,
-                    message: 'Delivery recorded',
-                };
-            },
-        } as unknown as FieldApiClient;
+            const database = new DatabaseSync(databasePath);
+            const outbox = new CommandOutboxManager({
+                repository: new SqliteOutboxRepository(
+                    async () => new NodeSqliteDatabase(database),
+                ),
+                hasher: testHasher,
+            });
+            await outbox.activateActor(26);
 
-        const command = await outbox.enqueueSubmitSalesDelivery({
-            order_id: 88,
-            dispatch_job_id: 15,
-            verified_vin: 'CAT320GC12345',
-            accessories_checked: ['bucket', 'toolkit'],
-            delivery_notes: 'Delivered safely',
-            signee_name: 'Receiving Officer',
-            signee_role: 'Warehouse Manager',
-        });
+            const cmd = outbox.getCommand(legacyCmdId);
+            assert.ok(cmd);
+            assert.equal(cmd.state, 'failed');
+            assert.equal(cmd.error?.code, 'UNKNOWN_COMMAND_TYPE');
+            assert.equal(cmd.error?.retryable, false);
 
-        assert.equal(command.type, 'submit_sales_delivery');
-        assert.equal(command.jobId, 15);
-        assert.equal(command.state, 'queued');
+            let apiCallMade = false;
+            const fakeClient = new Proxy(
+                {},
+                {
+                    get: () => async () => {
+                        apiCallMade = true;
 
-        const result = await outbox.processQueue(apiClient);
-        assert.equal(result.completed, 1);
-        assert.equal(command.state, 'completed');
-        assert.equal(submittedOrderId, 88);
-        assert.equal(submittedCommandId, command.id);
-        assert.equal(submittedPayload?.verified_vin, 'CAT320GC12345');
+                        throw new Error('API should not be called');
+                    },
+                },
+            ) as unknown as FieldApiClient;
+
+            const processResult = await outbox.processQueue(fakeClient);
+            const retryResult = await outbox.retryCommand(
+                legacyCmdId,
+                fakeClient,
+            );
+            assert.equal(apiCallMade, false);
+            assert.equal(processResult.completed, 0);
+            assert.equal(retryResult.completed, 0);
+            assert.equal(outbox.getCommand(legacyCmdId)?.state, 'failed');
+
+            await outbox.discardCommand(legacyCmdId);
+            assert.equal(outbox.getCommand(legacyCmdId), undefined);
+
+            database.close();
+        } finally {
+            await rm(directory, { force: true, recursive: true });
+        }
     });
 
     test('durably queues fuel requests and receipt logs and replays each with its command id', async () => {
@@ -1053,16 +1104,8 @@ describe('CommandOutboxManager', () => {
             dispatch_blocking: true,
         });
 
-        const cmd3 = await outboxBefore.enqueueSubmitSalesDelivery({
-            order_id: 555,
-            verified_vin: 'VIN-555-XYZ',
-            signee_name: 'Warehouse Manager',
-            signee_role: 'Operations Director',
-        });
-
         assert.equal(cmd1.type, 'submit_equipment_inspection');
         assert.equal(cmd2.type, 'submit_maintenance_work_order');
-        assert.equal(cmd3.type, 'submit_sales_delivery');
 
         // Simulate app restart with fresh outbox manager reading from same repository
         const outboxAfter = await createOutbox(actorId, { repository });
@@ -1070,16 +1113,13 @@ describe('CommandOutboxManager', () => {
 
         const restoredCmd1 = restoredCommands.find((c) => c.id === cmd1.id);
         const restoredCmd2 = restoredCommands.find((c) => c.id === cmd2.id);
-        const restoredCmd3 = restoredCommands.find((c) => c.id === cmd3.id);
 
         assert.ok(restoredCmd1, 'Command 1 must be restored');
         assert.ok(restoredCmd2, 'Command 2 must be restored');
-        assert.ok(restoredCmd3, 'Command 3 must be restored');
 
         // Crucial check: Must preserve exact command types and NOT degrade to 'transition_status'
         assert.equal(restoredCmd1.type, 'submit_equipment_inspection');
         assert.equal(restoredCmd2.type, 'submit_maintenance_work_order');
-        assert.equal(restoredCmd3.type, 'submit_sales_delivery');
     });
 
     test('work order release cannot be queued in offline outbox and requires fresh online execution', async () => {

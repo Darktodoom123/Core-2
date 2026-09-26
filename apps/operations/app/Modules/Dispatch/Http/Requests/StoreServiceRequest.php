@@ -48,7 +48,7 @@ final class StoreServiceRequest extends FormRequest
         $validator->after(function (Validator $validator): void {
             $line = $this->input('business_line', BusinessLine::Service->value);
             if ($line !== BusinessLine::Service->value) {
-                $validator->errors()->add('business_line', 'Rental and sales intake use their dedicated reservation or quote endpoints.');
+                $validator->errors()->add('business_line', 'Rental intake uses the dedicated reservation endpoints.');
             }
         });
     }

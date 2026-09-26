@@ -2,6 +2,7 @@
 
 namespace App\Modules\Fuel\Actions;
 
+use App\Modules\Fuel\Enums\FuelNoReceiptReason;
 use App\Modules\Fuel\Enums\FuelRequestStatus;
 use App\Modules\Fuel\Models\FuelLog;
 use App\Modules\Fuel\Models\FuelRequest;
@@ -22,6 +23,7 @@ final class TransitionFuelRequest
         private RecordAuditEvent $audit,
         private UploadAttachmentAction $uploadAttachment,
         private CalculateFuelVarianceAndBurnRate $calculateVariance,
+        private FuelNotifier $notifier,
     ) {}
 
     /**
@@ -34,7 +36,7 @@ final class TransitionFuelRequest
             FuelRequestStatus::Approved, FuelRequestStatus::Rejected => [FuelRequestStatus::Forwarded, PermissionName::FuelApprove],
             FuelRequestStatus::Verified => [FuelRequestStatus::Approved, PermissionName::FuelVerify],
             FuelRequestStatus::Logged => [FuelRequestStatus::Verified, PermissionName::FuelRecord],
-            FuelRequestStatus::Submitted => throw ValidationException::withMessages(['status' => 'Unsupported fuel transition.']),
+            FuelRequestStatus::Submitted, FuelRequestStatus::Withdrawn => throw ValidationException::withMessages(['status' => 'Unsupported fuel transition.']),
         };
 
         if (! $actor->can($permission->value) || (($next === FuelRequestStatus::Approved || $next === FuelRequestStatus::Rejected) && $fuel->requester_id === $actor->id)) {
@@ -83,9 +85,30 @@ final class TransitionFuelRequest
             }
 
             $this->audit->handle($actor, $fuel, 'fuel.status_updated', $before, ['status' => $next->value], $reason);
+            $this->notifier->statusChanged($fuel);
 
             return $fuel->refresh();
         });
+    }
+
+    /**
+     * A log needs the receipt itself or an explicit, reviewable reason for its absence.
+     *
+     * @param  array<string, mixed>  $logDetails
+     */
+    private function assertReceiptOrException(array $logDetails): void
+    {
+        $reason = FuelNoReceiptReason::tryFrom(is_string($logDetails['no_receipt_reason'] ?? null) ? $logDetails['no_receipt_reason'] : '');
+
+        if ($reason === null) {
+            throw ValidationException::withMessages(['receipt' => 'Attach the fuel receipt, or choose why there is no receipt.']);
+        }
+
+        $note = is_string($logDetails['no_receipt_note'] ?? null) ? trim($logDetails['no_receipt_note']) : '';
+
+        if ($reason === FuelNoReceiptReason::Other && $note === '') {
+            throw ValidationException::withMessages(['no_receipt_note' => 'Explain why there is no receipt.']);
+        }
     }
 
     /**
@@ -182,6 +205,10 @@ final class TransitionFuelRequest
             }
         }
 
+        if (! (($logDetails['receipt'] ?? null) instanceof UploadedFile)) {
+            $this->assertReceiptOrException($logDetails);
+        }
+
         $varianceResult = $this->calculateVariance->execute($fuel, $quantityLitres, $odometerKm, $hourMeter);
 
         return FuelLog::query()->create([
@@ -201,6 +228,9 @@ final class TransitionFuelRequest
             'is_anomaly' => $varianceResult->isAnomaly,
             'anomaly_reason' => $varianceResult->anomalyReason,
             'receipt_path' => null,
+            'receipt_number' => isset($logDetails['receipt_number']) && is_string($logDetails['receipt_number']) && trim($logDetails['receipt_number']) !== '' ? trim($logDetails['receipt_number']) : null,
+            'no_receipt_reason' => ($logDetails['receipt'] ?? null) instanceof UploadedFile ? null : FuelNoReceiptReason::tryFrom(is_string($logDetails['no_receipt_reason'] ?? null) ? $logDetails['no_receipt_reason'] : '')?->value,
+            'no_receipt_note' => ($logDetails['receipt'] ?? null) instanceof UploadedFile ? null : (isset($logDetails['no_receipt_note']) && is_string($logDetails['no_receipt_note']) && trim($logDetails['no_receipt_note']) !== '' ? trim($logDetails['no_receipt_note']) : null),
             'recorded_at' => now(),
         ]);
     }

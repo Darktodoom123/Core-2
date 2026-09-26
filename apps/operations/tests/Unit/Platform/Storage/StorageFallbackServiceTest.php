@@ -200,6 +200,29 @@ test('resolvePublicDisk and resolveProtectedDisk convenience methods resolve app
     expect($service->resolvePublicDisk('r2-public'))->toBe('r2-public');
 });
 
+test('protected R2 refuses a bucket also configured for public media', function () {
+    $base = [
+        'driver' => 's3',
+        'key' => 'test-key',
+        'secret' => 'test-secret',
+        'endpoint' => 'https://account.r2.cloudflarestorage.com',
+    ];
+    Config::set('filesystems.disks.r2', $base + ['bucket' => 'media', 'visibility' => 'public']);
+    Config::set('filesystems.disks.r2-public', $base + ['bucket' => 'media', 'visibility' => 'public']);
+    Config::set('filesystems.disks.r2-private', $base + ['bucket' => 'media', 'visibility' => 'private']);
+
+    /** @var StorageFallbackService $service */
+    $service = app(StorageFallbackServiceInterface::class);
+
+    expect($service->isConfigured('r2-private'))->toBeFalse()
+        ->and($service->resolveProtectedDisk('r2-private'))->toBe('private')
+        ->and($service->resolveProtectedDisk('r2-public'))->toBe('private');
+
+    Config::set('filesystems.disks.r2-private.bucket', 'documents');
+    expect($service->isConfigured('r2-private'))->toBeTrue()
+        ->and($service->resolveProtectedDisk('r2-private'))->toBe('r2-private');
+});
+
 test('StorageFallback facade delegates correctly to registered service', function () {
     expect(StorageFallback::isConfigured('local'))->toBeTrue()
         ->and(StorageFallback::isConfigured('non_existent_disk_xyz'))->toBeFalse();

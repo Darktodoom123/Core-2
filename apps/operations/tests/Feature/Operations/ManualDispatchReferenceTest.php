@@ -58,7 +58,7 @@ it('generates sequential manual dispatch references when the form omits one', fu
         ]);
 });
 
-it('generates stream-specific reference prefixes for service, rental, and sales work streams', function (): void {
+it('generates stream-specific reference prefixes for service and rental work streams', function (): void {
     $dispatcher = manualReferenceDispatcher();
     $year = now()->year;
 
@@ -72,17 +72,11 @@ it('generates stream-specific reference prefixes for service, rental, and sales 
         ->assertRedirect('/')
         ->assertSessionHas('flash.message', "Dispatch DSP-REN-{$year}-002 was created.");
 
-    $this->actingAs($dispatcher)
-        ->post('/operations/dispatch-jobs', manualDispatchPayload('Excavator sales transport', 'sale'))
-        ->assertRedirect('/')
-        ->assertSessionHas('flash.message', "Dispatch DSP-SAL-{$year}-003 was created.");
-
     $jobs = DispatchJob::query()->orderBy('id')->get();
     expect($jobs->pluck('reference')->all())
         ->toBe([
             "DSP-SRV-{$year}-001",
             "DSP-REN-{$year}-002",
-            "DSP-SAL-{$year}-003",
         ]);
 
     // Check canonical handoff payload preserved work stream and equipment subtype
@@ -93,4 +87,16 @@ it('generates stream-specific reference prefixes for service, rental, and sales 
     $handoffPayload = $firstHandoff->legacy_snapshot['canonical_source_payload'] ?? [];
     expect($handoffPayload['work_stream'])->toBe('service')
         ->and($handoffPayload['equipment_subtype'])->toBe('tower_crane');
+});
+
+it('rejects the retired sale work stream', function (): void {
+    $dispatcher = manualReferenceDispatcher();
+
+    $this->actingAs($dispatcher)
+        ->from('/')
+        ->post('/operations/dispatch-jobs', manualDispatchPayload('Excavator transport', 'sale'))
+        ->assertRedirect('/')
+        ->assertSessionHasErrors('work_stream');
+
+    expect(DispatchJob::query()->count())->toBe(0);
 });

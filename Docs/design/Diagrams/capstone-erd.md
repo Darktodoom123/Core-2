@@ -1,6 +1,6 @@
 # Core Transaction 2 - Entity-Relationship Diagram
 
-Last updated: 2026-09-17.
+Last updated: 2026-09-25.
 
 The main sheet presents the five operational modules, their shared records, and the keys used to connect them. It contains 21 tables and 122 selected fields. Table names, foreign keys, nullable columns, and single-column unique constraints were checked against the repository migrations.
 
@@ -46,7 +46,7 @@ The three software roles are held through the permission model. Separate adminis
 
 ## Schema details that affect the diagram
 
-- `dispatch_jobs.service_request_id` is nullable. Manual, rental, and sales dispatches do not require a service-request row.
+- `dispatch_jobs.service_request_id` is nullable. Manual and rental dispatches do not require a service-request row.
 - `dispatch_jobs.source_type` and `source_id` form a polymorphic application reference. They are not declared database foreign keys.
 - `personnel_profiles.user_id` is required and unique in the current migrations. The product description of employees without user accounts is broader than this implemented relationship; the diagram follows the migrations.
 - `personnel_credentials` has a composite unique constraint on `(kind, credential_number)`. A credential number is not independently unique.
@@ -310,7 +310,7 @@ erDiagram
 
 Related persistence includes `dispatch_idempotency_keys`, `dispatch_outbox_messages`, `dispatch_audit_lineage`, `dispatch_reconciliation_runs`, and `dispatch_reconciliation_findings`.
 
-## Rental and sales operational records
+## Rental operational records
 
 The diagrams below show the implemented Core-2 records. They do not establish completion of upstream Core 1 integration or move commercial ownership into Core-2.
 
@@ -339,33 +339,9 @@ erDiagram
     users ||--o{ rental_handover_evidences : submitted_by
 ```
 
-Sales catalog and fulfillment records:
+`rental_handover_evidences` is defined by the 17 September migration. Each evidence row has a required parent reservation, a required submitting user, and an optional dispatch job.
 
-```mermaid
-erDiagram
-    operational_assets o|--o| sales_catalog_items : operational_asset_id
-    clients ||--o{ sales_quotes : client_id
-    sales_quotes ||--o{ sales_quote_items : sales_quote_id
-    sales_catalog_items ||--o{ sales_quote_items : sales_catalog_item_id
-    clients ||--o{ sales_orders : client_id
-    sales_quotes o|--o{ sales_orders : sales_quote_id
-    dispatch_jobs o|--o{ sales_orders : dispatch_job_id
-    sales_orders ||--o{ sales_order_items : sales_order_id
-    sales_catalog_items ||--o{ sales_order_items : sales_catalog_item_id
-    sales_catalog_items ||--o{ sales_inventory_ledger : sales_catalog_item_id
-    sales_orders o|--o{ sales_inventory_ledger : sales_order_id
-    sales_orders ||--o{ ownership_transfers : sales_order_id
-    sales_order_items ||--o{ ownership_transfers : sales_order_item_id
-    sales_catalog_items ||--o{ ownership_transfers : sales_catalog_item_id
-    operational_assets o|--o| ownership_transfers : operational_asset_id
-    sales_orders ||--o{ sales_delivery_evidences : sales_order_id
-    dispatch_jobs o|--o{ sales_delivery_evidences : dispatch_job_id
-    operational_assets o|--o{ sales_delivery_evidences : operational_asset_id
-```
-
-`rental_handover_evidences` and `sales_delivery_evidences` are defined by the 17 September migration. Each evidence row has a required parent reservation/order, a required submitting user, and an optional dispatch job.
-
-`sales_orders.sales_quote_id` is not unique in the migrations. The physical schema therefore permits multiple orders to refer to a quote. `ownership_transfers` has composite uniqueness on `(sales_order_item_id, sales_catalog_item_id)` and single-column uniqueness on `operational_asset_id`; the latter must not be mistaken for uniqueness on `sales_order_item_id` alone.
+Core 2 no longer performs sales fulfillment. The former sales tables (`sales_catalog_items`, `sales_quotes`, `sales_quote_items`, `sales_orders`, `sales_order_items`, `sales_inventory_ledger`, `ownership_transfers`, and `sales_delivery_evidences`) were dropped by `2026_09_25_130000_remove_sales_module.php` and are not part of this ERD.
 
 ## Shared platform and Tracking database
 

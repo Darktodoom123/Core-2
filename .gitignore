@@ -3,7 +3,6 @@
 /apps/operations/bootstrap/ssr
 node_modules/
 /.nx/
-/.artemis/
 /.npm-cache
 /apps/operations/.npm-cache
 /.expo
@@ -65,6 +64,7 @@ Homestead.yaml
 /.zed
 AGENTS.md
 CLAUDE.md
+/.claude/worktrees/
 .agents
 .impeccable
 .codex
@@ -116,6 +116,7 @@ Desktop.ini
 /Docs/plans/*
 !/Docs/plans/Roadmap.md
 !/Docs/plans/fleet-fuel-reports-ux-plan.md
+!/Docs/plans/fuel-management-ui-ux-plan.md
 !/Docs/plans/employee-asset-picker-design.md
 !/Docs/plans/resource-picker-refinement.md
 !/Docs/plans/field-execution-view.md

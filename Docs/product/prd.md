@@ -4,7 +4,7 @@
 > **DESIGN AND IMPLEMENTATION OF A GPT MINI POWERED DISPATCH AND RESOURCE MANAGEMENT PLATFORM WITH MOBILE APPLICATION FOR REAL TIME TRACKING FOR FIELD SERVICE MONITORING**
 
 **Document status:** Living product definition  
-**Last updated:** 2026-09-16  
+**Last updated:** 2026-09-25  
 **Product stage:** Working vertical slices with remaining prototype-only surfaces
 
 ## 1. Product summary
@@ -12,14 +12,16 @@
 Alibaton operates heavy-equipment rental, heavy-equipment sales, and related
 heavy-equipment services. Core Transaction 1 (Core 1) owns the customer,
 commercial, job-order, rental, and project context. Core Transaction 2 (CT2)
-receives Core 1 handoffs for **service, rental, and sale** and turns the
+receives Core 1 handoffs for **service and rental** and turns the
 operational portion into scheduled, staffed, equipped, tracked, and auditable
 work. It brings dispatch, assignments, fleet and equipment readiness, fuel,
 location sharing, maintenance, approvals, SOS emergency safety, and administration into one
 role-aware workspace. The commercial boundary is documented in [Alibaton Business Context and CT2 Scope](./alibaton-business-scope.md). External **Core HR** (Core HCM, Employee Self-Service, Employee Records Management) owns master employee identity, while external **Workforce Management** (Time & Attendance, Shift & Schedule Management, Timesheets, Leave Management, Workforce Analytics) owns worker leave approvals and rosters. Core 2 receives upstream commercial handoffs from Core 1 and employee/availability sync from Core HR and Workforce Management. See [Core HR & Workforce Boundary](./core-hr-workforce-boundary.md) and [Core HR & Workforce Integration Architecture](../architecture/hr-workforce-integration.md).
 
-The product now implements the service operational flow plus partial API-first
-rental and sales operational slices. Core 1 remains the source of truth for
+The product now implements the service operational flow plus a partial API-first
+rental operational slice. Core 2 does not receive or fulfill sale handoffs; any
+sales activity is handled by Core 1 and is outside Core 2 (the former Core 2
+Sales module was removed on 2026-09-25). Core 1 remains the source of truth for
 commercial contracts, deposits, customer-facing screens, payments, billing,
 and invoicing. Core 1 itself is outside this project's implementation scope.
 The Core 2 receiving boundary and complete dispatch/delivery integration remain
@@ -44,10 +46,9 @@ The operational core is built upon **5 Main Operational Business Modules**:
 
 *(Note: DVIR inspections, Hours of Service compliance, Emergency SOS, and Statutory Safety Governance operate as sub-features and platform services embedded across these 5 modules and the mobile application).*
 
-These 5 operational modules execute and govern the **three tri-modal business transaction flows** received from Core 1:
+These 5 operational modules execute and govern the **two inbound business transaction flows** received from Core 1, plus direct (manual) dispatch:
 - **Field Service Flow**: Field service requests converted into scheduled, staffed, and executed dispatches and project plans.
 - **Rental Flow**: Equipment rental reservations, pre-checkout condition inspections, operator assignments, active rental deployment, and return check-ins.
-- **Sales Flow**: Sales order fulfillment, inventory reservations, delivery logistics, serial/VIN verification, and ownership transfer.
 
 Identity & RBAC, live tracking & telemetry, statutory safety governance (DOLE OSHS Rule 1410 & DO 198-18), SOS emergency response, audit trail, notifications, reports & attachments, data exports, and GPT assistance serve as shared cross-cutting platform services. Real-time updates are broadcast across all active clients using Laravel Reverb WebSockets.
 
@@ -59,7 +60,7 @@ CT2 must give office users a fast, information-dense decision surface and field 
 
 ## 3. Product goals
 
-1. Receive and validate a Core 1 service, rental, or sale handoff, then create
+1. Receive and validate a Core 1 service or rental handoff, then create
    the appropriate Core 2 operational record.
 2. Prevent unavailable, unqualified, conflicted, or unsafe resources from being assigned (integrating real-time leave status from Workforce Management).
 3. Require independent approval for priority and emergency dispatch decisions.
@@ -108,7 +109,7 @@ Heavy equipment and crane journeys show approved access routes, site staging det
 
 The main flow is:
 
-1. Receive a Core 1 service, rental, or sale handoff.
+1. Receive a Core 1 service or rental handoff, or create a direct dispatch.
 2. Validate it and create the matching Core 2 operational record.
 3. Create a dispatch job and schedule window when field execution, delivery,
    or collection is required.
@@ -117,7 +118,7 @@ The main flow is:
 6. Activate service or delivery dispatch when operational execution is needed.
 7. Let assigned field staff progress the job or complete the equipment
    fulfillment action.
-8. Track fuel, location, inspection, maintenance, rental, and ownership events.
+8. Track fuel, location, inspection, maintenance, and rental events.
 9. Preserve final reports, attachments, notifications, and audit history linked
    to the Core 1 source reference.
 
@@ -184,9 +185,9 @@ authorization.
 
 The operational capability set follows the **5 Main Operational Business Modules** in
 [modules.md](../architecture/modules.md): Dispatch Job and Scheduling (Real-Time Activation, including Project Planning), Assign Driver/Operator and Equipment (incorporating Hours of Service [HoS] compliance), Fleet Management (incorporating Driver Vehicle Inspection Reports [DVIR]), Crane and Equipment Management, and Fuel Management.
-Core 1 is the upstream commercial source that feeds three business transaction flows into Core 2:
-Service, Rental, and Sale transactions. Rental and sales operations are supported via backend
-operational flow handlers in `apps/operations/app/Modules/Rental` and `apps/operations/app/Modules/Sales` to coordinate availability
+Core 1 is the upstream commercial source that feeds two business transaction flows into Core 2:
+Service and Rental transactions. Rental operations are supported via backend
+operational flow handlers in `apps/operations/app/Modules/Rental` to coordinate availability
 and prevent resource collisions with the 5 main operational modules. Statutory safety governance
 (DOLE OSHS Rule 1410 & DO 198-18) and SOS emergency response operate as cross-cutting platform foundations.
 Building Core 1 commercial interfaces is not a Core 2 roadmap item. See [Core 1 involvement in

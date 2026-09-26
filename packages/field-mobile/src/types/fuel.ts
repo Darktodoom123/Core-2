@@ -1,5 +1,16 @@
 export type FuelStatus =
-    'submitted' | 'forwarded' | 'approved' | 'rejected' | 'verified' | 'logged';
+    | 'submitted'
+    | 'forwarded'
+    | 'approved'
+    | 'rejected'
+    | 'verified'
+    | 'logged'
+    | 'withdrawn';
+
+export type FuelUrgency = 'normal' | 'urgent' | 'critical';
+
+export type FuelNoReceiptReason =
+    'on_site_bowser' | 'vendor_no_receipt' | 'receipt_lost' | 'other';
 
 export interface FuelAsset {
     id: number;
@@ -18,6 +29,11 @@ export interface FuelOptions {
         title: string;
         operational_asset_ids: number[];
     }[];
+    /** Server-resolved active assignment (shift first, then a single assignment). */
+    defaults?: {
+        operational_asset_id: number | null;
+        dispatch_job_id: number | null;
+    };
 }
 
 export interface MobileFuelLog {
@@ -31,6 +47,12 @@ export interface MobileFuelLog {
     is_anomaly: boolean;
     anomaly_reason: string | null;
     has_receipt?: boolean;
+    receipt_number?: string | null;
+    no_receipt_reason?: FuelNoReceiptReason | null;
+    no_receipt_reason_label?: string | null;
+    no_receipt_note?: string | null;
+    requires_receipt_review?: boolean;
+    receipt_reviewed_at?: string | null;
 }
 
 export interface MobileFuelRequest {
@@ -48,6 +70,12 @@ export interface MobileFuelRequest {
     job: { id: number; reference: string; title: string } | null;
     logs: MobileFuelLog[];
     can_record: boolean;
+    can_withdraw?: boolean;
+    urgency?: FuelUrgency;
+    needed_by?: string | null;
+    current_fuel_level_percent?: number | null;
+    withdrawn_at?: string | null;
+    withdrawal_reason?: string | null;
     created_at: string | null;
     reviewed_at?: string | null;
     approved_at?: string | null;
@@ -61,6 +89,9 @@ export interface CreateFuelPayload {
     purpose: string;
     operational_asset_id?: number;
     dispatch_job_id?: number;
+    urgency?: FuelUrgency;
+    needed_by?: string;
+    current_fuel_level_percent?: number;
 }
 
 export interface RecordFuelPayload {
@@ -68,8 +99,12 @@ export interface RecordFuelPayload {
     odometer_km?: number;
     hour_meter?: number;
     total_cost?: number;
+    price_per_litre?: number;
     fuel_station?: string;
     remarks?: string;
+    receipt_number?: string;
+    no_receipt_reason?: FuelNoReceiptReason;
+    no_receipt_note?: string;
 }
 
 export interface FuelReceiptUpload {
@@ -82,6 +117,11 @@ export interface FuelLogCommandPayload {
     fuel_request_id: number;
     details: RecordFuelPayload;
     receipt?: FuelReceiptUpload;
+}
+
+export interface WithdrawFuelPayload {
+    fuel_request_id: number;
+    reason?: string;
 }
 
 export interface FuelOfflineSnapshot {
@@ -109,6 +149,11 @@ export type FuelApi = {
         receipt?: FuelReceiptUpload,
         commandId?: string,
     ): Promise<MobileFuelRequest>;
+    withdrawFuelRequest?(
+        id: number,
+        reason?: string,
+        commandId?: string,
+    ): Promise<MobileFuelRequest>;
 };
 
 export const fuelStatusLabels: Record<FuelStatus, string> = {
@@ -118,4 +163,33 @@ export const fuelStatusLabels: Record<FuelStatus, string> = {
     rejected: 'Rejected',
     verified: 'Ready to refuel',
     logged: 'Fuel recorded',
+    withdrawn: 'Withdrawn',
 };
+
+export const fuelUrgencyOptions: {
+    value: FuelUrgency;
+    label: string;
+    hint: string;
+}[] = [
+    { value: 'normal', label: 'Normal', hint: 'Planned refuel' },
+    { value: 'urgent', label: 'Urgent', hint: 'Needed this shift' },
+    { value: 'critical', label: 'Critical', hint: 'Work is stopped' },
+];
+
+export const fuelTankLevels: { value: number; label: string }[] = [
+    { value: 0, label: 'Empty' },
+    { value: 10, label: 'Reserve' },
+    { value: 25, label: '¼' },
+    { value: 50, label: '½' },
+    { value: 75, label: '¾' },
+];
+
+export const fuelNoReceiptReasons: {
+    value: FuelNoReceiptReason;
+    label: string;
+}[] = [
+    { value: 'on_site_bowser', label: 'On-site bowser / fuel truck' },
+    { value: 'vendor_no_receipt', label: 'Vendor gave no receipt' },
+    { value: 'receipt_lost', label: 'Receipt lost or damaged' },
+    { value: 'other', label: 'Other' },
+];

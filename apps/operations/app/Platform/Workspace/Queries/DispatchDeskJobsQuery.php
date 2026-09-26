@@ -5,7 +5,6 @@ namespace App\Platform\Workspace\Queries;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dispatch\Models\ServiceRequest;
 use App\Modules\Rental\Models\RentalReservation;
-use App\Modules\Sales\Models\SalesOrder;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
 use Carbon\CarbonImmutable;
@@ -119,7 +118,7 @@ final class DispatchDeskJobsQuery
                 foreach (['reference', 'title', 'client', 'site', 'source_reference'] as $column) {
                     $matching->orWhereRaw("LOWER({$column}) LIKE ? ESCAPE '!'", [$pattern]);
                 }
-                $matching->orWhereHasMorph('source', [ServiceRequest::class, RentalReservation::class, SalesOrder::class],
+                $matching->orWhereHasMorph('source', [ServiceRequest::class, RentalReservation::class],
                     fn (Builder $source) => $source->whereRaw("LOWER(reference) LIKE ? ESCAPE '!'", [$pattern]))
                     ->orWhereHas('serviceRequest', fn (Builder $source) => $source->whereRaw("LOWER(reference) LIKE ? ESCAPE '!'", [$pattern]))
                     ->orWhereHas('canonicalHandoff', fn (Builder $handoff) => $handoff

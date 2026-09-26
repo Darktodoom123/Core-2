@@ -67,7 +67,7 @@ it('filters source and excludes archived records', function (): void {
     $user = deskJobsUser();
     $manual = deskJobsFixture($user);
     $rental = deskJobsFixture($user, ['source_type' => 'rental_reservation']);
-    deskJobsFixture($user, ['source_type' => 'sales_order']);
+    deskJobsFixture($user, ['source_type' => 'service_request']);
     deskJobsFixture($user)->delete();
     $this->actingAs($user)->getJson('/operations/dispatch-desk/jobs?view=history&source=manual')
         ->assertOk()->assertJsonPath('total', 1)->assertJsonPath('jobs.0.id', $manual->id);

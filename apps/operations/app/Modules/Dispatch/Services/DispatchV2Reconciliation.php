@@ -24,7 +24,6 @@ use App\Modules\Dispatch\Models\DispatchReconciliationFinding;
 use App\Modules\Dispatch\Models\DispatchReconciliationRun;
 use App\Modules\Dispatch\Models\ServiceRequest;
 use App\Modules\Rental\Models\RentalReservation;
-use App\Modules\Sales\Models\SalesOrder;
 use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Idempotency\Models\CommandLog;
 use Carbon\CarbonImmutable;
@@ -344,7 +343,6 @@ final class DispatchV2Reconciliation
             DispatchSourceType::Manual => null,
             DispatchSourceType::ServiceRequest => ServiceRequest::query()->withTrashed()->find($sourceId),
             DispatchSourceType::RentalReservation => RentalReservation::query()->withTrashed()->find($sourceId),
-            DispatchSourceType::SalesOrder => SalesOrder::query()->find($sourceId),
         };
     }
 
@@ -395,15 +393,12 @@ final class DispatchV2Reconciliation
             $sourceReference = (string) ($source->getAttribute('reference') ?? '');
             $externalReference = (string) ($handoff->external_reference ?: $handoff->source_reference);
             if ($sourceReference !== '' && $externalReference !== '' && $sourceReference !== $externalReference) {
-                $longReference = $sourceType === DispatchSourceType::SalesOrder
-                    && strlen($externalReference) < strlen($sourceReference)
-                    && str_starts_with($sourceReference, $externalReference);
                 $this->finding(
                     $run,
                     'dispatch_handoff',
                     $handoff->id,
-                    $longReference ? 'long_sales_reference_truncated' : 'source_hash_mismatch',
-                    $longReference ? DispatchReconciliationFindingSeverity::Warning : DispatchReconciliationFindingSeverity::Blocker,
+                    'source_hash_mismatch',
+                    DispatchReconciliationFindingSeverity::Blocker,
                     ['canonical_reference' => $externalReference, 'source_reference' => $sourceReference],
                 );
             }
@@ -420,7 +415,7 @@ final class DispatchV2Reconciliation
                 }
             }
 
-            if (in_array($sourceType, [DispatchSourceType::RentalReservation, DispatchSourceType::SalesOrder], true)
+            if ($sourceType === DispatchSourceType::RentalReservation
                 && (int) $source->getAttribute('dispatch_job_id') !== (int) $handoff->legacy_dispatch_job_id) {
                 $this->finding($run, 'dispatch_handoff', $handoff->id, 'asymmetric_reverse_pointer', DispatchReconciliationFindingSeverity::Blocker, [
                     'source_dispatch_job_id' => $source->getAttribute('dispatch_job_id'),
@@ -482,7 +477,7 @@ final class DispatchV2Reconciliation
             }
         }
 
-        if (in_array($sourceType, [DispatchSourceType::RentalReservation, DispatchSourceType::SalesOrder], true)) {
+        if ($sourceType === DispatchSourceType::RentalReservation) {
             $backReference = $source->getAttribute('dispatch_job_id');
             if ((int) $backReference !== (int) $job->id) {
                 $this->finding($run, 'dispatch_job', $job->id, 'asymmetric_source_link', DispatchReconciliationFindingSeverity::Blocker, [
@@ -772,7 +767,6 @@ final class DispatchV2Reconciliation
     {
         return match (true) {
             $this->isModelType($type, 'RentalReservation') => DispatchSourceType::RentalReservation,
-            $this->isModelType($type, 'SalesOrder') => DispatchSourceType::SalesOrder,
             $this->isModelType($type, 'ServiceRequest') => DispatchSourceType::ServiceRequest,
             default => null,
         };

@@ -81,7 +81,7 @@ it('records actual fuel only after verification and prevents duplicate logs', fu
         $transition->handle($manager, $fuel, $status);
     }
     $this->getJson("/api/v1/fuel-requests/{$id}")->assertOk()->assertJsonPath('data.can_record', true);
-    $this->postJson("/api/v1/fuel-requests/{$id}/logs", ['quantity_litres' => 48, 'price_per_litre' => 60])->assertCreated()->assertJsonPath('data.status', 'logged')->assertJsonPath('data.can_record', false)->assertJsonPath('data.logs.0.total_cost', '2880.00');
+    $this->postJson("/api/v1/fuel-requests/{$id}/logs", ['quantity_litres' => 48, 'price_per_litre' => 60, 'no_receipt_reason' => 'on_site_bowser'])->assertCreated()->assertJsonPath('data.status', 'logged')->assertJsonPath('data.can_record', false)->assertJsonPath('data.logs.0.total_cost', '2880.00');
     $this->postJson("/api/v1/fuel-requests/{$id}/logs", ['quantity_litres' => 48])->assertUnprocessable();
     expect($fuel->logs()->count())->toBe(1);
 });

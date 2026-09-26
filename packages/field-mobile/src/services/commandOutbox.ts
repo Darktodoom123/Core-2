@@ -7,7 +7,11 @@ import type {
     OutboxRepository,
     PayloadHasher,
 } from '../storage/outboxRepository';
-import type { CreateFuelPayload, FuelLogCommandPayload } from '../types/fuel';
+import type {
+    CreateFuelPayload,
+    FuelLogCommandPayload,
+    WithdrawFuelPayload,
+} from '../types/fuel';
 import type {
     ActivateSosIncidentPayload,
     DispatchJob,
@@ -22,7 +26,6 @@ import type {
     RentalHandoverCommandPayload,
     ReportDelayPayload,
     SafetyHazardCommandPayload,
-    SalesDeliveryCommandPayload,
     WorkStoppageCommandPayload,
 } from '../types/index';
 import type { FieldApiClient } from './apiClient';
@@ -568,6 +571,28 @@ export class CommandOutboxManager {
         return this.enqueue('record_fuel_log', null, null, payloadRecord);
     }
 
+    public enqueueWithdrawFuelRequest(
+        payload: WithdrawFuelPayload,
+    ): Promise<OutboxCommand> {
+        const existing = this.getCommands().find(
+            (command) =>
+                command.type === 'withdraw_fuel_request' &&
+                command.payload.fuel_request_id === payload.fuel_request_id &&
+                command.state !== 'completed',
+        );
+
+        if (existing) {
+            return Promise.resolve(existing);
+        }
+
+        return this.enqueue(
+            'withdraw_fuel_request',
+            null,
+            null,
+            payload as unknown as Record<string, unknown>,
+        );
+    }
+
     public enqueueSubmitDvir(
         payload: Record<string, unknown>,
         jobId?: number | null,
@@ -585,17 +610,6 @@ export class CommandOutboxManager {
     ): Promise<OutboxCommand> {
         return this.enqueue(
             'submit_rental_handover',
-            payload.dispatch_job_id ?? null,
-            null,
-            payload as unknown as Record<string, unknown>,
-        );
-    }
-
-    public enqueueSubmitSalesDelivery(
-        payload: SalesDeliveryCommandPayload,
-    ): Promise<OutboxCommand> {
-        return this.enqueue(
-            'submit_sales_delivery',
             payload.dispatch_job_id ?? null,
             null,
             payload as unknown as Record<string, unknown>,
@@ -981,8 +995,7 @@ export class CommandOutboxManager {
 
             // Signed customer handovers cannot be discarded
             if (
-                (command.type === 'submit_rental_handover' ||
-                    command.type === 'submit_sales_delivery') &&
+                command.type === 'submit_rental_handover' &&
                 Boolean(
                     command.payload?.signee_name ||
                     command.payload?.signature_image_path ||
@@ -1526,14 +1539,6 @@ export class CommandOutboxManager {
                     payload as unknown as Record<string, unknown>,
                     command.id,
                 );
-            } else if (command.type === 'submit_sales_delivery') {
-                const payload =
-                    command.payload as unknown as SalesDeliveryCommandPayload;
-                response = await apiClient.submitSalesDelivery(
-                    payload.order_id,
-                    payload as unknown as Record<string, unknown>,
-                    command.id,
-                );
             } else if (
                 command.type === ('submit_equipment_inspection' as any)
             ) {
@@ -1563,6 +1568,14 @@ export class CommandOutboxManager {
             } else if (command.type === 'submit_fuel_request') {
                 response = await apiClient.createFuelRequest(
                     command.payload as unknown as CreateFuelPayload,
+                    command.id,
+                );
+            } else if (command.type === 'withdraw_fuel_request') {
+                const payload =
+                    command.payload as unknown as WithdrawFuelPayload;
+                response = await apiClient.withdrawFuelRequest(
+                    payload.fuel_request_id,
+                    payload.reason,
                     command.id,
                 );
             } else if (command.type === 'record_fuel_log') {

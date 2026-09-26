@@ -37,11 +37,6 @@ final class RentalAssetUsageConflictChecker implements AssetUsageConflictChecker
                     $reservation->where('id', '<>', $request->source->aggregateId);
                 }
 
-                if ($request->usageType === AssetUsageType::SalesAccept
-                    || $request->usageType === AssetUsageType::SalesFulfill) {
-                    return;
-                }
-
                 if ($request->windowStart !== null && $request->windowEnd !== null) {
                     $windowEndDate = $request->windowEnd->isStartOfDay()
                         ? $request->windowEnd->toDateString()

@@ -52,6 +52,7 @@ it('calculates quantity variance and does not flag anomaly when within 15 percen
     // Actual 110L (+10.0% variance, below 15% threshold)
     $this->actingAs($driver)->post("/operations/fuel-requests/{$fuel->id}/status", [
         'status' => 'logged',
+        'no_receipt_reason' => 'on_site_bowser',
         'quantity_litres' => 110,
         'price_per_litre' => 1.50,
         'total_cost' => 165.00,
@@ -80,6 +81,7 @@ it('flags an anomaly when actual quantity exceeds requested quantity by 15 perce
     // Actual 120L (+20.0% variance, >= 15% threshold)
     $this->actingAs($driver)->post("/operations/fuel-requests/{$fuel->id}/status", [
         'status' => 'logged',
+        'no_receipt_reason' => 'on_site_bowser',
         'quantity_litres' => 120,
         'price_per_litre' => 1.50,
     ])->assertRedirect('/');
@@ -119,6 +121,7 @@ it('calculates effective burn rate in L/km for trucks and updates asset meter va
     // Effective burn rate = 100 / 250 = 0.40 L/km
     $this->actingAs($driver)->post("/operations/fuel-requests/{$fuel->id}/status", [
         'status' => 'logged',
+        'no_receipt_reason' => 'on_site_bowser',
         'quantity_litres' => 100,
         'odometer_km' => 50250,
     ])->assertRedirect('/');
@@ -161,6 +164,7 @@ it('calculates effective burn rate in L/hr for cranes and stationary equipment',
     // Effective burn rate = 150 / 10 = 15.00 L/hr
     $this->actingAs($operator)->post("/operations/fuel-requests/{$fuel->id}/status", [
         'status' => 'logged',
+        'no_receipt_reason' => 'on_site_bowser',
         'quantity_litres' => 150,
         'hour_meter' => 1210.0,
     ])->assertRedirect('/');
@@ -203,6 +207,7 @@ it('flags an anomaly when effective burn rate exceeds asset baseline by 15 perce
     // Excess = (0.50 - 0.30) / 0.30 = +66.7% (well over +15.0% threshold)
     $this->actingAs($driver)->post("/operations/fuel-requests/{$fuel->id}/status", [
         'status' => 'logged',
+        'no_receipt_reason' => 'on_site_bowser',
         'quantity_litres' => 100,
         'odometer_km' => 10200,
     ])->assertRedirect('/');
@@ -237,6 +242,7 @@ it('rejects monotonic meter rollback when odometer is lower than asset current m
     // Submitting 74,000 km (less than 75,000 km current meter)
     $this->actingAs($driver)->post("/operations/fuel-requests/{$fuel->id}/status", [
         'status' => 'logged',
+        'no_receipt_reason' => 'on_site_bowser',
         'quantity_litres' => 80,
         'odometer_km' => 74000,
     ])->assertSessionHasErrors('odometer_km');
@@ -270,6 +276,7 @@ it('rejects monotonic meter rollback when hour meter is lower than asset current
     // Submitting 3,400.0 hrs (less than 3,500.5 hrs current meter)
     $this->actingAs($operator)->post("/operations/fuel-requests/{$fuel->id}/status", [
         'status' => 'logged',
+        'no_receipt_reason' => 'on_site_bowser',
         'quantity_litres' => 120,
         'hour_meter' => 3400.0,
     ])->assertSessionHasErrors('hour_meter');
@@ -301,6 +308,7 @@ it('allows non-metered asset to log fuel cleanly without error', function () {
 
     $this->actingAs($driver)->post("/operations/fuel-requests/{$fuel->id}/status", [
         'status' => 'logged',
+        'no_receipt_reason' => 'on_site_bowser',
         'quantity_litres' => 50,
     ])->assertRedirect('/');
 

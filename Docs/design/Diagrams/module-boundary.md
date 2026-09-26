@@ -3,10 +3,10 @@
 > **Capstone Project Title:**  
 > **DESIGN AND IMPLEMENTATION OF A GPT MINI POWERED DISPATCH AND RESOURCE MANAGEMENT PLATFORM WITH MOBILE APPLICATION FOR REAL TIME TRACKING FOR FIELD SERVICE MONITORING**
 
-**Last updated:** 2026-09-05  
+**Last updated:** 2026-09-25  
 **Status:** Canonical architecture and boundary diagram
 
-This document visualizes the **5 Main Operational Business Modules** (1. Dispatch Job and Scheduling [Real-Time Activation], 2. Assign Driver/Operator and Equipment, 3. Fleet Management, 4. Crane and Equipment Management, 5. Fuel Management), the **3 Tri-Modal Inbound Business Flows**, shared
+This document visualizes the **5 Main Operational Business Modules** (1. Dispatch Job and Scheduling [Real-Time Activation], 2. Assign Driver/Operator and Equipment, 3. Fleet Management, 4. Crane and Equipment Management, 5. Fuel Management), the **2 Inbound Business Flows** (Service and Rental) plus direct dispatch, shared
 platform services, role-based UI surfaces, and the operational dependency
 flow for the **3 System Users** (`System Administrator`, `Operations Manager`, `Operator`). [modules.md](../../architecture/modules.md),
 [features.md](../../product/features.md), migrations, and application code remain
@@ -29,18 +29,15 @@ flowchart TD
     subgraph C1[External Core 1: Commercial Boundary]
         C1_SVC["Service Demand / Contract"]
         C1_RNT["Rental Reservation / Agreement"]
-        C1_SAL["Sales Order / Purchase Agreement"]
     end
 
-    subgraph FLOWS[Tri-Modal Inbound Business Flows]
+    subgraph FLOWS[Inbound Business Flows]
         F_SVC["1. Field Service Flow\n(Intake -> Planning -> Multi-Draft Dispatch -> Field Lifts)"]
         F_RNT["2. Equipment Rental Flow\n(Hire Window -> Inspection -> Checkout -> Return Diff)"]
-        F_SAL["3. Equipment Sales Flow\n(Order -> Transport Fulfillment -> VIN/Serial Handover)"]
     end
 
     C1_SVC --> F_SVC
     C1_RNT --> F_RNT
-    C1_SAL --> F_SAL
 
     subgraph CORE_MODULES[Core 2: 5 Main Operational Business Modules]
         D["1. Dispatch Job and Scheduling\n(Real-Time Activation & Planning)"]
@@ -63,8 +60,6 @@ flowchart TD
     F_SVC ==> D
     F_RNT ==> D
     F_RNT ==> C
-    F_SAL ==> F
-    F_SAL ==> D
 
     subgraph SHARED[Shared Platform Services & Safety Foundations]
         S1[Auth, Spatie RBAC 3 System Users, Scoped Visibility]
@@ -78,11 +73,11 @@ flowchart TD
 ```
 
 Core 1 owns Sales, CRM, Client, Job Order, Rental, and Project Management and
-is external to this repository. Core 2 receives three actionable business transaction flows:
-**Service, Rental, and Sale**. These flows are scheduled, staffed, equipped, and executed by the
+is external to this repository. Core 2 receives two actionable business transaction flows:
+**Service and Rental**, and also supports direct (manual) dispatch. Core 2 does not receive or fulfill sale handoffs. These flows are scheduled, staffed, equipped, and executed by the
 **5 main operational business modules** (Dispatch with Planning, Assignment, Fleet, Cranes, Fuel), with DVIR, HoS, and Safety acting as integrated capabilities.
 
-Rental and Sales operations use backend flow handlers in `app/Modules/Rental` and `app/Modules/Sales`
+Rental operations use backend flow handlers in `app/Modules/Rental`
 to coordinate equipment reservation, inspection diffs, and prevent inventory collisions with active dispatch operations.
 
 ## Module and Submodule Map
@@ -141,7 +136,7 @@ flowchart TB
     end
 ```
 
-### Tri-Modal Inbound Flow Lifecycle Steps
+### Inbound Flow Lifecycle Steps
 
 ```mermaid
 flowchart LR
@@ -151,10 +146,6 @@ flowchart LR
 
     subgraph RNT_STEPS["2. Equipment Rental Flow"]
         R_RES["Reservation"] --> R_CHK["Pre-Checkout Inspection"] --> R_DEP["Active Rental Window"] --> R_DIF["Return Condition Diff"] --> R_REL["Safe Release"]
-    end
-
-    subgraph SAL_STEPS["3. Equipment Sales Flow"]
-        O_ORD["Sales Order"] --> O_RES["Inventory Reservation"] --> O_FUL["Transport Fulfillment"] --> O_VIN["VIN/Serial Handover"] --> O_TRN["Ownership Transfer"]
     end
 ```
 
