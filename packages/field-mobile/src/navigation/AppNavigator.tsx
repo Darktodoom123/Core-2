@@ -84,6 +84,7 @@ import type {
     OutboxRepository,
     PayloadHasher,
 } from '../storage/outboxRepository';
+import { useTheme } from '../theme';
 import type {
     DispatchJob,
     DispatchStatus,
@@ -105,6 +106,7 @@ import type {
     SafetyHazardCommandPayload,
     WorkStoppageCommandPayload,
 } from '../types/index';
+import { statusBarAppearance } from './status-bar-appearance';
 
 export { isAuthorizedFieldRole } from '../auth/fieldRoles';
 
@@ -552,6 +554,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         actions: [],
     });
     const [isSosActivating, setIsSosActivating] = useState(false);
+    const { theme } = useTheme();
     const [activeAppView, setActiveAppView] = useState<
         | 'main'
         | 'safety'
@@ -2722,36 +2725,20 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
             ? sosConfiguration.actions
             : []);
 
+    const statusBar = statusBarAppearance(activeAppView, theme);
+
     return (
         <ErrorBoundary>
             <SafeAreaView
                 edges={['top', 'left', 'right']}
                 style={[
                     styles.fullScreen,
-                    (activeAppView === 'dvir' ||
-                        activeAppView === 'inspection' ||
-                        activeAppView === 'hos' ||
-                        activeAppView === 'routes') &&
-                        styles.darkFullScreen,
+                    { backgroundColor: statusBar.backgroundColor },
                 ]}
             >
                 <StatusBar
-                    barStyle={
-                        activeAppView === 'dvir' ||
-                        activeAppView === 'inspection' ||
-                        activeAppView === 'hos' ||
-                        activeAppView === 'routes'
-                            ? 'light-content'
-                            : 'dark-content'
-                    }
-                    backgroundColor={
-                        activeAppView === 'dvir' ||
-                        activeAppView === 'inspection' ||
-                        activeAppView === 'hos' ||
-                        activeAppView === 'routes'
-                            ? '#0F172A'
-                            : colors.surface
-                    }
+                    backgroundColor={statusBar.backgroundColor}
+                    barStyle={statusBar.barStyle}
                 />
                 <View
                     style={styles.appShell}
@@ -3345,10 +3332,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
 const styles = StyleSheet.create({
     fullScreen: {
         backgroundColor: colors.background,
-        flex: 1,
-    },
-    darkFullScreen: {
-        backgroundColor: '#090E1A',
         flex: 1,
     },
     appShell: {
