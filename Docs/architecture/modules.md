@@ -198,7 +198,6 @@ Core Transaction 2 is structured as a two-service monorepo:
 - `HeavyCraneDriveModeScreen.tsx`: High-contrast in-cab turn-by-turn navigation HUD with clearance and corridor warning overlays.
 - `FuelScreen.tsx`: Mobile fuel requests, dispensed liters, meter readings, receipt photo capture.
 - `EquipmentInspectionScreen.tsx`: 5-tab inspection suite (Checklist, Maintenance Work Order, Safe-Release Certificate, Fuel Receipt, Custody Handover).
-- `OperatorDashboardScreen.tsx`: Operator overview, active equipment binding, and telemetry state.
 - `RentalHandoverScreen.tsx`: Equipment condition checkout/return handovers.
 - `DocumentsWalletScreen.tsx`: Digital credentials, licenses, certifications, and compliance wallet.
 

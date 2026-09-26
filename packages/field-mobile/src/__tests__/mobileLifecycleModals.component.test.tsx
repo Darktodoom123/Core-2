@@ -11,7 +11,6 @@ import {
 import { AssignedJobsListScreen } from '../screens/AssignedJobsListScreen';
 import { DispatchOrdersScreen } from '../screens/DispatchOrdersScreen';
 import { HosScreen } from '../screens/HosScreen';
-import { OperatorDashboardScreen } from '../screens/OperatorDashboardScreen';
 import type { DispatchJob } from '../types/index';
 
 describe('Mobile Lifecycle Modals & Operational Safeguards', () => {
@@ -701,69 +700,6 @@ describe('Mobile Lifecycle Modals & Operational Safeguards', () => {
             await fireEvent.press(view.getByTestId('confirm-duty-status-btn'));
             expect(view.getByTestId('end-shift-safeguard-modal')).toBeTruthy();
 
-            await fireEvent.press(view.getByTestId('confirm-safeguard-btn'));
-            expect(onReleaseUnit).toHaveBeenCalledWith('CRN-101');
-            expect(onToggleShift).toHaveBeenCalledWith('off_shift');
-            expect(onChangeDutyStatus).toHaveBeenCalledWith(
-                'off_duty',
-                undefined,
-                undefined,
-            );
-        });
-
-        it('intercepts off_duty selection in OperatorDashboardScreen with EndShiftSafeguardModal and releases unit on confirmation', async () => {
-            const onChangeDutyStatus = jest.fn();
-            const onToggleShift = jest.fn();
-            const onReleaseUnit = jest.fn();
-
-            const view = await render(
-                <OperatorDashboardScreen
-                    isLoading={false}
-                    jobs={[mockAcceptedJob]}
-                    onChangeDutyStatus={onChangeDutyStatus}
-                    onDiscardCommand={jest.fn()}
-                    onLogout={jest.fn()}
-                    onOpenDocuments={jest.fn()}
-                    onOpenDvir={jest.fn()}
-                    onOpenForms={jest.fn()}
-                    onOpenRental={jest.fn()}
-                    onOpenRoutes={jest.fn()}
-                    onOpenVehicle={jest.fn()}
-                    onRefresh={jest.fn()}
-                    onReleaseUnit={onReleaseUnit}
-                    onRetryCommand={jest.fn()}
-                    onSelectJob={jest.fn()}
-                    onSosHoldComplete={jest.fn()}
-                    onToggleShift={onToggleShift}
-                    outboxCommands={[]}
-                    shiftInfo={{
-                        status: 'on_shift',
-                        dutyStatus: 'operating',
-                        startedAt: '08:00 AM',
-                        hoursElapsed: 4.5,
-                    }}
-                />,
-            );
-
-            // Open duty modal by tapping persistent duty bar
-            await fireEvent.press(view.getByTestId('hero-duty-status-bar'));
-            expect(view.getByTestId('duty-status-sheet')).toBeTruthy();
-
-            // Select Off Duty
-            await fireEvent.press(
-                view.getByLabelText(/Off Duty — Shift Complete/i),
-            );
-
-            // Confirm duty selection
-            await fireEvent.press(view.getByTestId('confirm-duty-status-btn'));
-
-            // Intercept modal prompts
-            expect(view.getByTestId('end-shift-safeguard-modal')).toBeTruthy();
-            expect(onReleaseUnit).not.toHaveBeenCalled();
-            expect(onToggleShift).not.toHaveBeenCalled();
-            expect(onChangeDutyStatus).not.toHaveBeenCalled();
-
-            // Confirm release
             await fireEvent.press(view.getByTestId('confirm-safeguard-btn'));
             expect(onReleaseUnit).toHaveBeenCalledWith('CRN-101');
             expect(onToggleShift).toHaveBeenCalledWith('off_shift');

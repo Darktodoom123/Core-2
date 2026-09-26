@@ -7,7 +7,6 @@ import {
 import React from 'react';
 import { Alert } from 'react-native';
 import { AssignedJobsListScreen } from '../screens/AssignedJobsListScreen';
-import { OperatorDashboardScreen } from '../screens/OperatorDashboardScreen';
 import { ProfileInfoTab } from '../screens/profile/components/ProfileInfoTab';
 import { ProfileScreen } from '../screens/profile/ProfileScreen';
 import type { FieldApiClient } from '../services/apiClient';
@@ -806,7 +805,7 @@ describe('ProfileScreen component tests', () => {
         ).toBeTruthy();
     });
 
-    describe('Profile navigation wiring in AssignedJobsListScreen and OperatorDashboardScreen', () => {
+    describe('Profile navigation wiring in AssignedJobsListScreen', () => {
         it('AssignedJobsListScreen invokes onOpenProfile when operator profile avatar is tapped', async () => {
             const onOpenProfile = jest.fn();
             const view = await render(
@@ -882,111 +881,6 @@ describe('ProfileScreen component tests', () => {
             expect(onOpenProfile).toHaveBeenCalledTimes(1);
         });
 
-        it('OperatorDashboardScreen routes header settings button to onOpenProfile or fallback', async () => {
-            const onOpenProfile = jest.fn();
-            const view = await render(
-                <ThemeProvider initialMode="dark_hud">
-                    <OperatorDashboardScreen
-                        isLoading={false}
-                        isOnline={true}
-                        jobs={[]}
-                        onDiscardCommand={jest.fn()}
-                        onLogout={jest.fn()}
-                        onOpenDocuments={jest.fn()}
-                        onOpenDvir={jest.fn()}
-                        onOpenForms={jest.fn()}
-                        onOpenProfile={onOpenProfile}
-                        onOpenRental={jest.fn()}
-                        onOpenRoutes={jest.fn()}
-                        onOpenVehicle={jest.fn()}
-                        onRefresh={jest.fn()}
-                        onRetryCommand={jest.fn()}
-                        onSelectJob={jest.fn()}
-                        onSosHoldComplete={jest.fn()}
-                        outboxCommands={[]}
-                        userName="Alex Rivera"
-                    />
-                </ThemeProvider>,
-            );
-
-            const settingsBtn = view.getByTestId('btn-profile-settings');
-            await act(async () => {
-                fireEvent.press(settingsBtn);
-            });
-
-            expect(onOpenProfile).toHaveBeenCalledTimes(1);
-        });
-
-        it('OperatorDashboardScreen falls back to onOpenAccountSettings when onOpenProfile is not provided', async () => {
-            const onOpenAccountSettings = jest.fn();
-            const view = await render(
-                <ThemeProvider initialMode="dark_hud">
-                    <OperatorDashboardScreen
-                        isLoading={false}
-                        isOnline={true}
-                        jobs={[]}
-                        onDiscardCommand={jest.fn()}
-                        onLogout={jest.fn()}
-                        onOpenAccountSettings={onOpenAccountSettings}
-                        onOpenDocuments={jest.fn()}
-                        onOpenDvir={jest.fn()}
-                        onOpenForms={jest.fn()}
-                        onOpenRental={jest.fn()}
-                        onOpenRoutes={jest.fn()}
-                        onOpenVehicle={jest.fn()}
-                        onRefresh={jest.fn()}
-                        onRetryCommand={jest.fn()}
-                        onSelectJob={jest.fn()}
-                        onSosHoldComplete={jest.fn()}
-                        outboxCommands={[]}
-                        userName="Alex Rivera"
-                    />
-                </ThemeProvider>,
-            );
-
-            const settingsBtn = view.getByTestId('btn-profile-settings');
-            await act(async () => {
-                fireEvent.press(settingsBtn);
-            });
-
-            expect(onOpenAccountSettings).toHaveBeenCalledTimes(1);
-        });
-
-        it('OperatorDashboardScreen routes bottom nav profile tap to onOpenProfile', async () => {
-            const onOpenProfile = jest.fn();
-            const view = await render(
-                <ThemeProvider initialMode="dark_hud">
-                    <OperatorDashboardScreen
-                        isLoading={false}
-                        isOnline={true}
-                        jobs={[]}
-                        onDiscardCommand={jest.fn()}
-                        onLogout={jest.fn()}
-                        onOpenDocuments={jest.fn()}
-                        onOpenDvir={jest.fn()}
-                        onOpenForms={jest.fn()}
-                        onOpenProfile={onOpenProfile}
-                        onOpenRental={jest.fn()}
-                        onOpenRoutes={jest.fn()}
-                        onOpenVehicle={jest.fn()}
-                        onRefresh={jest.fn()}
-                        onRetryCommand={jest.fn()}
-                        onSelectJob={jest.fn()}
-                        onSosHoldComplete={jest.fn()}
-                        outboxCommands={[]}
-                        userName="Alex Rivera"
-                    />
-                </ThemeProvider>,
-            );
-
-            const navProfileBtn = view.getByTestId('bottom-nav-profile');
-            await act(async () => {
-                fireEvent.press(navProfileBtn);
-            });
-
-            expect(onOpenProfile).toHaveBeenCalledTimes(1);
-        });
-
         it('AssignedJobsListScreen falls back to ProfileSheet when neither onOpenProfile nor onOpenAccountSettings is provided', async () => {
             const view = await render(
                 <ThemeProvider initialMode="dark_hud">
@@ -1023,76 +917,6 @@ describe('ProfileScreen component tests', () => {
                         onSosHoldComplete={jest.fn()}
                         outboxCommands={[]}
                         userName="Dev Crane Operator"
-                    />
-                </ThemeProvider>,
-            );
-
-            expect(view.queryByTestId('profile-sheet')).toBeNull();
-
-            const navProfileBtn = view.getByTestId('bottom-nav-profile');
-            await act(async () => {
-                fireEvent.press(navProfileBtn);
-            });
-
-            expect(view.getByTestId('profile-sheet')).toBeTruthy();
-        });
-
-        it('OperatorDashboardScreen falls back to ProfileSheet when neither handler is provided', async () => {
-            const view = await render(
-                <ThemeProvider initialMode="dark_hud">
-                    <OperatorDashboardScreen
-                        isLoading={false}
-                        isOnline={true}
-                        jobs={[]}
-                        onDiscardCommand={jest.fn()}
-                        onLogout={jest.fn()}
-                        onOpenDocuments={jest.fn()}
-                        onOpenDvir={jest.fn()}
-                        onOpenForms={jest.fn()}
-                        onOpenRental={jest.fn()}
-                        onOpenRoutes={jest.fn()}
-                        onOpenVehicle={jest.fn()}
-                        onRefresh={jest.fn()}
-                        onRetryCommand={jest.fn()}
-                        onSelectJob={jest.fn()}
-                        onSosHoldComplete={jest.fn()}
-                        outboxCommands={[]}
-                        userName="Alex Rivera"
-                    />
-                </ThemeProvider>,
-            );
-
-            expect(view.queryByTestId('profile-sheet')).toBeNull();
-
-            const settingsBtn = view.getByTestId('btn-profile-settings');
-            await act(async () => {
-                fireEvent.press(settingsBtn);
-            });
-
-            expect(view.getByTestId('profile-sheet')).toBeTruthy();
-        });
-
-        it('OperatorDashboardScreen bottom nav falls back to ProfileSheet when neither handler is provided', async () => {
-            const view = await render(
-                <ThemeProvider initialMode="dark_hud">
-                    <OperatorDashboardScreen
-                        isLoading={false}
-                        isOnline={true}
-                        jobs={[]}
-                        onDiscardCommand={jest.fn()}
-                        onLogout={jest.fn()}
-                        onOpenDocuments={jest.fn()}
-                        onOpenDvir={jest.fn()}
-                        onOpenForms={jest.fn()}
-                        onOpenRental={jest.fn()}
-                        onOpenRoutes={jest.fn()}
-                        onOpenVehicle={jest.fn()}
-                        onRefresh={jest.fn()}
-                        onRetryCommand={jest.fn()}
-                        onSelectJob={jest.fn()}
-                        onSosHoldComplete={jest.fn()}
-                        outboxCommands={[]}
-                        userName="Alex Rivera"
                     />
                 </ThemeProvider>,
             );

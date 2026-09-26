@@ -3,7 +3,6 @@ export * from './DocumentsWalletScreen';
 export * from './DvirScreen';
 export * from './EquipmentInspectionScreen';
 export * from './HosScreen';
-export * from './OperatorDashboardScreen';
 export * from './RentalHandoverScreen';
 export * from './HeavyCraneDriveModeScreen';
 export * from './DispatchOrdersScreen';
