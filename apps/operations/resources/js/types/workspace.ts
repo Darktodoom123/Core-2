@@ -1076,6 +1076,8 @@ export interface WorkspaceScopeFreshness {
 }
 
 export interface WorkspaceTrackingFreshness extends WorkspaceScopeFreshness {
+    /** False when the Tracking service could not answer; positions are withheld, not stale. */
+    service_available?: boolean;
     latest_received_at: string | null;
     current_user: {
         sharing_enabled: boolean | null;

@@ -10,6 +10,7 @@ use App\Platform\Tracking\Data\LocationSampleDto;
 use App\Platform\Tracking\Exceptions\TrackingConflictException;
 use App\Platform\Tracking\Exceptions\TrackingServiceUnavailableException;
 use Carbon\CarbonImmutable;
+use Closure;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Collection;
@@ -33,6 +34,8 @@ class HttpTrackingClient implements TrackingClientInterface
 
     protected bool $allowIngestFallback;
 
+    protected bool $allowReadFallback;
+
     public function __construct(
         ?string $baseUrl = null,
         ?string $secret = null,
@@ -40,6 +43,7 @@ class HttpTrackingClient implements TrackingClientInterface
         ?float $connectTimeout = null,
         ?DatabaseTrackingClient $fallbackClient = null,
         ?bool $allowIngestFallback = null,
+        ?bool $allowReadFallback = null,
     ) {
         $this->baseUrl = rtrim($baseUrl ?? (string) config('services.tracking.url', 'http://localhost:8001'), '/');
         $this->secret = $secret ?? (string) config('services.tracking.secret', 'test-tracking-service-secret');
@@ -61,10 +65,13 @@ class HttpTrackingClient implements TrackingClientInterface
                 throw new RuntimeException('Tracking service signing secret is insecure or using development placeholder in production.');
             }
 
-            // In production, never write to a secondary authoritative database during outages
+            // In production, never write to a secondary authoritative database during outages,
+            // and never present its stale rows as live positions.
             $this->allowIngestFallback = false;
+            $this->allowReadFallback = false;
         } else {
             $this->allowIngestFallback = $allowIngestFallback ?? (bool) config('services.tracking.allow_ingest_fallback', false);
+            $this->allowReadFallback = $allowReadFallback ?? (bool) config('services.tracking.allow_read_fallback', false);
         }
     }
 
@@ -216,164 +223,55 @@ class HttpTrackingClient implements TrackingClientInterface
             }
         }
 
-        $path = '/internal/v1/locations/latest';
-        $queryParams = [];
-        if ($user !== null && ! $user->can(PermissionName::TrackingViewAll->value)) {
-            $queryParams['user_id'] = $user->id;
-        }
-
-        $url = $this->baseUrl.$path;
-        $headers = $this->buildSignedHeaders('GET', $path, '');
-
-        try {
-            /** @var Response $response */
-            $response = Http::timeout($this->timeout)
-                ->connectTimeout($this->connectTimeout)
-                ->withHeaders($headers)
-                ->get($url, $queryParams);
-
-            if ($response->successful()) {
-                /** @var list<array<string, mixed>> $data */
-                $data = $response->json('data') ?? [];
-
-                /** @var Collection<int, LatestLocationDto> $collection */
-                $collection = collect($data)->map(
-                    static fn (array $item): LatestLocationDto => LatestLocationDto::fromArray($item)
-                );
-
-                if ($user !== null && ! $user->can(PermissionName::TrackingViewAll->value)) {
-                    $collection = $collection->filter(
-                        static fn (LatestLocationDto $dto): bool => $dto->userId === $user->id
-                    );
-                }
-
-                return $collection->values();
-            }
-
-            Log::warning('Tracking microservice returned error on getLatestLocations', [
-                'status' => $response->status(),
-            ]);
-        } catch (Throwable $e) {
-            Log::warning('Tracking microservice unavailable during getLatestLocations, falling back to local database', [
-                'error' => $e->getMessage(),
-            ]);
-        }
-
-        return $this->fallbackClient->getLatestLocations($user);
+        return $this->fetchLatestVisibleTo($user)
+            ?? $this->unavailableRead(
+                fn (): Collection => $this->fallbackClient->getLatestLocations($user),
+                collect(),
+            );
     }
 
     public function getLatestLocationForUser(int $userId): ?LatestLocationDto
     {
-        $path = '/internal/v1/locations/latest';
-        $url = $this->baseUrl.$path;
-        $headers = $this->buildSignedHeaders('GET', $path, '');
+        $locations = $this->fetchLatest('getLatestLocationForUser', ['user_id' => $userId], ['user_id' => $userId]);
 
-        try {
-            /** @var Response $response */
-            $response = Http::timeout($this->timeout)
-                ->connectTimeout($this->connectTimeout)
-                ->withHeaders($headers)
-                ->get($url, ['user_id' => $userId]);
-
-            if ($response->successful()) {
-                /** @var list<array<string, mixed>> $data */
-                $data = $response->json('data') ?? [];
-                $first = collect($data)->first();
-
-                return is_array($first) ? LatestLocationDto::fromArray($first) : null;
-            }
-
-            Log::warning('Tracking microservice returned error on getLatestLocationForUser', [
-                'status' => $response->status(),
-                'user_id' => $userId,
-            ]);
-        } catch (Throwable $e) {
-            Log::warning('Tracking microservice unavailable during getLatestLocationForUser, falling back', [
-                'user_id' => $userId,
-                'error' => $e->getMessage(),
-            ]);
-        }
-
-        return $this->fallbackClient->getLatestLocationForUser($userId);
+        return $locations === null
+            ? $this->unavailableRead(
+                fn (): ?LatestLocationDto => $this->fallbackClient->getLatestLocationForUser($userId),
+                null,
+            )
+            : $locations->first();
     }
 
     public function getLatestLocationForAsset(int $assetId): ?LatestLocationDto
     {
-        $path = '/internal/v1/locations/latest';
-        $url = $this->baseUrl.$path;
-        $headers = $this->buildSignedHeaders('GET', $path, '');
+        $locations = $this->fetchLatest('getLatestLocationForAsset', ['operational_asset_id' => $assetId], ['asset_id' => $assetId]);
 
-        try {
-            /** @var Response $response */
-            $response = Http::timeout($this->timeout)
-                ->connectTimeout($this->connectTimeout)
-                ->withHeaders($headers)
-                ->get($url, ['operational_asset_id' => $assetId]);
-
-            if ($response->successful()) {
-                /** @var list<array<string, mixed>> $data */
-                $data = $response->json('data') ?? [];
-                $first = collect($data)->first();
-
-                return is_array($first) ? LatestLocationDto::fromArray($first) : null;
-            }
-
-            Log::warning('Tracking microservice returned error on getLatestLocationForAsset', [
-                'status' => $response->status(),
-                'asset_id' => $assetId,
-            ]);
-        } catch (Throwable $e) {
-            Log::warning('Tracking microservice unavailable during getLatestLocationForAsset, falling back', [
-                'asset_id' => $assetId,
-                'error' => $e->getMessage(),
-            ]);
-        }
-
-        return $this->fallbackClient->getLatestLocationForAsset($assetId);
+        return $locations === null
+            ? $this->unavailableRead(
+                fn (): ?LatestLocationDto => $this->fallbackClient->getLatestLocationForAsset($assetId),
+                null,
+            )
+            : $locations->first();
     }
 
     public function getLatestLocationForJob(int $jobId, ?User $user = null): ?LatestLocationDto
     {
-        $path = '/internal/v1/locations/latest';
-        $url = $this->baseUrl.$path;
-        $headers = $this->buildSignedHeaders('GET', $path, '');
+        $locations = $this->fetchLatest('getLatestLocationForJob', ['dispatch_job_id' => $jobId], ['job_id' => $jobId]);
 
-        try {
-            /** @var Response $response */
-            $response = Http::timeout($this->timeout)
-                ->connectTimeout($this->connectTimeout)
-                ->withHeaders($headers)
-                ->get($url, ['dispatch_job_id' => $jobId]);
-
-            if ($response->successful()) {
-                /** @var list<array<string, mixed>> $data */
-                $data = $response->json('data') ?? [];
-                /** @var Collection<int, LatestLocationDto> $collection */
-                $collection = collect($data)->map(
-                    static fn (array $item): LatestLocationDto => LatestLocationDto::fromArray($item)
-                );
-
-                if ($user !== null && ! $user->can(PermissionName::TrackingViewAll->value)) {
-                    $collection = $collection->filter(
-                        static fn (LatestLocationDto $dto): bool => $dto->userId === $user->id
-                    );
-                }
-
-                return $collection->first();
-            }
-
-            Log::warning('Tracking microservice returned error on getLatestLocationForJob', [
-                'status' => $response->status(),
-                'job_id' => $jobId,
-            ]);
-        } catch (Throwable $e) {
-            Log::warning('Tracking microservice unavailable during getLatestLocationForJob, falling back', [
-                'job_id' => $jobId,
-                'error' => $e->getMessage(),
-            ]);
+        if ($locations === null) {
+            return $this->unavailableRead(
+                fn (): ?LatestLocationDto => $this->fallbackClient->getLatestLocationForJob($jobId, $user),
+                null,
+            );
         }
 
-        return $this->fallbackClient->getLatestLocationForJob($jobId, $user);
+        if ($user !== null && ! $user->can(PermissionName::TrackingViewAll->value)) {
+            $locations = $locations->filter(
+                static fn (LatestLocationDto $dto): bool => $dto->userId === $user->id
+            );
+        }
+
+        return $locations->first();
     }
 
     public function queryLocationHistory(array $filters = []): Collection
@@ -405,9 +303,16 @@ class HttpTrackingClient implements TrackingClientInterface
                 'status' => $response->status(),
             ]);
         } catch (Throwable $e) {
-            Log::warning('Tracking microservice unavailable during queryLocationHistory, falling back', [
+            Log::warning($this->readFailureMessage('queryLocationHistory'), [
                 'error' => $e->getMessage(),
             ]);
+        }
+
+        // History feeds audit exports: failing is safer than returning an empty or partial trail.
+        if (! $this->allowReadFallback) {
+            throw new TrackingServiceUnavailableException(
+                'Tracking microservice is temporarily unavailable. Location history could not be loaded.'
+            );
         }
 
         return $this->fallbackClient->queryLocationHistory($filters);
@@ -427,30 +332,142 @@ class HttpTrackingClient implements TrackingClientInterface
             ];
         }
 
+        $locations = $this->fetchLatestVisibleTo($user);
+        if ($locations === null) {
+            return $this->unavailableFreshness($user, $refreshedAt, $staleAfterSeconds);
+        }
+
+        /** @var LatestLocationDto|null $latestVisible */
+        $latestVisible = $locations
+            ->sortByDesc(static fn (LatestLocationDto $l): ?string => $l->receivedAt?->toIso8601String())
+            ->first();
+
+        $latestOwn = $locations->first(static fn (LatestLocationDto $l): bool => $l->userId === $user->id);
+        if ($latestOwn === null) {
+            $ownLocations = $this->fetchLatest('getLatestLocationForUser', ['user_id' => $user->id], ['user_id' => $user->id]);
+            if ($ownLocations === null) {
+                return $this->unavailableFreshness($user, $refreshedAt, $staleAfterSeconds);
+            }
+
+            $latestOwn = $ownLocations->first();
+        }
+
+        return [
+            'refreshed_at' => $refreshedAt->toIso8601String(),
+            'stale_after_seconds' => $staleAfterSeconds,
+            'latest_received_at' => $latestVisible?->receivedAt?->toIso8601String(),
+            'current_user' => [
+                'sharing_enabled' => $latestOwn?->sharingEnabled,
+                'captured_at' => $latestOwn?->capturedAt?->toIso8601String(),
+                'received_at' => $latestOwn?->receivedAt?->toIso8601String(),
+            ],
+            'service_available' => true,
+        ];
+    }
+
+    /**
+     * Query the Tracking latest-position projection.
+     *
+     * @param  array<string, int>  $query
+     * @param  array<string, int>  $logContext
+     * @return Collection<int, LatestLocationDto>|null Null when the Tracking service could not answer.
+     */
+    private function fetchLatest(string $operation, array $query, array $logContext = []): ?Collection
+    {
+        $path = '/internal/v1/locations/latest';
+        $headers = $this->buildSignedHeaders('GET', $path, '');
+
         try {
-            $locations = $this->getLatestLocations($user);
-            /** @var LatestLocationDto|null $latestVisible */
-            $latestVisible = $locations
-                ->sortByDesc(static fn (LatestLocationDto $l): ?string => $l->receivedAt?->toIso8601String())
-                ->first();
+            /** @var Response $response */
+            $response = Http::timeout($this->timeout)
+                ->connectTimeout($this->connectTimeout)
+                ->withHeaders($headers)
+                ->get($this->baseUrl.$path, $query);
 
-            /** @var LatestLocationDto|null $latestOwn */
-            $latestOwn = $locations
-                ->first(static fn (LatestLocationDto $l): bool => $l->userId === $user->id)
-                ?? $this->getLatestLocationForUser($user->id);
+            if ($response->successful()) {
+                /** @var list<array<string, mixed>> $data */
+                $data = $response->json('data') ?? [];
 
-            return [
+                return collect($data)
+                    ->map(static fn (array $item): LatestLocationDto => LatestLocationDto::fromArray($item))
+                    ->values();
+            }
+
+            Log::warning("Tracking microservice returned error on {$operation}", [
+                'status' => $response->status(),
+                ...$logContext,
+            ]);
+        } catch (Throwable $e) {
+            Log::warning($this->readFailureMessage($operation), [
+                ...$logContext,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return null;
+    }
+
+    /**
+     * Latest positions the user may see: everyone's with view-all, otherwise only their own.
+     *
+     * @return Collection<int, LatestLocationDto>|null Null when the Tracking service could not answer.
+     */
+    private function fetchLatestVisibleTo(?User $user): ?Collection
+    {
+        $ownOnly = $user !== null && ! $user->can(PermissionName::TrackingViewAll->value);
+        $locations = $this->fetchLatest('getLatestLocations', $ownOnly ? ['user_id' => $user->id] : []);
+
+        if ($locations === null || ! $ownOnly) {
+            return $locations;
+        }
+
+        return $locations
+            ->filter(static fn (LatestLocationDto $dto): bool => $dto->userId === $user->id)
+            ->values();
+    }
+
+    /**
+     * Resolve a read the Tracking service could not answer. Operations rows are served only
+     * when read fallback is explicitly enabled; otherwise callers get "no data" rather than
+     * stale positions presented as live.
+     *
+     * @template TResult
+     *
+     * @param  Closure(): TResult  $fallback
+     * @param  TResult  $unavailable
+     * @return TResult
+     */
+    private function unavailableRead(Closure $fallback, mixed $unavailable): mixed
+    {
+        return $this->allowReadFallback ? $fallback() : $unavailable;
+    }
+
+    private function readFailureMessage(string $operation): string
+    {
+        return "Tracking microservice unavailable during {$operation}, "
+            .($this->allowReadFallback ? 'falling back to local database' : 'no local fallback');
+    }
+
+    /**
+     * @return array{
+     *     refreshed_at: string,
+     *     stale_after_seconds: int,
+     *     latest_received_at: ?string,
+     *     current_user: ?array{sharing_enabled: ?bool, captured_at: ?string, received_at: ?string},
+     *     service_available: false
+     * }
+     */
+    private function unavailableFreshness(User $user, CarbonImmutable $refreshedAt, int $staleAfterSeconds): array
+    {
+        $freshness = $this->allowReadFallback
+            ? $this->fallbackClient->getTrackingFreshness($user, $refreshedAt, $staleAfterSeconds)
+            : [
                 'refreshed_at' => $refreshedAt->toIso8601String(),
                 'stale_after_seconds' => $staleAfterSeconds,
-                'latest_received_at' => $latestVisible?->receivedAt?->toIso8601String(),
-                'current_user' => [
-                    'sharing_enabled' => $latestOwn?->sharingEnabled,
-                    'captured_at' => $latestOwn?->capturedAt?->toIso8601String(),
-                    'received_at' => $latestOwn?->receivedAt?->toIso8601String(),
-                ],
+                'latest_received_at' => null,
+                'current_user' => null,
             ];
-        } catch (Throwable) {
-            return $this->fallbackClient->getTrackingFreshness($user, $refreshedAt, $staleAfterSeconds);
-        }
+
+        return [...$freshness, 'service_available' => false];
     }
 }

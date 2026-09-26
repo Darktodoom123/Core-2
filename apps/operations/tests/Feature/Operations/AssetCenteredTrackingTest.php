@@ -263,6 +263,33 @@ it('preserves SOS incidents even when the worker has no active asset assignment'
         );
 });
 
+it('serializes SOS timestamps in the workspace payload', function (): void {
+    // Dates are CarbonImmutable (AppServiceProvider), so the view model must not
+    // drop them to null by checking for the mutable Carbon class.
+    $dispatcher = User::factory()->create();
+    $dispatcher->syncRoles([RoleName::OperationsManager->value]);
+    $worker = User::factory()->create();
+    $worker->syncRoles([RoleName::CraneOperator->value]);
+    $receivedAt = now()->subMinute()->startOfSecond();
+    $escalationDueAt = $receivedAt->addSeconds(180);
+
+    SosIncident::factory()->create([
+        'category' => SosIncidentCategory::SiteAccident,
+        'status' => SosIncidentStatus::Active,
+        'reporter_id' => $worker->id,
+        'received_at' => $receivedAt,
+        'escalation_due_at' => $escalationDueAt,
+    ]);
+
+    $this->actingAs($dispatcher)->get('/')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('activeSosIncidents', 1)
+            ->where('activeSosIncidents.0.received_at', $receivedAt->toIso8601String())
+            ->where('activeSosIncidents.0.escalation_due_at', $escalationDueAt->toIso8601String())
+        );
+});
+
 it('preserves newer asset position when out-of-order delayed telemetry arrives from earlier operator', function (): void {
     $dispatcher = User::factory()->create();
     $dispatcher->syncRoles([RoleName::OperationsManager->value]);

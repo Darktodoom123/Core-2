@@ -14,8 +14,10 @@ use App\Platform\Tracking\Exceptions\TrackingServiceUnavailableException;
 use App\Platform\Tracking\Models\LocationUpdate;
 use App\Platform\Tracking\Services\HttpTrackingClient;
 use App\Platform\Workspace\Events\WorkspaceUpdated;
+use Carbon\CarbonImmutable;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
@@ -653,4 +655,127 @@ it('strictly forces allowIngestFallback to false in production preventing silent
         ->toThrow(TrackingServiceUnavailableException::class);
 
     expect(LocationUpdate::query()->where('user_id', $user->id)->count())->toBe(0);
+});
+
+/**
+ * @return array{0: User, 1: User}
+ */
+function trackingOutageFixture(): array
+{
+    $dispatcher = User::factory()->create();
+    $dispatcher->syncRoles([RoleName::OperationsManager->value]);
+
+    $driver = User::factory()->create(['name' => 'Stale Local Driver']);
+    $driver->syncRoles([RoleName::CraneOperator->value]);
+
+    // A leftover operations-database row that must never be presented as a live position.
+    LocationUpdate::query()->create([
+        'user_id' => $driver->id,
+        'latitude' => 14.5800,
+        'longitude' => 121.0600,
+        'sharing_enabled' => true,
+        'captured_at' => now()->subDays(2),
+        'received_at' => now()->subDays(2),
+    ]);
+
+    return [$dispatcher, $driver];
+}
+
+it('returns no positions instead of stale operations rows when Tracking is down and read fallback is not enabled', function (): void {
+    [$dispatcher, $driver] = trackingOutageFixture();
+    $client = new HttpTrackingClient(baseUrl: 'http://localhost:8001');
+
+    Http::fake([
+        'http://localhost:8001/*' => Http::response(['message' => 'Service Unavailable'], 503),
+    ]);
+
+    expect($client->getLatestLocations($dispatcher))->toBeEmpty()
+        ->and($client->getLatestLocationForUser($driver->id))->toBeNull()
+        ->and($client->getLatestLocationForAsset(1))->toBeNull()
+        ->and($client->getLatestLocationForJob(1, $dispatcher))->toBeNull();
+});
+
+it('returns no positions when the Tracking service cannot be reached at all', function (): void {
+    [$dispatcher, $driver] = trackingOutageFixture();
+    $client = new HttpTrackingClient(baseUrl: 'http://localhost:8001');
+
+    Http::fake(fn () => throw new ConnectionException('Connection refused'));
+
+    expect($client->getLatestLocations($dispatcher))->toBeEmpty()
+        ->and($client->getLatestLocationForUser($driver->id))->toBeNull();
+});
+
+it('serves operations rows during a Tracking outage only when read fallback is explicitly enabled', function (): void {
+    [$dispatcher, $driver] = trackingOutageFixture();
+    $client = new HttpTrackingClient(baseUrl: 'http://localhost:8001', allowReadFallback: true);
+
+    Http::fake([
+        'http://localhost:8001/*' => Http::response(['message' => 'Service Unavailable'], 503),
+    ]);
+
+    expect($client->getLatestLocations($dispatcher))->toHaveCount(1)
+        ->and($client->getLatestLocationForUser($driver->id)?->userId)->toBe($driver->id);
+});
+
+it('fails location history reads during a Tracking outage so audit exports are never silently incomplete', function (): void {
+    trackingOutageFixture();
+    $client = new HttpTrackingClient(baseUrl: 'http://localhost:8001');
+
+    Http::fake([
+        'http://localhost:8001/*' => Http::response(['error' => 'Bad Gateway'], 502),
+    ]);
+
+    expect(fn () => $client->queryLocationHistory([]))
+        ->toThrow(TrackingServiceUnavailableException::class);
+
+    Http::fake(fn () => throw new ConnectionException('Connection refused'));
+
+    expect(fn () => $client->queryLocationHistory([]))
+        ->toThrow(TrackingServiceUnavailableException::class);
+});
+
+it('flags the Tracking service as unavailable in freshness without reporting stale operations data', function (): void {
+    [$dispatcher] = trackingOutageFixture();
+    $client = new HttpTrackingClient(baseUrl: 'http://localhost:8001');
+
+    Http::fake([
+        'http://localhost:8001/*' => Http::response(['message' => 'Service Unavailable'], 503),
+    ]);
+
+    $freshness = $client->getTrackingFreshness($dispatcher, CarbonImmutable::now());
+
+    expect($freshness['service_available'])->toBeFalse()
+        ->and($freshness['latest_received_at'])->toBeNull()
+        ->and($freshness['current_user'])->toBeNull();
+});
+
+it('flags the Tracking service as available in freshness when it answers', function (): void {
+    [$dispatcher] = trackingOutageFixture();
+    $client = new HttpTrackingClient(baseUrl: 'http://localhost:8001');
+
+    Http::fake([
+        'http://localhost:8001/*' => Http::response(['data' => []], 200),
+    ]);
+
+    $freshness = $client->getTrackingFreshness($dispatcher, CarbonImmutable::now());
+
+    expect($freshness['service_available'])->toBeTrue()
+        ->and($freshness['latest_received_at'])->toBeNull();
+});
+
+it('strictly forces read fallback off in production so stale operations rows are never served as live positions', function (): void {
+    app()->detectEnvironment(fn () => 'production');
+    [$dispatcher] = trackingOutageFixture();
+
+    $client = new HttpTrackingClient(
+        baseUrl: 'http://localhost:8001',
+        secret: 'prod-secure-random-secret-at-least-16-chars',
+        allowReadFallback: true, // Even if true is passed, production overrides to false!
+    );
+
+    Http::fake([
+        'http://localhost:8001/*' => Http::response(['message' => 'Service Unavailable'], 503),
+    ]);
+
+    expect($client->getLatestLocations($dispatcher))->toBeEmpty();
 });

@@ -9,9 +9,14 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 
 final class SystemHealthController extends Controller
 {
+    private const TRACKING_PROBE_TIMEOUT_SECONDS = 2;
+
+    private const TRACKING_PROBE_CACHE_SECONDS = 5;
+
     public function __invoke(Request $request): JsonResponse
     {
         $actor = $request->user();
@@ -47,8 +52,12 @@ final class SystemHealthController extends Controller
         // 4. Failed Jobs
         $failedJobsCount = DB::table('failed_jobs')->count();
 
-        // 5. System Status Summary
-        $overallHealthy = $dbOk && $cacheOk && $outboxFailed === 0 && $failedJobsCount === 0;
+        // 5. Tracking Microservice Readiness
+        $tracking = $this->trackingHealth();
+
+        // 6. System Status Summary
+        $overallHealthy = $dbOk && $cacheOk && $outboxFailed === 0 && $failedJobsCount === 0
+            && $tracking['status'] !== 'offline';
 
         return response()->json([
             'status' => $overallHealthy ? 'healthy' : ($dbOk ? 'degraded' : 'unhealthy'),
@@ -76,7 +85,40 @@ final class SystemHealthController extends Controller
                     'driver' => config('broadcasting.default'),
                     'status' => 'operational',
                 ],
+                'tracking' => $tracking,
             ],
         ]);
+    }
+
+    /**
+     * Probe the Tracking microservice readiness endpoint when tracking runs out of process.
+     * The result is cached briefly so dashboard polling during an outage does not
+     * hold a worker for the full probe timeout on every request.
+     *
+     * @return array{status: 'operational'|'offline'|'not_applicable', latency_ms: float|null}
+     */
+    private function trackingHealth(): array
+    {
+        if (! in_array(config('services.tracking.driver'), ['http', 'stream'], true)) {
+            return ['status' => 'not_applicable', 'latency_ms' => null];
+        }
+
+        return Cache::remember('health:tracking-ready', self::TRACKING_PROBE_CACHE_SECONDS, function (): array {
+            $start = microtime(true);
+            try {
+                $response = Http::timeout(self::TRACKING_PROBE_TIMEOUT_SECONDS)
+                    ->connectTimeout(self::TRACKING_PROBE_TIMEOUT_SECONDS)
+                    ->acceptJson()
+                    ->get(rtrim((string) config('services.tracking.url', 'http://localhost:8001'), '/').'/ready');
+
+                if ($response->successful() && $response->json('status') === 'ready') {
+                    return ['status' => 'operational', 'latency_ms' => round((microtime(true) - $start) * 1000, 2)];
+                }
+            } catch (\Throwable) {
+                // Unreachable service is reported as offline below.
+            }
+
+            return ['status' => 'offline', 'latency_ms' => null];
+        });
     }
 }

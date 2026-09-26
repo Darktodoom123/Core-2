@@ -534,6 +534,72 @@ describe('OperationsOverviewDashboard', () => {
         expect(screen.queryByText('1.2 ms')).not.toBeInTheDocument();
     });
 
+    it('names the offline Tracking service as the reason the platform is degraded', async () => {
+        mockAuthRole = 'system_administrator';
+        mockAuthRoleLabel = 'System Administrator';
+
+        vi.stubGlobal(
+            'fetch',
+            vi.fn().mockImplementation(() =>
+                Promise.resolve({
+                    ok: true,
+                    json: () =>
+                        Promise.resolve({
+                            status: 'degraded',
+                            services: {
+                                database: {
+                                    status: 'operational',
+                                    latency_ms: 1.4,
+                                },
+                                cache: {
+                                    status: 'operational',
+                                    latency_ms: 0.8,
+                                },
+                                outbox: {
+                                    status: 'operational',
+                                    failed: 0,
+                                    pending: 0,
+                                    delivered: 12,
+                                },
+                                queues: {
+                                    status: 'operational',
+                                    failed_jobs: 0,
+                                },
+                                tracking: {
+                                    status: 'offline',
+                                    latency_ms: null,
+                                },
+                            },
+                        }),
+                }),
+            ),
+        );
+
+        render(
+            <OperationsOverviewDashboard
+                jobs={mockJobs}
+                assets={mockAssets}
+                fuelRequests={mockFuelRequests}
+                locations={mockLocations}
+                approvals={[]}
+                users={mockUsers}
+                auditEvents={mockAuditEvents}
+                gptRecommendations={mockGptRecommendations}
+                capabilities={capabilities}
+                availableSections={availableSections}
+                onSectionChange={mockOnSectionChange}
+            />,
+        );
+
+        expect(await screen.findByText('Degraded')).toBeInTheDocument();
+        expect(
+            screen.getByText('Tracking service offline'),
+        ).toBeInTheDocument();
+        expect(
+            screen.queryByText('1.4 ms query latency'),
+        ).not.toBeInTheDocument();
+    });
+
     it('handles probe error gracefully without fake metrics and displays honest error state', async () => {
         mockAuthRole = 'system_administrator';
         mockAuthRoleLabel = 'System Administrator';

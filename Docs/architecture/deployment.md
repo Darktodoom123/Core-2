@@ -87,7 +87,7 @@ APP_URL=https://core-2.alibaton-ph.com
 
 # Session & Security
 SESSION_DRIVER=redis
-SESSION_LIFETIME=120
+SESSION_LIFETIME=30
 SESSION_ENCRYPT=true
 SESSION_DOMAIN=.alibaton-ph.com
 SESSION_SECURE_COOKIE=true
@@ -152,6 +152,9 @@ TRACKING_SERVICE_TIMEOUT=5.0
 TRACKING_SERVICE_CONNECT_TIMEOUT=3.0
 # Strictly set false in production to eliminate split-brain dual authoritative writes
 TRACKING_ALLOW_INGEST_FALLBACK=false
+# Strictly set false in production (enforced) so outages hide positions instead of serving stale operations rows;
+# location history exports fail rather than produce an incomplete audit trail
+TRACKING_ALLOW_READ_FALLBACK=false
 
 # Redis Stream Telemetry Settings (for driver=stream)
 TRACKING_STREAM_KEY=telemetry.gps.v1

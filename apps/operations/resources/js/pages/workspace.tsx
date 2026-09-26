@@ -759,8 +759,14 @@ export default function Workspace(props: WorkspacePageProps) {
     const sectionReady =
         availableSection !== null && hasSectionProps(props, availableSection);
     const inlineFlash = flash?.tone === 'success' ? null : flash;
+    const trackingUnavailable =
+        props.workspace.tracking?.service_available === false;
     const hasInlineNotices = Boolean(
-        inlineFlash || locationError || safetyNotice || showStaleNotice,
+        inlineFlash ||
+        locationError ||
+        safetyNotice ||
+        showStaleNotice ||
+        trackingUnavailable,
     );
 
     return (
@@ -841,6 +847,22 @@ export default function Workspace(props: WorkspacePageProps) {
                                             : usingPollingFallback
                                               ? 'Retry live & refresh'
                                               : 'Refresh now'}
+                                    </Button>
+                                }
+                            />
+                        )}
+                        {trackingUnavailable && (
+                            <StateNotice
+                                tone="warning"
+                                message="Live tracking is unavailable. Crew and equipment positions may be missing or out of date until the tracking service reconnects."
+                                action={
+                                    <Button
+                                        size="sm"
+                                        variant="secondary"
+                                        onClick={refreshWorkspace}
+                                        disabled={refreshing}
+                                    >
+                                        {refreshing ? 'Refreshing…' : 'Retry'}
                                     </Button>
                                 }
                             />

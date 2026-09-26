@@ -56,7 +56,8 @@ interface TrackingClientInterface
      *         sharing_enabled: ?bool,
      *         captured_at: ?string,
      *         received_at: ?string
-     *     }
+     *     },
+     *     service_available?: bool
      * }
      */
     public function getTrackingFreshness(User $user, CarbonImmutable $refreshedAt, int $staleAfterSeconds = 120): array;

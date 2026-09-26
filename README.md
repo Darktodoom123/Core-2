@@ -87,10 +87,11 @@ composer run setup
 
 *(This command installs dependencies for `apps/operations` and `apps/tracking`, copies default `.env` files if missing, generates the Operations application key, migrates the Operations database, installs workspace npm packages, and builds the frontend bundle.)*
 
-For the Tracking service, generate its application key if running locally:
+For the Tracking service, generate its application key and migrate its separate database if running locally:
 
 ```bash
 php apps/tracking/artisan key:generate
+php apps/tracking/artisan migrate
 ```
 
 ### 4. Seed Database with Default Data
@@ -101,7 +102,7 @@ php apps/operations/artisan db:seed
 ```
 
 ### 5. Start Development Stack
-Launch all background services concurrently (Laravel operations server, queue listener, Reverb WebSocket server, and Vite dev server):
+Launch all background services concurrently (Laravel operations server, queue listener, Reverb WebSocket server, Vite dev server, and the Tracking microservice on `127.0.0.1:8001`):
 
 ```bash
 composer run dev

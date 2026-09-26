@@ -283,7 +283,7 @@ it('handles Tracking microservice HTTP 500 error by logging structured warning a
 it('handles Tracking microservice HTTP 503 Service Unavailable by logging structured warning and falling back to local database', function (): void {
     Log::spy();
 
-    $client = new HttpTrackingClient(baseUrl: 'http://localhost:8001');
+    $client = new HttpTrackingClient(baseUrl: 'http://localhost:8001', allowReadFallback: true);
 
     $dispatcher = User::factory()->create();
     $dispatcher->syncRoles([RoleName::OperationsManager->value]);
@@ -321,7 +321,7 @@ it('handles Tracking microservice HTTP 503 Service Unavailable by logging struct
 it('handles Tracking microservice HTTP 500 and 503 errors on getLatestLocationForUser, getLatestLocationForAsset, and queryLocationHistory with structured warning logs', function (): void {
     Log::spy();
 
-    $client = new HttpTrackingClient(baseUrl: 'http://localhost:8001');
+    $client = new HttpTrackingClient(baseUrl: 'http://localhost:8001', allowReadFallback: true);
 
     $driver = User::factory()->create(['name' => 'Query Driver']);
     $driver->syncRoles([RoleName::CraneOperator->value]);
@@ -392,6 +392,7 @@ it('handles Tracking microservice network partition and timeout (> 3.0s connect 
         timeout: 5.0,
         connectTimeout: 3.0,
         allowIngestFallback: true,
+        allowReadFallback: true,
     );
 
     $dispatcher = User::factory()->create();
@@ -450,7 +451,7 @@ it('handles Tracking microservice network partition and timeout (> 3.0s connect 
         ->once();
 });
 
-it('ensures Operations dispatch live map continues to load gracefully without 500 exceptions during complete Tracking service outage', function (): void {
+it('ensures Operations dispatch live map continues to load gracefully without 500 exceptions during complete Tracking service outage when read fallback is enabled', function (): void {
     $dispatcher = User::factory()->create(['name' => 'Dispatch Lead']);
     $dispatcher->syncRoles([RoleName::OperationsManager->value]);
 
@@ -495,7 +496,7 @@ it('ensures Operations dispatch live map continues to load gracefully without 50
     ]);
 
     // Bind HttpTrackingClient as TrackingClientInterface to exercise the real fallback pipeline
-    app()->singleton(TrackingClientInterface::class, fn () => new HttpTrackingClient(baseUrl: 'http://localhost:8001'));
+    app()->singleton(TrackingClientInterface::class, fn () => new HttpTrackingClient(baseUrl: 'http://localhost:8001', allowReadFallback: true));
 
     // Request the workspace overview view which resolves locations for the overview map
     $responseOverview = $this->actingAs($dispatcher)->get('/?view=overview');
@@ -554,6 +555,39 @@ it('ensures Operations dispatch live map continues to load gracefully without 50
             ->loadDeferredProps('workspace-overview', fn (Assert $section) => $section
                 ->has('locations', 1)
                 ->where('locations.0.user.id', $driver->id)
+            )
+        );
+});
+
+it('keeps the live map loading during a Tracking outage but hides stale operations rows and flags tracking unavailable by default', function (): void {
+    $dispatcher = User::factory()->create(['name' => 'Dispatch Lead']);
+    $dispatcher->syncRoles([RoleName::OperationsManager->value]);
+
+    $driver = User::factory()->create(['name' => 'Stale Map Driver']);
+    $driver->syncRoles([RoleName::CraneOperator->value]);
+
+    LocationUpdate::query()->create([
+        'user_id' => $driver->id,
+        'latitude' => 14.5900,
+        'longitude' => 120.9700,
+        'sharing_enabled' => true,
+        'captured_at' => now()->subDays(2),
+        'received_at' => now()->subDays(2),
+    ]);
+
+    Http::fake([
+        'http://localhost:8001/*' => Http::response(['message' => 'Tracking Microservice Outage'], 503),
+    ]);
+
+    app()->singleton(TrackingClientInterface::class, fn () => new HttpTrackingClient(baseUrl: 'http://localhost:8001'));
+
+    $this->actingAs($dispatcher)->get('/operations')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('workspace.tracking.service_available', false)
+            ->where('workspace.tracking.latest_received_at', null)
+            ->loadDeferredProps('workspace-overview', fn (Assert $section) => $section
+                ->has('locations', 0)
             )
         );
 });

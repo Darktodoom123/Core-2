@@ -215,6 +215,7 @@ function SystemAdminDashboardView({
             };
             queues: { status: string; failed_jobs: number };
             websockets: { driver: string; status: string };
+            tracking?: { status: string; latency_ms: number | null };
         };
     } | null>(null);
     const [healthLoading, setHealthLoading] = useState(false);
@@ -527,13 +528,15 @@ function SystemAdminDashboardView({
                     subtext={
                         healthError
                             ? healthError
-                            : health?.services.database.latency_ms !== null &&
-                                health?.services.database.latency_ms !==
-                                    undefined
-                              ? `${health.services.database.latency_ms} ms query latency`
-                              : healthLoading
-                                ? 'Connecting to health probes…'
-                                : 'Probes and synthetic health active'
+                            : health?.services.tracking?.status === 'offline'
+                              ? 'Tracking service offline'
+                              : health?.services.database.latency_ms !== null &&
+                                  health?.services.database.latency_ms !==
+                                      undefined
+                                ? `${health.services.database.latency_ms} ms query latency`
+                                : healthLoading
+                                  ? 'Connecting to health probes…'
+                                  : 'Probes and synthetic health active'
                     }
                     icon={Cpu}
                     tone={
