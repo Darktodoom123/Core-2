@@ -1,9 +1,9 @@
 import React from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useTheme } from '../../theme';
+import { useTheme, useThemedStyles } from '../../theme';
+import type { ThemeColors } from '../../theme';
 import { Icon } from '../common/Icon';
-import { colors, shadows } from '../nativeStyles';
 
 export interface TileScreenHeaderProps {
     category?: string;
@@ -18,7 +18,6 @@ export interface TileScreenHeaderProps {
     titleTestID?: string;
     testID?: string;
     style?: StyleProp<ViewStyle>;
-    categoryColor?: string;
 }
 
 export const TileScreenHeader: React.FC<TileScreenHeaderProps> = ({
@@ -34,15 +33,12 @@ export const TileScreenHeader: React.FC<TileScreenHeaderProps> = ({
     titleTestID,
     testID = 'tile-screen-header',
     style,
-    categoryColor,
 }) => {
-    const { isDarkHud } = useTheme();
+    const { theme } = useTheme();
+    const styles = useThemedStyles(createStyles);
 
     return (
-        <View
-            style={[styles.headerBar, isDarkHud && styles.darkHeaderBar, style]}
-            testID={testID}
-        >
+        <View style={[styles.headerBar, style]} testID={testID}>
             <View style={styles.headerContentRow}>
                 {onBack ? (
                     <Pressable
@@ -53,39 +49,24 @@ export const TileScreenHeader: React.FC<TileScreenHeaderProps> = ({
                         onPress={onBack}
                         style={({ pressed }) => [
                             styles.backButton,
-                            isDarkHud && styles.darkBackButton,
                             pressed && styles.backButtonPressed,
                         ]}
                         testID={backTestID}
                     >
-                        <Icon
-                            color={isDarkHud ? colors.hudText : colors.text}
-                            name="back"
-                            size={18}
-                        />
+                        <Icon color={theme.textPrimary} name="back" size={18} />
                     </Pressable>
                 ) : null}
 
                 <View style={styles.titleBlock}>
                     {category ? (
-                        <Text
-                            numberOfLines={1}
-                            style={[
-                                styles.categoryText,
-                                isDarkHud && styles.darkCategoryText,
-                                categoryColor ? { color: categoryColor } : null,
-                            ]}
-                        >
+                        <Text numberOfLines={1} style={styles.categoryText}>
                             {category}
                         </Text>
                     ) : null}
                     <Text
                         accessibilityRole="header"
                         numberOfLines={2}
-                        style={[
-                            styles.titleText,
-                            isDarkHud && styles.darkTitleText,
-                        ]}
+                        style={styles.titleText}
                         testID={titleTestID}
                     >
                         {title}
@@ -94,10 +75,7 @@ export const TileScreenHeader: React.FC<TileScreenHeaderProps> = ({
                         typeof subtitle === 'string' ? (
                             <Text
                                 numberOfLines={subtitleNumberOfLines}
-                                style={[
-                                    styles.subtitleText,
-                                    isDarkHud && styles.darkSubtitleText,
-                                ]}
+                                style={styles.subtitleText}
                             >
                                 {subtitle}
                             </Text>
@@ -115,83 +93,68 @@ export const TileScreenHeader: React.FC<TileScreenHeaderProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
-    headerBar: {
-        backgroundColor: colors.surface,
-        borderBottomColor: colors.border,
-        borderBottomWidth: 1,
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-    },
-    darkHeaderBar: {
-        backgroundColor: colors.surfaceDark,
-        borderBottomColor: colors.hudBorder,
-    },
-    headerContentRow: {
-        alignItems: 'center',
-        flexDirection: 'row',
-        gap: 12,
-    },
-    backButton: {
-        alignItems: 'center',
-        backgroundColor: colors.surfaceMuted,
-        borderColor: colors.border,
-        borderRadius: 10,
-        borderWidth: 1,
-        flexShrink: 0,
-        height: 48,
-        justifyContent: 'center',
-        width: 48,
-        ...shadows.sm,
-    },
-    darkBackButton: {
-        backgroundColor: colors.hudSurface,
-        borderColor: colors.hudBorder,
-    },
-    backButtonPressed: {
-        opacity: 0.75,
-        transform: [{ scale: 0.92 }],
-    },
-    titleBlock: {
-        flex: 1,
-        justifyContent: 'center',
-        minWidth: 0,
-    },
-    categoryText: {
-        color: colors.amberDark,
-        fontSize: 12,
-        fontWeight: '800',
-        letterSpacing: 0.8,
-        marginBottom: 1,
-        textTransform: 'uppercase',
-    },
-    darkCategoryText: {
-        color: colors.hudAccent,
-    },
-    titleText: {
-        color: colors.text,
-        fontSize: 17,
-        fontWeight: '800',
-        letterSpacing: -0.3,
-        lineHeight: 22,
-    },
-    darkTitleText: {
-        color: colors.hudText,
-    },
-    subtitleText: {
-        color: colors.muted,
-        fontSize: 12,
-        fontWeight: '500',
-        lineHeight: 16,
-        marginTop: 1,
-    },
-    darkSubtitleText: {
-        color: colors.hudTextDim,
-    },
-    rightSlot: {
-        alignItems: 'center',
-        flexDirection: 'row',
-        flexShrink: 0,
-        justifyContent: 'flex-end',
-    },
-});
+const createStyles = (theme: ThemeColors) =>
+    StyleSheet.create({
+        headerBar: {
+            backgroundColor: theme.surface,
+            borderBottomColor: theme.border,
+            borderBottomWidth: 1,
+            paddingHorizontal: 16,
+            paddingVertical: 10,
+        },
+        headerContentRow: {
+            alignItems: 'center',
+            flexDirection: 'row',
+            gap: 12,
+        },
+        // Resting control: border only, no shadow.
+        backButton: {
+            alignItems: 'center',
+            backgroundColor: theme.surface,
+            borderColor: theme.border,
+            borderRadius: 12,
+            borderWidth: 1,
+            flexShrink: 0,
+            height: 48,
+            justifyContent: 'center',
+            width: 48,
+        },
+        backButtonPressed: {
+            opacity: 0.75,
+            transform: [{ scale: 0.96 }],
+        },
+        titleBlock: {
+            flex: 1,
+            justifyContent: 'center',
+            minWidth: 0,
+        },
+        // Eyebrow label is wayfinding, not an action, so it stays ink.
+        categoryText: {
+            color: theme.textSecondary,
+            fontSize: 12,
+            fontWeight: '700',
+            letterSpacing: 0.8,
+            marginBottom: 1,
+            textTransform: 'uppercase',
+        },
+        titleText: {
+            color: theme.textPrimary,
+            fontSize: 17,
+            fontWeight: '700',
+            letterSpacing: -0.3,
+            lineHeight: 22,
+        },
+        subtitleText: {
+            color: theme.textSecondary,
+            fontSize: 12,
+            fontWeight: '500',
+            lineHeight: 16,
+            marginTop: 1,
+        },
+        rightSlot: {
+            alignItems: 'center',
+            flexDirection: 'row',
+            flexShrink: 0,
+            justifyContent: 'flex-end',
+        },
+    });

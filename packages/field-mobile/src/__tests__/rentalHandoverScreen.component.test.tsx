@@ -1,8 +1,9 @@
 import { cleanup, fireEvent, render } from '@testing-library/react-native/pure';
 import React, { act } from 'react';
-import { colors } from '../components/nativeStyles';
+import { StyleSheet } from 'react-native';
 import { RentalHandoverScreen } from '../screens/RentalHandoverScreen';
 import { ThemeProvider } from '../theme';
+import { darkHudThemeColors, lightThemeColors } from '../theme/tokens';
 
 describe('RentalHandoverScreen', () => {
     afterEach(async () => {
@@ -170,7 +171,7 @@ describe('RentalHandoverScreen', () => {
         });
     });
 
-    it('applies standard amber brand styling to category header and confirm action in both light and dark mode', async () => {
+    it('keeps the category eyebrow ink and the confirm action Signal Gold in both light and dark mode', async () => {
         const lightView = await render(
             <RentalHandoverScreen
                 assetCode="ALB-CRN-050"
@@ -181,12 +182,12 @@ describe('RentalHandoverScreen', () => {
             />,
         );
 
-        const categoryText = lightView.getByText('Rental Handover');
-        expect(categoryText.props.style).toEqual(
-            expect.arrayContaining([
-                expect.objectContaining({ color: colors.amberDark }),
-            ]),
-        );
+        // Gold is reserved for actions and selection; the eyebrow is a label.
+        expect(
+            StyleSheet.flatten(
+                lightView.getByText('Rental Handover').props.style,
+            ).color,
+        ).toBe(lightThemeColors.textSecondary);
 
         const confirmBtn = lightView.getByTestId('confirm-handover-button');
         expect(confirmBtn.props.style).toEqual(
@@ -207,12 +208,11 @@ describe('RentalHandoverScreen', () => {
             </ThemeProvider>,
         );
 
-        const darkCategoryText = darkView.getByText('Rental Handover');
-        expect(darkCategoryText.props.style).toEqual(
-            expect.arrayContaining([
-                expect.objectContaining({ color: '#FFBF00' }),
-            ]),
-        );
+        expect(
+            StyleSheet.flatten(
+                darkView.getByText('Rental Handover').props.style,
+            ).color,
+        ).toBe(darkHudThemeColors.textSecondary);
     });
 
     it('renders user-facing sync states: queued, submitting, and failed with retry action', async () => {

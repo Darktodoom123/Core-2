@@ -9,9 +9,12 @@ const SRC = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 // Screens migrated to theme tokens. Add each screen here as it is migrated
 // (see "Known deviations" in Docs/design/mobile.md).
 const MIGRATED = [
+    'components/cards/AssignmentResponseCard.tsx',
     'components/layout/field-header.tsx',
     'components/layout/profile-summary.tsx',
     'components/layout/sync-status-pill.tsx',
+    'components/layout/tile-screen-header.tsx',
+    'screens/DispatchOrdersScreen.tsx',
     'screens/DvirScreen.tsx',
     ...fs
         .readdirSync(path.join(SRC, 'screens', 'dvir'))

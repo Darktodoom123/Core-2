@@ -4,9 +4,9 @@ import { AssignmentResponseCard } from '../components/cards/AssignmentResponseCa
 import { JobListItemCard } from '../components/cards/JobListItemCard';
 import { Icon } from '../components/common/Icon';
 import { TileScreenHeader } from '../components/layout/tile-screen-header';
-import { colors, shadows } from '../components/nativeStyles';
 import { ReportDelayModal } from '../components/sheets/ReportDelayModal';
-import { useTheme } from '../theme';
+import { useTheme, useThemedStyles } from '../theme';
+import type { ThemeColors } from '../theme';
 import type {
     DispatchJob,
     DispatchStatus,
@@ -69,7 +69,8 @@ export const DispatchOrdersScreen: React.FC<DispatchOrdersScreenProps> = ({
     testID = 'dispatch-orders-screen',
     backTestID = 'dispatch-back-btn',
 }) => {
-    const { isDarkHud } = useTheme();
+    const { theme } = useTheme();
+    const styles = useThemedStyles(createStyles);
 
     const pendingJobs = jobs.filter(
         (job) => job.my_assignment?.response_status === 'pending',
@@ -79,49 +80,49 @@ export const DispatchOrdersScreen: React.FC<DispatchOrdersScreenProps> = ({
         null,
     );
 
+    const hasPending = pendingJobs.length > 0;
     const selectedTab = userTab ?? (pendingJobs.length > 0 ? 'pending' : 'all');
     const displayedJobs = selectedTab === 'pending' ? pendingJobs : jobs;
     const handleReportDelay =
         onReportDelay ?? (onSubmitDelay ? setDelayModalJob : undefined);
 
     return (
-        <View
-            style={[styles.screenRoot, isDarkHud && styles.darkScreenRoot]}
-            testID={testID}
-        >
+        <View style={styles.screenRoot} testID={testID}>
             {/* Unified Tile Screen Header */}
             <TileScreenHeader
                 backAccessibilityHint="Returns to dashboard launcher"
                 backAccessibilityLabel="Back to dashboard"
                 backTestID={backTestID}
                 category="Central Dispatch"
-                categoryColor={isDarkHud ? '#60A5FA' : '#2563EB'}
                 onBack={onBack}
                 rightElement={
                     <View
                         style={[
                             styles.headerBadge,
-                            isDarkHud && styles.darkHeaderBadge,
+                            hasPending
+                                ? styles.headerBadgePending
+                                : styles.headerBadgeClear,
                         ]}
+                        testID="dispatch-header-badge"
                     >
-                        <View
-                            style={[
-                                styles.headerBadgeDot,
-                                {
-                                    backgroundColor:
-                                        pendingJobs.length > 0
-                                            ? '#FFBF00'
-                                            : '#10B981',
-                                },
-                            ]}
+                        <Icon
+                            color={
+                                hasPending
+                                    ? theme.warningOrangeText
+                                    : theme.successEmeraldText
+                            }
+                            name={hasPending ? 'alert' : 'check'}
+                            size={14}
                         />
                         <Text
                             style={[
                                 styles.headerBadgeText,
-                                isDarkHud && styles.darkHeaderBadgeText,
+                                hasPending
+                                    ? styles.headerBadgeTextPending
+                                    : styles.headerBadgeTextClear,
                             ]}
                         >
-                            {pendingJobs.length > 0
+                            {hasPending
                                 ? `${pendingJobs.length} PENDING`
                                 : 'ALL CLEAR'}
                         </Text>
@@ -132,12 +133,7 @@ export const DispatchOrdersScreen: React.FC<DispatchOrdersScreenProps> = ({
             />
 
             {/* Segmented Filter Tab Rail */}
-            <View
-                style={[
-                    styles.tabRailContainer,
-                    isDarkHud && styles.darkTabRailContainer,
-                ]}
-            >
+            <View style={styles.tabRailContainer}>
                 <Pressable
                     accessibilityLabel={`Pending response tab, ${pendingJobs.length} orders`}
                     accessibilityRole="button"
@@ -145,21 +141,14 @@ export const DispatchOrdersScreen: React.FC<DispatchOrdersScreenProps> = ({
                     style={[
                         styles.tabItem,
                         selectedTab === 'pending' && styles.tabItemActive,
-                        isDarkHud &&
-                            selectedTab === 'pending' &&
-                            styles.darkTabItemActive,
                     ]}
                     testID="intake-tab-pending"
                 >
                     <Text
                         style={[
                             styles.tabItemText,
-                            isDarkHud && styles.darkTabItemText,
                             selectedTab === 'pending' &&
                                 styles.tabItemTextActive,
-                            isDarkHud &&
-                                selectedTab === 'pending' &&
-                                styles.darkTabItemTextActive,
                         ]}
                     >
                         Needs Response ({pendingJobs.length})
@@ -173,20 +162,13 @@ export const DispatchOrdersScreen: React.FC<DispatchOrdersScreenProps> = ({
                     style={[
                         styles.tabItem,
                         selectedTab === 'all' && styles.tabItemActive,
-                        isDarkHud &&
-                            selectedTab === 'all' &&
-                            styles.darkTabItemActive,
                     ]}
                     testID="intake-tab-all"
                 >
                     <Text
                         style={[
                             styles.tabItemText,
-                            isDarkHud && styles.darkTabItemText,
                             selectedTab === 'all' && styles.tabItemTextActive,
-                            isDarkHud &&
-                                selectedTab === 'all' &&
-                                styles.darkTabItemTextActive,
                         ]}
                     >
                         All Orders ({jobs.length})
@@ -204,40 +186,22 @@ export const DispatchOrdersScreen: React.FC<DispatchOrdersScreenProps> = ({
             >
                 {displayedJobs.length === 0 ? (
                     <View
-                        style={[
-                            styles.emptyCard,
-                            isDarkHud && styles.darkEmptyCard,
-                        ]}
+                        style={styles.emptyCard}
                         testID="dispatch-intake-empty"
                     >
-                        <View
-                            style={[
-                                styles.emptyIconCircle,
-                                isDarkHud && styles.darkEmptyIconCircle,
-                            ]}
-                        >
+                        <View style={styles.emptyIconCircle}>
                             <Icon
-                                color={isDarkHud ? '#60A5FA' : '#2563EB'}
+                                color={theme.textSecondary}
                                 name="clipboard"
                                 size={28}
                             />
                         </View>
-                        <Text
-                            style={[
-                                styles.emptyTitle,
-                                isDarkHud && styles.darkEmptyTitle,
-                            ]}
-                        >
+                        <Text style={styles.emptyTitle}>
                             {selectedTab === 'pending'
                                 ? 'No Orders Pending Response'
                                 : 'No Dispatch Orders Found'}
                         </Text>
-                        <Text
-                            style={[
-                                styles.emptySubtext,
-                                isDarkHud && styles.darkEmptySubtext,
-                            ]}
-                        >
+                        <Text style={styles.emptySubtext}>
                             {selectedTab === 'pending'
                                 ? 'All dispatched job orders have been reviewed. New incoming orders from central dispatch will appear here immediately.'
                                 : 'There are currently no active or scheduled equipment dispatch assignments.'}
@@ -333,134 +297,116 @@ export const DispatchOrdersScreen: React.FC<DispatchOrdersScreenProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
-    screenRoot: {
-        backgroundColor: colors.background,
-        flex: 1,
-    },
-    darkScreenRoot: {
-        backgroundColor: colors.hudBackground,
-    },
-    headerBadge: {
-        alignItems: 'center',
-        backgroundColor: 'rgba(37, 99, 235, 0.1)',
-        borderColor: 'rgba(37, 99, 235, 0.25)',
-        borderRadius: 14,
-        borderWidth: 1,
-        flexDirection: 'row',
-        gap: 6,
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-    },
-    darkHeaderBadge: {
-        backgroundColor: 'rgba(96, 165, 250, 0.15)',
-        borderColor: 'rgba(96, 165, 250, 0.3)',
-    },
-    headerBadgeDot: {
-        borderRadius: 4,
-        height: 8,
-        width: 8,
-    },
-    headerBadgeText: {
-        color: '#2563EB',
-        fontSize: 12,
-        fontWeight: '800',
-        letterSpacing: 0.4,
-    },
-    darkHeaderBadgeText: {
-        color: '#93C5FD',
-    },
-    tabRailContainer: {
-        backgroundColor: '#E2E8F0',
-        borderRadius: 12,
-        flexDirection: 'row',
-        marginHorizontal: 16,
-        marginTop: 12,
-        padding: 4,
-    },
-    darkTabRailContainer: {
-        backgroundColor: '#1E293B',
-    },
-    tabItem: {
-        alignItems: 'center',
-        borderRadius: 8,
-        flex: 1,
-        paddingVertical: 8,
-    },
-    tabItemActive: {
-        backgroundColor: '#2563EB',
-        ...shadows.sm,
-    },
-    darkTabItemActive: {
-        backgroundColor: '#2563EB',
-    },
-    tabItemText: {
-        color: '#64748B',
-        fontSize: 13,
-        fontWeight: '700',
-    },
-    darkTabItemText: {
-        color: '#94A3B8',
-    },
-    tabItemTextActive: {
-        color: '#FFFFFF',
-    },
-    darkTabItemTextActive: {
-        color: '#FFFFFF',
-    },
-    scrollView: {
-        flex: 1,
-    },
-    scrollContent: {
-        padding: 16,
-        paddingBottom: 40,
-    },
-    jobCardWrapper: {
-        gap: 12,
-        marginBottom: 16,
-    },
-    emptyCard: {
-        alignItems: 'center',
-        backgroundColor: '#FFFFFF',
-        borderColor: '#E2E8F0',
-        borderRadius: 16,
-        borderWidth: 1,
-        marginTop: 24,
-        padding: 32,
-    },
-    darkEmptyCard: {
-        backgroundColor: '#1E293B',
-        borderColor: '#334155',
-    },
-    emptyIconCircle: {
-        alignItems: 'center',
-        backgroundColor: 'rgba(37, 99, 235, 0.1)',
-        borderRadius: 30,
-        height: 60,
-        justifyContent: 'center',
-        marginBottom: 16,
-        width: 60,
-    },
-    darkEmptyIconCircle: {
-        backgroundColor: 'rgba(96, 165, 250, 0.15)',
-    },
-    emptyTitle: {
-        color: '#0F172A',
-        fontSize: 17,
-        fontWeight: '800',
-        marginBottom: 8,
-        textAlign: 'center',
-    },
-    darkEmptyTitle: {
-        color: '#F8FAFC',
-    },
-    emptySubtext: {
-        color: '#64748B',
-        fontSize: 13.5,
-        lineHeight: 20,
-        textAlign: 'center',
-    },
-    darkEmptySubtext: {
-        color: '#94A3B8',
-    },
-});
+const createStyles = (theme: ThemeColors) =>
+    StyleSheet.create({
+        screenRoot: {
+            backgroundColor: theme.canvas,
+            flex: 1,
+        },
+        headerBadge: {
+            alignItems: 'center',
+            borderRadius: 14,
+            borderWidth: 1,
+            flexDirection: 'row',
+            gap: 6,
+            minHeight: 32,
+            paddingHorizontal: 10,
+        },
+        headerBadgePending: {
+            backgroundColor: theme.warningOrangeLight,
+            borderColor: theme.warningOrange,
+        },
+        headerBadgeClear: {
+            backgroundColor: theme.successEmeraldLight,
+            borderColor: theme.successEmerald,
+        },
+        headerBadgeText: {
+            fontSize: 12,
+            fontWeight: '700',
+            letterSpacing: 0.4,
+        },
+        headerBadgeTextPending: {
+            color: theme.warningOrangeText,
+        },
+        headerBadgeTextClear: {
+            color: theme.successEmeraldText,
+        },
+        tabRailContainer: {
+            backgroundColor: theme.surfaceHighlight,
+            borderColor: theme.border,
+            borderRadius: 12,
+            borderWidth: 1,
+            flexDirection: 'row',
+            gap: 4,
+            marginHorizontal: 16,
+            marginTop: 12,
+            padding: 4,
+        },
+        tabItem: {
+            alignItems: 'center',
+            borderColor: 'transparent',
+            borderRadius: 8,
+            borderWidth: 1,
+            flex: 1,
+            justifyContent: 'center',
+            minHeight: 48,
+            paddingHorizontal: 8,
+        },
+        // Selected filter: Signal Gold Soft with ink text (selection, not action).
+        tabItemActive: {
+            backgroundColor: theme.brandAmberLight,
+            borderColor: theme.brandAmber,
+        },
+        tabItemText: {
+            color: theme.textSecondary,
+            fontSize: 14,
+            fontWeight: '500',
+        },
+        tabItemTextActive: {
+            color: theme.textPrimary,
+            fontWeight: '700',
+        },
+        scrollView: {
+            flex: 1,
+        },
+        scrollContent: {
+            padding: 16,
+            paddingBottom: 40,
+        },
+        jobCardWrapper: {
+            gap: 12,
+            marginBottom: 16,
+        },
+        // Resting panel: border only, no shadow.
+        emptyCard: {
+            alignItems: 'center',
+            backgroundColor: theme.surface,
+            borderColor: theme.border,
+            borderRadius: 16,
+            borderWidth: 1,
+            marginTop: 24,
+            padding: 32,
+        },
+        emptyIconCircle: {
+            alignItems: 'center',
+            backgroundColor: theme.surfaceHighlight,
+            borderRadius: 30,
+            height: 60,
+            justifyContent: 'center',
+            marginBottom: 16,
+            width: 60,
+        },
+        emptyTitle: {
+            color: theme.textPrimary,
+            fontSize: 17,
+            fontWeight: '700',
+            marginBottom: 8,
+            textAlign: 'center',
+        },
+        emptySubtext: {
+            color: theme.textSecondary,
+            fontSize: 14,
+            lineHeight: 20,
+            textAlign: 'center',
+        },
+    });

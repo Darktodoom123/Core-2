@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useTheme, useThemedStyles } from '../../theme';
+import type { ThemeColors } from '../../theme';
 import type { DispatchJob } from '../../types/index';
-import { colors, sharedStyles } from '../nativeStyles';
 
 export interface AssignmentResponseCardProps {
     job: DispatchJob;
@@ -19,6 +20,8 @@ export const AssignmentResponseCard: React.FC<AssignmentResponseCardProps> = ({
     onAccept,
     onReject,
 }) => {
+    const { theme } = useTheme();
+    const styles = useThemedStyles(createStyles);
     const myAssignment = job.my_assignment;
     const [showRejectInput, setShowRejectInput] = useState(false);
     const [reason, setReason] = useState('');
@@ -65,13 +68,13 @@ export const AssignmentResponseCard: React.FC<AssignmentResponseCardProps> = ({
                             onAccept(job.id, myAssignment.id, job.version)
                         }
                         style={({ pressed }) => [
-                            sharedStyles.button,
+                            styles.button,
                             styles.acceptButton,
                             pressed && styles.pressed,
                         ]}
                         testID="accept-assignment-btn"
                     >
-                        <Text style={sharedStyles.buttonText}>
+                        <Text style={styles.acceptButtonText}>
                             Accept assignment
                         </Text>
                     </Pressable>
@@ -80,7 +83,7 @@ export const AssignmentResponseCard: React.FC<AssignmentResponseCardProps> = ({
                         accessibilityRole="button"
                         onPress={() => setShowRejectInput(true)}
                         style={({ pressed }) => [
-                            sharedStyles.button,
+                            styles.button,
                             styles.rejectButton,
                             pressed && styles.pressed,
                         ]}
@@ -114,6 +117,7 @@ export const AssignmentResponseCard: React.FC<AssignmentResponseCardProps> = ({
                         }}
                         onSubmitEditing={handleRejectSubmit}
                         placeholder="e.g. Rest cycle or equipment conflict"
+                        placeholderTextColor={theme.textMuted}
                         returnKeyType="done"
                         style={[styles.input, errorMsg && styles.inputError]}
                         testID="rejection-reason-input"
@@ -134,13 +138,13 @@ export const AssignmentResponseCard: React.FC<AssignmentResponseCardProps> = ({
                             accessibilityRole="button"
                             onPress={handleRejectSubmit}
                             style={({ pressed }) => [
-                                sharedStyles.button,
+                                styles.button,
                                 styles.confirmRejectButton,
                                 pressed && styles.pressed,
                             ]}
                             testID="submit-rejection-btn"
                         >
-                            <Text style={sharedStyles.buttonText}>
+                            <Text style={styles.confirmRejectButtonText}>
                                 Confirm rejection
                             </Text>
                         </Pressable>
@@ -152,7 +156,7 @@ export const AssignmentResponseCard: React.FC<AssignmentResponseCardProps> = ({
                                 setErrorMsg('');
                             }}
                             style={({ pressed }) => [
-                                sharedStyles.button,
+                                styles.button,
                                 styles.cancelButton,
                                 pressed && styles.pressed,
                             ]}
@@ -167,95 +171,116 @@ export const AssignmentResponseCard: React.FC<AssignmentResponseCardProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
-    card: {
-        backgroundColor: colors.warningLight,
-        borderColor: colors.warningBorder,
-        borderRadius: 12,
-        borderWidth: 1,
-        marginBottom: 16,
-        padding: 16,
-    },
-    heading: {
-        color: colors.warningDark,
-        fontSize: 17,
-        fontWeight: '800',
-    },
-    description: {
-        color: colors.text,
-        fontSize: 14,
-        lineHeight: 21,
-        marginTop: 8,
-    },
-    consequenceText: {
-        color: colors.secondary,
-        fontSize: 13,
-        lineHeight: 19,
-        marginBottom: 14,
-        marginTop: 8,
-    },
-    actions: {
-        alignItems: 'stretch',
-        flexDirection: 'column',
-        gap: 10,
-    },
-    acceptButton: {
-        backgroundColor: colors.primary,
-        width: '100%',
-    },
-    rejectButton: {
-        backgroundColor: colors.surface,
-        borderColor: colors.borderStrong,
-        borderWidth: 1,
-        width: '100%',
-    },
-    confirmRejectButton: {
-        backgroundColor: colors.red,
-        width: '100%',
-    },
-    secondaryButtonText: {
-        color: colors.text,
-        fontSize: 15,
-        fontWeight: '700',
-        textAlign: 'center',
-    },
-    cancelButton: {
-        backgroundColor: colors.surfaceMuted,
-        width: '100%',
-    },
-    cancelButtonText: {
-        color: colors.text,
-        fontSize: 14,
-        fontWeight: '800',
-        textAlign: 'center',
-    },
-    rejectForm: {
-        gap: 8,
-    },
-    label: {
-        color: colors.text,
-        fontSize: 13,
-        fontWeight: '800',
-    },
-    input: {
-        backgroundColor: colors.surface,
-        borderColor: colors.borderStrong,
-        borderRadius: 8,
-        borderWidth: 1,
-        color: colors.text,
-        fontSize: 15,
-        minHeight: 48,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-    },
-    inputError: {
-        borderColor: colors.red,
-    },
-    errorText: {
-        color: colors.red,
-        fontSize: 13,
-    },
-    pressed: {
-        opacity: 0.78,
-    },
-});
+const createStyles = (theme: ThemeColors) =>
+    StyleSheet.create({
+        // A pending assignment needs the operator's attention: warning family.
+        card: {
+            backgroundColor: theme.warningOrangeLight,
+            borderColor: theme.warningOrange,
+            borderRadius: 12,
+            borderWidth: 1,
+            marginBottom: 16,
+            padding: 16,
+        },
+        heading: {
+            color: theme.warningOrangeText,
+            fontSize: 17,
+            fontWeight: '700',
+        },
+        description: {
+            color: theme.textPrimary,
+            fontSize: 14,
+            lineHeight: 21,
+            marginTop: 8,
+        },
+        consequenceText: {
+            color: theme.textSecondary,
+            fontSize: 13,
+            lineHeight: 19,
+            marginBottom: 14,
+            marginTop: 8,
+        },
+        actions: {
+            alignItems: 'stretch',
+            flexDirection: 'column',
+            gap: 10,
+        },
+        button: {
+            alignItems: 'center',
+            borderRadius: 12,
+            justifyContent: 'center',
+            minHeight: 48,
+            paddingHorizontal: 18,
+            width: '100%',
+        },
+        acceptButton: {
+            backgroundColor: theme.brandAmber,
+            minHeight: 52,
+        },
+        acceptButtonText: {
+            color: theme.surfaceDark,
+            fontSize: 15,
+            fontWeight: '700',
+            textAlign: 'center',
+        },
+        rejectButton: {
+            backgroundColor: theme.surface,
+            borderColor: theme.borderStrong,
+            borderWidth: 1,
+        },
+        confirmRejectButton: {
+            backgroundColor: theme.hazardRed,
+        },
+        confirmRejectButtonText: {
+            color: theme.textInverse,
+            fontSize: 15,
+            fontWeight: '700',
+            textAlign: 'center',
+        },
+        secondaryButtonText: {
+            color: theme.textPrimary,
+            fontSize: 15,
+            fontWeight: '700',
+            textAlign: 'center',
+        },
+        cancelButton: {
+            backgroundColor: theme.surfaceHighlight,
+            borderColor: theme.border,
+            borderWidth: 1,
+        },
+        cancelButtonText: {
+            color: theme.textPrimary,
+            fontSize: 14,
+            fontWeight: '700',
+            textAlign: 'center',
+        },
+        rejectForm: {
+            gap: 8,
+        },
+        label: {
+            color: theme.textPrimary,
+            fontSize: 13,
+            fontWeight: '700',
+        },
+        input: {
+            backgroundColor: theme.surface,
+            borderColor: theme.borderStrong,
+            borderRadius: 8,
+            borderWidth: 1,
+            color: theme.textPrimary,
+            fontSize: 16,
+            minHeight: 48,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+        },
+        inputError: {
+            borderColor: theme.hazardRed,
+        },
+        errorText: {
+            color: theme.hazardRedText,
+            fontSize: 13,
+        },
+        pressed: {
+            opacity: 0.78,
+        },
+    });
