@@ -126,7 +126,8 @@ Rules for new and touched code:
   duplicates or `isDarkHud &&` style branches.
 - A migrated screen is added to `src/__tests__/designTokenAdoption.test.ts`,
   which fails on any hex or `rgba()` literal or `nativeStyles` import in it.
-  Migrated so far: `DvirScreen.tsx` and `src/screens/dvir/`.
+  Migrated so far: `DvirScreen.tsx`, `src/screens/dvir/`, and the home
+  header (`field-header.tsx`, `profile-summary.tsx`, `sync-status-pill.tsx`).
 
 ### Roles
 
@@ -267,10 +268,10 @@ live browser mode do not apply.
 The current code predates this file. Do not add to this debt, and fix it
 opportunistically in code you touch:
 
-- Two palettes (`theme/tokens.ts` and `components/nativeStyles.ts`). 51
+- Two palettes (`theme/tokens.ts` and `components/nativeStyles.ts`). 50
   files still import the light-only `nativeStyles` colors (2026-09-27).
-- 61 component and screen files contain hex literals, and `#FFBF00` appears
-  296 times outside `src/theme` (2026-09-27).
+- 60 component and screen files contain hex literals, and `#FFBF00` appears
+  292 times outside `src/theme` (2026-09-27).
 - Resting panels combine a border with a shadow (`sharedStyles.panel`,
   `shadows.md`).
 - `createMachinedStyles` in `src/theme/index.tsx` (uppercase "pedal" buttons and
