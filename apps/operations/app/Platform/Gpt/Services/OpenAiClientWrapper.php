@@ -24,8 +24,8 @@ final class OpenAiClientWrapper
         private ?string $baseUrl = null,
     ) {
         $this->apiKey = $this->apiKey ?? (string) config('services.openai.key', '');
-        $this->model = $this->model ?? (string) config('services.openai.provider_model', 'openai/gpt-5-mini');
-        $this->baseUrl = rtrim($this->baseUrl ?? (string) config('services.openai.base_url', 'https://openrouter.ai/api/v1'), '/');
+        $this->model = $this->model ?? (string) config('services.openai.model', 'gpt-6-luna');
+        $this->baseUrl = rtrim($this->baseUrl ?? (string) config('services.openai.base_url', 'https://api.openai.com/v1'), '/');
     }
 
     public function getApiKey(): string
@@ -43,9 +43,17 @@ final class OpenAiClientWrapper
         return $this->baseUrl;
     }
 
+    public function withModel(string $model): self
+    {
+        $client = clone $this;
+        $client->model = $model;
+
+        return $client;
+    }
+
     public static function fake(mixed $responseResolver = null): void
     {
-        self::$fakeInstance = new self('fake-key', 'gpt-5-mini', 'https://api.openai.fake');
+        self::$fakeInstance = new self('fake-key', 'gpt-6-luna', 'https://api.openai.fake');
         self::$fakeResponseResolver = $responseResolver;
         self::$recordedRequests = [];
     }
@@ -184,7 +192,7 @@ final class OpenAiClientWrapper
         }
 
         if (self::$fakeInstance !== null) {
-            return self::$fakeInstance->handleFakeCall($boundedContext);
+            return $this->handleFakeCall($boundedContext);
         }
 
         if ((bool) config('services.openai.fake', false)) {
@@ -204,10 +212,28 @@ final class OpenAiClientWrapper
             ];
         }
 
+        $prices = match ($this->model) {
+            'gpt-6-luna' => ['input' => 0.10, 'cached_input' => 0.01, 'output' => 0.50],
+            'gpt-5-mini' => ['input' => 0.25, 'cached_input' => 0.025, 'output' => 2.00],
+            default => null,
+        };
+        if ($prices === null) {
+            return [
+                'success' => false,
+                'recommendation' => null,
+                'usage' => null,
+                'cost_usd' => null,
+                'error_message' => 'OpenAI model pricing is not configured.',
+                'response_summary' => null,
+                'is_refusal' => false,
+                'is_timeout' => false,
+            ];
+        }
+
         $systemPrompt = $this->getSystemPrompt();
         $userMessage = $contextJson;
 
-        $isReasoningModel = (bool) preg_match('/^(?:openai\/)?(?:gpt-5|o[134])/i', $this->model);
+        $isReasoningModel = (bool) preg_match('/^(?:openai\/)?(?:gpt-[56]|o[134])/i', $this->model);
         $maxTokens = max(4000, (int) config('services.openai.max_completion_tokens', 4000));
         $timeout = (int) config('services.openai.timeout', 60);
 
@@ -276,6 +302,19 @@ final class OpenAiClientWrapper
                 ];
             }
 
+            if (($choice['finish_reason'] ?? null) !== 'stop') {
+                return [
+                    'success' => false,
+                    'recommendation' => null,
+                    'usage' => null,
+                    'cost_usd' => null,
+                    'error_message' => 'OpenAI did not complete the recommendation.',
+                    'response_summary' => null,
+                    'is_refusal' => false,
+                    'is_timeout' => false,
+                ];
+            }
+
             $content = $choice['message']['content'] ?? '';
             $parsedJson = json_decode($content, true);
 
@@ -292,14 +331,29 @@ final class OpenAiClientWrapper
                 ];
             }
 
-            $promptTokens = (int) ($responseData['usage']['prompt_tokens'] ?? 0);
-            $completionTokens = (int) ($responseData['usage']['completion_tokens'] ?? 0);
+            if (! isset($responseData['usage']['prompt_tokens'], $responseData['usage']['completion_tokens'])) {
+                return [
+                    'success' => false,
+                    'recommendation' => null,
+                    'usage' => null,
+                    'cost_usd' => null,
+                    'error_message' => 'OpenAI response is missing token usage.',
+                    'response_summary' => null,
+                    'is_refusal' => false,
+                    'is_timeout' => false,
+                ];
+            }
+
+            $promptTokens = max(0, (int) $responseData['usage']['prompt_tokens']);
+            $completionTokens = max(0, (int) $responseData['usage']['completion_tokens']);
             $totalTokens = (int) ($responseData['usage']['total_tokens'] ?? ($promptTokens + $completionTokens));
+            $cachedTokens = min($promptTokens, max(0, (int) ($responseData['usage']['prompt_tokens_details']['cached_tokens'] ?? 0)));
+            $rawCostUsd = ((($promptTokens - $cachedTokens) * $prices['input'])
+                + ($cachedTokens * $prices['cached_input'])
+                + ($completionTokens * $prices['output'])) / 1_000_000;
+            $costUsd = round($rawCostUsd, 4);
 
-            // Estimate cost based on OpenRouter's listed GPT-5 mini rates ($0.25/1M input, $2/1M output).
-            $costUsd = round(($promptTokens * 0.00000025) + ($completionTokens * 0.000002), 4);
-
-            if ($costUsd > (float) config('services.openai.max_cost_usd', 0.05)) {
+            if ($rawCostUsd > (float) config('services.openai.max_cost_usd', 0.05)) {
                 return [
                     'success' => false,
                     'recommendation' => null,

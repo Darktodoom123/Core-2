@@ -207,7 +207,7 @@ for Core 1 commercial transaction boundaries.
 - **BR-066:** An attachment is private, at most 15 MiB, one of at most 10 files
   on its owning record, and initially JPEG, PNG, HEIC/HEIF, or PDF after
   content-based MIME validation.
-- **BR-067:** GPT recommendations use `gpt-5-mini`, expire after 15 minutes,
+- **BR-067:** GPT recommendations use `gpt-6-luna`, expire after 15 minutes,
   fail closed, and must remain within the accepted token, cost, latency, and
   rate limits.
 - **BR-068:** Job reports record work interval, summary, ending meter value/type, and job site geocoordinates at submission.

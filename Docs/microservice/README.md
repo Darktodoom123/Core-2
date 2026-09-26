@@ -35,7 +35,7 @@ The approved and implemented architecture is **Plan A (2-Service Model: Operatio
 1. **Core Operations Service (`apps/operations`)**:
    - Tech stack: Laravel 13 + Inertia 3 + React 19 + PostgreSQL (`core2_ms_operations`).
    - Authoritative domain: Dispatch, Crane/Equipment Management, Fleet, Crew/Driver Assignment, Hours of Service (HoS) & DOLE 10h fatigue rules, DVIR inspections and immediate critical defect safety lockouts, Fuel requests/logs, and the Web/Mobile Backend-For-Frontend (BFF) handling Sanctum authentication and sessions.
-   - OpenRouter AI recommendations remain within Operations as an asynchronous queue worker (`ai` queue).
+   - Direct OpenAI recommendations remain within Operations as an asynchronous queue worker (`ai` queue).
    - Compliance reporting (DOLE WAIR, CSHP safe man-hours, demurrage, fuel logs) remains within Operations as background queue workers (`reports` queue).
 2. **Tracking & Telemetry Microservice (`apps/tracking`)**:
    - Tech stack: Dedicated high-throughput Laravel service with isolated database (`core2_ms_tracking`).

@@ -70,7 +70,7 @@ test('authorized dispatcher can initiate async gpt recommendation request', func
         'requested_by' => $dispatcher->id,
         'purpose' => 'dispatch_assignment',
         'status' => 'draft',
-        'model' => 'gpt-5-mini',
+        'model' => 'gpt-6-luna',
     ]);
 
     Queue::assertPushed(GenerateGptRecommendationJob::class);
@@ -117,12 +117,104 @@ test('async job processes context redaction and generates structured recommendat
         ->and($recommendation->cost_usd)->toBeGreaterThan(0)
         ->and($recommendation->recommendation)->toHaveKey('summary')
         ->and($recommendation->recommendation)->toHaveKey('proposed_personnel')
-        ->and($recommendation->recommendation)->toHaveKey('proposed_assets');
+        ->and($recommendation->recommendation)->toHaveKey('proposed_assets')
+        ->and(OpenAiClientWrapper::recordedRequests()[0]['model'])->toBe('gpt-5-mini');
 
     $this->assertDatabaseHas('audit_events', [
         'action' => 'gpt.recommendation_generated',
         'actor_id' => $dispatcher->id,
     ]);
+});
+
+test('failed recommendation retains reported token usage and cost for governance telemetry', function (): void {
+    $dispatcher = gptUser(RoleName::OperationsManager);
+    $job = gptDispatchJob($dispatcher);
+    $recommendation = GptRecommendation::query()->create([
+        'subject_type' => $job->getMorphClass(),
+        'subject_id' => $job->id,
+        'requested_by' => $dispatcher->id,
+        'purpose' => 'dispatch_assignment',
+        'context_hash' => 'failure-cost-hash',
+        'input_references' => ['user_ids' => [], 'asset_ids' => []],
+        'recommendation' => [],
+        'model' => 'gpt-6-luna',
+        'status' => 'draft',
+    ]);
+
+    OpenAiClientWrapper::fake([
+        'success' => false,
+        'usage' => ['prompt_tokens' => 1000, 'completion_tokens' => 400, 'total_tokens' => 1400],
+        'cost_usd' => 0.0003,
+        'error_message' => 'The estimated GPT cost exceeds the configured ceiling.',
+    ]);
+
+    (new GenerateGptRecommendationJob($recommendation->id, ['job' => ['id' => $job->id]]))->handle(
+        app(OpenAiClientWrapper::class),
+        app(RecordAuditEvent::class),
+    );
+
+    $recommendation->refresh();
+    expect($recommendation->status->value)->toBe('failed')
+        ->and($recommendation->usage['total_tokens'])->toBe(1400)
+        ->and((float) $recommendation->cost_usd)->toBe(0.0003);
+
+    $this->assertDatabaseHas('gpt_recommendation_metrics', [
+        'recommendation_id' => $recommendation->id,
+        'event' => 'failed',
+        'total_tokens' => 1400,
+        'cost_usd' => 0.0003,
+    ]);
+});
+
+test('worker rejects ineligible or unknown proposed resources before review', function (): void {
+    $dispatcher = gptUser(RoleName::OperationsManager);
+    $job = gptDispatchJob($dispatcher);
+    $context = [
+        'job' => ['id' => $job->id],
+        'personnel_candidates' => [
+            ['user_id' => 12, 'eligible' => false],
+            ['user_id' => 13, 'eligible' => true],
+        ],
+        'asset_candidates' => [
+            ['asset_id' => 21, 'eligible' => true],
+        ],
+    ];
+
+    foreach ([
+        ['proposed_personnel' => [['user_id' => 12]], 'proposed_assets' => []],
+        ['proposed_personnel' => [], 'proposed_assets' => [['operational_asset_id' => 22]]],
+        ['proposed_personnel' => [['user_id' => 13], ['user_id' => 13]], 'proposed_assets' => []],
+    ] as $proposal) {
+        $recommendation = GptRecommendation::query()->create([
+            'subject_type' => $job->getMorphClass(),
+            'subject_id' => $job->id,
+            'requested_by' => $dispatcher->id,
+            'purpose' => 'dispatch_assignment',
+            'context_hash' => 'invalid-candidate-hash',
+            'input_references' => ['user_ids' => [12, 13], 'asset_ids' => [21]],
+            'recommendation' => [],
+            'model' => 'gpt-6-luna',
+            'status' => 'draft',
+        ]);
+        OpenAiClientWrapper::fake([
+            'recommendation' => array_merge($proposal, [
+                'summary' => 'Invalid proposal',
+                'reasons' => [],
+                'assumptions' => [],
+            ]),
+            'cost_usd' => 0.0003,
+        ]);
+
+        (new GenerateGptRecommendationJob($recommendation->id, $context))->handle(
+            app(OpenAiClientWrapper::class),
+            app(RecordAuditEvent::class),
+        );
+
+        $recommendation->refresh();
+        expect($recommendation->status->value)->toBe('failed')
+            ->and($recommendation->recommendation)->toBe([])
+            ->and((float) $recommendation->cost_usd)->toBe(0.0003);
+    }
 });
 
 test('provider output is redacted before recommendation persistence', function (): void {
@@ -177,10 +269,10 @@ test('async job hydrates personnel names and equipment codes and capacities from
         'recommendation' => [
             'summary' => 'Recommend candidate personnel and asset.',
             'proposed_personnel' => [
-                ['user_id' => 99, 'assignment_type' => 'driver'],
+                ['user_id' => 99, 'name' => 'Wrong person', 'role' => 'crane_operator', 'assignment_type' => 'crane_operator'],
             ],
             'proposed_assets' => [
-                ['operational_asset_id' => 88, 'assignment_type' => 'crane'],
+                ['operational_asset_id' => 88, 'name' => 'Wrong asset', 'asset_code' => 'WRONG', 'capacity' => '1 t', 'assignment_type' => 'truck'],
             ],
             'reasons' => ['Matches criteria.'],
             'assumptions' => ['Normal conditions.'],
@@ -232,7 +324,9 @@ test('async job hydrates personnel names and equipment codes and capacities from
 
     expect($payload['proposed_personnel'][0]['name'])->toBe('Candidate Driver Bob')
         ->and($payload['proposed_personnel'][0]['role'])->toBe('driver')
+        ->and($payload['proposed_personnel'][0]['assignment_type'])->toBe('driver')
         ->and($payload['proposed_assets'][0]['name'])->toBe('Grove GMK 5150')
         ->and($payload['proposed_assets'][0]['asset_code'])->toBe('CR-088')
-        ->and($payload['proposed_assets'][0]['capacity'])->toBe('150 t');
+        ->and($payload['proposed_assets'][0]['capacity'])->toBe('150 t')
+        ->and($payload['proposed_assets'][0]['assignment_type'])->toBe('mobile_crane');
 });

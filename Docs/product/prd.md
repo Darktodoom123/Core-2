@@ -178,7 +178,7 @@ mobile uses a separate future `/api/v1` JSON boundary; production is a managed
 single-region Laravel/Supabase topology; and the reliability, location,
 offline, attachment, and GPT limits in that record are active requirements.
 
-The approved GPT target is OpenAI `gpt-5-mini`; the application integration and
+The approved GPT target is OpenAI `gpt-6-luna`; the application integration and
 guarded lifecycle are implemented, while credentials, queue operations, and
 production cost/retention proof still require product-owner configuration and
 authorization.

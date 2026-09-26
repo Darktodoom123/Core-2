@@ -126,6 +126,7 @@ Strategic planning documents, feature roadmaps, and UX plans:
 | [employee-asset-picker-design.md](plans/employee-asset-picker-design.md) | Active | Dispatch resource assignment picker design. |
 | [resource-picker-refinement.md](plans/resource-picker-refinement.md) | Active | Candidate filtering and conflict detection UX. |
 | [field-execution-view.md](plans/field-execution-view.md) | Active | Field execution view model and telemetry indicators. |
+| [ai-gpt-6-luna-migration.md](plans/ai-gpt-6-luna-migration.md) | Active | Direct OpenAI model migration, existing advisory lifecycle, rollout checks, and improvement priorities. |
 | [microservices-migration.md](plans/microservices-migration.md) | **Superseded** | Earlier 4-service proposal (2026-09-08); superseded by Plan A in `Docs/microservice/`. |
 
 ### 9. Historical Archives (`Docs/archive/`)

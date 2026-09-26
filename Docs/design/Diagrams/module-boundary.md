@@ -64,7 +64,7 @@ flowchart TD
     subgraph SHARED[Shared Platform Services & Safety Foundations]
         S1[Auth, Spatie RBAC 3 System Users, Scoped Visibility]
         S2[Immutable Audit, Notifications, Job Reports]
-        S3[MapLibre GL Live Tracking, Outbox Replay, GPT-5-mini]
+        S3[MapLibre GL Live Tracking, Outbox Replay, GPT-6 Luna]
         S4[Statutory Safety Governance: DOLE Rule 1410, TBM, Critical Lift Plans, WSO]
         S5[SOS Emergency Response System: Floating Jewel, Cradle Notch, Reverb Broadcast]
     end

@@ -594,20 +594,20 @@ it('keeps the live map loading during a Tracking outage but hides stale operatio
 
 /*
 |--------------------------------------------------------------------------
-| 2. External AI (OpenRouter) Outage Resilience
+| 2. External AI (OpenAI) Outage Resilience
 |--------------------------------------------------------------------------
 */
 
-it('fails cleanly on OpenRouter connection timeout during GenerateGptRecommendationJob and records failure metrics', function (): void {
+it('fails cleanly on OpenAI connection timeout during GenerateGptRecommendationJob and records failure metrics', function (): void {
     OpenAiClientWrapper::resetFakes();
     config([
         'services.openai.key' => 'test-key',
         'services.openai.fake' => false,
     ]);
 
-    // Simulate network timeout to OpenRouter API
+    // Simulate network timeout to OpenAI API
     Http::fake([
-        'https://openrouter.ai/api/v1/chat/completions' => function () {
+        'https://api.openai.com/v1/chat/completions' => function () {
             throw new ConnectionException('cURL error 28: Operation timed out after 30000 milliseconds');
         },
     ]);
@@ -662,16 +662,16 @@ it('fails cleanly on OpenRouter connection timeout during GenerateGptRecommendat
         ->and($metric->status)->toBe('failed');
 });
 
-it('fails cleanly on OpenRouter rate-limit (HTTP 429) during GenerateGptRecommendationJob and records failure metrics', function (): void {
+it('fails cleanly on OpenAI rate-limit (HTTP 429) during GenerateGptRecommendationJob and records failure metrics', function (): void {
     OpenAiClientWrapper::resetFakes();
     config([
         'services.openai.key' => 'test-key',
         'services.openai.fake' => false,
     ]);
 
-    // Simulate HTTP 429 Too Many Requests from OpenRouter
+    // Simulate HTTP 429 Too Many Requests from OpenAI
     Http::fake([
-        'https://openrouter.ai/api/v1/chat/completions' => Http::response([
+        'https://api.openai.com/v1/chat/completions' => Http::response([
             'error' => [
                 'message' => 'Rate limit exceeded: 200 requests per minute quota reached.',
                 'code' => 429,
@@ -728,16 +728,16 @@ it('fails cleanly on OpenRouter rate-limit (HTTP 429) during GenerateGptRecommen
         ->and($metric->status)->toBe('failed');
 });
 
-it('fails cleanly on OpenRouter external API connection failure or server error (HTTP 502/503) during GenerateGptRecommendationJob and records failure metrics', function (): void {
+it('fails cleanly on OpenAI external API connection failure or server error (HTTP 502/503) during GenerateGptRecommendationJob and records failure metrics', function (): void {
     OpenAiClientWrapper::resetFakes();
     config([
         'services.openai.key' => 'test-key',
         'services.openai.fake' => false,
     ]);
 
-    // Simulate HTTP 502 Bad Gateway from OpenRouter
+    // Simulate HTTP 502 Bad Gateway from OpenAI
     Http::fake([
-        'https://openrouter.ai/api/v1/chat/completions' => Http::response([
+        'https://api.openai.com/v1/chat/completions' => Http::response([
             'error' => [
                 'message' => 'Provider bad gateway or connection failed.',
                 'code' => 502,
@@ -805,7 +805,7 @@ it('ensures failed AI job does not block subsequent AI queue jobs and never star
 
     $callCount = 0;
     Http::fake([
-        'https://openrouter.ai/api/v1/chat/completions' => function () use (&$callCount) {
+        'https://api.openai.com/v1/chat/completions' => function () use (&$callCount) {
             $callCount++;
             if ($callCount === 1) {
                 // First call fails with 429 rate limit

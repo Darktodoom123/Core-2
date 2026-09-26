@@ -97,7 +97,7 @@ flowchart LR
     C -->|Internal HMAC HTTP /internal/v1| TMS[Tracking Microservice apps/tracking]
     TMS --> TDB[(Tracking DB: core2_ms_tracking)]
     A -. queued jobs .-> Q[Dedicated Queues: operational | ai | reports]
-    Q -.-> X[Notifications · mPDF exports · OpenRouter GPT · SOS sweeps]
+    Q -.-> X[Notifications · mPDF exports · OpenAI GPT · SOS sweeps]
     A -. realtime broadcast .-> REV[Laravel Reverb WebSockets]
     REV -. wss:// private channels .-> UI
     UI -. durable offline commands .-> O[Client outbox]
@@ -222,7 +222,7 @@ records, notifications, reports, attachments, and proactive GPT remain shared pl
 
 ### Adopt Plan A (2-Service Model: Operations Monolith & BFF + Tracking Microservice)
 
-Dispatch, approval, asset safety, fuel, and audit are tightly transactional and organized as a pragmatic modular monolith (`apps/operations/`). In contrast, high-frequency mobile GPS sample writes and map position lookups are isolated into the standalone Tracking microservice (`apps/tracking/`) with its own database (`core2_ms_tracking`) and HMAC service-to-service authentication. Internal background workloads (OpenRouter GPT advisories and mPDF compliance exports) remain isolated inside Operations as dedicated queue worker pools (`ai` and `reports` queues) rather than creating unnecessary microservice network hops.
+Dispatch, approval, asset safety, fuel, and audit are tightly transactional and organized as a pragmatic modular monolith (`apps/operations/`). In contrast, high-frequency mobile GPS sample writes and map position lookups are isolated into the standalone Tracking microservice (`apps/tracking/`) with its own database (`core2_ms_tracking`) and HMAC service-to-service authentication. Internal background workloads (direct OpenAI GPT advisories and mPDF compliance exports) remain isolated inside Operations as dedicated queue worker pools (`ai` and `reports` queues) rather than creating unnecessary microservice network hops.
 
 ### Keep the server authoritative
 

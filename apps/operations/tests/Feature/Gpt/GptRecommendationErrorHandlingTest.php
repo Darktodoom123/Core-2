@@ -155,7 +155,7 @@ test('rejects provider responses with an invalid schema without persisting raw o
     OpenAiClientWrapper::resetFakes();
     config(['services.openai.key' => 'test-key', 'services.openai.fake' => false]);
     Http::fake([
-        'https://openrouter.ai/api/v1/chat/completions' => Http::response([
+        'https://api.openai.com/v1/chat/completions' => Http::response([
             'choices' => [[
                 'finish_reason' => 'stop',
                 'message' => ['content' => '{"secret":"provider output"}'],
@@ -184,7 +184,7 @@ test('enforces input-token and cost ceilings before accepting provider output', 
 
     config(['services.openai.max_input_tokens' => 32000, 'services.openai.max_cost_usd' => 0.0001]);
     Http::fake([
-        'https://openrouter.ai/api/v1/chat/completions' => Http::response([
+        'https://api.openai.com/v1/chat/completions' => Http::response([
             'choices' => [[
                 'finish_reason' => 'stop',
                 'message' => ['content' => json_encode([
@@ -206,4 +206,87 @@ test('enforces input-token and cost ceilings before accepting provider output', 
     $tooExpensive = app(OpenAiClientWrapper::class)->generateRecommendation(['job' => []]);
     expect($tooExpensive['success'])->toBeFalse()
         ->and($tooExpensive['error_message'])->toBe('The estimated GPT cost exceeds the configured ceiling.');
+});
+
+test('sends Luna with low reasoning effort and estimates cached input at Luna rates', function (): void {
+    OpenAiClientWrapper::resetFakes();
+    config([
+        'services.openai.key' => 'test-key',
+        'services.openai.model' => 'gpt-6-luna',
+        'services.openai.base_url' => 'https://api.openai.com/v1',
+        'services.openai.fake' => false,
+    ]);
+    Http::fake(['https://api.openai.com/v1/chat/completions' => Http::response([
+        'choices' => [[
+            'finish_reason' => 'stop',
+            'message' => ['content' => json_encode([
+                'summary' => 'Safe result',
+                'proposed_personnel' => [],
+                'proposed_assets' => [],
+                'reasons' => [],
+                'assumptions' => [],
+            ], JSON_THROW_ON_ERROR)],
+        ]],
+        'usage' => [
+            'prompt_tokens' => 1000,
+            'completion_tokens' => 200,
+            'total_tokens' => 1200,
+            'prompt_tokens_details' => ['cached_tokens' => 400],
+        ],
+    ])]);
+
+    $result = app(OpenAiClientWrapper::class)->generateRecommendation(['job' => []]);
+
+    expect($result['success'])->toBeTrue()
+        ->and($result['cost_usd'])->toBe(0.0002);
+    Http::assertSent(fn ($request) => $request->url() === 'https://api.openai.com/v1/chat/completions'
+        && $request['model'] === 'gpt-6-luna'
+        && $request['reasoning_effort'] === 'low');
+});
+
+test('compares unrounded legacy-model cost against the ceiling', function (): void {
+    OpenAiClientWrapper::resetFakes();
+    config([
+        'services.openai.key' => 'test-key',
+        'services.openai.model' => 'gpt-6-luna',
+        'services.openai.base_url' => 'https://api.openai.com/v1',
+        'services.openai.max_cost_usd' => 0.0001,
+        'services.openai.fake' => false,
+    ]);
+    Http::fake(['https://api.openai.com/v1/chat/completions' => Http::response([
+        'choices' => [[
+            'finish_reason' => 'stop',
+            'message' => ['content' => json_encode([
+                'summary' => 'Safe result',
+                'proposed_personnel' => [],
+                'proposed_assets' => [],
+                'reasons' => [],
+                'assumptions' => [],
+            ], JSON_THROW_ON_ERROR)],
+        ]],
+        'usage' => ['prompt_tokens' => 0, 'completion_tokens' => 74, 'total_tokens' => 74],
+    ])]);
+
+    $result = app(OpenAiClientWrapper::class)->withModel('gpt-5-mini')->generateRecommendation(['job' => []]);
+
+    expect($result['success'])->toBeFalse()
+        ->and($result['cost_usd'])->toBe(0.0001)
+        ->and($result['error_message'])->toBe('The estimated GPT cost exceeds the configured ceiling.');
+    Http::assertSent(fn ($request) => $request['model'] === 'gpt-5-mini');
+});
+
+test('rejects truncated output even when the content contains valid JSON', function (): void {
+    OpenAiClientWrapper::resetFakes();
+    config(['services.openai.key' => 'test-key', 'services.openai.fake' => false]);
+    Http::fake(['https://api.openai.com/v1/chat/completions' => Http::response([
+        'choices' => [[
+            'finish_reason' => 'length',
+            'message' => ['content' => '{"summary":"Incomplete"}'],
+        ]],
+    ])]);
+
+    $result = app(OpenAiClientWrapper::class)->generateRecommendation(['job' => []]);
+
+    expect($result['success'])->toBeFalse()
+        ->and($result['error_message'])->toBe('OpenAI did not complete the recommendation.');
 });

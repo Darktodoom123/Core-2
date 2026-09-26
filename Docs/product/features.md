@@ -108,7 +108,7 @@ Core Transaction 2 delivers the complete operational backbone for heavy equipmen
   - Multi-channel delivery tracking and responder acknowledgement workflows.
   - Real-time emergency incident feed broadcast over Laravel Reverb (`operations.sos`).
   - Prioritized emergency hotline directory with SHA-256 phone hashing.
-- **GPT Explainable Advisory & Resource Recommendations (`gpt-5-mini`)**:
+- **GPT Explainable Advisory & Resource Recommendations (`gpt-6-luna`)**:
   - AI-assisted resource allocation proposals based on job requirements and asset specifications.
   - Proactive background suggestions for complete, scheduled jobs with missing resources or blocking resource conflicts, using the authorized dispatch creator and existing quotas.
   - Strict 15-minute expiration countdown, $0.05 cost budget cap, and token telemetry tracking.

@@ -91,7 +91,7 @@ final class GenerateGptRecommendation
             'input_references' => $contextData['input_references'],
             'recommendation' => [],
             'conflicts' => [],
-            'model' => config('services.openai.model', 'gpt-5-mini'),
+            'model' => config('services.openai.model', 'gpt-6-luna'),
             'status' => GptRecommendationStatus::Draft,
             'prompt_summary' => $automatic ? 'Automatically prepared. '.$contextData['prompt_summary'] : $contextData['prompt_summary'],
             'purge_at' => now()->addDays(90),

@@ -120,6 +120,7 @@ Desktop.ini
 !/Docs/plans/employee-asset-picker-design.md
 !/Docs/plans/resource-picker-refinement.md
 !/Docs/plans/field-execution-view.md
+!/Docs/plans/ai-gpt-6-luna-migration.md
 /Docs/plans/microservices-migration.md
 # Keep only the shareable Graphify graph and report; rebuild and local state stay untracked.
 /graphify-out/*

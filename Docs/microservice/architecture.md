@@ -8,7 +8,7 @@ The approved architecture is **Plan A: The Pragmatic 2-Service Model**, comprisi
 
 | Service / Component | Authoritative Data & Domain Responsibilities |
 | --- | --- |
-| **Core Operations Service**<br>(`apps/operations`) | **Stack:** Laravel 13 + Inertia 3 + PostgreSQL (`core2_ms_operations`).<br>**Authoritative Domain:** Users, authentication (Sanctum tokens, sessions, CSRF), roles & permissions (Spatie), dispatch planning & approvals, crane and heavy equipment management, fleet assets, crew/driver assignments, Hours of Service (HoS) & statutory DOLE 10h fatigue rules, DVIR walkaround inspections & immediate critical defect safety lockouts, fuel requests & logs, rental agreements & reservations, safety & SOS incidents, business attachments, field job reports and meter updates, operational audit, Web & Mobile Backend-For-Frontend (BFF), and Reverb real-time workspace updates.<br>**Internal Queue Workers:** Dedicated worker pools for OpenRouter AI recommendations (`ai` queue) and compliance reporting (`reports` queue). |
+| **Core Operations Service**<br>(`apps/operations`) | **Stack:** Laravel 13 + Inertia 3 + PostgreSQL (`core2_ms_operations`).<br>**Authoritative Domain:** Users, authentication (Sanctum tokens, sessions, CSRF), roles & permissions (Spatie), dispatch planning & approvals, crane and heavy equipment management, fleet assets, crew/driver assignments, Hours of Service (HoS) & statutory DOLE 10h fatigue rules, DVIR walkaround inspections & immediate critical defect safety lockouts, fuel requests & logs, rental agreements & reservations, safety & SOS incidents, business attachments, field job reports and meter updates, operational audit, Web & Mobile Backend-For-Frontend (BFF), and Reverb real-time workspace updates.<br>**Internal Queue Workers:** Dedicated worker pools for direct OpenAI recommendations (`ai` queue) and compliance reporting (`reports` queue). |
 | **Tracking & Telemetry Microservice**<br>(`apps/tracking`) | **Stack:** Dedicated high-throughput service + isolated storage (Redis / partitioned PostgreSQL / TimescaleDB) (`core2_ms_tracking`).<br>**Authoritative Domain:** High-frequency mobile GPS sample ingestion, live position caching for dispatch maps, historical coordinate tracking, automated 30-day coordinate privacy pruning, ingestion command receipts, and local telemetry audit.<br>**Isolation Purpose:** Isolates heavy mobile GPS write traffic from the primary dispatch database. |
 
 ### Client Applications Topology
@@ -23,7 +23,7 @@ The approved architecture is **Plan A: The Pragmatic 2-Service Model**, comprisi
 
 ### Internal Worker Isolation Rationale (No 4-Service Overhead)
 
-- **OpenRouter AI Recommendations**: `app/Platform/Gpt/Services/OpenAiClientWrapper.php` is an external API wrapper around OpenRouter LLM endpoints. Extracting AI into an isolated microservice would introduce unnecessary RPC latency, serialization overhead, and distributed failure modes for what is fundamentally an outbound third-party API call. Instead, AI generation remains within Operations on a dedicated asynchronous queue worker (`ai` queue). This isolates third-party LLM latency, timeouts, and rate limits from interactive dispatch operations while preserving transactional assignment row locking in `AcceptGptRecommendation`.
+- **OpenAI Recommendations**: `app/Platform/Gpt/Services/OpenAiClientWrapper.php` is an external API wrapper around the direct OpenAI endpoint. Extracting AI into an isolated microservice would introduce unnecessary RPC latency, serialization overhead, and distributed failure modes for what is fundamentally an outbound third-party API call. Instead, AI generation remains within Operations on a dedicated asynchronous queue worker (`ai` queue). This isolates provider latency, timeouts, and rate limits from interactive dispatch operations while preserving transactional assignment row locking in `AcceptGptRecommendation`.
 - **Compliance Reporting**: Compliance reports (DOLE WAIR, CSHP safe man-hours, demurrage, fuel logs, weekly fuel consumption, maintenance logs, daily accomplishment) require comprehensive relational joins across dispatch, equipment, crew, and safety tables. An isolated reporting microservice would necessitate synchronizing massive event projections or creating fragile cross-database queries. Instead, reporting runs within Operations on a dedicated background queue worker (`reports` queue). For coordinate audit datasets (`LocationAuditExportDataset`), Operations queries Tracking via internal HTTP API, ensuring transactional consistency and preventing memory-intensive report generation from starving interactive HTTP requests.
 
 ---
@@ -76,11 +76,11 @@ Core-2/
 │  └────────────┬─────────────┘            └──────────────────────────┘  │
 └───▲───────────┼────────────────────────────────────────▲───────────────┘
     │           │                                        │
-    │ HTTPS     │ OpenRouter API                         │ Scoped Internal HTTP
+    │ HTTPS     │ OpenAI API                             │ Scoped Internal HTTP
     │ (Sanctum) │ (External LLM)                         │ (HMAC-SHA256 Signed)
     │           ▼                                        │ (/internal/v1/locations/*)
     │   ┌─────────────────────────┐                      │
-    │   │     OpenRouter API      │                      │
+    │   │       OpenAI API       │                      │
     │   └─────────────────────────┘                      │
     │                                                    │
 ┌───┴───────────────────────┐                            │
@@ -118,7 +118,7 @@ Core-2/
      - `reports`: Long-running CSV and mPDF dataset exports (`GenerateReportExportJob`, up to 300s runtime) and export retention pruning (`PruneExpiredExportsJob`).
        - Worker command: `php artisan queue:work --queue=reports --timeout=360 --tries=2 --sleep=3 --max-time=3600` (retry_after: 420s).
    - **Starvation Immunity Guarantee**:
-     - Operational dispatchers, safety alerts, and telemetry updates are never delayed or blocked behind long-running mPDF PDF renders or external OpenRouter LLM timeouts. Each worker pool operates with dedicated timeouts and process boundaries.
+     - Operational dispatchers, safety alerts, and telemetry updates are never delayed or blocked behind long-running mPDF PDF renders or external OpenAI timeouts. Each worker pool operates with dedicated timeouts and process boundaries.
    - RabbitMQ is eliminated. No external broker infrastructure is required.
 
 ### Idempotency & Command Receipts
@@ -159,8 +159,8 @@ Core-2/
    - Operations live map handles Tracking 503/timeout gracefully by displaying a non-blocking "Telemetry unavailable / showing cached positions" warning state.
    - **Zero Split-Brain Ingestion**: In production (`TRACKING_ALLOW_INGEST_FALLBACK=false`), Operations strictly prohibits falling back to secondary local database writes during Tracking outages. Dual authoritative writes are eliminated.
    - Operations returns `HTTP 503 Service Unavailable` with `Retry-After: 5`, allowing the mobile client to retain unacknowledged samples in its persistent SQLite outbox and retry with exponential backoff once Tracking recovers.
-2. **OpenRouter External AI Outage**:
-   - Outages, rate limits, or slow responses from OpenRouter do not impact dispatch workflows.
+2. **OpenAI External AI Outage**:
+   - Outages, rate limits, or slow responses from OpenAI do not impact dispatch workflows.
    - `GenerateGptRecommendationJob` runs on the isolated `ai` queue worker. Failures record an error code in `gpt_recommendation_metrics` and leave dispatch proposals in a pending/failed state.
    - Human dispatchers can manually override or assign resources without waiting for AI recommendations.
    - Assignment acceptance (`AcceptGptRecommendation`) atomically locks `OperationalAsset` and `DispatchJob` rows, preventing race conditions or stale recommendations from causing double bookings.

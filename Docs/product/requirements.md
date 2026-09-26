@@ -151,7 +151,7 @@ Sanctum token handling, CSRF protection, and password hashing are unchanged.
 
 - **FR-050 — Implemented:** The database and browser routes preserve scoped job reports, private attachment metadata, notifications, GPT recommendations, audit events, and asynchronous CSV/PDF export records with authorization and retention controls; remaining full-surface convergence is tracked separately.
 - **FR-051 — Implemented:** Important current mutations shall record an audit event containing actor, subject, action, before/after summary where applicable, request ID, IP, and occurrence time.
-- **FR-052 — Implemented:** OpenAI `gpt-5-mini` recommendations include
+- **FR-052 — Implemented:** OpenAI `gpt-6-luna` recommendations include
   explanation and conflicts, be role-scoped, expire after 15 minutes, and never
   mutate operational data without a separately authorized human action. The
   routed review lifecycle includes bounded processing polling and accessible

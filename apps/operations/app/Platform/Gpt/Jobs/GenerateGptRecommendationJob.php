@@ -78,8 +78,14 @@ final class GenerateGptRecommendationJob implements ShouldQueue
         }
 
         $startedAt = microtime(true);
-        $result = $openAi->generateRecommendation($this->boundedContext);
+        $result = $openAi->withModel($recommendation->model)->generateRecommendation($this->boundedContext);
         $latencyMs = (int) round((microtime(true) - $startedAt) * 1000);
+
+        if ($result['success'] && ! $this->proposedCandidatesAreEligible($result['recommendation'] ?? [])) {
+            $result['success'] = false;
+            $result['recommendation'] = null;
+            $result['response_summary'] = null;
+        }
 
         if ($result['success']) {
             $recPayload = $result['recommendation'] ?? [];
@@ -138,6 +144,8 @@ final class GenerateGptRecommendationJob implements ShouldQueue
                 [
                     'error_message' => $result['is_timeout'] ? 'GPT generation timed out. Please retry.' : 'GPT generation failed. Please retry.',
                     'response_summary' => null,
+                    'usage' => $result['usage'],
+                    'cost_usd' => $result['cost_usd'],
                     'latency_ms' => $latencyMs,
                 ],
             );
@@ -148,6 +156,8 @@ final class GenerateGptRecommendationJob implements ShouldQueue
 
             $this->recordMetric($metrics, $recommendation, 'failed', [
                 'status' => GptRecommendationStatus::Failed->value,
+                'usage' => $result['usage'],
+                'cost_usd' => $result['cost_usd'],
                 'latency_ms' => $latencyMs,
             ]);
 
@@ -185,6 +195,62 @@ final class GenerateGptRecommendationJob implements ShouldQueue
                 'error' => $exception::class,
             ]);
         }
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function proposedCandidatesAreEligible(array $payload): bool
+    {
+        $eligiblePersonnel = [];
+        foreach ($this->boundedContext['personnel_candidates'] ?? [] as $candidate) {
+            if (is_array($candidate) && ($candidate['eligible'] ?? false) === true) {
+                $eligiblePersonnel[(int) ($candidate['user_id'] ?? 0)] = true;
+            }
+        }
+
+        $eligibleAssets = [];
+        foreach ($this->boundedContext['asset_candidates'] ?? [] as $candidate) {
+            if (is_array($candidate) && ($candidate['eligible'] ?? false) === true) {
+                $eligibleAssets[(int) ($candidate['asset_id'] ?? 0)] = true;
+            }
+        }
+
+        $seenPersonnel = [];
+        foreach ($payload['proposed_personnel'] ?? [] as $person) {
+            $id = is_array($person) ? $person['user_id'] ?? null : null;
+            if (! $this->isEligibleCandidateId($id, $eligiblePersonnel, $seenPersonnel)) {
+                return false;
+            }
+        }
+
+        $seenAssets = [];
+        foreach ($payload['proposed_assets'] ?? [] as $asset) {
+            $id = is_array($asset) ? ($asset['operational_asset_id'] ?? $asset['asset_id'] ?? null) : null;
+            if (! $this->isEligibleCandidateId($id, $eligibleAssets, $seenAssets)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @param  array<int, true>  $eligible
+     * @param  array<int, true>  $seen
+     */
+    private function isEligibleCandidateId(mixed $value, array $eligible, array &$seen): bool
+    {
+        if (! is_int($value) && (! is_string($value) || ! ctype_digit($value))) {
+            return false;
+        }
+
+        $id = (int) $value;
+        if ($id <= 0 || ! isset($eligible[$id]) || isset($seen[$id])) {
+            return false;
+        }
+
+        $seen[$id] = true;
+
+        return true;
     }
 
     public function failed(Throwable $exception): void
@@ -285,26 +351,16 @@ final class GenerateGptRecommendationJob implements ShouldQueue
                 $candidateName = (isset($candidate['name']) && is_string($candidate['name'])) ? $candidate['name'] : null;
                 $candidateRole = (isset($candidate['role']) && is_string($candidate['role'])) ? $candidate['role'] : null;
 
-                $name = (is_array($person) && ! empty($person['name']) && is_string($person['name']))
-                    ? $person['name']
-                    : ($candidateName ?? $userName);
+                $name = $candidateName ?? $userName;
+                $role = $candidateRole ?? $userRole;
+                $assignmentType = $candidate['assignment_type'] ?? 'crew';
 
-                $role = (is_array($person) && ! empty($person['role']) && is_string($person['role']))
-                    ? $person['role']
-                    : ($candidateRole ?? $userRole);
-
-                $assignmentType = (is_array($person) && ! empty($person['assignment_type']) && is_string($person['assignment_type']))
-                    ? $person['assignment_type']
-                    : ($candidate['assignment_type'] ?? 'crew');
-
-                $base = is_array($person) ? $person : [];
-
-                return array_merge($base, array_filter([
+                return array_filter([
                     'user_id' => $userId,
                     'name' => $name,
                     'role' => $role,
                     'assignment_type' => $assignmentType,
-                ], static fn ($v) => $v !== null));
+                ], static fn ($v) => $v !== null);
             }, $recPayload['proposed_personnel'])));
         }
 
@@ -337,38 +393,20 @@ final class GenerateGptRecommendationJob implements ShouldQueue
                     ? trim(((float) $candidate['rated_capacity']).' '.($candidate['capacity_unit'] ?? ''))
                     : null;
 
-                $name = (is_array($asset) && ! empty($asset['name']) && is_string($asset['name']))
-                    ? $asset['name']
-                    : ($candidateName ?? $assetName);
+                $name = $candidateName ?? $assetName;
+                $code = $candidateCode ?? $assetCode;
+                $kind = $candidateKind ?? $assetKind;
+                $capacity = $candidateCapacity ?? $assetCapacity;
+                $assignmentType = $kind ?? 'equipment';
 
-                $code = (is_array($asset) && ! empty($asset['asset_code']) && is_string($asset['asset_code']))
-                    ? $asset['asset_code']
-                    : ((is_array($asset) && ! empty($asset['code']) && is_string($asset['code']))
-                        ? $asset['code']
-                        : ($candidateCode ?? $assetCode));
-
-                $kind = (is_array($asset) && ! empty($asset['kind']) && is_string($asset['kind']))
-                    ? $asset['kind']
-                    : ($candidateKind ?? $assetKind);
-
-                $capacity = (is_array($asset) && ! empty($asset['capacity']) && is_string($asset['capacity']))
-                    ? $asset['capacity']
-                    : ($candidateCapacity ?? $assetCapacity);
-
-                $assignmentType = (is_array($asset) && ! empty($asset['assignment_type']) && is_string($asset['assignment_type']))
-                    ? $asset['assignment_type']
-                    : ($kind ?? 'equipment');
-
-                $base = is_array($asset) ? $asset : [];
-
-                return array_merge($base, array_filter([
+                return array_filter([
                     'operational_asset_id' => $assetId,
                     'name' => $name,
                     'asset_code' => $code,
                     'kind' => $kind,
                     'capacity' => $capacity,
                     'assignment_type' => $assignmentType,
-                ], static fn ($v) => $v !== null));
+                ], static fn ($v) => $v !== null);
             }, $recPayload['proposed_assets'])));
         }
 
