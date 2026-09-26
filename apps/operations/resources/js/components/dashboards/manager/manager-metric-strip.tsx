@@ -52,6 +52,7 @@ export const FLEET_BUCKET_TONES = {
 export function ManagerMetricStrip({
     schedule,
     scheduleStatus,
+    scheduleTruncated,
     fleet,
     authorizations,
     safety,
@@ -63,6 +64,8 @@ export function ManagerMetricStrip({
 }: {
     schedule: ScheduleSummary;
     scheduleStatus: TodayDispatchesStatus;
+    /** More of today's jobs exist than were loaded, so counts are a floor. */
+    scheduleTruncated: boolean;
     fleet: FleetSummary;
     authorizations: AuthorizationSummary;
     safety: SafetySummary;
@@ -101,7 +104,7 @@ export function ManagerMetricStrip({
                 ) : scheduleStatus === 'ready' ? (
                     <>
                         <MetricValue
-                            value={String(schedule.total)}
+                            value={`${schedule.total}${scheduleTruncated ? '+' : ''}`}
                             suffix="on today's schedule"
                         />
                         <SegmentBar segments={scheduleSegments} />
@@ -114,6 +117,12 @@ export function ManagerMetricStrip({
                                 ].toLowerCase(),
                             }))}
                         />
+                        {scheduleTruncated && (
+                            <MetricNote icon={CalendarClock}>
+                                Partial count · open the schedule for the full
+                                day
+                            </MetricNote>
+                        )}
                     </>
                 ) : (
                     <>
@@ -301,9 +310,11 @@ function MetricCell({
                         onClick={onOpen}
                         aria-label={openLabel}
                         title={openLabel}
-                        className="flex flex-1 items-center justify-between text-left rounded-md text-muted transition-colors group-hover:text-ink after:absolute after:inset-0 after:content-[''] focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
+                        className="flex flex-1 items-center justify-between rounded-md text-left text-muted transition-colors group-hover:text-ink after:absolute after:inset-0 after:content-[''] focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                     >
-                        <span className="text-xs font-medium text-ink-soft">{label}</span>
+                        <span className="text-xs font-medium text-ink-soft">
+                            {label}
+                        </span>
                         <ArrowUpRight className="size-4" aria-hidden="true" />
                     </button>
                 ) : (

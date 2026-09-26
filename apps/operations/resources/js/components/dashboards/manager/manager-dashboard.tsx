@@ -155,6 +155,7 @@ export function OperationsManagerDashboard({
                 todayTotal={
                     today.status === 'ready' ? todaySummary.total : null
                 }
+                todayTruncated={today.truncated}
                 inService={fleet.inService}
                 loadedUnits={fleet.loaded}
                 realtimeConnected={realtimeConnected}
@@ -165,6 +166,7 @@ export function OperationsManagerDashboard({
             <ManagerMetricStrip
                 schedule={todaySummary}
                 scheduleStatus={today.status}
+                scheduleTruncated={today.truncated}
                 fleet={fleet}
                 authorizations={authorizations}
                 safety={safety}

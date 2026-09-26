@@ -52,6 +52,7 @@ import {
 import type { TodayDispatches } from './use-today-dispatches';
 
 const SCHEDULE_PREVIEW_LIMIT = 6;
+const SCHEDULE_ROWS_ID = 'manager-schedule-rows';
 const LABEL_COLUMN = '11.5rem';
 
 const SOURCE_FILTERS: Array<{ value: ScheduleSourceFilter; label: string }> = [
@@ -337,6 +338,7 @@ export function ManagerSchedulePanel({
                                         variant="quiet"
                                         size="sm"
                                         aria-expanded={expanded}
+                                        aria-controls={SCHEDULE_ROWS_ID}
                                         onClick={() =>
                                             setExpanded((value) => !value)
                                         }
@@ -421,7 +423,10 @@ function ScheduleTimeline({
                         </span>
                     </div>
                 )}
-                <ul className="divide-y divide-line border-t border-line">
+                <ul
+                    id={SCHEDULE_ROWS_ID}
+                    className="divide-y divide-line border-t border-line"
+                >
                     {jobs.map((job) => (
                         <ScheduleRow
                             key={job.id}

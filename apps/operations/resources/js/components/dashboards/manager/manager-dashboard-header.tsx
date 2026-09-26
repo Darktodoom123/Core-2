@@ -6,6 +6,7 @@ import { formatClockTime, formatElapsed } from './manager-dashboard-model';
 export function ManagerDashboardHeader({
     actionCount,
     todayTotal,
+    todayTruncated = false,
     inService,
     loadedUnits,
     realtimeConnected,
@@ -14,6 +15,8 @@ export function ManagerDashboardHeader({
 }: {
     actionCount: number;
     todayTotal: number | null;
+    /** The schedule was loaded partially, so todayTotal is a minimum. */
+    todayTruncated?: boolean;
     inService: number;
     loadedUnits: number;
     realtimeConnected: boolean;
@@ -23,7 +26,9 @@ export function ManagerDashboardHeader({
     const summary = [
         todayTotal === null
             ? null
-            : `${todayTotal} ${todayTotal === 1 ? 'dispatch' : 'dispatches'} today`,
+            : todayTruncated
+              ? `${todayTotal}+ dispatches today`
+              : `${todayTotal} ${todayTotal === 1 ? 'dispatch' : 'dispatches'} today`,
         loadedUnits > 0
             ? `${inService} of ${loadedUnits} units in service`
             : null,

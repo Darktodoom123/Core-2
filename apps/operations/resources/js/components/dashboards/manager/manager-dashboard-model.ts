@@ -348,7 +348,7 @@ function approvalTitle(approval: ApprovalViewModel): string {
         default:
             return approval.kind
                 ? `Review ${humanize(approval.kind)} for ${reference}`
-                : fallbackTitle ?? `Review approval for ${reference}`;
+                : (fallbackTitle ?? `Review approval for ${reference}`);
     }
 }
 

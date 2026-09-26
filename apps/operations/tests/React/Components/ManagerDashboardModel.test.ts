@@ -22,6 +22,8 @@ import {
     visibleQueueItems,
 } from '@/components/dashboards/manager/manager-dashboard-model';
 import type {
+    AssetViewModel,
+    DispatchJobViewModel,
     FuelLogViewModel,
     WorkspaceCapabilities,
 } from '@/types/workspace';

@@ -503,6 +503,91 @@ describe('OperationsManagerDashboard', () => {
         );
     });
 
+    it("marks today's count as partial when the schedule exceeds the page limit", async () => {
+        // Five pages exist but only TODAY_SCHEDULE_MAX_PAGES (4) are fetched.
+        deskResponses = [1, 2, 3, 4].map((page) =>
+            deskPage(
+                [
+                    job(page, 'scheduled', {
+                        scheduled_start: at(8 + page),
+                        scheduled_end: at(9 + page),
+                    }),
+                ],
+                { total: 101, lastPage: 5 },
+            ),
+        );
+
+        renderDashboard();
+
+        const schedule = scheduleRegion();
+        await within(schedule).findByRole('link', { name: 'DSP-4' });
+
+        expect(
+            deskRequests().map((url) => url.searchParams.get('page')),
+        ).toEqual(['1', '2', '3', '4']);
+        expect(metricValue("on today's schedule")).toHaveTextContent(
+            /^4\+\s*on today's schedule$/,
+        );
+        expect(screen.getByText('4+ dispatches today')).toBeInTheDocument();
+        expect(
+            screen.getByText(/Partial count · open the schedule/),
+        ).toBeInTheDocument();
+        expect(
+            within(schedule).getByText(/first 100 loaded/),
+        ).toBeInTheDocument();
+    });
+
+    it('refreshes the schedule in the background when workspace data changes', async () => {
+        deskResponses = [deskPage([job(1, 'working')])];
+        const props = {
+            jobs: [],
+            assets: [],
+            fuelRequests: [],
+            locations: [],
+            approvals: [],
+            capabilities: ALL_FUEL_CAPABILITIES,
+            availableSections: ALL_SECTIONS,
+            onSectionChange: vi.fn(),
+        };
+        const { rerender } = render(
+            <OperationsManagerDashboard
+                {...props}
+                workspaceRefresh={refreshState()}
+            />,
+        );
+        const schedule = scheduleRegion();
+        await within(schedule).findByRole('link', { name: 'DSP-1' });
+
+        deskResponses = [
+            deskPage([
+                job(1, 'working'),
+                job(2, 'scheduled', {
+                    scheduled_start: at(13),
+                    scheduled_end: at(15),
+                }),
+            ]),
+        ];
+        rerender(
+            <OperationsManagerDashboard
+                {...props}
+                workspaceRefresh={refreshState({
+                    refreshed_at: new Date(NOW).toISOString(),
+                })}
+            />,
+        );
+
+        // Existing rows stay on screen instead of dropping back to a skeleton.
+        expect(
+            within(schedule).queryByRole('status', {
+                name: "Loading today's schedule",
+            }),
+        ).not.toBeInTheDocument();
+        expect(
+            await within(schedule).findByRole('link', { name: 'DSP-2' }),
+        ).toBeInTheDocument();
+        expect(deskRequests()).toHaveLength(2);
+    });
+
     it('reports the live connection separately from the age of the data', async () => {
         const { rerender } = renderDashboard({
             realtimeConnected: false,
