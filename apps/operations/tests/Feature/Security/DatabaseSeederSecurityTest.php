@@ -119,6 +119,51 @@ it('keeps local developer seeding idempotent and usable', function (): void {
     }
 });
 
+it('applies untracked local account overrides without duplicating fixture accounts on reseed', function (): void {
+    $originalEnvironment = app()->environment();
+    $originalOverrides = config('auth.local_account_overrides');
+    app()->detectEnvironment(fn (): string => 'local');
+    config(['auth.local_account_overrides' => [
+        'admin' => ['name' => 'Local Admin', 'email' => 'local.admin@example.test'],
+        'manager' => ['name' => null, 'email' => null],
+    ]]);
+
+    try {
+        app(DatabaseSeeder::class)->run();
+        app(DatabaseSeeder::class)->run();
+
+        $administrator = User::query()->where('username', 'admin')->firstOrFail();
+
+        expect($administrator->name)->toBe('Local Admin')
+            ->and($administrator->email)->toBe('local.admin@example.test')
+            ->and($administrator->hasRole(RoleName::SystemAdministrator->value))->toBeTrue()
+            ->and(User::query()->role(RoleName::SystemAdministrator->value)->count())->toBe(1)
+            ->and(User::query()->where('email', 'admin@example.com')->exists())->toBeFalse()
+            ->and(User::query()->where('username', 'manager')->value('email'))->toBe('manager@example.com');
+    } finally {
+        app()->detectEnvironment(fn () => $originalEnvironment);
+        config(['auth.local_account_overrides' => $originalOverrides]);
+    }
+});
+
+it('rejects an invalid local account override email', function (): void {
+    $originalEnvironment = app()->environment();
+    $originalOverrides = config('auth.local_account_overrides');
+    app()->detectEnvironment(fn (): string => 'local');
+    config(['auth.local_account_overrides' => [
+        'operator' => ['name' => null, 'email' => 'not-an-email'],
+    ]]);
+
+    try {
+        expect(function (): void {
+            app(DatabaseSeeder::class)->run();
+        })->toThrow(InvalidArgumentException::class, 'LOCAL_OPERATOR_EMAIL');
+    } finally {
+        app()->detectEnvironment(fn () => $originalEnvironment);
+        config(['auth.local_account_overrides' => $originalOverrides]);
+    }
+});
+
 it('does not seed deprecated safety fixture accounts in local environment', function (): void {
     $originalEnvironment = app()->environment();
     app()->detectEnvironment(fn (): string => 'local');

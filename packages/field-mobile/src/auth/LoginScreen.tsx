@@ -631,70 +631,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                                             </Text>
                                         </View>
                                     </View>
-
-                                    {__DEV__ ? (
-                                        <View
-                                            style={styles.devSection}
-                                            testID="dev-quick-login-section"
-                                        >
-                                            <Text style={styles.devTitle}>
-                                                Dev Quick Sign-In
-                                            </Text>
-                                            <View style={styles.devButtons}>
-                                                <Pressable
-                                                    onPress={() => {
-                                                        setUsername('driver');
-                                                        setPassword('password');
-                                                    }}
-                                                    disabled={formDisabled}
-                                                    style={({ pressed }) => [
-                                                        styles.devButton,
-                                                        pressed &&
-                                                            styles.pressed,
-                                                        formDisabled &&
-                                                            styles.disabledButton,
-                                                    ]}
-                                                    accessibilityRole="button"
-                                                    accessibilityLabel="Fill Driver dev credentials"
-                                                    testID="dev-login-driver"
-                                                >
-                                                    <Text
-                                                        style={
-                                                            styles.devButtonText
-                                                        }
-                                                    >
-                                                        Driver
-                                                    </Text>
-                                                </Pressable>
-
-                                                <Pressable
-                                                    onPress={() => {
-                                                        setUsername('operator');
-                                                        setPassword('password');
-                                                    }}
-                                                    disabled={formDisabled}
-                                                    style={({ pressed }) => [
-                                                        styles.devButton,
-                                                        pressed &&
-                                                            styles.pressed,
-                                                        formDisabled &&
-                                                            styles.disabledButton,
-                                                    ]}
-                                                    accessibilityRole="button"
-                                                    accessibilityLabel="Fill Operator dev credentials"
-                                                    testID="dev-login-operator"
-                                                >
-                                                    <Text
-                                                        style={
-                                                            styles.devButtonText
-                                                        }
-                                                    >
-                                                        Operator
-                                                    </Text>
-                                                </Pressable>
-                                            </View>
-                                        </View>
-                                    ) : null}
                                 </View>
                             )}
                         </View>
@@ -951,42 +887,6 @@ const styles = StyleSheet.create({
     },
     disabledButtonText: { color: colors.muted },
     pressed: { opacity: 0.8 },
-    devSection: {
-        borderTopWidth: 1,
-        borderTopColor: colors.border,
-        paddingTop: 16,
-        marginTop: 4,
-    },
-    devTitle: {
-        color: colors.muted,
-        fontSize: 12,
-        fontWeight: '700',
-        letterSpacing: 0.6,
-        textTransform: 'uppercase',
-        marginBottom: 10,
-    },
-    devButtons: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
-    },
-    devButton: {
-        flexGrow: 1,
-        flexBasis: 96,
-        minHeight: 48,
-        backgroundColor: colors.surfaceMuted,
-        borderColor: colors.border,
-        borderWidth: 1,
-        borderRadius: 8,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: 8,
-    },
-    devButtonText: {
-        color: colors.text,
-        fontSize: 13,
-        fontWeight: '600',
-    },
     challengeHeader: {
         marginBottom: 8,
     },

@@ -26,7 +26,6 @@ final class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'name' => config('app.name'),
-            'is_local_env' => app()->environment('local'),
             'flash' => fn (): mixed => $request->session()->get('flash'),
             'auth' => [
                 'user' => $user,

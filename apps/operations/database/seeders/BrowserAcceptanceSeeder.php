@@ -194,7 +194,9 @@ final class BrowserAcceptanceSeeder extends Seeder
         Storage::disk('private')->put($restrictedExportPath, 'Browser-only restricted export fixture');
         ReportExport::query()->create([
             'id' => '00000000-0000-0000-0000-000000000008',
-            'user_id' => $safetyOfficer->id,
+            // Owned by someone other than the manager, driver, or admin so the
+            // owner-or-system-admin download rule is exercised.
+            'user_id' => $foreman->id,
             'export_type' => ReportExportType::JobReports,
             'format' => 'xlsx',
             'status' => ReportExportStatus::Completed,

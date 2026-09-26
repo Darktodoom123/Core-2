@@ -25,6 +25,9 @@ class DatabaseSeeder extends Seeder
             throw new RuntimeException('ADMIN_PASSWORD must contain at least 12 characters when seeding production.');
         }
 
+        $localAccountOverrides = app()->environment('local') ? LocalAccountOverrides::fromConfig() : null;
+        $localAccountOverrides?->restoreFixtureEmails();
+
         $this->call(RolePermissionSeeder::class);
 
         $administrator = User::query()->firstOrCreate(
@@ -41,6 +44,7 @@ class DatabaseSeeder extends Seeder
 
         if (app()->environment('local')) {
             $this->call(LocalDevelopmentSeeder::class);
+            $localAccountOverrides?->apply();
         }
     }
 }

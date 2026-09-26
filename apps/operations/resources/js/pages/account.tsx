@@ -27,7 +27,6 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent, KeyboardEvent } from 'react';
-import { DevUserSwitcher } from '@/components/dev-user-switcher';
 import { Button, Input, Label, Modal } from '@/components/ui';
 import { useTheme } from '@/lib/use-theme';
 import { cn } from '@/lib/utils';
@@ -2846,8 +2845,6 @@ export default function AccountSettings({
                     </div>
                 )}
             </Modal>
-
-            <DevUserSwitcher />
         </div>
     );
 }

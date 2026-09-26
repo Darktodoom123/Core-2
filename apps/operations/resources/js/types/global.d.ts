@@ -12,7 +12,6 @@ declare module '@inertiajs/core' {
     export interface InertiaConfig {
         sharedPageProps: {
             name: string;
-            is_local_env: boolean;
             auth: Auth;
             flash: WorkspaceFlash | null;
             sidebarOpen: boolean;

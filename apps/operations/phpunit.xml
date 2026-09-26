@@ -43,5 +43,11 @@
         <env name="OPENROUTER_MODEL" value="openai/gpt-5-mini"/>
         <env name="OPENAI_API_KEY" value=""/>
         <env name="OPENROUTER_API_KEY" value=""/>
+        <env name="LOCAL_ADMIN_NAME" value=""/>
+        <env name="LOCAL_ADMIN_EMAIL" value=""/>
+        <env name="LOCAL_MANAGER_NAME" value=""/>
+        <env name="LOCAL_MANAGER_EMAIL" value=""/>
+        <env name="LOCAL_OPERATOR_NAME" value=""/>
+        <env name="LOCAL_OPERATOR_EMAIL" value=""/>
     </php>
 </phpunit>

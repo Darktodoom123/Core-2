@@ -51,7 +51,6 @@ export default function Login({ status }: { status?: string }) {
                         }
                         autoComplete="username"
                         autoFocus
-                        placeholder="dispatch.admin"
                         aria-invalid={Boolean(form.errors.username)}
                         aria-describedby={
                             form.errors.username ? 'username-error' : undefined

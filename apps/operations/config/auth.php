@@ -122,4 +122,15 @@ return [
 
     'bootstrap_admin_password' => env('ADMIN_PASSWORD'),
 
+    /*
+    | Optional local-only renames for the quick-login accounts, keyed by
+    | username and applied by DatabaseSeeder. Set these only in the untracked
+    | .env so personal names and emails stay out of the repository.
+    */
+    'local_account_overrides' => [
+        'admin' => ['name' => env('LOCAL_ADMIN_NAME'), 'email' => env('LOCAL_ADMIN_EMAIL')],
+        'manager' => ['name' => env('LOCAL_MANAGER_NAME'), 'email' => env('LOCAL_MANAGER_EMAIL')],
+        'operator' => ['name' => env('LOCAL_OPERATOR_NAME'), 'email' => env('LOCAL_OPERATOR_EMAIL')],
+    ],
+
 ];

@@ -1,6 +1,5 @@
 <?php
 
-use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Http\Controllers\AccountSecurityController;
 use App\Platform\Identity\Http\Controllers\AccountSettingsController;
 use App\Platform\Identity\Http\Controllers\Auth\AuthenticatedSessionController;
@@ -11,11 +10,7 @@ use App\Platform\Identity\Http\Controllers\Auth\TwoFactorChallengeController;
 use App\Platform\Identity\Http\Controllers\PersonnelController;
 use App\Platform\Identity\Http\Controllers\UserManagementController;
 use App\Platform\Identity\Http\Middleware\ValidateActiveSession;
-use App\Platform\Identity\Models\EmailOneTimeCode;
-use App\Platform\Identity\Models\User;
-use App\Platform\Identity\Services\EmailOtpService;
 use App\Platform\Workspace\Http\Controllers\OperationsWorkspaceController;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function (): void {
@@ -104,73 +99,3 @@ Route::middleware(['auth', 'active', ValidateActiveSession::class, 'verified', '
     Route::post('/users/{user}/credentials/{credential}/replace', [PersonnelController::class, 'replaceCredential']);
     Route::delete('/users/{user}/credentials/{credential}', [PersonnelController::class, 'destroyCredential']);
 });
-
-if (app()->environment(['local', 'testing'])) {
-    Route::get('/dev/users', function () {
-        return response()->json(
-            User::query()
-                ->whereIn('email', [
-                    'admin@example.com',
-                    'manager@example.com',
-                ])
-                ->role([
-                    RoleName::SystemAdministrator->value,
-                    RoleName::OperationsManager->value,
-                ])
-                ->with('roles')
-                ->select('id', 'name', 'email')
-                ->where('is_active', true)
-                ->whereNull('suspended_at')
-                ->whereNotNull('email_verified_at')
-                ->orderBy('name')
-                ->get()
-                ->map(static fn (User $user): array => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'role_label' => $user->operationalRole()?->label(),
-                ])
-                ->values(),
-        );
-    });
-
-    Route::post('/dev/login/{user}', function (User $user) {
-        abort_unless(
-            $user->is_active
-            && $user->suspended_at === null
-            && $user->hasVerifiedEmail()
-            && in_array($user->email, [
-                'admin@example.com',
-                'manager@example.com',
-            ], true)
-            && $user->hasAnyRole([
-                RoleName::SystemAdministrator->value,
-                RoleName::OperationsManager->value,
-            ]),
-            404,
-        );
-
-        if ($user->email_otp_enabled) {
-            $otpService = app(EmailOtpService::class);
-            $result = $otpService->generateCode(
-                user: $user,
-                purpose: EmailOneTimeCode::PURPOSE_LOGIN,
-            );
-
-            request()->session()->put('login.two_factor', [
-                'user_id' => $user->id,
-                'challenge_id' => $result['challenge_id'],
-                'remember' => false,
-                'expires_at' => now()->addMinutes(5)->timestamp,
-            ]);
-
-            return redirect()->route('login.challenge');
-        }
-
-        Auth::login($user);
-        request()->session()->regenerate();
-        ValidateActiveSession::track($user, request());
-
-        return redirect()->route('home');
-    })->whereNumber('user');
-}

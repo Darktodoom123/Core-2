@@ -1,5 +1,4 @@
 import type { PropsWithChildren } from 'react';
-import { DevUserSwitcher } from '@/components/dev-user-switcher';
 
 export function AuthShell({ children }: PropsWithChildren) {
     return (
@@ -30,7 +29,6 @@ export function AuthShell({ children }: PropsWithChildren) {
                     </div>
                 </section>
             </div>
-            <DevUserSwitcher />
         </main>
     );
 }
