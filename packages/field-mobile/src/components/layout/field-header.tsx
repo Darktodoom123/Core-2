@@ -20,7 +20,7 @@ export const SyncStatusPill: React.FC<SyncStatusPillProps> = ({
     tone,
     onPress,
 }) => {
-    const { isDarkHud } = useTheme();
+    const { isDarkHud, theme } = useTheme();
 
     const pillBody = (
         <View
@@ -32,7 +32,11 @@ export const SyncStatusPill: React.FC<SyncStatusPillProps> = ({
                 tone === 'online' && styles.syncPillOnline,
                 isDarkHud && tone === 'online' && styles.darkSyncPillOnline,
                 tone === 'offline' && styles.syncPillOffline,
-                isDarkHud && tone === 'offline' && styles.darkSyncPillOffline,
+                isDarkHud &&
+                    tone === 'offline' && {
+                        backgroundColor: theme.warningOrangeLight,
+                        borderColor: theme.warningOrange,
+                    },
                 tone === 'attention' && styles.syncPillAttention,
                 isDarkHud &&
                     tone === 'attention' &&
@@ -49,8 +53,11 @@ export const SyncStatusPill: React.FC<SyncStatusPillProps> = ({
                     tone === 'online' && styles.syncMarkOnline,
                     tone === 'offline' && styles.syncMarkOffline,
                     tone === 'attention' && styles.syncMarkAttention,
-                    tone === 'syncing' && styles.syncMarkSyncing,
+                    tone === 'syncing' && {
+                        backgroundColor: theme.actionCobalt,
+                    },
                 ]}
+                testID="sync-status-mark"
             />
             <Text
                 style={[
@@ -466,10 +473,6 @@ const styles = StyleSheet.create({
         backgroundColor: colors.warningLight,
         borderColor: colors.warningBorder,
     },
-    darkSyncPillOffline: {
-        backgroundColor: 'rgba(255, 191, 0, 0.12)',
-        borderColor: 'rgba(255, 191, 0, 0.3)',
-    },
     syncPillAttention: {
         backgroundColor: colors.warningSoft,
         borderColor: colors.warningBorder,
@@ -514,9 +517,6 @@ const styles = StyleSheet.create({
     },
     syncMarkAttention: {
         backgroundColor: colors.warning,
-    },
-    syncMarkSyncing: {
-        backgroundColor: colors.primary,
     },
     syncLabel: {
         color: colors.text,
@@ -742,11 +742,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: colors.red,
         borderColor: '#FFFFFF',
-        borderRadius: 9,
+        borderRadius: 11,
         borderWidth: 1.5,
-        height: 18,
+        height: 22,
         justifyContent: 'center',
-        minWidth: 18,
+        minWidth: 22,
         paddingHorizontal: 3,
         position: 'absolute',
         right: -4,
@@ -758,7 +758,7 @@ const styles = StyleSheet.create({
     },
     notificationBadgeText: {
         color: colors.white,
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '900',
     },
     accountMenuWrap: {

@@ -24,7 +24,7 @@ export const FieldBottomNav: React.FC<FieldBottomNavProps> = ({
 }) => {
     const insets = useContext(SafeAreaInsetsContext);
     const bottomInset = insets?.bottom ?? 0;
-    const { isDarkHud } = useTheme();
+    const { isDarkHud, theme } = useTheme();
 
     return (
         <View
@@ -112,9 +112,7 @@ export const FieldBottomNav: React.FC<FieldBottomNavProps> = ({
                         <Icon
                             color={
                                 activeItem === 'profile'
-                                    ? isDarkHud
-                                        ? '#FFBF00'
-                                        : '#806000'
+                                    ? theme.brandAmberText
                                     : isDarkHud
                                       ? '#94A3B8'
                                       : '#64748B'
@@ -126,11 +124,15 @@ export const FieldBottomNav: React.FC<FieldBottomNavProps> = ({
                     <Text
                         style={[
                             styles.label,
-                            activeItem === 'profile' && styles.labelSelected,
                             isDarkHud &&
-                                (activeItem === 'profile'
-                                    ? styles.darkLabelSelected
-                                    : styles.darkLabel),
+                                activeItem !== 'profile' &&
+                                styles.darkLabel,
+                            // Gold ink, not plain Signal Gold: #FFBF00 text on
+                            // the white nav is about 1.6:1.
+                            activeItem === 'profile' && {
+                                color: theme.brandAmberText,
+                                fontWeight: '700',
+                            },
                         ]}
                     >
                         Profile
@@ -203,20 +205,13 @@ const styles = StyleSheet.create({
     },
     label: {
         color: colors.secondary,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '600',
         letterSpacing: -0.1,
         textAlign: 'center',
     },
-    labelSelected: {
-        color: '#FFBF00',
-        fontWeight: '700',
-    },
     darkLabel: {
         color: '#94A3B8',
-    },
-    darkLabelSelected: {
-        color: '#FFBF00',
     },
     pressed: {
         opacity: 0.75,

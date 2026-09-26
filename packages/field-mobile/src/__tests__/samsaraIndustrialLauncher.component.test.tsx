@@ -6,6 +6,7 @@ import {
 } from '@testing-library/react-native/pure';
 import '@testing-library/react-native/matchers';
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { DutyStatusSelectorModal } from '../components/sheets/DutyStatusSelectorModal';
 import { AssignedJobsListScreen } from '../screens/AssignedJobsListScreen';
 import { DocumentsWalletScreen } from '../screens/DocumentsWalletScreen';
@@ -59,7 +60,7 @@ jest.mock('../services/walletService', () => ({
     },
 }));
 import { DvirScreen } from '../screens/DvirScreen';
-import { OperatorDashboardScreen } from '../screens/OperatorDashboardScreen';
+import { lightThemeColors } from '../theme/tokens';
 import type { DispatchJob } from '../types/index';
 
 describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
@@ -175,235 +176,6 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
         });
     });
 
-    describe('OperatorDashboardScreen 6-Tile Industrial Launcher', () => {
-        it('renders persistent duty bar, vehicle asset card, and all 6 colored launcher tiles', async () => {
-            const onOpenDvir = jest.fn();
-            const onOpenDocs = jest.fn();
-            const onOpenRoutes = jest.fn();
-            const onOpenVehicle = jest.fn();
-            const onOpenForms = jest.fn();
-            const onOpenRental = jest.fn();
-            const onSelectJob = jest.fn();
-
-            const view = await render(
-                <OperatorDashboardScreen
-                    onSosHoldComplete={jest.fn()}
-                    isLoading={false}
-                    isOnline={true}
-                    jobs={[mockJob]}
-                    onDiscardCommand={jest.fn()}
-                    onLogout={jest.fn()}
-                    onOpenDocuments={onOpenDocs}
-                    onOpenDvir={onOpenDvir}
-                    onOpenForms={onOpenForms}
-                    onOpenRental={onOpenRental}
-                    onOpenRoutes={onOpenRoutes}
-                    onOpenVehicle={onOpenVehicle}
-                    onRefresh={jest.fn()}
-                    onRetryCommand={jest.fn()}
-                    onSelectJob={onSelectJob}
-                    outboxCommands={[]}
-                    shiftInfo={{
-                        status: 'on_shift',
-                        dutyStatus: 'operating',
-                        hoursElapsed: 4.2,
-                    }}
-                    userName="Alex Rivera"
-                    userRole="Master Crane Rigger"
-                />,
-            );
-
-            // Identity & Vehicle
-            expect(view.getByText('ALEX RIVERA')).toBeTruthy();
-            expect(view.getByText('ALB-CRN-050')).toBeTruthy();
-            expect(view.getByText('DISP-2026-0891')).toBeTruthy();
-
-            // Launcher Grid
-            expect(view.getByTestId('tile-hos')).toBeTruthy();
-            expect(view.getByTestId('tile-dvir')).toBeTruthy();
-            expect(view.queryByTestId('tile-routes')).toBeNull();
-            expect(view.getByTestId('tile-documents')).toBeTruthy();
-            expect(view.getByTestId('tile-vehicle')).toBeTruthy();
-            expect(view.getByTestId('tile-forms')).toBeTruthy();
-            const rentalTile = view.getByTestId('tile-rental');
-            expect(rentalTile).toBeTruthy();
-            expect(rentalTile.props.style).toEqual(
-                expect.arrayContaining([
-                    expect.objectContaining({ backgroundColor: '#4F46E5' }),
-                ]),
-            );
-
-            // Column Layout Verification
-            // Col 1: HOS (top) & Documents (bottom)
-            // Col 2: Vehicle Inspection (top) & Machine Profile (bottom)
-            // Col 3: Dispatch (top) & Rental Handover (bottom)
-            const col1 = view.getByTestId('tile-column-1');
-            const col2 = view.getByTestId('tile-column-2');
-            const col3 = view.getByTestId('tile-column-3');
-            expect(within(col1).getByTestId('tile-hos')).toBeTruthy();
-            expect(within(col1).getByTestId('tile-documents')).toBeTruthy();
-            expect(within(col2).getByTestId('tile-dvir')).toBeTruthy();
-            expect(within(col2).getByTestId('tile-vehicle')).toBeTruthy();
-            expect(within(col3).getByTestId('tile-forms')).toBeTruthy();
-            expect(within(col3).getByTestId('tile-rental')).toBeTruthy();
-
-            // UX User-Friendly Text Labels
-            expect(view.getByText('Hours of\nService')).toBeTruthy();
-            expect(view.getByText('Vehicle\nInspection')).toBeTruthy();
-            expect(view.queryByText('Drive\nRoutes')).toBeNull();
-            expect(view.getByText('Documents')).toBeTruthy();
-            expect(view.getByText('Machine\nProfile')).toBeTruthy();
-            expect(view.getByText('Dispatch')).toBeTruthy();
-            expect(view.getByText('Intake & Orders')).toBeTruthy();
-            expect(view.getByText('Rental\nHandover')).toBeTruthy();
-
-            // Tapping DVIR tile
-            await fireEvent.press(view.getByTestId('tile-dvir'));
-            expect(onOpenDvir).toHaveBeenCalled();
-
-            // Tapping Documents tile
-            await fireEvent.press(view.getByTestId('tile-documents'));
-            expect(onOpenDocs).toHaveBeenCalled();
-
-            // Tapping Forms tile
-            await fireEvent.press(view.getByTestId('tile-forms'));
-            expect(onOpenForms).toHaveBeenCalled();
-
-            // Tapping Rental tile
-            await fireEvent.press(view.getByTestId('tile-rental'));
-            expect(onOpenRental).toHaveBeenCalled();
-        });
-
-        it('updates persistent duty status when confirmed via selector modal', async () => {
-            const onChangeDutyStatus = jest.fn();
-
-            const view = await render(
-                <OperatorDashboardScreen
-                    isLoading={false}
-                    jobs={[mockJob]}
-                    onChangeDutyStatus={onChangeDutyStatus}
-                    onDiscardCommand={jest.fn()}
-                    onLogout={jest.fn()}
-                    onOpenDocuments={jest.fn()}
-                    onOpenDvir={jest.fn()}
-                    onOpenForms={jest.fn()}
-                    onOpenRoutes={jest.fn()}
-                    onOpenVehicle={jest.fn()}
-                    onRefresh={jest.fn()}
-                    onRetryCommand={jest.fn()}
-                    onSelectJob={jest.fn()}
-                    onSosHoldComplete={jest.fn()}
-                    outboxCommands={[]}
-                    shiftInfo={{
-                        status: 'on_shift',
-                        dutyStatus: 'operating',
-                        hoursElapsed: 4.5,
-                    }}
-                    userName="Alex Rivera"
-                    userRole="Master Crane Rigger"
-                />,
-            );
-
-            // Initially operating
-            expect(view.getByText('On Duty — Crane Operating')).toBeTruthy();
-            expect(view.getByText('OPR')).toBeTruthy();
-
-            // Open duty modal by tapping persistent duty bar
-            await fireEvent.press(view.getByTestId('hero-duty-status-bar'));
-            expect(view.getByTestId('duty-status-sheet')).toBeTruthy();
-
-            // Select Driving
-            await fireEvent.press(view.getByTestId('duty-option-driving'));
-
-            // Confirm
-            await fireEvent.press(view.getByTestId('confirm-duty-status-btn'));
-            expect(onChangeDutyStatus).toHaveBeenCalledWith(
-                'driving',
-                undefined,
-                undefined,
-            );
-
-            // Verified immediate update on dashboard screen
-            expect(view.getByText('On Duty — Driving / Transit')).toBeTruthy();
-            expect(view.getByText('DRV')).toBeTruthy();
-        });
-
-        it('opens DispatchIntakeSheet from Dispatch tile to inspect orders and accept assignment', async () => {
-            const onAccept = jest.fn();
-            const onReject = jest.fn();
-            const onOpenForms = jest.fn();
-
-            const pendingJob: DispatchJob = {
-                ...mockJob,
-                id: 202,
-                version: 3,
-                status: {
-                    value: 'dispatched',
-                    label: 'Dispatched',
-                },
-                my_assignment: {
-                    id: 77,
-                    response_status: 'pending',
-                    response_status_label: 'Pending Response',
-                    assigned_at: '2026-08-31T08:00:00Z',
-                },
-            };
-
-            const view = await render(
-                <OperatorDashboardScreen
-                    isLoading={false}
-                    jobs={[pendingJob]}
-                    onAcceptAssignment={onAccept}
-                    onDiscardCommand={jest.fn()}
-                    onLogout={jest.fn()}
-                    onOpenDocuments={jest.fn()}
-                    onOpenDvir={jest.fn()}
-                    onOpenForms={onOpenForms}
-                    onOpenRental={jest.fn()}
-                    onOpenRoutes={jest.fn()}
-                    onOpenVehicle={jest.fn()}
-                    onRefresh={jest.fn()}
-                    onRejectAssignment={onReject}
-                    onRetryCommand={jest.fn()}
-                    onSelectJob={jest.fn()}
-                    onSosHoldComplete={jest.fn()}
-                    outboxCommands={[]}
-                    shiftInfo={{
-                        status: 'on_shift',
-                        dutyStatus: 'operating',
-                        hoursElapsed: 4.5,
-                    }}
-                    userName="Alex Rivera"
-                    userRole="Master Crane Rigger"
-                />,
-            );
-
-            // Sublabel displayed on tile
-            expect(view.getByText('Intake & Orders')).toBeTruthy();
-
-            // Press Dispatch tile
-            await fireEvent.press(view.getByTestId('tile-forms'));
-            expect(onOpenForms).toHaveBeenCalled();
-
-            // Sheet opens and displays pending assignment
-            expect(view.getByTestId('dispatch-intake-sheet')).toBeTruthy();
-            expect(view.getByText('Dispatch Intake & Orders')).toBeTruthy();
-            expect(view.getByText('Needs Response (1)')).toBeTruthy();
-            expect(view.getByTestId('dispatch-intake-job-202')).toBeTruthy();
-            expect(view.getByTestId('accept-assignment-btn')).toBeTruthy();
-
-            // Accept assignment
-            await fireEvent.press(view.getByTestId('accept-assignment-btn'));
-            expect(onAccept).toHaveBeenCalledWith(202, 77, 3);
-
-            // Close sheet
-            await fireEvent.press(
-                view.getByTestId('close-dispatch-intake-btn'),
-            );
-            expect(view.queryByTestId('dispatch-intake-sheet')).toBeNull();
-        });
-    });
-
     describe('AssignedJobsListScreen Persistent Duty Bar', () => {
         it('updates persistent duty status when confirmed via selector modal', async () => {
             const onChangeDutyStatus = jest.fn();
@@ -450,13 +222,14 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
             expect(view.getByText('SBY')).toBeTruthy();
         });
 
-        it('renders 6 solid-color centered launcher tiles with user-friendly text', async () => {
+        it('renders neutral launcher tiles in a non-scrolling grid with user-friendly text', async () => {
             const onOpenHos = jest.fn();
             const onOpenDvir = jest.fn();
             const onOpenRoutes = jest.fn();
             const onOpenDocs = jest.fn();
             const onOpenVehicle = jest.fn();
             const onOpenRental = jest.fn();
+            const onOpenFuel = jest.fn();
 
             const view = await render(
                 <AssignedJobsListScreen
@@ -464,6 +237,7 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
                     jobs={[mockJob]}
                     onOpenDocuments={onOpenDocs}
                     onOpenDvir={onOpenDvir}
+                    onOpenFuel={onOpenFuel}
                     onOpenHos={onOpenHos}
                     onOpenRental={onOpenRental}
                     onOpenRoutes={onOpenRoutes}
@@ -489,61 +263,143 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
             expect(view.getByText('Dispatch')).toBeTruthy();
             expect(view.getByText('Intake & Orders')).toBeTruthy();
             expect(view.getByText('Rental\nHandover')).toBeTruthy();
+            expect(view.getByText('Fuel')).toBeTruthy();
 
-            // Verify testIDs
-            expect(view.getByTestId('tile-hos')).toBeTruthy();
-            expect(view.getByTestId('tile-dvir')).toBeTruthy();
+            // The grid wraps instead of scrolling sideways (Docs/design/mobile.md).
+            const grid = view.getByTestId('industrial-tile-grid');
+            expect(grid.props.horizontal).toBeFalsy();
             expect(view.queryByTestId('tile-routes')).toBeNull();
-            expect(view.getByTestId('tile-documents')).toBeTruthy();
-            expect(view.getByTestId('tile-vehicle')).toBeTruthy();
-            expect(view.getByTestId('tile-forms')).toBeTruthy();
-            const assignedRentalTile = view.getByTestId('tile-rental');
-            expect(assignedRentalTile).toBeTruthy();
-            expect(assignedRentalTile.props.style).toEqual(
-                expect.arrayContaining([
-                    expect.objectContaining({ backgroundColor: '#4F46E5' }),
-                ]),
+
+            // Row layout: lifecycle actions first, then supporting tools.
+            const row1 = view.getByTestId('tile-row-1');
+            const row2 = view.getByTestId('tile-row-2');
+            expect(within(row1).getByTestId('tile-hos')).toBeTruthy();
+            expect(within(row1).getByTestId('tile-dvir')).toBeTruthy();
+            expect(within(row1).getByTestId('tile-forms')).toBeTruthy();
+            expect(within(row2).getByTestId('tile-documents')).toBeTruthy();
+            expect(within(row2).getByTestId('tile-vehicle')).toBeTruthy();
+            expect(within(row2).getByTestId('tile-rental')).toBeTruthy();
+            expect(within(grid).getByTestId('tile-fuel')).toBeTruthy();
+
+            // Tiles are navigation, not status: neutral surface, hairline
+            // border, no per-tile hue and no resting shadow.
+            for (const id of [
+                'hos',
+                'dvir',
+                'forms',
+                'documents',
+                'vehicle',
+                'rental',
+                'fuel',
+            ]) {
+                const tileStyle = StyleSheet.flatten(
+                    view.getByTestId(`tile-${id}`).props.style,
+                );
+                expect(tileStyle).toEqual(
+                    expect.objectContaining({
+                        backgroundColor: lightThemeColors.surface,
+                        borderColor: lightThemeColors.border,
+                        borderWidth: 1,
+                        borderRadius: 12,
+                    }),
+                );
+                expect(tileStyle.elevation ?? 0).toBe(0);
+                expect(tileStyle.boxShadow).toBeUndefined();
+            }
+
+            // State appears only as a badge; a pending dispatch is an action,
+            // so its count badge uses Signal Gold.
+            const badgeStyle = StyleSheet.flatten(
+                view.getByTestId('tile-forms-badge').props.style,
+            );
+            expect(badgeStyle.backgroundColor).toBe(
+                lightThemeColors.brandAmber,
             );
 
-            // Column Layout Verification
-            // Col 1: HOS (top) & Documents (bottom)
-            // Col 2: Vehicle Inspection (top) & Machine Profile (bottom)
-            // Col 3: Dispatch (top) & Rental Handover (bottom)
-            const assignedCol1 = view.getByTestId('tile-column-1');
-            const assignedCol2 = view.getByTestId('tile-column-2');
-            const assignedCol3 = view.getByTestId('tile-column-3');
-            expect(within(assignedCol1).getByTestId('tile-hos')).toBeTruthy();
-            expect(
-                within(assignedCol1).getByTestId('tile-documents'),
-            ).toBeTruthy();
-            expect(within(assignedCol2).getByTestId('tile-dvir')).toBeTruthy();
-            expect(
-                within(assignedCol2).getByTestId('tile-vehicle'),
-            ).toBeTruthy();
-            expect(within(assignedCol3).getByTestId('tile-forms')).toBeTruthy();
-            expect(
-                within(assignedCol3).getByTestId('tile-rental'),
-            ).toBeTruthy();
+            // Text respects the 12sp floor.
+            for (const label of ['Dispatch', 'Intake & Orders']) {
+                const textStyle = StyleSheet.flatten(
+                    view.getByText(label).props.style,
+                );
+                expect(textStyle.fontSize).toBeGreaterThanOrEqual(12);
+            }
 
-            // Tapping HOS opens HOS callback
             await fireEvent.press(view.getByTestId('tile-hos'));
             expect(onOpenHos).toHaveBeenCalled();
 
-            // Tapping DVIR opens DVIR callback
             await fireEvent.press(view.getByTestId('tile-dvir'));
             expect(onOpenDvir).toHaveBeenCalled();
 
-            // Tapping Documents opens Documents callback
             await fireEvent.press(view.getByTestId('tile-documents'));
             expect(onOpenDocs).toHaveBeenCalled();
 
-            // Tapping Vehicle opens Vehicle callback
             await fireEvent.press(view.getByTestId('tile-vehicle'));
             expect(onOpenVehicle).toHaveBeenCalled();
 
-            // Tapping Rental opens Rental callback
             await fireEvent.press(view.getByTestId('tile-rental'));
             expect(onOpenRental).toHaveBeenCalled();
+
+            await fireEvent.press(view.getByTestId('tile-fuel'));
+            expect(onOpenFuel).toHaveBeenCalled();
+        });
+
+        it('opens DispatchIntakeSheet from Dispatch tile to inspect orders and accept assignment', async () => {
+            const onAccept = jest.fn();
+            const onOpenForms = jest.fn();
+
+            const pendingJob: DispatchJob = {
+                ...mockJob,
+                id: 202,
+                version: 3,
+                status: {
+                    value: 'dispatched',
+                    label: 'Dispatched',
+                },
+                my_assignment: {
+                    id: 77,
+                    response_status: 'pending',
+                    response_status_label: 'Pending Response',
+                    assigned_at: '2026-08-31T08:00:00Z',
+                },
+            };
+
+            const view = await render(
+                <AssignedJobsListScreen
+                    isLoading={false}
+                    jobs={[pendingJob]}
+                    onAcceptAssignment={onAccept}
+                    onOpenForms={onOpenForms}
+                    onRefresh={jest.fn()}
+                    onRejectAssignment={jest.fn()}
+                    onSelectJob={jest.fn()}
+                    onSosHoldComplete={jest.fn()}
+                    outboxCommands={[]}
+                    shiftInfo={{
+                        status: 'on_shift',
+                        dutyStatus: 'operating',
+                        hoursElapsed: 4.5,
+                    }}
+                />,
+            );
+
+            // Press Dispatch tile
+            await fireEvent.press(view.getByTestId('tile-forms'));
+            expect(onOpenForms).toHaveBeenCalled();
+
+            // Sheet opens on the pending assignment
+            expect(view.getByTestId('dispatch-intake-sheet')).toBeTruthy();
+            expect(view.getByText('Needs Response (1)')).toBeTruthy();
+            expect(view.getByTestId('dispatch-intake-job-202')).toBeTruthy();
+
+            // Accept assignment
+            await fireEvent.press(view.getByTestId('accept-assignment-btn'));
+            expect(onAccept).toHaveBeenCalledWith(202, 77, 3);
+
+            // Close sheet
+            await fireEvent.press(
+                view.getByTestId('close-dispatch-intake-btn'),
+            );
+            expect(view.queryByTestId('dispatch-intake-sheet')).toBeNull();
         });
 
         it('opens DispatchIntakeSheet from Dispatch tile and allows rejecting assignment with reason', async () => {

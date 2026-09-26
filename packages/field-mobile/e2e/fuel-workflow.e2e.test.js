@@ -133,8 +133,9 @@ async function openFuelManagement() {
     const tile = element(by.id('tile-fuel'));
     await waitFor(tile)
         .toBeVisible()
-        .whileElement(by.id('industrial-tile-grid'))
-        .scroll(500, 'right');
+        // The tile grid wraps; scroll the home screen, not the grid.
+        .whileElement(by.id('refresh-control'))
+        .scroll(300, 'down');
     await tile.tap();
     await waitFor(element(by.id('fuel-management-screen')))
         .toBeVisible()

@@ -149,8 +149,9 @@ async function openDispatchOrders() {
     });
     await waitFor(dispatchTile)
         .toBeVisible()
-        .whileElement(by.id('industrial-tile-grid'))
-        .scroll(300, 'right');
+        // The tile grid wraps; scroll the home screen, not the grid.
+        .whileElement(by.id('refresh-control'))
+        .scroll(300, 'down');
     await revealAboveBottomNav();
     await dispatchTile.tap();
     await waitFor(element(by.id('dispatch-orders-screen')))

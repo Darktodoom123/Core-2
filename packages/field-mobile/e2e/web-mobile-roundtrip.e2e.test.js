@@ -213,8 +213,9 @@ async function signInFieldOperator() {
     });
     await waitFor(element(by.id('tile-forms')))
         .toBeVisible()
-        .whileElement(by.id('industrial-tile-grid'))
-        .scroll(300, 'right');
+        // The tile grid wraps; scroll the home screen, not the grid.
+        .whileElement(by.id('refresh-control'))
+        .scroll(300, 'down');
     console.info('[cross-client] Dispatch tile is visible.');
     const tileScreenshot = await device.takeScreenshot(
         'cross-client-dispatch-tile-before-nav-clearance',
