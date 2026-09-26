@@ -263,9 +263,6 @@ opportunistically in code you touch:
   times outside `src/theme`.
 - Resting panels combine a border with a shadow (`sharedStyles.panel`,
   `shadows.md`).
-- Gold used for state or with failing contrast: the "Site Weather Locked" card
-  on the home screen is gold-tinted, and the selected document filter chip in
-  `DocumentsWalletScreen.tsx` puts white text on Signal Gold (about 1.6:1).
 - The sync pill's "attention" tone is orange with red text in light mode but
   red in dark HUD; its meaning (warning or critical) needs deciding.
 - `createMachinedStyles` in `src/theme/index.tsx` (uppercase "pedal" buttons and
@@ -274,8 +271,9 @@ opportunistically in code you touch:
   over 3,000 lines. `HosScreen.tsx` was split into `src/screens/hos/` (largest
   file 667 lines); its section components still receive raw state setters
   (for example `setIsSaved`) and could take intent-named callbacks instead.
-- Hours of Service clocks color values decoratively: the 70-hour cycle value is
-  Signal Gold and the break countdown is purple (`hos-clocks-card.tsx`).
+- The Hours of Service shift gauge turns orange above 70% and red above 85%
+  of the shift window, which does not match the DOLE 9.0h warning and 10.0h
+  cap. The clock values warn at 1 hour or less remaining.
 
 ## Mobile design QA checklist
 

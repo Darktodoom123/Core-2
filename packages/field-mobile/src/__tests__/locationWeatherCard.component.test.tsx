@@ -1,7 +1,9 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { LocationWeatherCard } from '../components/cards/LocationWeatherCard';
 import { ThemeProvider } from '../theme';
+import { darkHudThemeColors, lightThemeColors } from '../theme/tokens';
 import type { WeatherTelemetry } from '../types/index';
 
 describe('LocationWeatherCard Component', () => {
@@ -247,5 +249,94 @@ describe('LocationWeatherCard Component', () => {
         expect(view.getByTestId('location-weather-card')).toBeTruthy();
         expect(view.getByText('Quezon City')).toBeTruthy();
         expect(view.getByText('12 km/h')).toBeTruthy();
+    });
+
+    describe('state colors follow the mobile design roles', () => {
+        const cautionWeather: WeatherTelemetry = {
+            latitude: 14.59,
+            longitude: 120.98,
+            location_name: 'Manila North Harbor',
+            temperature_celsius: 27.0,
+            wind_speed_kmh: 38.2,
+            wind_gusts_kmh: 46.0,
+            rain_intensity_mmh: 1.2,
+            humidity_percent: 85,
+            weather_description: 'Light Rain',
+            safety_level: 'warning_caution',
+            safety_message: 'High Wind Caution',
+            source: 'open_meteo_live',
+            fetched_at: '2026-09-06T00:00:00Z',
+        };
+
+        it.each([
+            ['light', lightThemeColors],
+            ['dark_hud', darkHudThemeColors],
+        ] as const)(
+            'draws unavailable weather as a neutral card in %s mode',
+            async (mode, theme) => {
+                const view = await render(
+                    <ThemeProvider initialMode={mode}>
+                        <LocationWeatherCard />
+                    </ThemeProvider>,
+                );
+
+                const card = StyleSheet.flatten(
+                    view.getByTestId('location-weather-card').props.style,
+                );
+                const title = StyleSheet.flatten(
+                    view.getByText('Site Weather Locked').props.style,
+                );
+
+                expect(card.backgroundColor).toBe(theme.surface);
+                expect(card.borderColor).toBe(theme.border);
+                expect(title.color).toBe(theme.textPrimary);
+            },
+        );
+
+        it.each([
+            ['light', lightThemeColors],
+            ['dark_hud', darkHudThemeColors],
+        ] as const)(
+            'uses warning orange, not Signal Gold, for the caution pill in %s mode',
+            async (mode, theme) => {
+                const view = await render(
+                    <ThemeProvider initialMode={mode}>
+                        <LocationWeatherCard weather={cautionWeather} />
+                    </ThemeProvider>,
+                );
+
+                const pill = StyleSheet.flatten(
+                    view.getByTestId('weather-safety-pill').props.style,
+                );
+                const label = StyleSheet.flatten(
+                    view.getByText('CAUTION (36-44 KM/H)').props.style,
+                );
+
+                expect(pill.backgroundColor).toBe(theme.warningOrangeLight);
+                expect(label.color).toBe(theme.warningOrangeText);
+            },
+        );
+
+        it('gives the retry action a glove-sized touch target', async () => {
+            const view = await render(
+                <LocationWeatherCard
+                    canUseCurrentLocation
+                    onRefresh={jest.fn()}
+                />,
+            );
+
+            const retry = view.getByTestId('weather-refresh-btn');
+            const style = StyleSheet.flatten(
+                typeof retry.props.style === 'function'
+                    ? retry.props.style({ pressed: false })
+                    : retry.props.style,
+            );
+            const hitSlop = retry.props.hitSlop ?? 0;
+
+            expect(style.minHeight + hitSlop * 2).toBeGreaterThanOrEqual(48);
+            expect(
+                StyleSheet.flatten(view.getByText('Retry').props.style).color,
+            ).toBe(lightThemeColors.brandAmberText);
+        });
     });
 });

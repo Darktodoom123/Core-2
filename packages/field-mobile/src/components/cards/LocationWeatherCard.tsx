@@ -107,7 +107,7 @@ export const LocationWeatherCard: React.FC<LocationWeatherCardProps> = ({
     canUseCurrentLocation = false,
     onRefresh,
 }) => {
-    const { isDarkHud } = useTheme();
+    const { isDarkHud, theme } = useTheme();
 
     // 1. Loading State (when no weather yet, but currently fetching)
     if (isLoading && !weather) {
@@ -170,15 +170,17 @@ export const LocationWeatherCard: React.FC<LocationWeatherCardProps> = ({
                 accessibilityLabel={`${friendly.title}: ${friendly.message}`}
                 style={[
                     styles.cardRoot,
-                    styles.errorCardRoot,
-                    isDarkHud && styles.darkErrorCardRoot,
+                    {
+                        backgroundColor: theme.surface,
+                        borderColor: theme.border,
+                    },
                 ]}
                 testID="location-weather-card"
             >
                 <View style={styles.headerRow}>
                     <View style={styles.locationGroup}>
                         <Icon
-                            color={isDarkHud ? '#FFBF00' : '#806000'}
+                            color={theme.textSecondary}
                             name={friendly.icon}
                             size={13}
                         />
@@ -186,7 +188,7 @@ export const LocationWeatherCard: React.FC<LocationWeatherCardProps> = ({
                             numberOfLines={1}
                             style={[
                                 styles.errorTitle,
-                                isDarkHud && styles.darkErrorTitle,
+                                { color: theme.textPrimary },
                             ]}
                         >
                             {friendly.title}
@@ -202,30 +204,28 @@ export const LocationWeatherCard: React.FC<LocationWeatherCardProps> = ({
                             onPress={onRefresh}
                             style={({ pressed }) => [
                                 styles.retryButton,
-                                isDarkHud && styles.darkRetryButton,
+                                { backgroundColor: theme.brandAmberLight },
                                 pressed && styles.btnPressed,
                             ]}
                             testID="weather-refresh-btn"
                         >
                             {isLoading ? (
                                 <ActivityIndicator
-                                    color={isDarkHud ? '#FFBF00' : '#806000'}
+                                    color={theme.brandAmberText}
                                     size="small"
                                     testID="weather-refresh-spinner"
                                 />
                             ) : (
                                 <View style={styles.retryInner}>
                                     <Icon
-                                        color={
-                                            isDarkHud ? '#FFBF00' : '#806000'
-                                        }
+                                        color={theme.brandAmberText}
                                         name="route"
                                         size={11}
                                     />
                                     <Text
                                         style={[
                                             styles.retryText,
-                                            isDarkHud && styles.darkRetryText,
+                                            { color: theme.brandAmberText },
                                         ]}
                                     >
                                         Retry
@@ -246,7 +246,7 @@ export const LocationWeatherCard: React.FC<LocationWeatherCardProps> = ({
                         numberOfLines={1}
                         style={[
                             styles.errorMessageText,
-                            isDarkHud && styles.darkErrorMessageText,
+                            { color: theme.textSecondary },
                         ]}
                     >
                         {friendly.message}
@@ -271,9 +271,9 @@ export const LocationWeatherCard: React.FC<LocationWeatherCardProps> = ({
                 };
             case 'warning_caution':
                 return {
-                    pillBg: isDarkHud ? 'rgba(255, 191, 0, 0.2)' : '#FFF3C4',
-                    pillText: isDarkHud ? '#FFBF00' : '#806000',
-                    dotColor: '#806000',
+                    pillBg: theme.warningOrangeLight,
+                    pillText: theme.warningOrangeText,
+                    dotColor: theme.warningOrange,
                     label: 'CAUTION (36-44 KM/H)',
                 };
             case 'safe_normal':
@@ -338,6 +338,7 @@ export const LocationWeatherCard: React.FC<LocationWeatherCardProps> = ({
                             styles.safetyPill,
                             { backgroundColor: safetyTheme.pillBg },
                         ]}
+                        testID="weather-safety-pill"
                     >
                         <View
                             style={[
@@ -396,11 +397,7 @@ export const LocationWeatherCard: React.FC<LocationWeatherCardProps> = ({
             >
                 {/* Wind / Anemometer */}
                 <View style={styles.metricItem}>
-                    <Icon
-                        color={isDarkHud ? '#FFBF00' : '#806000'}
-                        name="speed"
-                        size={13}
-                    />
+                    <Icon color={theme.textSecondary} name="speed" size={13} />
                     <Text
                         style={[
                             styles.metricBold,
@@ -465,44 +462,21 @@ const styles = StyleSheet.create({
         backgroundColor: '#131D31',
         borderColor: 'rgba(255, 255, 255, 0.08)',
     },
-    errorCardRoot: {
-        backgroundColor: '#FFF3C4',
-        borderColor: '#FFBF00',
-    },
-    darkErrorCardRoot: {
-        backgroundColor: '#1E293B',
-        borderColor: 'rgba(255, 191, 0, 0.35)',
-    },
     errorTitle: {
-        color: '#806000',
         fontSize: 12,
         fontWeight: '700',
         letterSpacing: 0.1,
     },
-    darkErrorTitle: {
-        color: '#FFBF00',
-    },
     errorMessageText: {
-        color: '#806000',
         fontSize: 12,
         fontWeight: '500',
     },
-    darkErrorMessageText: {
-        color: '#FFBF00',
-    },
     retryButton: {
         alignItems: 'center',
-        backgroundColor: '#FFF3C4',
-        borderColor: '#FFF3C4',
-        borderRadius: 6,
-        borderWidth: 1,
+        borderRadius: 8,
         justifyContent: 'center',
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-    },
-    darkRetryButton: {
-        backgroundColor: 'rgba(255, 191, 0, 0.15)',
-        borderColor: 'rgba(255, 191, 0, 0.3)',
+        minHeight: 32,
+        paddingHorizontal: 12,
     },
     retryInner: {
         alignItems: 'center',
@@ -510,12 +484,8 @@ const styles = StyleSheet.create({
         gap: 4,
     },
     retryText: {
-        color: '#806000',
         fontSize: 12,
         fontWeight: '700',
-    },
-    darkRetryText: {
-        color: '#FFBF00',
     },
     headerRow: {
         alignItems: 'center',

@@ -24,6 +24,79 @@ export interface HosClocksCardProps {
     userRole: string;
 }
 
+/** At or under this many hours left, a clock is shown as a warning. */
+const LOW_REMAINING_HOURS = 1;
+
+type ClockTone = 'neutral' | 'warning' | 'hazard';
+
+function getRemainingTone(remainingHours: number | null): ClockTone {
+    if (remainingHours === null) {
+        return 'neutral';
+    }
+
+    if (remainingHours <= 0) {
+        return 'hazard';
+    }
+
+    return remainingHours <= LOW_REMAINING_HOURS ? 'warning' : 'neutral';
+}
+
+interface HosClockDialProps {
+    id: 'drive' | 'shift' | 'cycle' | 'break';
+    label: string;
+    remainingHours: number | null;
+    sublabel: string;
+}
+
+const HosClockDial: React.FC<HosClockDialProps> = ({
+    id,
+    label,
+    remainingHours,
+    sublabel,
+}) => {
+    const { isDarkHud, theme } = useTheme();
+    const tone = getRemainingTone(remainingHours);
+    const toneColor = {
+        neutral: theme.textPrimary,
+        warning: theme.warningOrangeText,
+        hazard: theme.hazardRedText,
+    }[tone];
+
+    return (
+        <View style={[styles.clockCell, isDarkHud && styles.darkClockCell]}>
+            <Text
+                style={[
+                    styles.clockCellLabel,
+                    isDarkHud && styles.darkClockCellLabel,
+                ]}
+            >
+                {label}
+            </Text>
+            <View style={styles.clockValueRow}>
+                {tone === 'neutral' ? null : (
+                    <View testID={`hos-clock-${id}-alert`}>
+                        <Icon color={toneColor} name="alert" size={16} />
+                    </View>
+                )}
+                <Text
+                    style={[styles.clockCellValue, { color: toneColor }]}
+                    testID={`hos-clock-${id}-value`}
+                >
+                    {formatHoursMinutes(remainingHours)}
+                </Text>
+            </View>
+            <Text
+                style={[
+                    styles.clockCellSub,
+                    isDarkHud && styles.darkClockCellSub,
+                ]}
+            >
+                {sublabel}
+            </Text>
+        </View>
+    );
+};
+
 export const HosClocksCard: React.FC<HosClocksCardProps> = ({
     breakCountdownHours,
     cycleHoursElapsed,
@@ -41,7 +114,14 @@ export const HosClocksCard: React.FC<HosClocksCardProps> = ({
     shiftRemainingHours,
     userRole,
 }) => {
-    const { isDarkHud } = useTheme();
+    const { isDarkHud, theme } = useTheme();
+    const shiftProgress = shiftProgressPercent ?? 0;
+    const gaugeFillColor =
+        shiftProgress > 85
+            ? theme.hazardRed
+            : shiftProgress > 70
+              ? theme.warningOrange
+              : theme.successEmerald;
 
     return (
         <View
@@ -76,139 +156,34 @@ export const HosClocksCard: React.FC<HosClocksCardProps> = ({
 
             {/* 4-Cell Dials Grid */}
             <View style={styles.clocksGrid}>
-                {/* Dial 1: Drive / Operating Remaining */}
-                <View
-                    style={[
-                        styles.clockCell,
-                        isDarkHud && styles.darkClockCell,
-                    ]}
-                >
-                    <Text
-                        style={[
-                            styles.clockCellLabel,
-                            isDarkHud && styles.darkClockCellLabel,
-                        ]}
-                    >
-                        Drive / Operating
-                    </Text>
-                    <Text
-                        style={[
-                            styles.clockCellValueGreen,
-                            isDarkHud && styles.darkClockCellValueGreen,
-                        ]}
-                    >
-                        {formatHoursMinutes(driveRemainingHours)}
-                    </Text>
-                    <Text
-                        style={[
-                            styles.clockCellSub,
-                            isDarkHud && styles.darkClockCellSub,
-                        ]}
-                    >
-                        of {maxDriveHours}h limit
-                    </Text>
-                </View>
-
-                {/* Dial 2: Shift Window Remaining */}
-                <View
-                    style={[
-                        styles.clockCell,
-                        isDarkHud && styles.darkClockCell,
-                    ]}
-                >
-                    <Text
-                        style={[
-                            styles.clockCellLabel,
-                            isDarkHud && styles.darkClockCellLabel,
-                        ]}
-                    >
-                        Shift Window
-                    </Text>
-                    <Text
-                        style={[
-                            styles.clockCellValueBlue,
-                            isDarkHud && styles.darkClockCellValueBlue,
-                        ]}
-                    >
-                        {formatHoursMinutes(shiftRemainingHours)}
-                    </Text>
-                    <Text
-                        style={[
-                            styles.clockCellSub,
-                            isDarkHud && styles.darkClockCellSub,
-                        ]}
-                    >
-                        of {maxShiftHours}h daily
-                    </Text>
-                </View>
-
-                {/* Dial 3: 70-Hr Cycle Remaining */}
-                <View
-                    style={[
-                        styles.clockCell,
-                        isDarkHud && styles.darkClockCell,
-                    ]}
-                >
-                    <Text
-                        style={[
-                            styles.clockCellLabel,
-                            isDarkHud && styles.darkClockCellLabel,
-                        ]}
-                    >
-                        {cycleHoursLimit}-Hr 8-Day Cycle
-                    </Text>
-                    <Text
-                        style={[
-                            styles.clockCellValueAmber,
-                            isDarkHud && styles.darkClockCellValueAmber,
-                        ]}
-                    >
-                        {formatHoursMinutes(cycleRemainingHours)}
-                    </Text>
-                    <Text
-                        style={[
-                            styles.clockCellSub,
-                            isDarkHud && styles.darkClockCellSub,
-                        ]}
-                    >
-                        {cycleHoursElapsed === null
+                <HosClockDial
+                    id="drive"
+                    label="Drive / Operating"
+                    remainingHours={driveRemainingHours}
+                    sublabel={`of ${maxDriveHours}h limit`}
+                />
+                <HosClockDial
+                    id="shift"
+                    label="Shift Window"
+                    remainingHours={shiftRemainingHours}
+                    sublabel={`of ${maxShiftHours}h daily`}
+                />
+                <HosClockDial
+                    id="cycle"
+                    label={`${cycleHoursLimit}-Hr 8-Day Cycle`}
+                    remainingHours={cycleRemainingHours}
+                    sublabel={
+                        cycleHoursElapsed === null
                             ? 'Unavailable'
-                            : `${cycleHoursElapsed.toFixed(1)}h logged`}
-                    </Text>
-                </View>
-
-                {/* Dial 4: Mandatory Rest Break Countdown */}
-                <View
-                    style={[
-                        styles.clockCell,
-                        isDarkHud && styles.darkClockCell,
-                    ]}
-                >
-                    <Text
-                        style={[
-                            styles.clockCellLabel,
-                            isDarkHud && styles.darkClockCellLabel,
-                        ]}
-                    >
-                        Break Countdown
-                    </Text>
-                    <Text
-                        style={[
-                            styles.clockCellValuePurple,
-                            isDarkHud && styles.darkClockCellValuePurple,
-                        ]}
-                    >
-                        {formatHoursMinutes(breakCountdownHours)}
-                    </Text>
-                    <Text
-                        style={[
-                            styles.clockCellSub,
-                            isDarkHud && styles.darkClockCellSub,
-                        ]}
-                    >
-                        until 30m rest
-                    </Text>
-                </View>
+                            : `${cycleHoursElapsed.toFixed(1)}h logged`
+                    }
+                />
+                <HosClockDial
+                    id="break"
+                    label="Break Countdown"
+                    remainingHours={breakCountdownHours}
+                    sublabel="until 30m rest"
+                />
             </View>
 
             <View
@@ -229,8 +204,8 @@ export const HosClocksCard: React.FC<HosClocksCardProps> = ({
                 </Text>
                 <Text
                     style={[
-                        styles.clockCellValueBlue,
-                        isDarkHud && styles.darkClockCellValueBlue,
+                        styles.clockCellValue,
+                        { color: theme.textPrimary },
                     ]}
                 >
                     {formatHoursMinutes(limitCounterHours)}
@@ -272,14 +247,11 @@ export const HosClocksCard: React.FC<HosClocksCardProps> = ({
                         style={[
                             styles.gaugeFill,
                             {
-                                width: `${shiftProgressPercent ?? 0}%`,
+                                backgroundColor: gaugeFillColor,
+                                width: `${shiftProgress}%`,
                             },
-                            (shiftProgressPercent ?? 0) > 85
-                                ? styles.gaugeFillRed
-                                : (shiftProgressPercent ?? 0) > 70
-                                  ? styles.gaugeFillAmber
-                                  : styles.gaugeFillGreen,
                         ]}
+                        testID="hos-shift-gauge-fill"
                     />
                 </View>
             </View>
@@ -307,8 +279,8 @@ export const HosClocksCard: React.FC<HosClocksCardProps> = ({
                         </Text>
                         <Text
                             style={[
-                                styles.clockCellValueBlue,
-                                isDarkHud && styles.darkClockCellValueBlue,
+                                styles.clockCellValue,
+                                { color: theme.textPrimary },
                             ]}
                         >
                             {formatHoursMinutes(value)}
@@ -361,25 +333,14 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         marginTop: 2,
     },
-    clockCellValueAmber: {
-        color: '#FFBF00',
+    clockCellValue: {
         fontSize: 18,
-        fontWeight: '900',
+        fontWeight: '700',
     },
-    clockCellValueBlue: {
-        color: '#2563EB',
-        fontSize: 18,
-        fontWeight: '900',
-    },
-    clockCellValueGreen: {
-        color: '#059669',
-        fontSize: 18,
-        fontWeight: '900',
-    },
-    clockCellValuePurple: {
-        color: '#7C3AED',
-        fontSize: 18,
-        fontWeight: '900',
+    clockValueRow: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 4,
     },
     clocksCard: {
         backgroundColor: '#FFFFFF',
@@ -421,18 +382,6 @@ const styles = StyleSheet.create({
     darkClockCellSub: {
         color: '#64748B',
     },
-    darkClockCellValueAmber: {
-        color: '#FFBF00',
-    },
-    darkClockCellValueBlue: {
-        color: '#60A5FA',
-    },
-    darkClockCellValueGreen: {
-        color: '#34D399',
-    },
-    darkClockCellValuePurple: {
-        color: '#C084FC',
-    },
     darkClocksCard: {
         backgroundColor: '#1E293B',
         borderColor: '#334155',
@@ -465,15 +414,6 @@ const styles = StyleSheet.create({
     gaugeFill: {
         borderRadius: 6,
         height: '100%',
-    },
-    gaugeFillAmber: {
-        backgroundColor: '#FFBF00',
-    },
-    gaugeFillGreen: {
-        backgroundColor: '#10B981',
-    },
-    gaugeFillRed: {
-        backgroundColor: '#EF4444',
     },
     gaugeMetaLabel: {
         color: '#64748B',

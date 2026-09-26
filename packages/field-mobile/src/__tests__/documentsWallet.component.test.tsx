@@ -1,8 +1,16 @@
-import { cleanup, fireEvent, render } from '@testing-library/react-native/pure';
+import {
+    cleanup,
+    fireEvent,
+    render,
+    within,
+} from '@testing-library/react-native/pure';
 import '@testing-library/react-native/matchers';
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { DocumentsWalletScreen } from '../screens/DocumentsWalletScreen';
 import { WalletService } from '../services/walletService';
+import { ThemeProvider } from '../theme';
+import { darkHudThemeColors, lightThemeColors } from '../theme/tokens';
 import type { ComplianceDocument } from '../types/index';
 
 const mockUser = { id: 42, name: 'Alex Rivera' };
@@ -458,5 +466,113 @@ describe('DocumentsWalletScreen Component & Offline Access Engine', () => {
                 'LOCAL DURABLE STORAGE • wallet_ALB_CRN_050_doc_permit_sync_99.pdf • OFFLINE READY',
             ),
         ).toBeTruthy();
+    });
+
+    describe('filter and status colors follow the mobile design roles', () => {
+        const flatten = (style: unknown) =>
+            StyleSheet.flatten(
+                typeof style === 'function'
+                    ? style({ pressed: false })
+                    : (style as never),
+            );
+
+        it.each([
+            ['light', lightThemeColors],
+            ['dark_hud', darkHudThemeColors],
+        ] as const)(
+            'marks the selected filter chip with Signal Gold Soft and ink text in %s mode',
+            async (mode, theme) => {
+                const view = await render(
+                    <ThemeProvider initialMode={mode}>
+                        <DocumentsWalletScreen
+                            assetCode="ALB-CRN-050"
+                            operatorName="Alex Rivera"
+                        />
+                    </ThemeProvider>,
+                );
+                await view.findByText(
+                    'DPWH Special Heavy-Load Road Transit Permit',
+                );
+
+                await fireEvent.press(view.getByTestId('filter-insurance'));
+
+                const selected = view.getByTestId('filter-insurance');
+                const unselected = view.getByTestId('filter-all');
+
+                expect(selected.props.accessibilityState).toMatchObject({
+                    selected: true,
+                });
+                expect(flatten(selected.props.style).backgroundColor).toBe(
+                    theme.brandAmberLight,
+                );
+                expect(flatten(selected.props.style).borderColor).toBe(
+                    theme.brandAmber,
+                );
+                expect(
+                    flatten(within(selected).getByText('Insurance').props.style)
+                        .color,
+                ).toBe(theme.textPrimary);
+                expect(unselected.props.accessibilityState).toMatchObject({
+                    selected: false,
+                });
+                expect(flatten(unselected.props.style).backgroundColor).toBe(
+                    theme.surface,
+                );
+                expect(
+                    flatten(
+                        within(unselected).getByText('All Documents').props
+                            .style,
+                    ).color,
+                ).toBe(theme.textSecondary);
+            },
+        );
+
+        it.each([
+            ['light', lightThemeColors],
+            ['dark_hud', darkHudThemeColors],
+        ] as const)(
+            'shows Expiring Soon in Caution Orange, not Signal Gold, in %s mode',
+            async (mode, theme) => {
+                const view = await render(
+                    <ThemeProvider initialMode={mode}>
+                        <DocumentsWalletScreen
+                            assetCode="ALB-CRN-050"
+                            operatorName="Alex Rivera"
+                        />
+                    </ThemeProvider>,
+                );
+
+                const label = await view.findByText('Expiring Soon');
+
+                expect(flatten(label.props.style).color).toBe(
+                    theme.warningOrangeText,
+                );
+            },
+        );
+
+        it('sizes the asset switcher chips for gloved use', async () => {
+            const view = await render(
+                <DocumentsWalletScreen
+                    assetCode="ALB-CRN-050"
+                    assignedAssets={[
+                        { assetCode: 'ALB-CRN-050' },
+                        { assetCode: 'ALB-TRK-012' },
+                    ]}
+                    operatorName="Alex Rivera"
+                />,
+            );
+            await view.findByText(
+                'DPWH Special Heavy-Load Road Transit Permit',
+            );
+
+            const chip = view.getByTestId('asset-selector-ALB-TRK-012');
+
+            expect(flatten(chip.props.style).minHeight).toBeGreaterThanOrEqual(
+                48,
+            );
+            expect(chip.props.accessibilityState).toMatchObject({
+                selected: false,
+            });
+        });
     });
 });

@@ -55,7 +55,7 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
     operatorName = 'Alex Rivera',
     assignedAssets,
 }) => {
-    const { isDarkHud } = useTheme();
+    const { isDarkHud, theme } = useTheme();
     const [activeAssetCode, setActiveAssetCode] = useState<string>(
         assetCode ||
             (assignedAssets && assignedAssets.length > 0
@@ -249,11 +249,9 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                 return {
                     label: 'Expiring Soon',
                     icon: 'alert' as const,
-                    color: isDarkHud ? '#FFBF00' : colors.amberDark,
-                    bg: isDarkHud
-                        ? 'rgba(255, 191, 0, 0.2)'
-                        : colors.amberLight,
-                    border: isDarkHud ? '#FFBF00' : colors.amberBorder,
+                    color: theme.warningOrangeText,
+                    bg: theme.warningOrangeLight,
+                    border: theme.warningOrange,
                 };
             case 'expired':
                 return {
@@ -333,6 +331,9 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                             return (
                                 <Pressable
                                     accessibilityRole="button"
+                                    accessibilityState={{
+                                        selected: isSelected,
+                                    }}
                                     key={asset.assetCode}
                                     onPress={() =>
                                         setActiveAssetCode(asset.assetCode)
@@ -441,22 +442,19 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                         return (
                             <Pressable
                                 accessibilityRole="button"
+                                accessibilityState={{ selected: isSelected }}
                                 key={cat.key}
                                 onPress={() => setSelectedCategory(cat.key)}
                                 style={({ pressed }) => [
                                     styles.categoryChip,
-                                    isDarkHud && styles.categoryChipDark,
-                                    isAll &&
-                                        !isSelected &&
-                                        styles.categoryChipAll,
-                                    isDarkHud &&
-                                        isAll &&
-                                        !isSelected &&
-                                        styles.categoryChipAllDark,
-                                    isSelected && styles.categoryChipActive,
-                                    isDarkHud &&
-                                        isSelected &&
-                                        styles.categoryChipActiveDark,
+                                    {
+                                        backgroundColor: isSelected
+                                            ? theme.brandAmberLight
+                                            : theme.surface,
+                                        borderColor: isSelected
+                                            ? theme.brandAmber
+                                            : theme.border,
+                                    },
                                     pressed && styles.pressed,
                                 ]}
                                 testID={`filter-${cat.key}`}
@@ -464,20 +462,11 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                 <Text
                                     style={[
                                         styles.categoryChipText,
-                                        isDarkHud &&
-                                            styles.categoryChipTextDark,
-                                        isAll &&
-                                            !isSelected &&
-                                            styles.categoryChipTextAll,
-                                        isDarkHud &&
-                                            isAll &&
-                                            !isSelected &&
-                                            styles.categoryChipTextAllDark,
-                                        isSelected &&
-                                            styles.categoryChipTextActive,
-                                        isDarkHud &&
-                                            isSelected &&
-                                            styles.categoryChipTextActiveDark,
+                                        {
+                                            color: isSelected
+                                                ? theme.textPrimary
+                                                : theme.textSecondary,
+                                        },
                                     ]}
                                 >
                                     {cat.label}
@@ -485,37 +474,21 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
                                 <View
                                     style={[
                                         styles.countTag,
-                                        isAll &&
-                                            !isSelected &&
-                                            styles.countTagAll,
-                                        isDarkHud &&
-                                            isAll &&
-                                            !isSelected &&
-                                            styles.countTagAllDark,
-                                        isSelected && styles.countTagActive,
-                                        isDarkHud && styles.countTagDark,
-                                        isDarkHud &&
-                                            isSelected &&
-                                            styles.countTagActiveDark,
+                                        {
+                                            backgroundColor: isSelected
+                                                ? theme.brandAmber
+                                                : theme.canvas,
+                                        },
                                     ]}
                                 >
                                     <Text
                                         style={[
                                             styles.countTagText,
-                                            isAll &&
-                                                !isSelected &&
-                                                styles.countTagTextAll,
-                                            isDarkHud &&
-                                                isAll &&
-                                                !isSelected &&
-                                                styles.countTagTextAllDark,
-                                            isSelected &&
-                                                styles.countTagTextActive,
-                                            isDarkHud &&
-                                                styles.countTagTextDark,
-                                            isDarkHud &&
-                                                isSelected &&
-                                                styles.countTagTextActiveDark,
+                                            {
+                                                color: isSelected
+                                                    ? theme.surfaceDark
+                                                    : theme.textSecondary,
+                                            },
                                         ]}
                                     >
                                         {count}
@@ -1939,96 +1912,25 @@ const styles = StyleSheet.create({
     },
     categoryChip: {
         alignItems: 'center',
-        backgroundColor: colors.surface,
-        borderRadius: 20,
+        borderRadius: 8,
+        borderWidth: 1,
         flexDirection: 'row',
         gap: 6,
         minHeight: 48,
         paddingHorizontal: 14,
     },
-    categoryChipDark: {
-        backgroundColor: colors.hudSurface,
-    },
-    categoryChipAll: {
-        backgroundColor: colors.amberLight,
-    },
-    categoryChipAllDark: {
-        backgroundColor: 'rgba(51, 40, 0, 0.25)',
-    },
-    categoryChipActive: {
-        backgroundColor: colors.primary,
-    },
-    categoryChipActiveDark: {
-        backgroundColor: colors.hudAmber,
-    },
     categoryChipText: {
-        color: colors.secondary,
         fontSize: 12,
         fontWeight: '700',
     },
-    categoryChipTextDark: {
-        color: colors.hudTextDim,
-    },
-    categoryChipTextAll: {
-        color: colors.amberDark,
-        fontWeight: '800',
-    },
-    categoryChipTextAllDark: {
-        color: colors.hudAmber,
-        fontWeight: '800',
-    },
-    categoryChipTextActive: {
-        color: '#FFFFFF',
-        fontWeight: '800',
-    },
-    categoryChipTextActiveDark: {
-        color: colors.surfaceDark,
-        fontWeight: '800',
-    },
     countTag: {
-        backgroundColor: colors.surfaceMuted,
         borderRadius: 10,
         paddingHorizontal: 6,
         paddingVertical: 2,
     },
-    countTagDark: {
-        backgroundColor: colors.surfaceDark,
-    },
-    countTagAll: {
-        backgroundColor: 'rgba(255, 191, 0, 0.18)',
-    },
-    countTagAllDark: {
-        backgroundColor: 'rgba(255, 191, 0, 0.22)',
-    },
-    countTagActive: {
-        backgroundColor: 'rgba(255, 255, 255, 0.28)',
-    },
-    countTagActiveDark: {
-        backgroundColor: 'rgba(15, 23, 42, 0.25)',
-    },
     countTagText: {
-        color: colors.muted,
         fontSize: 12,
-        fontWeight: '800',
-    },
-    countTagTextDark: {
-        color: colors.hudTextDim,
-    },
-    countTagTextAll: {
-        color: colors.amberDark,
-        fontWeight: '800',
-    },
-    countTagTextAllDark: {
-        color: colors.hudAmber,
-        fontWeight: '800',
-    },
-    countTagTextActive: {
-        color: '#FFFFFF',
-        fontWeight: '800',
-    },
-    countTagTextActiveDark: {
-        color: colors.surfaceDark,
-        fontWeight: '800',
+        fontWeight: '700',
     },
     scrollView: {
         flex: 1,
@@ -2858,6 +2760,7 @@ const styles = StyleSheet.create({
     assetSelectorSection: {
         paddingHorizontal: 16,
         paddingBottom: 8,
+        paddingTop: 12,
     },
     assetSelectorRail: {
         gap: 8,
@@ -2866,8 +2769,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
+        minHeight: 48,
         paddingHorizontal: 12,
-        paddingVertical: 6,
         borderRadius: 8,
         backgroundColor: '#F1F5F9',
         borderWidth: 1,
