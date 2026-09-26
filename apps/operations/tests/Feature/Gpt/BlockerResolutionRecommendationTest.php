@@ -69,6 +69,18 @@ test('no eligible option yields useful deterministic advice without a model call
     Queue::assertNothingPushed();
 });
 
+test('unrecorded availability is explained in plain language', function (): void {
+    $operator = eligibleBlockerOperator();
+    $operator->personnelProfile()->delete();
+    $rec = app(GenerateGptRecommendation::class)->handle($this->dispatcher, $this->job, 'dispatch_blocker_resolution');
+    $context = app(BlockerResolutionContextBuilder::class)->buildForDispatchJob($this->job);
+
+    app()->call([new GenerateGptRecommendationJob($rec->id, $context['context']), 'handle']);
+
+    expect($rec->fresh()->recommendation['options'][0]['explanation'])
+        ->toBe('Availability is not recorded. Confirm it before assigning.');
+});
+
 test('vetted option is reviewed and adopted only through the normal assignment route', function (): void {
     $operator = eligibleBlockerOperator();
     $rec = app(GenerateGptRecommendation::class)->handle($this->dispatcher, $this->job, 'dispatch_blocker_resolution');

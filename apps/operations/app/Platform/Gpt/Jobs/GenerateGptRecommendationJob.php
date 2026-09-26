@@ -214,11 +214,13 @@ final class GenerateGptRecommendationJob implements ShouldQueue
             $option = $approved[$ranked['id']];
             $focus = $ranked['focus'];
             $explanation = match ($focus) {
-                'availability' => 'Recorded availability is '.$option['evidence']['availability'].'.',
+                'availability' => $option['evidence']['availability'] === 'not_recorded'
+                    ? 'Availability is not recorded. Confirm it before assigning.'
+                    : 'Recorded availability is '.str_replace('_', ' ', (string) $option['evidence']['availability']).'.',
                 'credential' => $option['evidence']['credential'] === 'valid'
                     ? 'The required credential is valid at the scheduled start.'
                     : 'No role-specific credential is required for this assignment.',
-                'readiness' => 'Recorded asset readiness is '.$option['evidence']['readiness'].'.',
+                'readiness' => 'Recorded asset readiness is '.str_replace('_', ' ', (string) $option['evidence']['readiness']).'.',
                 'schedule_conflicts' => 'No overlapping commitment was found for the scheduled window.',
                 default => throw new \UnexpectedValueException('Unsupported blocker evidence key.'),
             };

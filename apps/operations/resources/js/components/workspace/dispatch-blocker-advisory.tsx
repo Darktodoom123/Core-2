@@ -20,6 +20,9 @@ export function DispatchBlockerAdvisory({
     const page = usePage();
     const [requesting, setRequesting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [pollingStoppedFor, setPollingStoppedFor] = useState<number | null>(
+        null,
+    );
     const rec = useMemo(
         () =>
             recommendations
@@ -38,6 +41,8 @@ export function DispatchBlockerAdvisory({
     );
     const pending =
         requesting || rec?.status === 'draft' || rec?.status === 'processing';
+    const pendingId = rec?.id ?? -job.id;
+    const pollingStopped = pending && pollingStoppedFor === pendingId;
     const expired = rec?.status !== 'accepted' && Boolean(rec?.is_expired);
     const stale =
         rec?.is_stale ||
@@ -49,7 +54,7 @@ export function DispatchBlockerAdvisory({
         | undefined;
 
     useEffect(() => {
-        if (!pending) {
+        if (!pending || pollingStopped) {
             return;
         }
 
@@ -58,13 +63,14 @@ export function DispatchBlockerAdvisory({
             attempts += 1;
             router.reload({ only: ['gptRecommendations'] });
 
-            if (attempts >= 15) {
+            if (attempts >= 25) {
                 window.clearInterval(timer);
+                setPollingStoppedFor(pendingId);
             }
         }, 3500);
 
         return () => window.clearInterval(timer);
-    }, [pending, job.id, rec?.id]);
+    }, [pending, pendingId, pollingStopped]);
 
     const request = (refresh: boolean) => {
         setRequesting(true);
@@ -130,7 +136,9 @@ export function DispatchBlockerAdvisory({
                 <div className="mt-3 space-y-3 text-sm">
                     {pending ? (
                         <p role="status" className="text-ink-soft">
-                            Checking the current resource blocker…
+                            {pollingStopped
+                                ? 'Automatic status checks paused. Check status for the latest result.'
+                                : 'Checking the current resource blocker…'}
                         </p>
                     ) : ready ? (
                         <>
@@ -210,6 +218,20 @@ export function DispatchBlockerAdvisory({
                         </p>
                     )}
                     <div className="flex flex-wrap gap-2">
+                        {pollingStopped && (
+                            <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => {
+                                    setPollingStoppedFor(null);
+                                    router.reload({
+                                        only: ['gptRecommendations'],
+                                    });
+                                }}
+                            >
+                                Check status
+                            </Button>
+                        )}
                         {capabilities.request_gpt_assistance && !pending && (
                             <Button
                                 size="sm"

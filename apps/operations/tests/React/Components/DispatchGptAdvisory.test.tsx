@@ -256,6 +256,42 @@ describe('dispatch GPT advisory', () => {
         );
     });
 
+    it('offers a status check when queued blocker advice takes longer than polling', () => {
+        vi.useFakeTimers();
+
+        try {
+            render(
+                <DispatchGptAdvisory
+                    job={job(10)}
+                    capabilities={capabilities({
+                        blocker_resolution_enabled: true,
+                    })}
+                    recommendations={[
+                        recommendation({
+                            id: 8,
+                            purpose: 'dispatch_blocker_resolution',
+                            status: 'processing',
+                        }),
+                    ]}
+                />,
+            );
+
+            act(() => vi.advanceTimersByTime(3500 * 26));
+            expect(router.reload).toHaveBeenCalledTimes(25);
+            expect(
+                screen.getByText(/Automatic status checks paused\./),
+            ).toBeInTheDocument();
+
+            fireEvent.click(
+                screen.getByRole('button', { name: 'Check status' }),
+            );
+            expect(router.reload).toHaveBeenCalledTimes(26);
+            expect(router.post).not.toHaveBeenCalled();
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
     it('shows only the latest dispatch assignment recommendation for the selected job', () => {
         render(
             <DispatchGptAdvisory
