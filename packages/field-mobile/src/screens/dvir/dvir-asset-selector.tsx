@@ -1,10 +1,10 @@
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { colors } from '../../components/nativeStyles';
-import { useTheme } from '../../theme';
+import { useThemedStyles } from '../../theme';
+import type { ThemeColors } from '../../theme';
 import type { AssetAssignment } from '../../types/index';
 import type { DvirScreenProps } from '../DvirScreen';
-import { dvirSharedStyles } from './dvir-shared-styles';
+import { createDvirSharedStyles } from './dvir-shared-styles';
 
 export interface DvirAssetSelectorProps {
     activeSelectedAssetId: number | null;
@@ -23,26 +23,17 @@ export const DvirAssetSelector: React.FC<DvirAssetSelectorProps> = ({
     setUncontrolledAssetId,
     setUserSelectedAssetId,
 }) => {
-    const { isDarkHud } = useTheme();
+    const styles = useThemedStyles(createStyles);
+    const dvirSharedStyles = useThemedStyles(createDvirSharedStyles);
 
     return (
         <View
             accessibilityLabel="Select assigned equipment"
             accessibilityRole="radiogroup"
-            style={[
-                styles.assetSelectorContainer,
-                isDarkHud && styles.darkAssetSelectorContainer,
-            ]}
+            style={[styles.assetSelectorContainer]}
             testID="dvir-asset-selector"
         >
-            <Text
-                style={[
-                    styles.assetSelectorLabel,
-                    isDarkHud && styles.darkAssetSelectorLabel,
-                ]}
-            >
-                Assigned Equipment:
-            </Text>
+            <Text style={[styles.assetSelectorLabel]}>Assigned Equipment:</Text>
             <ScrollView
                 contentContainerStyle={styles.assetSelectorScroll}
                 horizontal
@@ -75,36 +66,19 @@ export const DvirAssetSelector: React.FC<DvirAssetSelectorProps> = ({
                             }}
                             style={({ pressed }) => [
                                 styles.assetPill,
-                                isDarkHud && styles.darkAssetPill,
                                 isSelected && styles.assetPillActive,
-                                isDarkHud &&
-                                    isSelected &&
-                                    styles.darkAssetPillActive,
                                 pressed && dvirSharedStyles.pressed,
                             ]}
                             testID={`dvir-select-asset-${assignment.operational_asset_id}`}
                         >
-                            <Text
-                                style={[
-                                    styles.assetPillCode,
-                                    isDarkHud && styles.darkAssetPillCode,
-                                    isSelected && styles.assetPillCodeActive,
-                                    isDarkHud &&
-                                        isSelected &&
-                                        styles.darkAssetPillCodeActive,
-                                ]}
-                            >
+                            <Text style={[styles.assetPillCode]}>
                                 {assignment.asset_code}
                             </Text>
                             <Text
                                 numberOfLines={1}
                                 style={[
                                     styles.assetPillName,
-                                    isDarkHud && styles.darkAssetPillName,
                                     isSelected && styles.assetPillNameActive,
-                                    isDarkHud &&
-                                        isSelected &&
-                                        styles.darkAssetPillNameActive,
                                 ]}
                             >
                                 {assignment.asset_name}
@@ -117,83 +91,54 @@ export const DvirAssetSelector: React.FC<DvirAssetSelectorProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
-    assetPill: {
-        alignItems: 'center',
-        backgroundColor: colors.surfaceMuted,
-        borderColor: colors.border,
-        borderRadius: 8,
-        borderWidth: 1,
-        flexDirection: 'row',
-        gap: 6,
-        minHeight: 48,
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-    },
-    assetPillActive: {
-        backgroundColor: colors.amberDark,
-        borderColor: colors.amberDark,
-    },
-    assetPillCode: {
-        color: colors.amber,
-        fontSize: 13,
-        fontWeight: '800',
-    },
-    assetPillCodeActive: {
-        color: '#FFFFFF',
-    },
-    assetPillName: {
-        color: colors.muted,
-        fontSize: 12,
-        fontWeight: '500',
-        maxWidth: 160,
-    },
-    assetPillNameActive: {
-        color: '#FFFFFF',
-    },
-    assetSelectorContainer: {
-        backgroundColor: colors.surface,
-        borderBottomColor: colors.border,
-        borderBottomWidth: 1,
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-    },
-    assetSelectorLabel: {
-        color: colors.muted,
-        fontSize: 12,
-        fontWeight: '700',
-        marginBottom: 8,
-        textTransform: 'uppercase',
-    },
-    assetSelectorScroll: {
-        flexDirection: 'row',
-        gap: 8,
-    },
-    darkAssetPill: {
-        backgroundColor: colors.surfaceDark,
-        borderColor: colors.hudBorder,
-    },
-    darkAssetPillActive: {
-        backgroundColor: colors.hudAmber,
-        borderColor: colors.hudAmber,
-    },
-    darkAssetPillCode: {
-        color: colors.hudText,
-    },
-    darkAssetPillCodeActive: {
-        color: colors.surfaceDark,
-    },
-    darkAssetPillName: {
-        color: colors.hudTextDim,
-    },
-    darkAssetPillNameActive: {
-        color: colors.surfaceDark,
-    },
-    darkAssetSelectorContainer: {
-        backgroundColor: colors.hudSurface,
-        borderBottomColor: colors.hudBorder,
-    },
-    darkAssetSelectorLabel: {
-        color: colors.hudTextDim,
-    },
-});
+const createStyles = (theme: ThemeColors) =>
+    StyleSheet.create({
+        assetPill: {
+            alignItems: 'center',
+            backgroundColor: theme.surface,
+            borderColor: theme.border,
+            borderRadius: 8,
+            borderWidth: 1,
+            flexDirection: 'row',
+            gap: 6,
+            minHeight: 48,
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+        },
+        assetPillActive: {
+            backgroundColor: theme.brandAmberLight,
+            borderColor: theme.brandAmber,
+        },
+        assetPillCode: {
+            color: theme.textPrimary,
+            fontSize: 13,
+            fontWeight: '700',
+        },
+        assetPillName: {
+            color: theme.textSecondary,
+            fontSize: 12,
+            fontWeight: '500',
+            maxWidth: 160,
+        },
+        assetPillNameActive: {
+            color: theme.textPrimary,
+        },
+        assetSelectorContainer: {
+            backgroundColor: theme.surface,
+            borderBottomColor: theme.border,
+            borderBottomWidth: 1,
+            paddingHorizontal: 16,
+            paddingVertical: 10,
+        },
+        assetSelectorLabel: {
+            color: theme.textSecondary,
+            fontSize: 12,
+            fontWeight: '700',
+            marginBottom: 8,
+            textTransform: 'uppercase',
+        },
+        assetSelectorScroll: {
+            flexDirection: 'row',
+            gap: 8,
+        },
+    });

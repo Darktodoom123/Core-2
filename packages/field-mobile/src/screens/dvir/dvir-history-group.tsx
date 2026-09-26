@@ -1,10 +1,10 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { colors } from '../../components/nativeStyles';
-import { useTheme } from '../../theme';
+import { useThemedStyles } from '../../theme';
+import type { ThemeColors } from '../../theme';
 import type { DvirInspectionRecord } from '../../types/index';
 import { DvirHistoryRecordCard } from './dvir-history-record-card';
-import { dvirSharedStyles } from './dvir-shared-styles';
+import { createDvirSharedStyles } from './dvir-shared-styles';
 
 export interface DvirHistoryGroupProps {
     emptyMessage: string;
@@ -17,25 +17,14 @@ export const DvirHistoryGroup: React.FC<DvirHistoryGroupProps> = ({
     records,
     title,
 }) => {
-    const { isDarkHud } = useTheme();
+    const styles = useThemedStyles(createStyles);
+    const dvirSharedStyles = useThemedStyles(createDvirSharedStyles);
 
     return (
         <View style={dvirSharedStyles.timelineSection}>
             <View style={styles.timelineSectionHeader}>
-                <Text
-                    style={[
-                        styles.sectionHeading,
-                        isDarkHud && styles.darkSectionHeading,
-                    ]}
-                >
-                    {title}
-                </Text>
-                <Text
-                    style={[
-                        styles.timelineSectionCount,
-                        isDarkHud && styles.darkTimelineSectionCount,
-                    ]}
-                >
+                <Text style={[styles.sectionHeading]}>{title}</Text>
+                <Text style={[styles.timelineSectionCount]}>
                     {records.length}
                 </Text>
             </View>
@@ -47,12 +36,7 @@ export const DvirHistoryGroup: React.FC<DvirHistoryGroupProps> = ({
                 </View>
             ) : (
                 <View style={styles.emptyTimelineContainer}>
-                    <Text
-                        style={[
-                            styles.emptyTimelineText,
-                            isDarkHud && styles.darkEmptyTimelineText,
-                        ]}
-                    >
+                    <Text style={[styles.emptyTimelineText]}>
                         {emptyMessage}
                     </Text>
                 </View>
@@ -61,43 +45,35 @@ export const DvirHistoryGroup: React.FC<DvirHistoryGroupProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
-    darkEmptyTimelineText: {
-        color: '#64748B',
-    },
-    darkSectionHeading: {
-        color: '#94A3B8',
-    },
-    darkTimelineSectionCount: {
-        color: '#94A3B8',
-    },
-    emptyTimelineContainer: {
-        alignItems: 'center',
-        paddingHorizontal: 12,
-        paddingVertical: 18,
-    },
-    emptyTimelineText: {
-        color: colors.muted,
-        fontSize: 13,
-        lineHeight: 18,
-        textAlign: 'center',
-    },
-    sectionHeading: {
-        color: colors.textSecondary,
-        fontSize: 12,
-        fontWeight: '800',
-        letterSpacing: 0.5,
-        marginBottom: 0,
-    },
-    timelineSectionCount: {
-        color: colors.textSecondary,
-        fontSize: 12,
-        fontWeight: '600',
-    },
-    timelineSectionHeader: {
-        alignItems: 'center',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        paddingHorizontal: 2,
-    },
-});
+const createStyles = (theme: ThemeColors) =>
+    StyleSheet.create({
+        emptyTimelineContainer: {
+            alignItems: 'center',
+            paddingHorizontal: 12,
+            paddingVertical: 18,
+        },
+        emptyTimelineText: {
+            color: theme.textSecondary,
+            fontSize: 13,
+            lineHeight: 18,
+            textAlign: 'center',
+        },
+        sectionHeading: {
+            color: theme.textSecondary,
+            fontSize: 12,
+            fontWeight: '700',
+            letterSpacing: 0.5,
+            marginBottom: 0,
+        },
+        timelineSectionCount: {
+            color: theme.textSecondary,
+            fontSize: 12,
+            fontWeight: '700',
+        },
+        timelineSectionHeader: {
+            alignItems: 'center',
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            paddingHorizontal: 2,
+        },
+    });

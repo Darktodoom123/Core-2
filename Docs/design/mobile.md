@@ -117,7 +117,16 @@ Rules for new and touched code:
 - Text in a state color uses that role's `*Text` token (`brandAmberText`,
   `successEmeraldText`, `hazardRedText`, `warningOrangeText`). The base state
   colors are for icons, borders, and fills; as small text on their soft
-  backgrounds they fail WCAG AA.
+  backgrounds they fail WCAG AA. Icons on a soft state background (for
+  example an alert icon on `hazardRedLight`) also use the `*Text` token; the
+  base color is under 3:1 there in dark HUD.
+- Build a component's styles with `useThemedStyles(createStyles)`, where
+  `createStyles = (theme: ThemeColors) => StyleSheet.create({...})` is defined
+  at module scope. One style set then covers both modes, with no `dark*`
+  duplicates or `isDarkHud &&` style branches.
+- A migrated screen is added to `src/__tests__/designTokenAdoption.test.ts`,
+  which fails on any hex or `rgba()` literal or `nativeStyles` import in it.
+  Migrated so far: `DvirScreen.tsx` and `src/screens/dvir/`.
 
 ### Roles
 
@@ -258,11 +267,10 @@ live browser mode do not apply.
 The current code predates this file. Do not add to this debt, and fix it
 opportunistically in code you touch:
 
-- Two palettes (`theme/tokens.ts` and `components/nativeStyles.ts`). About 52
-  files still import the light-only `nativeStyles` colors, including 72 uses
-  of its warning family.
-- 113 distinct hex literals in component files. `#FFBF00` appears about 330
-  times outside `src/theme`.
+- Two palettes (`theme/tokens.ts` and `components/nativeStyles.ts`). 51
+  files still import the light-only `nativeStyles` colors (2026-09-27).
+- 61 component and screen files contain hex literals, and `#FFBF00` appears
+  296 times outside `src/theme` (2026-09-27).
 - Resting panels combine a border with a shadow (`sharedStyles.panel`,
   `shadows.md`).
 - `createMachinedStyles` in `src/theme/index.tsx` (uppercase "pedal" buttons and

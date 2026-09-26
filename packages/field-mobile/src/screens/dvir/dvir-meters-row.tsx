@@ -1,8 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
-import { colors } from '../../components/nativeStyles';
-import { useTheme } from '../../theme';
-import { dvirSharedStyles } from './dvir-shared-styles';
+import { useThemedStyles } from '../../theme';
+import type { ThemeColors } from '../../theme';
+import { createDvirSharedStyles } from './dvir-shared-styles';
 
 export interface DvirMetersRowProps {
     engineHours: string;
@@ -19,66 +19,37 @@ export const DvirMetersRow: React.FC<DvirMetersRowProps> = ({
     setIsSaved,
     setOdometerKm,
 }) => {
-    const { isDarkHud } = useTheme();
+    const styles = useThemedStyles(createStyles);
+    const dvirSharedStyles = useThemedStyles(createDvirSharedStyles);
 
     return (
-        <View
-            style={[
-                dvirSharedStyles.telemetryCard,
-                isDarkHud && dvirSharedStyles.darkTelemetryCard,
-            ]}
-        >
-            <Text
-                style={[
-                    dvirSharedStyles.telemetryHeading,
-                    isDarkHud && dvirSharedStyles.darkTelemetryHeading,
-                ]}
-            >
+        <View style={[dvirSharedStyles.telemetryCard]}>
+            <Text style={[dvirSharedStyles.telemetryHeading]}>
                 METERS & BASELINE READINGS
             </Text>
             <View style={styles.inputsRow}>
                 <View style={styles.inputGroup}>
-                    <Text
-                        style={[
-                            styles.inputLabel,
-                            isDarkHud && styles.darkInputLabel,
-                        ]}
-                    >
-                        Odometer (km)
-                    </Text>
+                    <Text style={[styles.inputLabel]}>Odometer (km)</Text>
                     <TextInput
                         keyboardType="numeric"
                         onChangeText={(val) => {
                             setOdometerKm(val);
                             setIsSaved(false);
                         }}
-                        style={[
-                            styles.textInput,
-                            isDarkHud && styles.darkTextInput,
-                        ]}
+                        style={[styles.textInput]}
                         testID="input-odometer"
                         value={odometerKm}
                     />
                 </View>
                 <View style={styles.inputGroup}>
-                    <Text
-                        style={[
-                            styles.inputLabel,
-                            isDarkHud && styles.darkInputLabel,
-                        ]}
-                    >
-                        Engine Hours (hrs)
-                    </Text>
+                    <Text style={[styles.inputLabel]}>Engine Hours (hrs)</Text>
                     <TextInput
                         keyboardType="numeric"
                         onChangeText={(val) => {
                             setEngineHours(val);
                             setIsSaved(false);
                         }}
-                        style={[
-                            styles.textInput,
-                            isDarkHud && styles.darkTextInput,
-                        ]}
+                        style={[styles.textInput]}
                         testID="input-engine-hours"
                         value={engineHours}
                     />
@@ -88,37 +59,30 @@ export const DvirMetersRow: React.FC<DvirMetersRowProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
-    darkInputLabel: {
-        color: '#CBD5E1',
-    },
-    darkTextInput: {
-        backgroundColor: '#162238',
-        borderColor: '#1E3A8A',
-        color: '#FFFFFF',
-    },
-    inputGroup: {
-        flex: 1,
-    },
-    inputLabel: {
-        color: colors.text,
-        fontSize: 12,
-        fontWeight: '600',
-        marginBottom: 4,
-    },
-    inputsRow: {
-        flexDirection: 'row',
-        gap: 12,
-    },
-    textInput: {
-        backgroundColor: '#F8FAFC',
-        borderColor: colors.borderStrong,
-        borderRadius: 8,
-        borderWidth: 1,
-        color: colors.text,
-        fontSize: 14,
-        fontWeight: '700',
-        minHeight: 48,
-        paddingHorizontal: 12,
-    },
-});
+const createStyles = (theme: ThemeColors) =>
+    StyleSheet.create({
+        inputGroup: {
+            flex: 1,
+        },
+        inputLabel: {
+            color: theme.textPrimary,
+            fontSize: 12,
+            fontWeight: '700',
+            marginBottom: 4,
+        },
+        inputsRow: {
+            flexDirection: 'row',
+            gap: 12,
+        },
+        textInput: {
+            backgroundColor: theme.surfaceHighlight,
+            borderColor: theme.borderStrong,
+            borderRadius: 12,
+            borderWidth: 1,
+            color: theme.textPrimary,
+            fontSize: 16,
+            fontWeight: '700',
+            minHeight: 48,
+            paddingHorizontal: 12,
+        },
+    });

@@ -1,9 +1,9 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Icon } from '../../components/common/Icon';
-import { colors } from '../../components/nativeStyles';
-import { useTheme } from '../../theme';
-import { dvirSharedStyles } from './dvir-shared-styles';
+import { useTheme, useThemedStyles } from '../../theme';
+import type { ThemeColors } from '../../theme';
+import { createDvirSharedStyles } from './dvir-shared-styles';
 
 export interface DvirParkedSecuredChecklistProps {
     chocksDeployed: boolean;
@@ -24,52 +24,30 @@ export const DvirParkedSecuredChecklist: React.FC<
     setOutriggersStowed,
     setParkingBrakeSet,
 }) => {
-    const { isDarkHud } = useTheme();
+    const { theme } = useTheme();
+    const styles = useThemedStyles(createStyles);
+    const dvirSharedStyles = useThemedStyles(createDvirSharedStyles);
 
     return (
-        <View
-            style={[
-                styles.postTripSecureCard,
-                isDarkHud && styles.darkPostTripSecureCard,
-            ]}
-        >
-            <Text
-                style={[
-                    dvirSharedStyles.telemetryHeading,
-                    isDarkHud && dvirSharedStyles.darkTelemetryHeading,
-                ]}
-            >
+        <View style={[styles.postTripSecureCard]}>
+            <Text style={[dvirSharedStyles.telemetryHeading]}>
                 PARKED & SECURED SHUTDOWN CHECKLIST
             </Text>
 
             <Pressable
                 accessibilityRole="checkbox"
                 onPress={() => setParkingBrakeSet(!parkingBrakeSet)}
-                style={[
-                    styles.secureCheckItem,
-                    isDarkHud && styles.darkSecureCheckItem,
-                ]}
+                style={[styles.secureCheckItem]}
                 testID="check-parking-brake"
             >
                 <Icon
                     color={
-                        parkingBrakeSet
-                            ? isDarkHud
-                                ? '#10B981'
-                                : colors.green
-                            : isDarkHud
-                              ? '#64748B'
-                              : '#CBD5E1'
+                        parkingBrakeSet ? theme.successEmerald : theme.hazardRed
                     }
                     name={parkingBrakeSet ? 'check-circle' : 'alert'}
                     size={18}
                 />
-                <Text
-                    style={[
-                        styles.secureCheckLabel,
-                        isDarkHud && styles.darkSecureCheckLabel,
-                    ]}
-                >
+                <Text style={[styles.secureCheckLabel]}>
                     Air brake & spring emergency brake fully engaged
                 </Text>
             </Pressable>
@@ -77,31 +55,19 @@ export const DvirParkedSecuredChecklist: React.FC<
             <Pressable
                 accessibilityRole="checkbox"
                 onPress={() => setChocksDeployed(!chocksDeployed)}
-                style={[
-                    styles.secureCheckItem,
-                    isDarkHud && styles.darkSecureCheckItem,
-                ]}
+                style={[styles.secureCheckItem]}
                 testID="check-wheel-chocks"
             >
                 <Icon
                     color={
                         chocksDeployed
-                            ? isDarkHud
-                                ? '#10B981'
-                                : colors.green
-                            : isDarkHud
-                              ? '#64748B'
-                              : '#CBD5E1'
+                            ? theme.successEmerald
+                            : theme.warningOrange
                     }
                     name={chocksDeployed ? 'check-circle' : 'alert'}
                     size={18}
                 />
-                <Text
-                    style={[
-                        styles.secureCheckLabel,
-                        isDarkHud && styles.darkSecureCheckLabel,
-                    ]}
-                >
+                <Text style={[styles.secureCheckLabel]}>
                     Heavy wheel chocks firmly deployed on drive axles
                 </Text>
             </Pressable>
@@ -109,31 +75,19 @@ export const DvirParkedSecuredChecklist: React.FC<
             <Pressable
                 accessibilityRole="checkbox"
                 onPress={() => setOutriggersStowed(!outriggersStowed)}
-                style={[
-                    styles.secureCheckItem,
-                    isDarkHud && styles.darkSecureCheckItem,
-                ]}
+                style={[styles.secureCheckItem]}
                 testID="check-outriggers-stowed"
             >
                 <Icon
                     color={
                         outriggersStowed
-                            ? isDarkHud
-                                ? '#10B981'
-                                : colors.green
-                            : isDarkHud
-                              ? '#64748B'
-                              : '#CBD5E1'
+                            ? theme.successEmerald
+                            : theme.hazardRed
                     }
                     name={outriggersStowed ? 'check-circle' : 'alert'}
                     size={18}
                 />
-                <Text
-                    style={[
-                        styles.secureCheckLabel,
-                        isDarkHud && styles.darkSecureCheckLabel,
-                    ]}
-                >
+                <Text style={[styles.secureCheckLabel]}>
                     Outrigger beams & hydraulic jacks retracted & locked
                 </Text>
             </Pressable>
@@ -141,36 +95,28 @@ export const DvirParkedSecuredChecklist: React.FC<
     );
 };
 
-const styles = StyleSheet.create({
-    darkPostTripSecureCard: {
-        backgroundColor: '#0F1A2E',
-        borderColor: '#1E293B',
-    },
-    darkSecureCheckItem: {
-        borderBottomColor: '#1E293B',
-    },
-    darkSecureCheckLabel: {
-        color: '#E2E8F0',
-    },
-    postTripSecureCard: {
-        backgroundColor: colors.surface,
-        borderColor: colors.border,
-        borderRadius: 12,
-        borderWidth: 1,
-        padding: 14,
-    },
-    secureCheckItem: {
-        alignItems: 'center',
-        borderBottomColor: colors.border,
-        borderBottomWidth: 1,
-        flexDirection: 'row',
-        gap: 10,
-        paddingVertical: 10,
-    },
-    secureCheckLabel: {
-        color: colors.text,
-        flex: 1,
-        fontSize: 13,
-        fontWeight: '600',
-    },
-});
+const createStyles = (theme: ThemeColors) =>
+    StyleSheet.create({
+        postTripSecureCard: {
+            backgroundColor: theme.surface,
+            borderColor: theme.border,
+            borderRadius: 12,
+            borderWidth: 1,
+            padding: 14,
+        },
+        secureCheckItem: {
+            alignItems: 'center',
+            borderBottomColor: theme.border,
+            borderBottomWidth: 1,
+            flexDirection: 'row',
+            gap: 10,
+            minHeight: 48,
+            paddingVertical: 10,
+        },
+        secureCheckLabel: {
+            color: theme.textPrimary,
+            flex: 1,
+            fontSize: 14,
+            fontWeight: '500',
+        },
+    });

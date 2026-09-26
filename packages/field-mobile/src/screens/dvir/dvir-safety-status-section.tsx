@@ -1,9 +1,9 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors } from '../../components/nativeStyles';
-import { useTheme } from '../../theme';
+import { useThemedStyles } from '../../theme';
+import type { ThemeColors } from '../../theme';
 import type { EquipmentPresentation } from '../../utils/equipmentClassification';
-import { dvirSharedStyles } from './dvir-shared-styles';
+import { createDvirSharedStyles } from './dvir-shared-styles';
 
 export interface DvirSafetyStatusSectionProps {
     presentation: EquipmentPresentation;
@@ -15,16 +15,12 @@ export interface DvirSafetyStatusSectionProps {
 export const DvirSafetyStatusSection: React.FC<
     DvirSafetyStatusSectionProps
 > = ({ presentation, safetyStatus, setIsSaved, setSafetyStatus }) => {
-    const { isDarkHud } = useTheme();
+    const styles = useThemedStyles(createStyles);
+    const dvirSharedStyles = useThemedStyles(createDvirSharedStyles);
 
     return (
         <View style={dvirSharedStyles.formSection}>
-            <Text
-                style={[
-                    dvirSharedStyles.formSectionTitle,
-                    isDarkHud && dvirSharedStyles.darkFormSectionTitle,
-                ]}
-            >
+            <Text style={[dvirSharedStyles.formSectionTitle]}>
                 Choose safety status
             </Text>
             <Text style={dvirSharedStyles.requiredBadge}>Required</Text>
@@ -42,24 +38,15 @@ export const DvirSafetyStatusSection: React.FC<
                     }}
                     style={[
                         dvirSharedStyles.toggleCard,
-                        isDarkHud && dvirSharedStyles.darkToggleCard,
-                        safetyStatus === 'safe' &&
-                            dvirSharedStyles.toggleCardActive,
-                        isDarkHud &&
-                            safetyStatus === 'safe' &&
-                            dvirSharedStyles.darkToggleCardActive,
+                        safetyStatus === 'safe' && styles.toggleCardSafeActive,
                     ]}
                     testID="safety-status-safe"
                 >
                     <Text
                         style={[
                             dvirSharedStyles.toggleCardText,
-                            isDarkHud && dvirSharedStyles.darkToggleCardText,
                             safetyStatus === 'safe' &&
-                                dvirSharedStyles.toggleCardTextActive,
-                            isDarkHud &&
-                                safetyStatus === 'safe' &&
-                                dvirSharedStyles.darkToggleCardTextActive,
+                                styles.toggleCardSafeTextActive,
                         ]}
                     >
                         {presentation.safetySafeLabel}
@@ -78,24 +65,16 @@ export const DvirSafetyStatusSection: React.FC<
                     }}
                     style={[
                         dvirSharedStyles.toggleCard,
-                        isDarkHud && dvirSharedStyles.darkToggleCard,
                         safetyStatus === 'unsafe' &&
                             styles.toggleCardUnsafeActive,
-                        isDarkHud &&
-                            safetyStatus === 'unsafe' &&
-                            styles.darkToggleCardUnsafeActive,
                     ]}
                     testID="safety-status-unsafe"
                 >
                     <Text
                         style={[
                             dvirSharedStyles.toggleCardText,
-                            isDarkHud && dvirSharedStyles.darkToggleCardText,
                             safetyStatus === 'unsafe' &&
                                 styles.toggleCardUnsafeTextActive,
-                            isDarkHud &&
-                                safetyStatus === 'unsafe' &&
-                                styles.darkToggleCardUnsafeTextActive,
                         ]}
                     >
                         Unsafe
@@ -104,10 +83,7 @@ export const DvirSafetyStatusSection: React.FC<
             </View>
 
             <Text
-                style={[
-                    styles.safetyHelperNotice,
-                    isDarkHud && styles.darkSafetyHelperNotice,
-                ]}
+                style={[styles.safetyHelperNotice]}
                 testID="dvir-safety-disclaimer"
             >
                 Pre-trip verification of transit roadworthiness and visible
@@ -119,32 +95,29 @@ export const DvirSafetyStatusSection: React.FC<
     );
 };
 
-const styles = StyleSheet.create({
-    darkSafetyHelperNotice: {
-        color: '#94A3B8',
-    },
-    darkToggleCardUnsafeActive: {
-        backgroundColor: '#450A0A',
-        borderColor: '#DC2626',
-        borderWidth: 2,
-    },
-    darkToggleCardUnsafeTextActive: {
-        color: '#F87171',
-        fontWeight: '800',
-    },
-    safetyHelperNotice: {
-        color: colors.textSecondary,
-        fontSize: 12,
-        lineHeight: 16,
-        marginTop: 8,
-    },
-    toggleCardUnsafeActive: {
-        backgroundColor: '#FEF2F2',
-        borderColor: '#DC2626',
-        borderWidth: 2,
-    },
-    toggleCardUnsafeTextActive: {
-        color: '#B91C1C',
-        fontWeight: '800',
-    },
-});
+const createStyles = (theme: ThemeColors) =>
+    StyleSheet.create({
+        safetyHelperNotice: {
+            color: theme.textSecondary,
+            fontSize: 12,
+            lineHeight: 16,
+            marginTop: 8,
+        },
+        // Status choices use their state colors: cleared green, unsafe red.
+        toggleCardSafeActive: {
+            backgroundColor: theme.successEmeraldLight,
+            borderColor: theme.successEmerald,
+            borderWidth: 2,
+        },
+        toggleCardSafeTextActive: {
+            color: theme.successEmeraldText,
+        },
+        toggleCardUnsafeActive: {
+            backgroundColor: theme.hazardRedLight,
+            borderColor: theme.hazardRed,
+            borderWidth: 2,
+        },
+        toggleCardUnsafeTextActive: {
+            color: theme.hazardRedText,
+        },
+    });

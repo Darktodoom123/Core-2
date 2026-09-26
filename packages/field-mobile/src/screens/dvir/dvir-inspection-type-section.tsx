@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { useTheme } from '../../theme';
-import { dvirSharedStyles } from './dvir-shared-styles';
+import { useThemedStyles } from '../../theme';
+import { createDvirSharedStyles } from './dvir-shared-styles';
 
 export interface DvirInspectionTypeSectionProps {
     mode: 'pre_trip' | 'post_trip' | 'history';
@@ -14,16 +14,11 @@ export interface DvirInspectionTypeSectionProps {
 export const DvirInspectionTypeSection: React.FC<
     DvirInspectionTypeSectionProps
 > = ({ mode, setIsSaved, setMode }) => {
-    const { isDarkHud } = useTheme();
+    const dvirSharedStyles = useThemedStyles(createDvirSharedStyles);
 
     return (
         <View style={dvirSharedStyles.formSection}>
-            <Text
-                style={[
-                    dvirSharedStyles.formSectionTitle,
-                    isDarkHud && dvirSharedStyles.darkFormSectionTitle,
-                ]}
-            >
+            <Text style={[dvirSharedStyles.formSectionTitle]}>
                 Choose inspection type
             </Text>
             <Text style={dvirSharedStyles.requiredBadge}>Required</Text>
@@ -41,24 +36,16 @@ export const DvirInspectionTypeSection: React.FC<
                     }}
                     style={[
                         dvirSharedStyles.toggleCard,
-                        isDarkHud && dvirSharedStyles.darkToggleCard,
                         mode === 'pre_trip' &&
                             dvirSharedStyles.toggleCardActive,
-                        isDarkHud &&
-                            mode === 'pre_trip' &&
-                            dvirSharedStyles.darkToggleCardActive,
                     ]}
                     testID="tab-pre-trip"
                 >
                     <Text
                         style={[
                             dvirSharedStyles.toggleCardText,
-                            isDarkHud && dvirSharedStyles.darkToggleCardText,
                             mode === 'pre_trip' &&
                                 dvirSharedStyles.toggleCardTextActive,
-                            isDarkHud &&
-                                mode === 'pre_trip' &&
-                                dvirSharedStyles.darkToggleCardTextActive,
                         ]}
                     >
                         1. Pre-Trip
@@ -77,24 +64,16 @@ export const DvirInspectionTypeSection: React.FC<
                     }}
                     style={[
                         dvirSharedStyles.toggleCard,
-                        isDarkHud && dvirSharedStyles.darkToggleCard,
                         mode === 'post_trip' &&
                             dvirSharedStyles.toggleCardActive,
-                        isDarkHud &&
-                            mode === 'post_trip' &&
-                            dvirSharedStyles.darkToggleCardActive,
                     ]}
                     testID="tab-post-trip"
                 >
                     <Text
                         style={[
                             dvirSharedStyles.toggleCardText,
-                            isDarkHud && dvirSharedStyles.darkToggleCardText,
                             mode === 'post_trip' &&
                                 dvirSharedStyles.toggleCardTextActive,
-                            isDarkHud &&
-                                mode === 'post_trip' &&
-                                dvirSharedStyles.darkToggleCardTextActive,
                         ]}
                     >
                         2. Post-Trip

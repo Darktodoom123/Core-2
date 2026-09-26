@@ -17,12 +17,12 @@ import type {
     WalkaroundPhotosMap,
 } from '../components/inspection';
 import { TileScreenHeader } from '../components/layout/tile-screen-header';
-import { colors } from '../components/nativeStyles';
 import { DigitalSignatureModal } from '../components/signature/DigitalSignatureModal';
 import type { DigitalSignatureData } from '../components/signature/DigitalSignatureModal';
 import type { FieldApiClient } from '../services/apiClient';
 import type { CommandOutboxManager } from '../services/commandOutbox';
-import { useTheme } from '../theme';
+import { useTheme, useThemedStyles } from '../theme';
+import type { ThemeColors } from '../theme';
 import type { AssetAssignment, DvirInspectionRecord } from '../types/index';
 import {
     getEquipmentPresentation,
@@ -48,7 +48,7 @@ import {
 } from './dvir/dvir-record-builder';
 import { DvirRemarksSection } from './dvir/dvir-remarks-section';
 import { DvirSafetyStatusSection } from './dvir/dvir-safety-status-section';
-import { dvirSharedStyles } from './dvir/dvir-shared-styles';
+import { createDvirSharedStyles } from './dvir/dvir-shared-styles';
 import { DvirSignatureSection } from './dvir/dvir-signature-section';
 import { useDvirHistory } from './dvir/use-dvir-history';
 
@@ -95,7 +95,9 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     onSwitchToStandby,
     onPreTripPassed,
 }) => {
-    const { isDarkHud } = useTheme();
+    const { theme } = useTheme();
+    const styles = useThemedStyles(createStyles);
+    const dvirSharedStyles = useThemedStyles(createDvirSharedStyles);
 
     const [uncontrolledAssetId, setUncontrolledAssetId] = useState<
         number | null
@@ -395,10 +397,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     };
 
     return (
-        <View
-            style={[styles.screenRoot, isDarkHud && styles.darkScreenRoot]}
-            testID="dvir-screen"
-        >
+        <View style={styles.screenRoot} testID="dvir-screen">
             {/* Header: Unified Minimalist Header matching other tiles */}
             <TileScreenHeader
                 backAccessibilityLabel="Back to dashboard"
@@ -463,11 +462,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                     <View style={styles.historyContainer}>
                         {isHistoryLoading && (
                             <Text
-                                style={[
-                                    dvirSharedStyles.historyMeta,
-                                    isDarkHud &&
-                                        dvirSharedStyles.darkHistoryAsset,
-                                ]}
+                                style={[dvirSharedStyles.historyMeta]}
                                 testID="dvir-history-loading"
                             >
                                 Loading DVIR history from server...
@@ -477,7 +472,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                             <Text
                                 style={[
                                     dvirSharedStyles.historyMeta,
-                                    { color: '#FFBF00' },
+                                    { color: theme.warningOrangeText },
                                 ]}
                                 testID="dvir-sync-warning"
                             >
@@ -510,25 +505,15 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                     <View style={styles.formContainer}>
                         {freshInspectionNotice ? (
                             <View
-                                style={[
-                                    styles.freshInspectionBanner,
-                                    isDarkHud &&
-                                        styles.darkFreshInspectionBanner,
-                                ]}
+                                style={[styles.freshInspectionBanner]}
                                 testID="fresh-inspection-notice"
                             >
                                 <Icon
-                                    color={isDarkHud ? '#34D399' : '#059669'}
+                                    color={theme.successEmerald}
                                     name="check-circle"
                                     size={16}
                                 />
-                                <Text
-                                    style={[
-                                        styles.freshInspectionText,
-                                        isDarkHud &&
-                                            styles.darkFreshInspectionText,
-                                    ]}
-                                >
+                                <Text style={[styles.freshInspectionText]}>
                                     {freshInspectionNotice}
                                 </Text>
                             </View>
@@ -687,51 +672,41 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
-    screenRoot: {
-        backgroundColor: colors.background,
-        flex: 1,
-    },
-    darkScreenRoot: {
-        backgroundColor: '#090E1A',
-    },
-    scrollView: {
-        flex: 1,
-    },
-    contentContainer: {
-        padding: 16,
-        paddingBottom: 24,
-    },
-    formContainer: {
-        gap: 20,
-    },
-    freshInspectionBanner: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        backgroundColor: '#ECFDF5',
-        borderColor: '#A7F3D0',
-        borderWidth: 1,
-        borderRadius: 10,
-        paddingHorizontal: 14,
-        paddingVertical: 10,
-        marginBottom: 14,
-    },
-    darkFreshInspectionBanner: {
-        backgroundColor: '#064E3B25',
-        borderColor: '#065F46',
-    },
-    freshInspectionText: {
-        color: '#065F46',
-        fontSize: 12,
-        fontWeight: '700',
-        flex: 1,
-    },
-    darkFreshInspectionText: {
-        color: '#34D399',
-    },
-    historyContainer: {
-        gap: 16,
-    },
-    darkArchiveToggleBtn: {},
-});
+const createStyles = (theme: ThemeColors) =>
+    StyleSheet.create({
+        screenRoot: {
+            backgroundColor: theme.canvas,
+            flex: 1,
+        },
+        scrollView: {
+            flex: 1,
+        },
+        contentContainer: {
+            padding: 16,
+            paddingBottom: 24,
+        },
+        formContainer: {
+            gap: 20,
+        },
+        freshInspectionBanner: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+            backgroundColor: theme.successEmeraldLight,
+            borderColor: theme.successEmerald,
+            borderWidth: 1,
+            borderRadius: 12,
+            paddingHorizontal: 14,
+            paddingVertical: 10,
+            marginBottom: 14,
+        },
+        freshInspectionText: {
+            color: theme.successEmeraldText,
+            fontSize: 12,
+            fontWeight: '700',
+            flex: 1,
+        },
+        historyContainer: {
+            gap: 16,
+        },
+    });

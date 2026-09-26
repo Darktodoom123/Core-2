@@ -1,10 +1,10 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors } from '../../components/nativeStyles';
-import { useTheme } from '../../theme';
+import { useThemedStyles } from '../../theme';
+import type { ThemeColors } from '../../theme';
 import type { DvirInspectionRecord } from '../../types/index';
 import { DvirHistoryRecordCard } from './dvir-history-record-card';
-import { dvirSharedStyles } from './dvir-shared-styles';
+import { createDvirSharedStyles } from './dvir-shared-styles';
 
 export interface DvirHistoryArchiveProps {
     olderRecords: DvirInspectionRecord[];
@@ -17,7 +17,8 @@ export const DvirHistoryArchive: React.FC<DvirHistoryArchiveProps> = ({
     setShowOlderArchive,
     showOlderArchive,
 }) => {
-    const { isDarkHud } = useTheme();
+    const styles = useThemedStyles(createStyles);
+    const dvirSharedStyles = useThemedStyles(createDvirSharedStyles);
 
     return (
         <View style={dvirSharedStyles.timelineSection}>
@@ -28,12 +29,7 @@ export const DvirHistoryArchive: React.FC<DvirHistoryArchiveProps> = ({
                 style={styles.archiveToggleBtn}
                 testID="toggle-older-archive"
             >
-                <Text
-                    style={[
-                        styles.archiveToggleText,
-                        isDarkHud && styles.darkArchiveToggleText,
-                    ]}
-                >
+                <Text style={[styles.archiveToggleText]}>
                     {showOlderArchive
                         ? `▼ Hide 30-Day Archive (${olderRecords.length} Records)`
                         : `▶ Load 30-Day Archive (${olderRecords.length} Older Records)`}
@@ -50,19 +46,18 @@ export const DvirHistoryArchive: React.FC<DvirHistoryArchiveProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
-    archiveToggleBtn: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 12,
-    },
-    archiveToggleText: {
-        color: colors.amberDark,
-        fontSize: 13,
-        fontWeight: '700',
-        letterSpacing: 0.2,
-    },
-    darkArchiveToggleText: {
-        color: '#FFBF00',
-    },
-});
+const createStyles = (theme: ThemeColors) =>
+    StyleSheet.create({
+        archiveToggleBtn: {
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: 48,
+            paddingVertical: 12,
+        },
+        archiveToggleText: {
+            color: theme.brandAmberText,
+            fontSize: 13,
+            fontWeight: '700',
+            letterSpacing: 0.2,
+        },
+    });

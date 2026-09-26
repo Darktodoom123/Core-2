@@ -1,8 +1,8 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors } from '../../components/nativeStyles';
-import { useTheme } from '../../theme';
-import { dvirSharedStyles } from './dvir-shared-styles';
+import { useThemedStyles } from '../../theme';
+import type { ThemeColors } from '../../theme';
+import { createDvirSharedStyles } from './dvir-shared-styles';
 
 export interface DvirFooterActionProps {
     handleNextOrSubmit: () => void;
@@ -17,15 +17,11 @@ export const DvirFooterAction: React.FC<DvirFooterActionProps> = ({
     isSaved,
     isUnassigned,
 }) => {
-    const { isDarkHud } = useTheme();
+    const styles = useThemedStyles(createStyles);
+    const dvirSharedStyles = useThemedStyles(createDvirSharedStyles);
 
     return (
-        <View
-            style={[
-                styles.footerContainer,
-                isDarkHud && styles.darkFooterContainer,
-            ]}
-        >
+        <View style={[styles.footerContainer]}>
             <Pressable
                 accessibilityLabel="Next"
                 accessibilityRole="button"
@@ -36,7 +32,6 @@ export const DvirFooterAction: React.FC<DvirFooterActionProps> = ({
                 onPress={handleNextOrSubmit}
                 style={({ pressed }) => [
                     styles.nextButton,
-                    isDarkHud && styles.darkNextButton,
                     (isUnassigned || hasUnselectedMultiAsset) &&
                         styles.nextButtonDisabled,
                     pressed &&
@@ -45,12 +40,7 @@ export const DvirFooterAction: React.FC<DvirFooterActionProps> = ({
                 ]}
                 testID="complete-dvir-button"
             >
-                <Text
-                    style={[
-                        styles.nextButtonText,
-                        isDarkHud && styles.darkNextButtonText,
-                    ]}
-                >
+                <Text style={[styles.nextButtonText]}>
                     {isSaved ? '✓ DVIR Certified & Synced' : 'Next'}
                 </Text>
             </Pressable>
@@ -58,37 +48,28 @@ export const DvirFooterAction: React.FC<DvirFooterActionProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
-    darkFooterContainer: {
-        backgroundColor: '#0F172A',
-        borderTopColor: '#1E293B',
-    },
-    darkNextButton: {
-        backgroundColor: '#FFBF00',
-    },
-    darkNextButtonText: {
-        color: '#0F172A',
-    },
-    footerContainer: {
-        backgroundColor: colors.surface,
-        borderTopColor: colors.border,
-        borderTopWidth: 1,
-        padding: 16,
-    },
-    nextButton: {
-        alignItems: 'center',
-        backgroundColor: colors.primary,
-        borderRadius: 10,
-        justifyContent: 'center',
-        minHeight: 52,
-        width: '100%',
-    },
-    nextButtonDisabled: {
-        opacity: 0.45,
-    },
-    nextButtonText: {
-        color: '#0F172A',
-        fontSize: 16,
-        fontWeight: '800',
-    },
-});
+const createStyles = (theme: ThemeColors) =>
+    StyleSheet.create({
+        footerContainer: {
+            backgroundColor: theme.surface,
+            borderTopColor: theme.border,
+            borderTopWidth: 1,
+            padding: 16,
+        },
+        nextButton: {
+            alignItems: 'center',
+            backgroundColor: theme.brandAmber,
+            borderRadius: 12,
+            justifyContent: 'center',
+            minHeight: 52,
+            width: '100%',
+        },
+        nextButtonDisabled: {
+            opacity: 0.45,
+        },
+        nextButtonText: {
+            color: theme.surfaceDark,
+            fontSize: 16,
+            fontWeight: '700',
+        },
+    });

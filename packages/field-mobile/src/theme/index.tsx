@@ -56,6 +56,17 @@ export const useTheme = (): ThemeContextValue => {
     return useContext(ThemeContext);
 };
 
+/**
+ * Memoizes a component's `StyleSheet.create(...)` built from the active theme,
+ * so one style set covers light and dark HUD. Define `factory` at module scope
+ * so it is stable across renders.
+ */
+export function useThemedStyles<T>(factory: (theme: ThemeColors) => T): T {
+    const { theme } = useTheme();
+
+    return useMemo(() => factory(theme), [factory, theme]);
+}
+
 export const createMachinedStyles = (theme: ThemeColors) =>
     StyleSheet.create({
         screenCanvas: {

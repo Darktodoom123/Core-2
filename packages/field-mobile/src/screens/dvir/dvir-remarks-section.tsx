@@ -1,8 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
-import { colors } from '../../components/nativeStyles';
-import { useTheme } from '../../theme';
-import { dvirSharedStyles } from './dvir-shared-styles';
+import { useTheme, useThemedStyles } from '../../theme';
+import type { ThemeColors } from '../../theme';
+import { createDvirSharedStyles } from './dvir-shared-styles';
 
 export interface DvirRemarksSectionProps {
     mode: 'pre_trip' | 'post_trip' | 'history';
@@ -17,21 +17,13 @@ export const DvirRemarksSection: React.FC<DvirRemarksSectionProps> = ({
     setIsSaved,
     setRemarks,
 }) => {
-    const { isDarkHud } = useTheme();
+    const { theme } = useTheme();
+    const styles = useThemedStyles(createStyles);
+    const dvirSharedStyles = useThemedStyles(createDvirSharedStyles);
 
     return (
-        <View
-            style={[
-                dvirSharedStyles.telemetryCard,
-                isDarkHud && dvirSharedStyles.darkTelemetryCard,
-            ]}
-        >
-            <Text
-                style={[
-                    dvirSharedStyles.telemetryHeading,
-                    isDarkHud && dvirSharedStyles.darkTelemetryHeading,
-                ]}
-            >
+        <View style={[dvirSharedStyles.telemetryCard]}>
+            <Text style={[dvirSharedStyles.telemetryHeading]}>
                 INSPECTOR SIGN-OFF REMARKS
             </Text>
             <TextInput
@@ -46,11 +38,8 @@ export const DvirRemarksSection: React.FC<DvirRemarksSectionProps> = ({
                         ? 'Note walkaround observation, fluid levels, tire status...'
                         : 'Note post-operation condition, site clearance...'
                 }
-                placeholderTextColor={isDarkHud ? '#64748B' : colors.muted}
-                style={[
-                    styles.remarksInput,
-                    isDarkHud && styles.darkRemarksInput,
-                ]}
+                placeholderTextColor={theme.textMuted}
+                style={[styles.remarksInput]}
                 testID="dvir-remarks-input"
                 value={remarks}
             />
@@ -58,21 +47,17 @@ export const DvirRemarksSection: React.FC<DvirRemarksSectionProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
-    darkRemarksInput: {
-        backgroundColor: '#162238',
-        borderColor: '#1E3A8A',
-        color: '#FFFFFF',
-    },
-    remarksInput: {
-        backgroundColor: '#F8FAFC',
-        borderColor: colors.borderStrong,
-        borderRadius: 8,
-        borderWidth: 1,
-        color: colors.text,
-        fontSize: 13,
-        minHeight: 70,
-        padding: 10,
-        textAlignVertical: 'top',
-    },
-});
+const createStyles = (theme: ThemeColors) =>
+    StyleSheet.create({
+        remarksInput: {
+            backgroundColor: theme.surfaceHighlight,
+            borderColor: theme.borderStrong,
+            borderRadius: 12,
+            borderWidth: 1,
+            color: theme.textPrimary,
+            fontSize: 16,
+            minHeight: 96,
+            padding: 10,
+            textAlignVertical: 'top',
+        },
+    });
