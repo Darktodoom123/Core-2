@@ -21,12 +21,19 @@ export interface ThemeColors {
     // Functional Brands
     brandAmber: string;
     brandAmberLight: string;
+    brandAmberText: string;
     actionCobalt: string;
     actionCobaltLight: string;
     successEmerald: string;
     successEmeraldLight: string;
+    successEmeraldText: string;
     hazardRed: string;
     hazardRedLight: string;
+    hazardRedText: string;
+    // Warning & conflict (distinct from brand gold)
+    warningOrange: string;
+    warningOrangeLight: string;
+    warningOrangeText: string;
     // Cockpit Instrument
     hudBezel: string;
     hudGlowAmber: string;
@@ -50,12 +57,18 @@ export const lightThemeColors: ThemeColors = {
     textInverse: '#FFFFFF',
     brandAmber: '#FFBF00',
     brandAmberLight: '#FFF3C4',
+    brandAmberText: '#806000',
     actionCobalt: '#2563EB',
     actionCobaltLight: '#EFF6FF',
     successEmerald: '#059669',
     successEmeraldLight: '#ECFDF5',
+    successEmeraldText: '#047857',
     hazardRed: '#DC2626',
     hazardRedLight: '#FEF2F2',
+    hazardRedText: '#B91C1C',
+    warningOrange: '#EA580C',
+    warningOrangeLight: '#FFF7ED',
+    warningOrangeText: '#9A3412',
     hudBezel: '#1E293B',
     hudGlowAmber: '#FFBF00',
     hudGlowEmerald: '#10B981',
@@ -78,12 +91,18 @@ export const darkHudThemeColors: ThemeColors = {
     textInverse: '#0F172A',
     brandAmber: '#FFBF00',
     brandAmberLight: '#332800',
+    brandAmberText: '#FFBF00',
     actionCobalt: '#3B82F6',
     actionCobaltLight: '#1E3A8A',
     successEmerald: '#10B981',
     successEmeraldLight: '#064E3B',
+    successEmeraldText: '#6EE7B7',
     hazardRed: '#EF4444',
     hazardRedLight: '#7F1D1D',
+    hazardRedText: '#FCA5A5',
+    warningOrange: '#F97316',
+    warningOrangeLight: '#7C2D12',
+    warningOrangeText: '#FDBA74',
     hudBezel: '#1E293B',
     hudGlowAmber: '#FFBF00',
     hudGlowEmerald: '#34D399',
