@@ -271,6 +271,18 @@ export function FuelRequestCard({
 
                     {isDetail ? (
                         <div className="space-y-1 text-sm">
+                            <p className="text-sm font-semibold text-ink">
+                                <span className="tabular-nums">
+                                    Requested: {request.quantity_litres} Litres
+                                </span>
+                                <span className="font-normal text-ink-soft">
+                                    {' '}
+                                    ·{' '}
+                                </span>
+                                <span className="font-medium text-ink capitalize">
+                                    {humanize(request.fuel_type)}
+                                </span>
+                            </p>
                             {asset && (
                                 <p className="font-medium text-ink">
                                     {asset.code} · {asset.name || asset.code}
