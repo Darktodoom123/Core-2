@@ -51,6 +51,8 @@ export default function DispatchDetail({
     execution,
     capabilities,
     project_context,
+    advice_prefill,
+    advice_notice,
 }: DispatchDetailPageProps) {
     const { flash, errors, auth } = usePage().props;
     const pageUrl = usePage().url;
@@ -117,8 +119,11 @@ export default function DispatchDetail({
         },
         initialStep,
         job.version,
+        advice_prefill,
     );
-    const [assignmentPickerOpen, setAssignmentPickerOpen] = useState(false);
+    const [assignmentPickerOpen, setAssignmentPickerOpen] = useState(
+        Boolean(advice_prefill?.action === 'assign'),
+    );
 
     const assignmentSaved = isAssignmentSuccessFlash(flash);
     const hasCurrentAssignments =
@@ -262,6 +267,14 @@ export default function DispatchDetail({
                         flash={flash}
                         conflictMessage={conflictMessage}
                     />
+                    {advice_notice && (
+                        <p
+                            role="alert"
+                            className="border-warning-subtle rounded-lg border bg-warning-soft p-3 text-sm text-warning-strong"
+                        >
+                            {advice_notice}
+                        </p>
+                    )}
 
                     {project_context && (
                         <Panel className="flex flex-wrap items-center justify-between gap-3 p-4">
@@ -921,6 +934,7 @@ export default function DispatchDetail({
                                         />
                                     )}
                                     <CurrentAssignments
+                                        advicePrefill={advice_prefill}
                                         job={job}
                                         capabilities={capabilities}
                                         hasPendingSelections={

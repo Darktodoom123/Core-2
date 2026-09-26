@@ -13,6 +13,8 @@ export interface AssignmentRequestPayload {
         assignment_type: AssetCandidateViewModel['assignment_type'];
     }>;
     version?: number;
+    advice_id?: number;
+    option_id?: number;
 }
 
 export type DispatchStep = 1 | 2 | 3;

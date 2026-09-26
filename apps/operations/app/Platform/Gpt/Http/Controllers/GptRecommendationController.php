@@ -8,6 +8,7 @@ use App\Platform\Gpt\Actions\AcceptGptRecommendation;
 use App\Platform\Gpt\Actions\GenerateGptRecommendation;
 use App\Platform\Gpt\Actions\RejectGptRecommendation;
 use App\Platform\Gpt\Actions\RetryGptRecommendation;
+use App\Platform\Gpt\Enums\GptRecommendationStatus;
 use App\Platform\Gpt\Http\Requests\AcceptGptRecommendationRequest;
 use App\Platform\Gpt\Models\GptRecommendation;
 use App\Platform\Gpt\Models\GptRecommendationMetric;
@@ -28,7 +29,8 @@ final class GptRecommendationController extends Controller
         $validated = $request->validate([
             'subject_type' => ['required', 'string'],
             'subject_id' => ['required', 'integer'],
-            'purpose' => ['nullable', 'string', 'max:48', Rule::in(['dispatch_assignment', 'operations_review', 'maintenance_advice'])],
+            'purpose' => ['nullable', 'string', 'max:48', Rule::in(['dispatch_assignment', 'dispatch_blocker_resolution', 'operations_review', 'maintenance_advice'])],
+            'refresh' => ['sometimes', 'boolean'],
         ]);
 
         $subjectType = $validated['subject_type'];
@@ -43,8 +45,11 @@ final class GptRecommendationController extends Controller
 
         Gate::forUser($request->user())->authorize('view', $subject);
 
-        $purpose = $validated['purpose'] ?? 'dispatch_assignment';
-        $generateAction->handle($request->user(), $subject, $purpose);
+        $purpose = $validated['purpose'] ?? (config('services.openai.blocker_resolution_enabled', false) ? 'dispatch_blocker_resolution' : 'dispatch_assignment');
+        if ($purpose === 'dispatch_blocker_resolution' && ! config('services.openai.blocker_resolution_enabled', false)) {
+            throw ValidationException::withMessages(['gpt' => 'Blocker assistance is not enabled.']);
+        }
+        $generateAction->handle($request->user(), $subject, $purpose, refresh: $purpose === 'dispatch_blocker_resolution' && (bool) ($validated['refresh'] ?? false));
 
         return redirect()->back()->with('flash', [
             'success' => 'GPT recommendation request queued for processing.',
@@ -53,6 +58,9 @@ final class GptRecommendationController extends Controller
 
     public function accept(AcceptGptRecommendationRequest $request, GptRecommendation $recommendation, AcceptGptRecommendation $acceptAction): RedirectResponse
     {
+        if ($recommendation->purpose === 'dispatch_blocker_resolution') {
+            throw ValidationException::withMessages(['gpt' => 'Review a blocker option in the assignment workspace.']);
+        }
         $acceptAction->handle(
             $request->user(),
             $recommendation,
@@ -126,6 +134,17 @@ final class GptRecommendationController extends Controller
         $totalDecided = $accepted + $rejected;
         $acceptanceRate = $totalDecided > 0 ? round(($accepted / $totalDecided) * 100, 1) : null;
 
+        $blockerRecommendations = $recommendations->where('purpose', 'dispatch_blocker_resolution')->keyBy('id');
+        $blockerMetrics = $monthlyMetrics->whereIn('recommendation_id', $blockerRecommendations->keys());
+        $resolvedMetrics = $blockerMetrics->where('event', 'blocker_resolved');
+        $resolutionSeconds = $resolvedMetrics->map(static function (GptRecommendationMetric $metric) use ($blockerRecommendations): ?float {
+            $recommendation = $blockerRecommendations->get($metric->recommendation_id);
+
+            return $recommendation?->generated_at === null
+                ? null
+                : $recommendation->generated_at->diffInSeconds($metric->occurred_at);
+        })->filter(static fn (?float $seconds): bool => $seconds !== null);
+
         return response()->json([
             'monthly_spend_usd' => $monthlySpend,
             'monthly_budget_ceiling_usd' => 250.0,
@@ -134,6 +153,18 @@ final class GptRecommendationController extends Controller
             'acceptance_rate' => $acceptanceRate,
             'accepted_count' => $accepted,
             'rejected_count' => $rejected,
+            'blocker_advice' => [
+                'generated' => $blockerRecommendations->count(),
+                'no_eligible_option' => $blockerMetrics->where('event', 'no_eligible_option')->count(),
+                'failed' => $blockerRecommendations->where('status', GptRecommendationStatus::Failed)->count(),
+                'stale' => $blockerRecommendations->where('status', GptRecommendationStatus::Stale)->count(),
+                'opened' => $blockerMetrics->where('event', 'review_opened')->count(),
+                'adopted' => $blockerMetrics->where('event', 'adopted')->count(),
+                'edited' => $blockerMetrics->where('event', 'edited_after_review')->count(),
+                'resolved' => $resolvedMetrics->count(),
+                'ready_after_save' => $blockerMetrics->where('event', 'job_ready')->count(),
+                'average_seconds_to_resolution' => $resolutionSeconds->isEmpty() ? null : (int) round($resolutionSeconds->avg()),
+            ],
             'circuit_breaker_active' => (bool) Cache::get('gpt_circuit_breaker_disabled', false),
         ]);
     }

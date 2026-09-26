@@ -637,6 +637,7 @@ final class OperationsWorkspaceController extends Controller
                 'source',
                 'serviceRequest:id,reference',
                 'canonicalHandoff',
+                'projectShift.phase',
                 'latestDelay.reporter:id,name',
                 'latestDelay.operationalAsset:id,code,name',
             ])
@@ -959,6 +960,7 @@ final class OperationsWorkspaceController extends Controller
     {
         $purposes = array_values(array_filter([
             $user->can(PermissionName::GptUseDispatch->value) ? 'dispatch_assignment' : null,
+            $user->can(PermissionName::GptUseDispatch->value) ? 'dispatch_blocker_resolution' : null,
             $user->can(PermissionName::GptUseOperations->value) ? 'operations_review' : null,
             $user->can(PermissionName::GptUseMaintenance->value) ? 'maintenance_advice' : null,
         ]));

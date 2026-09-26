@@ -1,7 +1,7 @@
 # Direct OpenAI GPT-6 Luna migration plan
 
 Status: Implemented in the local workspace; production deployment and stricter output schema remain open
-Last reviewed: 2026-09-26
+Last reviewed: 2026-09-27
 
 ## Decision and evidence
 
@@ -16,6 +16,17 @@ OpenAI `gpt-6-luna` replaces `gpt-5-mini` for new local dispatch advisory reques
 - Remaining for production: set the deployment's `OPENAI_MODEL`, restart its `ai` workers, compare real advisory quality and spend, and monitor failure rate and latency. A strict JSON schema and validation of all narrative fields remain improvement work; assignment-time checks still enforce operational eligibility.
 
 ## Existing flow and lifecycle
+
+The lifecycle below describes the older `dispatch_assignment` purpose. When
+`OPENAI_BLOCKER_RESOLUTION_ENABLED=true`, new dispatch requests use
+`dispatch_blocker_resolution`: the server identifies one resource blocker and
+up to three eligible options, Luna ranks them and selects a verified fact to
+emphasize, and a dispatcher
+reviews a choice in the normal assignment or reassignment workflow. The old
+recommendations remain readable in history. A changed or expired option cannot
+prefill the picker. Saving a matching option records adoption only after the
+domain action succeeds; a changed selection remains a manual choice. Project
+shifts use **Fill coverage** guidance and generate no blocker AI request.
 
 ```mermaid
 flowchart LR

@@ -12,13 +12,15 @@ use App\Modules\Assignment\Http\Requests\ReassignDispatchResourcesRequest;
 use App\Modules\Assignment\Http\Requests\RespondToDispatchAssignmentRequest;
 use App\Modules\Assignment\Models\DispatchPersonnelAssignment;
 use App\Modules\Dispatch\Models\DispatchJob;
+use App\Platform\Gpt\Services\BlockerAdviceAttribution;
 use Illuminate\Http\RedirectResponse;
 
 final class AssignmentController extends Controller
 {
-    public function assign(AssignDispatchResourcesRequest $request, DispatchJob $dispatchJob, AssignDispatchResources $action): RedirectResponse
+    public function assign(AssignDispatchResourcesRequest $request, DispatchJob $dispatchJob, AssignDispatchResources $action, BlockerAdviceAttribution $attribution): RedirectResponse
     {
         $version = $request->validated('version') !== null ? (int) $request->validated('version') : null;
+        $proposal = $attribution->before($request->user(), $dispatchJob, $request->integer('advice_id') ?: null, $request->integer('option_id') ?: null);
 
         $action->handle(
             $request->user(),
@@ -27,6 +29,7 @@ final class AssignmentController extends Controller
             $request->validated('assets', []),
             $version,
         );
+        $attribution->after($request->user(), $dispatchJob, $proposal, 'assign', $request->validated('personnel', []), $request->validated('assets', []));
 
         return to_route('dispatch-jobs.show', $dispatchJob)->with('flash', [
             'tone' => 'success',
@@ -38,7 +41,9 @@ final class AssignmentController extends Controller
         ReassignDispatchResourcesRequest $request,
         DispatchJob $dispatchJob,
         ReassignDispatchResources $action,
+        BlockerAdviceAttribution $attribution,
     ): RedirectResponse {
+        $proposal = $attribution->before($request->user(), $dispatchJob, $request->integer('advice_id') ?: null, $request->integer('option_id') ?: null);
         $result = $action->handle(
             $request->user(),
             $dispatchJob,
@@ -49,6 +54,7 @@ final class AssignmentController extends Controller
             $request->validated('reason'),
             (int) $request->validated('version'),
         );
+        $attribution->after($request->user(), $dispatchJob, $proposal, 'reassign', $request->validated('personnel', []), $request->validated('assets', []), $request->validated('end_personnel_assignment_ids', []), $request->validated('end_asset_assignment_ids', []), ! $result->approvalRequested());
 
         return to_route('dispatch-jobs.show', $dispatchJob)->with('flash', [
             'tone' => 'success',

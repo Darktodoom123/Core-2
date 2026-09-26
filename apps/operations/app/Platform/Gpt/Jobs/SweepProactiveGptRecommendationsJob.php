@@ -53,14 +53,15 @@ final class SweepProactiveGptRecommendationsJob implements ShouldBeUnique, Shoul
         foreach ($jobs as $job) {
             try {
                 $actor = $job->creator;
+                $blockerEnabled = (bool) config('services.openai.blocker_resolution_enabled', false);
                 if (! $actor instanceof User || ! $actor->is_active || $actor->suspended_at !== null
                     || ! $actor->can(PermissionName::GptUseDispatch->value)
                     || Gate::forUser($actor)->denies('view', $job)
-                    || ! $openAi->checkRateLimits($actor)['allowed'] || ! $need->exists($job)) {
+                    || (! $blockerEnabled && (! $openAi->checkRateLimits($actor)['allowed'] || ! $need->exists($job)))) {
                     continue;
                 }
 
-                $generate->handle($actor, $job, automatic: true);
+                $generate->handle($actor, $job, $blockerEnabled ? 'dispatch_blocker_resolution' : 'dispatch_assignment', automatic: true);
             } catch (AuthorizationException|ValidationException) {
                 // Changed permissions or exhausted quota defer to the next sweep.
             } catch (Throwable $exception) {

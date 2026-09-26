@@ -37,6 +37,9 @@ final class GptRecommendationPolicy
 
     public function retry(User $user, GptRecommendation $recommendation): bool
     {
+        if ($recommendation->purpose === 'dispatch_assignment' && config('services.openai.blocker_resolution_enabled', false)) {
+            return false;
+        }
         $retryable = $recommendation->status->isTerminal()
             && $recommendation->status !== GptRecommendationStatus::Accepted;
 
@@ -48,7 +51,7 @@ final class GptRecommendationPolicy
     private function canAccessPurpose(User $user, string $purpose): bool
     {
         return match ($purpose) {
-            'dispatch_assignment' => $user->can(PermissionName::GptUseDispatch->value),
+            'dispatch_assignment', 'dispatch_blocker_resolution' => $user->can(PermissionName::GptUseDispatch->value),
             'operations_review' => $user->can(PermissionName::GptUseOperations->value),
             'maintenance_advice' => $user->can(PermissionName::GptUseMaintenance->value),
             default => false,

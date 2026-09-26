@@ -6,6 +6,7 @@ use App\Modules\Dispatch\Models\DispatchJob;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Gpt\Enums\GptRecommendationStatus;
 use App\Platform\Gpt\Models\GptRecommendation;
+use App\Platform\Gpt\Services\BlockerResolutionContextBuilder;
 use App\Platform\Gpt\Services\BoundedContextBuilder;
 use App\Platform\Gpt\Services\DispatchAdvisoryNeed;
 use App\Platform\Gpt\Services\GptRecommendationTransition;
@@ -69,7 +70,7 @@ final class GenerateGptRecommendationJob implements ShouldQueue
             return;
         }
 
-        if ($this->automatic && ! $this->automaticRequestIsCurrent($recommendation)) {
+        if (($this->automatic || $recommendation->purpose === 'dispatch_blocker_resolution') && ! $this->automaticRequestIsCurrent($recommendation)) {
             $transitions->compareAndSet($recommendation->id, GptRecommendationStatus::Processing, GptRecommendationStatus::Failed, [
                 'error_message' => 'Automatic suggestion deferred because dispatch context or access changed. Request a fresh suggestion when ready.',
             ]);
@@ -81,7 +82,15 @@ final class GenerateGptRecommendationJob implements ShouldQueue
         $result = $openAi->withModel($recommendation->model)->generateRecommendation($this->boundedContext);
         $latencyMs = (int) round((microtime(true) - $startedAt) * 1000);
 
-        if ($result['success'] && ! $this->proposedCandidatesAreEligible($result['recommendation'] ?? [])) {
+        if ($recommendation->purpose === 'dispatch_blocker_resolution' && ! $this->automaticRequestIsCurrent($recommendation)) {
+            $transitions->compareAndSet($recommendation->id, GptRecommendationStatus::Processing, GptRecommendationStatus::Failed, [
+                'error_message' => 'Dispatch resources changed while advice was generated. Request a fresh suggestion.',
+            ]);
+
+            return;
+        }
+
+        if ($result['success'] && $recommendation->purpose !== 'dispatch_blocker_resolution' && ! $this->proposedCandidatesAreEligible($result['recommendation'] ?? [])) {
             $result['success'] = false;
             $result['recommendation'] = null;
             $result['response_summary'] = null;
@@ -89,7 +98,9 @@ final class GenerateGptRecommendationJob implements ShouldQueue
 
         if ($result['success']) {
             $recPayload = $result['recommendation'] ?? [];
-            $recPayload = $this->hydrateRecommendationDetails($recPayload, $this->boundedContext);
+            $recPayload = $recommendation->purpose === 'dispatch_blocker_resolution'
+                ? $this->blockerPayload($recPayload)
+                : $this->hydrateRecommendationDetails($recPayload, $this->boundedContext);
             $updated = $transitions->compareAndSet(
                 $recommendation->id,
                 GptRecommendationStatus::Processing,
@@ -173,14 +184,54 @@ final class GenerateGptRecommendationJob implements ShouldQueue
         $actor = $recommendation->requestedBy;
         $subject = $recommendation->subject;
 
-        return (bool) config('services.openai.proactive_enabled', true)
+        $isBlockerAdvice = $recommendation->purpose === 'dispatch_blocker_resolution';
+        $context = $subject instanceof DispatchJob
+            ? ($isBlockerAdvice
+                ? app(BlockerResolutionContextBuilder::class)->buildForDispatchJob($subject)
+                : app(BoundedContextBuilder::class)->buildForDispatchJob($subject))
+            : null;
+
+        return (! $this->automatic || (bool) config('services.openai.proactive_enabled', true))
+            && (! $isBlockerAdvice || (bool) config('services.openai.blocker_resolution_enabled', false))
             && ! Cache::get('gpt_circuit_breaker_disabled', false)
             && $actor instanceof User && $actor->is_active && $actor->suspended_at === null
             && $actor->can(PermissionName::GptUseDispatch->value)
             && $subject instanceof DispatchJob
             && Gate::forUser($actor)->allows('view', $subject)
-            && app(DispatchAdvisoryNeed::class)->exists($subject)
-            && $recommendation->context_hash === app(BoundedContextBuilder::class)->buildForDispatchJob($subject)['context_hash'];
+            && ($isBlockerAdvice || app(DispatchAdvisoryNeed::class)->exists($subject))
+            && $context !== null
+            && $recommendation->context_hash === $context['context_hash'];
+    }
+
+    /** @param array<string, mixed> $modelPayload
+     * @return array<string, mixed>
+     */
+    private function blockerPayload(array $modelPayload): array
+    {
+        $approved = array_column($this->boundedContext['options'] ?? [], null, 'id');
+        $options = [];
+        foreach ($modelPayload['options'] ?? [] as $ranked) {
+            $option = $approved[$ranked['id']];
+            $focus = $ranked['focus'];
+            $explanation = match ($focus) {
+                'availability' => 'Recorded availability is '.$option['evidence']['availability'].'.',
+                'credential' => $option['evidence']['credential'] === 'valid'
+                    ? 'The required credential is valid at the scheduled start.'
+                    : 'No role-specific credential is required for this assignment.',
+                'readiness' => 'Recorded asset readiness is '.$option['evidence']['readiness'].'.',
+                'schedule_conflicts' => 'No overlapping commitment was found for the scheduled window.',
+                default => throw new \UnexpectedValueException('Unsupported blocker evidence key.'),
+            };
+            $options[] = [...$option, 'explanation' => $explanation];
+        }
+
+        return [
+            'version' => 1,
+            'job_version' => $this->boundedContext['job']['version'],
+            'blocker' => $this->boundedContext['blocker'],
+            'summary' => 'Review these eligible resources for the identified blocker. Other readiness checks still apply.',
+            'options' => $options,
+        ];
     }
 
     /** @param array<string, mixed> $values */

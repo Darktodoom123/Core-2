@@ -175,7 +175,8 @@ final class OpenAiClientWrapper
     public function generateRecommendation(array $boundedContext): array
     {
         $contextJson = json_encode($boundedContext, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR);
-        $estimatedInputTokens = (int) ceil((strlen($this->getSystemPrompt()) + strlen($contextJson)) / 4);
+        $systemPrompt = $this->getSystemPrompt($boundedContext);
+        $estimatedInputTokens = (int) ceil((strlen($systemPrompt) + strlen($contextJson)) / 4);
         $maxInputTokens = (int) config('services.openai.max_input_tokens', 32000);
 
         if ($estimatedInputTokens > $maxInputTokens) {
@@ -230,7 +231,6 @@ final class OpenAiClientWrapper
             ];
         }
 
-        $systemPrompt = $this->getSystemPrompt();
         $userMessage = $contextJson;
 
         $isReasoningModel = (bool) preg_match('/^(?:openai\/)?(?:gpt-[56]|o[134])/i', $this->model);
@@ -318,7 +318,7 @@ final class OpenAiClientWrapper
             $content = $choice['message']['content'] ?? '';
             $parsedJson = json_decode($content, true);
 
-            if (! is_array($parsedJson) || ! $this->validateRecommendationStructure($parsedJson)) {
+            if (! is_array($parsedJson) || ! $this->validateRecommendationStructure($parsedJson, $boundedContext)) {
                 return [
                     'success' => false,
                     'recommendation' => null,
@@ -431,7 +431,7 @@ final class OpenAiClientWrapper
         self::$recordedRequests[] = [
             'model' => $this->model,
             'messages' => [
-                ['role' => 'system', 'content' => $this->getSystemPrompt()],
+                ['role' => 'system', 'content' => $this->getSystemPrompt($boundedContext)],
                 ['role' => 'user', 'content' => (string) json_encode($boundedContext)],
             ],
             'context' => $boundedContext,
@@ -459,7 +459,7 @@ final class OpenAiClientWrapper
         }
 
         $recommendation = $resolved['recommendation'] ?? $resolved;
-        if (! $this->validateRecommendationStructure($recommendation)) {
+        if (! $this->validateRecommendationStructure($recommendation, $boundedContext)) {
             return [
                 'success' => false,
                 'recommendation' => null,
@@ -486,9 +486,32 @@ final class OpenAiClientWrapper
         ];
     }
 
-    /** @param array<string, mixed> $data */
-    private function validateRecommendationStructure(array $data): bool
+    /** @param array<string, mixed> $data
+     * @param  array<string, mixed>  $context
+     */
+    private function validateRecommendationStructure(array $data, array $context): bool
     {
+        if (($context['purpose'] ?? null) === 'dispatch_blocker_resolution') {
+            $expectedOptions = array_column($context['options'] ?? [], null, 'id');
+            $expected = array_keys($expectedOptions);
+            $received = [];
+            if (! is_array($data['options'] ?? null) || count($data['options']) !== count($expected)) {
+                return false;
+            }
+            foreach ($data['options'] as $option) {
+                if (! is_array($option) || ! is_int($option['id'] ?? null)
+                    || ! is_string($option['focus'] ?? null)
+                    || ! in_array($option['focus'], array_keys($expectedOptions[$option['id']]['evidence'] ?? []), true)) {
+                    return false;
+                }
+                $received[] = $option['id'];
+            }
+            sort($expected);
+            sort($received);
+
+            return $expected === $received;
+        }
+
         return isset($data['summary']) && is_string($data['summary'])
             && isset($data['proposed_personnel']) && is_array($data['proposed_personnel'])
             && isset($data['proposed_assets']) && is_array($data['proposed_assets'])
@@ -546,6 +569,15 @@ final class OpenAiClientWrapper
      */
     private function defaultFakeRecommendation(array $boundedContext): array
     {
+        if (($boundedContext['purpose'] ?? null) === 'dispatch_blocker_resolution') {
+            return [
+                'options' => array_map(static fn (array $option): array => [
+                    'id' => $option['id'],
+                    'focus' => array_key_first($option['evidence']),
+                ], $boundedContext['options'] ?? []),
+            ];
+        }
+
         $personnelCandidates = is_array($boundedContext['personnel_candidates'] ?? null) ? $boundedContext['personnel_candidates'] : [];
         $assetCandidates = is_array($boundedContext['asset_candidates'] ?? null) ? $boundedContext['asset_candidates'] : [];
 
@@ -611,8 +643,17 @@ final class OpenAiClientWrapper
         ];
     }
 
-    private function getSystemPrompt(): string
+    /** @param array<string, mixed> $context */
+    private function getSystemPrompt(array $context = []): string
     {
+        if (($context['purpose'] ?? null) === 'dispatch_blocker_resolution') {
+            return <<<'PROMPT'
+You rank dispatch resource options already vetted by the server. You cannot change assignments or approve work.
+Use only the blocker, option IDs, and evidence supplied. Return JSON with exactly: {"options":[{"id":1,"focus":"availability"}]}.
+Include each supplied option ID exactly once, ordered by usefulness. For each option, choose one focus key present in that option's evidence. Do not invent candidates, IDs, facts, schedules, or actions. Do not write prose.
+PROMPT;
+        }
+
         return <<<'PROMPT'
 You are an advisory operational assistant for an industrial fleet and crane dispatch platform.
 Your task is to analyze the provided bounded dispatch job requirements, eligible personnel candidates, and eligible asset candidates, and output an explainable recommendation.

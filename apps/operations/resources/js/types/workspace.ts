@@ -192,6 +192,7 @@ export interface DispatchJobViewModel {
     scheduled_end: string | null;
     requirements: string[];
     version: number;
+    project_coverage_url?: string | null;
     site_latitude?: number | null;
     site_longitude?: number | null;
     planned_crane_slots?: PlannedCraneSlotViewModel[];
@@ -970,6 +971,8 @@ export interface WorkspaceCapabilities {
     request_gpt_assistance: boolean;
     view_gpt_governance?: boolean;
     proactive_gpt_assistance?: boolean;
+    blocker_resolution_enabled?: boolean;
+    edit_project_plan?: boolean;
     decide_gpt_recommendation: boolean;
     retry_gpt_recommendation: boolean;
     create_job_report: boolean;
@@ -1115,6 +1118,15 @@ export interface GptRecommendationViewModel {
     prompt_summary: string | null;
     response_summary: string | null;
     recommendation: Record<string, unknown>;
+    blocker_options?: Array<{
+        id: number;
+        candidate_id: number;
+        candidate_name?: string | null;
+        candidate_code?: string | null;
+        resource_kind: 'personnel' | 'asset';
+        assignment_type: string;
+        explanation: string;
+    }> | null;
     proposed_personnel?: Array<{
         user_id: number;
         name?: string;
@@ -1484,6 +1496,15 @@ export interface DispatchExecutionViewModel {
 }
 
 export interface DispatchDetailPageProps {
+    advice_prefill?: {
+        advice_id: number;
+        option_id: number;
+        action: 'assign' | 'reassign';
+        resource_kind: 'personnel' | 'asset';
+        replace_assignment_id: number | null;
+        candidate: PersonnelCandidateViewModel | AssetCandidateViewModel;
+    } | null;
+    advice_notice?: string | null;
     project_context?: {
         name: string;
         phase: string;
@@ -1535,5 +1556,6 @@ export interface DispatchDetailPageProps {
         archive: boolean;
         restore: boolean;
         request_gpt_assistance?: boolean;
+        blocker_resolution_enabled?: boolean;
     };
 }

@@ -30,6 +30,8 @@ final class AssignDispatchResourcesRequest extends FormRequest
             'assets.*.operational_asset_id' => ['required', 'integer', 'distinct', 'exists:operational_assets,id'],
             'assets.*.assignment_type' => ['required', 'string', Rule::in(['truck', 'crane', 'mobile_crane', 'equipment'])],
             'version' => ['sometimes', 'integer', 'min:1'],
+            'advice_id' => ['required_with:option_id', 'integer', 'min:1'],
+            'option_id' => ['required_with:advice_id', 'integer', 'min:1'],
         ];
     }
 }

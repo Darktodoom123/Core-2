@@ -130,6 +130,132 @@ beforeEach(() => {
 });
 
 describe('dispatch GPT advisory', () => {
+    it('opens a vetted blocker option in the assignment workflow without a direct apply action', () => {
+        render(
+            <DispatchGptAdvisory
+                job={job(10)}
+                capabilities={capabilities({
+                    blocker_resolution_enabled: true,
+                })}
+                recommendations={[
+                    recommendation({
+                        purpose: 'dispatch_blocker_resolution',
+                        recommendation: {
+                            summary: 'Review an eligible operator.',
+                            blocker: {
+                                code: 'missing_personnel',
+                                assignment_type: 'crane_operator',
+                                reasons: [
+                                    'No active personnel assignment is recorded.',
+                                ],
+                            },
+                        },
+                        blocker_options: [
+                            {
+                                id: 1,
+                                candidate_id: 2,
+                                candidate_name: 'Suggested operator',
+                                resource_kind: 'personnel',
+                                assignment_type: 'crane_operator',
+                                explanation:
+                                    'Credential and schedule checks passed.',
+                            },
+                        ],
+                    }),
+                ]}
+            />,
+        );
+
+        expect(
+            screen.getByText('AI dispatch blocker assistance'),
+        ).toBeInTheDocument();
+        expect(screen.getByText('Suggested operator')).toBeInTheDocument();
+        expect(
+            screen.queryByRole('button', { name: /apply/i }),
+        ).not.toBeInTheDocument();
+        expect(
+            screen.getByRole('link', {
+                name: /review option in assignment workflow/i,
+            }),
+        ).toHaveAttribute(
+            'href',
+            expect.stringContaining('advice_id=1&option_id=1'),
+        );
+    });
+
+    it('sends project shifts to Fill coverage without requesting AI', () => {
+        render(
+            <DispatchGptAdvisory
+                job={{
+                    ...job(10),
+                    project_coverage_url:
+                        '/?view=dispatch&dispatch_tab=project-plans&project=3',
+                }}
+                capabilities={capabilities({
+                    blocker_resolution_enabled: true,
+                    edit_project_plan: true,
+                })}
+                recommendations={[]}
+            />,
+        );
+        expect(
+            screen.getByRole('link', { name: 'Fill coverage' }),
+        ).toHaveAttribute('href', expect.stringContaining('project=3'));
+        expect(
+            screen.queryByRole('button', { name: 'Check blockers' }),
+        ).not.toBeInTheDocument();
+        expect(router.post).not.toHaveBeenCalled();
+    });
+
+    it('shows project coverage guidance without an edit link for viewers', () => {
+        render(
+            <DispatchGptAdvisory
+                job={{
+                    ...job(10),
+                    project_coverage_url: '/?view=dispatch&project=3',
+                }}
+                capabilities={capabilities({
+                    blocker_resolution_enabled: true,
+                })}
+                recommendations={[]}
+            />,
+        );
+
+        expect(
+            screen.getByText('Ask a project planner to fill coverage.'),
+        ).toBeInTheDocument();
+        expect(
+            screen.queryByRole('link', { name: 'Fill coverage' }),
+        ).not.toBeInTheDocument();
+    });
+
+    it('refreshes blocker advice through the same purpose', () => {
+        render(
+            <DispatchGptAdvisory
+                job={job(10)}
+                capabilities={capabilities({
+                    blocker_resolution_enabled: true,
+                })}
+                recommendations={[
+                    recommendation({
+                        purpose: 'dispatch_blocker_resolution',
+                        status: 'stale',
+                        blocker_options: [],
+                    }),
+                ]}
+            />,
+        );
+        fireEvent.click(screen.getByRole('button', { name: 'Refresh advice' }));
+        expect(router.post).toHaveBeenCalledWith(
+            '/operations/gpt-recommendations',
+            expect.objectContaining({
+                purpose: 'dispatch_blocker_resolution',
+                refresh: true,
+            }),
+            expect.anything(),
+        );
+    });
+
     it('shows only the latest dispatch assignment recommendation for the selected job', () => {
         render(
             <DispatchGptAdvisory

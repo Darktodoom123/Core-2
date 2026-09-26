@@ -9,6 +9,7 @@ use App\Modules\Dispatch\Models\ApprovalRequest;
 use App\Modules\Dispatch\Models\Client;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dispatch\Models\ServiceRequest;
+use App\Modules\Dispatch\Planning\Services\PlanningAccess;
 use App\Modules\Dvir\Models\DvirInspection;
 use App\Modules\Fleet\Models\AssetDocument;
 use App\Modules\Fuel\Models\FuelRequest;
@@ -111,6 +112,8 @@ final class OperationsWorkspaceViewModel
     /** @return array<string, mixed> */
     public static function job(DispatchJob $job): array
     {
+        $projectShift = $job->relationLoaded('projectShift') ? $job->projectShift : null;
+
         return [
             'id' => (int) $job->getKey(),
             'reference' => $job->reference,
@@ -134,6 +137,7 @@ final class OperationsWorkspaceViewModel
             'scheduled_end' => $job->scheduled_end?->toIso8601String(),
             'requirements' => $job->requirements ?? [],
             'version' => $job->version,
+            'project_coverage_url' => $projectShift === null ? null : '/?view=dispatch&dispatch_tab=project-plans&project='.$projectShift->phase->project_plan_id.'&phase='.$projectShift->project_phase_id.'&crew_week='.$job->scheduled_start?->toDateString(),
             'updated_at' => $job->updated_at?->toIso8601String(),
             'personnel_assignments' => $job->personnelAssignments
                 ->map(static function (DispatchPersonnelAssignment $assignment) use ($job): array {
@@ -1002,6 +1006,8 @@ final class OperationsWorkspaceViewModel
             'request_gpt_assistance' => $user->can(PermissionName::GptUseDispatch->value) || $user->can(PermissionName::GptUseOperations->value) || $user->can(PermissionName::GptUseMaintenance->value),
             'view_gpt_governance' => $user->can(PermissionName::GptConfigure->value),
             'proactive_gpt_assistance' => (bool) config('services.openai.proactive_enabled', true),
+            'blocker_resolution_enabled' => (bool) config('services.openai.blocker_resolution_enabled', false),
+            'edit_project_plan' => PlanningAccess::edit($user),
             'decide_gpt_recommendation' => $user->can(PermissionName::GptUseDispatch->value) || $user->can(PermissionName::GptUseOperations->value),
             'retry_gpt_recommendation' => $user->can(PermissionName::GptUseDispatch->value) || $user->can(PermissionName::GptUseOperations->value),
             'create_job_report' => $user->can(PermissionName::DispatchUpdateOwnStatus->value) || $user->can(PermissionName::ReportsViewOwn->value),
@@ -1241,6 +1247,16 @@ final class OperationsWorkspaceViewModel
         $assetIds = [];
 
         foreach ($recommendations as $rec) {
+            foreach ($rec->recommendation['options'] ?? [] as $option) {
+                if (! is_array($option) || ! is_numeric($option['candidate_id'] ?? null)) {
+                    continue;
+                }
+                if (($option['resource_kind'] ?? null) === 'personnel') {
+                    $userIds[] = (int) $option['candidate_id'];
+                } elseif (($option['resource_kind'] ?? null) === 'asset') {
+                    $assetIds[] = (int) $option['candidate_id'];
+                }
+            }
             $rawPersonnel = is_array($rec->recommendation['proposed_personnel'] ?? null)
                 ? $rec->recommendation['proposed_personnel']
                 : [];
@@ -1371,6 +1387,20 @@ final class OperationsWorkspaceViewModel
             }, $rawAssets)));
 
             $recData = $rec->recommendation ?? [];
+            if ($rec->purpose === 'dispatch_blocker_resolution') {
+                $recData['options'] = array_map(static function (array $option) use ($users, $assets): array {
+                    $candidateId = (int) ($option['candidate_id'] ?? 0);
+                    $candidate = ($option['resource_kind'] ?? null) === 'personnel'
+                        ? $users->get($candidateId)
+                        : $assets->get($candidateId);
+
+                    return [
+                        ...$option,
+                        'candidate_name' => $candidate instanceof User || $candidate instanceof OperationalAsset ? $candidate->name : null,
+                        'candidate_code' => $candidate instanceof OperationalAsset ? $candidate->code : null,
+                    ];
+                }, $recData['options'] ?? []);
+            }
             $recData['proposed_personnel'] = $proposedPersonnel;
             $recData['proposed_assets'] = $proposedAssets;
 
@@ -1387,6 +1417,7 @@ final class OperationsWorkspaceViewModel
                 'prompt_summary' => $rec->prompt_summary,
                 'response_summary' => $rec->response_summary,
                 'recommendation' => $recData,
+                'blocker_options' => $rec->purpose === 'dispatch_blocker_resolution' ? $recData['options'] : null,
                 'proposed_personnel' => $proposedPersonnel,
                 'proposed_assets' => $proposedAssets,
                 'conflicts' => $rec->conflicts ?? [],
@@ -1403,7 +1434,8 @@ final class OperationsWorkspaceViewModel
                 'expires_at' => $rec->expires_at instanceof CarbonInterface ? $rec->expires_at->toIso8601String() : null,
                 'expires_in_seconds' => $rec->expires_at instanceof CarbonInterface ? max(0, (int) now()->diffInSeconds($rec->expires_at, false)) : 0,
                 'is_expired' => $rec->isExpired(),
-                'is_retryable' => $rec->status !== GptRecommendationStatus::Accepted
+                'is_retryable' => ! ($rec->purpose === 'dispatch_assignment' && config('services.openai.blocker_resolution_enabled', false))
+                    && $rec->status !== GptRecommendationStatus::Accepted
                     && ($rec->status->isTerminal() || ($rec->status === GptRecommendationStatus::PendingReview && $rec->isExpired())),
                 'retry_url' => "/operations/gpt-recommendations/{$rec->id}/retry",
                 'error_message' => $rec->error_message,

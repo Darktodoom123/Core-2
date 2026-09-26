@@ -1,4 +1,4 @@
-import { router, useForm, usePage } from '@inertiajs/react';
+import { Link, router, useForm, usePage } from '@inertiajs/react';
 import {
     AlertCircle,
     AlertTriangle,
@@ -41,6 +41,18 @@ interface GptGovernanceTelemetry {
     accepted_count: number;
     rejected_count: number;
     circuit_breaker_active: boolean;
+    blocker_advice?: {
+        generated: number;
+        no_eligible_option: number;
+        failed: number;
+        stale: number;
+        opened: number;
+        adopted: number;
+        edited: number;
+        resolved: number;
+        ready_after_save: number;
+        average_seconds_to_resolution: number | null;
+    };
 }
 
 const GOVERNANCE_STATUS_ERROR =
@@ -378,6 +390,35 @@ export function GptRecommendationsSurface({
                 )}
 
                 {/* AI Governance & Spend Telemetry Cards */}
+                {telemetry?.blocker_advice && (
+                    <Panel className="mb-3 p-3.5 text-xs text-ink-soft">
+                        <span className="font-semibold text-ink">
+                            Resource blocker advice this month
+                        </span>
+                        <p className="mt-1">
+                            {telemetry.blocker_advice.generated} prepared ·{' '}
+                            {telemetry.blocker_advice.opened} opened ·{' '}
+                            {telemetry.blocker_advice.adopted} adopted ·{' '}
+                            {telemetry.blocker_advice.edited} edited ·{' '}
+                            {telemetry.blocker_advice.resolved} blockers
+                            resolved ·{' '}
+                            {telemetry.blocker_advice.ready_after_save} ready
+                            after save
+                        </p>
+                        <p className="mt-1">
+                            Average time from advice to resolved blocker:{' '}
+                            {telemetry.blocker_advice
+                                .average_seconds_to_resolution === null
+                                ? 'No outcomes yet'
+                                : `${telemetry.blocker_advice.average_seconds_to_resolution}s`}{' '}
+                            · {telemetry.blocker_advice.no_eligible_option} with
+                            no eligible option ·{' '}
+                            {telemetry.blocker_advice.failed} failed ·{' '}
+                            {telemetry.blocker_advice.stale} stale
+                        </p>
+                    </Panel>
+                )}
+
                 {telemetry && (
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                         <div className="rounded-xl border border-line bg-surface p-3.5 shadow-sm">
@@ -1081,6 +1122,26 @@ function PendingRecommendationCard({
         auth?.role === 'admin' ||
         auth?.prototype_role === 'system_administrator';
 
+    if (rec.purpose === 'dispatch_blocker_resolution') {
+        return (
+            <Panel
+                data-testid={`gpt-recommendation-card-${rec.id}`}
+                className="space-y-3 p-5"
+            >
+                <h4 className="text-sm font-semibold text-ink">
+                    Resource blocker advice #{rec.id} · Dispatch #
+                    {rec.subject_id}
+                </h4>
+                <RecommendationDetails rec={rec} />
+                {capabilities.decide_gpt_recommendation && (
+                    <Button size="sm" variant="secondary" onClick={onReject}>
+                        Dismiss advice
+                    </Button>
+                )}
+            </Panel>
+        );
+    }
+
     return (
         <Panel
             data-testid={`gpt-recommendation-card-${rec.id}`}
@@ -1270,6 +1331,43 @@ export function RecommendationDetails({
         auth?.role === 'system_administrator' ||
         auth?.role === 'admin' ||
         auth?.prototype_role === 'system_administrator';
+
+    if (rec.purpose === 'dispatch_blocker_resolution') {
+        const blocker = rec.recommendation.blocker as
+            { code?: string; reasons?: string[] } | undefined;
+
+        return (
+            <div className="space-y-2 text-xs text-ink-soft">
+                <p className="font-medium text-ink">
+                    {humanize(blocker?.code ?? 'resource blocker')}
+                </p>
+                {blocker?.reasons?.[0] && <p>{blocker.reasons[0]}</p>}
+                <p>{String(rec.recommendation.summary ?? '')}</p>
+                {(rec.blocker_options ?? []).map((option) => (
+                    <div
+                        key={option.id}
+                        className="rounded-lg border border-line p-2"
+                    >
+                        <p className="font-medium text-ink">
+                            {option.candidate_name ??
+                                `Resource #${option.candidate_id}`}
+                        </p>
+                        <p>{option.explanation}</p>
+                        {rec.status === 'pending_review' &&
+                            !rec.is_expired &&
+                            !rec.is_stale && (
+                                <Link
+                                    href={`/operations/dispatch-jobs/${rec.subject_id}?${new URLSearchParams({ advice_id: String(rec.id), option_id: String(option.id) })}`}
+                                    className="font-medium text-brand-strong underline"
+                                >
+                                    Review in assignment workflow
+                                </Link>
+                            )}
+                    </div>
+                ))}
+            </div>
+        );
+    }
 
     const recommendation = rec.recommendation ?? {};
     const reasons = Array.isArray(recommendation.reasons)

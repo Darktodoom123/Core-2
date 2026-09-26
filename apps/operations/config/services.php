@@ -43,6 +43,7 @@ return [
         'max_input_tokens' => (int) env('OPENAI_MAX_INPUT_TOKENS', 32000),
         'max_cost_usd' => (float) env('OPENAI_MAX_COST_USD', 0.05),
         'proactive_enabled' => (bool) env('OPENAI_PROACTIVE_ENABLED', true),
+        'blocker_resolution_enabled' => (bool) env('OPENAI_BLOCKER_RESOLUTION_ENABLED', false),
         'proactive_batch_size' => 10,
         'proactive_cooldown_minutes' => 5,
     ],

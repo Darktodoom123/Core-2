@@ -161,6 +161,46 @@ describe('resource picker', () => {
         );
     });
 
+    it('opens an advised replacement already selected, even when it is outside the loaded page', () => {
+        routerPost.mockReset();
+        render(
+            <ReassignmentModal
+                job={job}
+                target={{
+                    kind: 'personnel',
+                    id: 91,
+                    name: 'Current Driver',
+                    type: 'driver',
+                }}
+                advicePrefill={{
+                    advice_id: 6,
+                    option_id: 2,
+                    action: 'reassign',
+                    resource_kind: 'personnel',
+                    replace_assignment_id: 91,
+                    candidate: personnelCandidate,
+                }}
+                personnelCandidates={[personnelCandidate]}
+                assetCandidates={[]}
+                onClose={vi.fn()}
+            />,
+        );
+
+        const replace = screen.getByRole('button', { name: 'Replace driver' });
+        expect(replace).toBeEnabled();
+        fireEvent.click(replace);
+        expect(routerPost).toHaveBeenCalledWith(
+            '/operations/dispatch-jobs/42/reassign',
+            expect.objectContaining({
+                advice_id: 6,
+                option_id: 2,
+                end_personnel_assignment_ids: [91],
+                personnel: [{ user_id: 7, assignment_type: 'driver' }],
+            }),
+            expect.any(Object),
+        );
+    });
+
     it('keeps replacement review focused on one compatible resource type', () => {
         render(
             <ResourcePicker

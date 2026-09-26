@@ -33,6 +33,9 @@ final class AcceptGptRecommendation
         ?array $selectedPersonnel = null,
         ?array $selectedAssets = null,
     ): DispatchJob {
+        if ($recommendation->purpose === 'dispatch_blocker_resolution') {
+            throw ValidationException::withMessages(['gpt' => 'Review a blocker option in the assignment workspace.']);
+        }
         Gate::forUser($actor)->authorize('decide', $recommendation);
 
         /** @var DispatchJob|array{message: string} $result */

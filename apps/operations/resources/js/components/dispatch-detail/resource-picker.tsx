@@ -67,6 +67,7 @@ type ResourcePickerProps = {
     mode: PickerMode;
     job: DispatchDetailPageProps['job'];
     target?: ReassignmentTarget;
+    initialReplacementCandidate?: Candidate | null;
     personnelCandidates: PersonnelCandidateViewModel[];
     assetCandidates: AssetCandidateViewModel[];
     personnelPage?: CandidatePageViewModel<PersonnelCandidateViewModel>;
@@ -203,6 +204,7 @@ export function ResourcePicker({
     mode,
     job,
     target,
+    initialReplacementCandidate = null,
     personnelCandidates,
     assetCandidates,
     personnelPage,
@@ -232,7 +234,7 @@ export function ResourcePicker({
     const [currentPage, setCurrentPage] = useState(1);
     const [loading, setLoading] = useState(false);
     const [replacementCandidate, setReplacementCandidate] =
-        useState<Candidate | null>(null);
+        useState<Candidate | null>(initialReplacementCandidate);
     const filterInitialized = useRef(false);
     const initialFetchRequested = useRef(false);
     const requestSequence = useRef(0);

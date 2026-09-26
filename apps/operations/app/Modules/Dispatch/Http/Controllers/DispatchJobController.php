@@ -19,6 +19,7 @@ use App\Modules\Dispatch\Planning\Models\ProjectShift;
 use App\Modules\Dispatch\Planning\Services\PlanningAccess;
 use App\Modules\Dispatch\ViewModels\DispatchExecutionViewModel;
 use App\Modules\Dispatch\ViewModels\DispatchFieldProgressionViewModel;
+use App\Platform\Gpt\Services\BlockerAdviceReview;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Workspace\ViewModels\OperationsWorkspaceViewModel;
 use Illuminate\Http\JsonResponse;
@@ -93,6 +94,7 @@ final class DispatchJobController extends Controller
         DispatchActivationReadinessQuery $readiness,
         PersonnelCandidateQuery $personnelCandidates,
         AssetCandidateQuery $assetCandidates,
+        BlockerAdviceReview $adviceReview,
     ): Response {
         $user = request()->user();
         $canViewCandidates = $user->can(PermissionName::AssignmentsViewAll->value);
@@ -143,7 +145,15 @@ final class DispatchJobController extends Controller
             fn (DispatchPersonnelAssignment $assignment): bool => Gate::forUser($user)->allows('respond', $assignment),
         );
 
+        $adviceId = request()->integer('advice_id');
+        $optionId = request()->integer('option_id');
+        $advicePrefill = $adviceId > 0 && $optionId > 0 && (bool) config('services.openai.blocker_resolution_enabled', false)
+            ? $adviceReview->prefill($user, $job, $adviceId, $optionId)
+            : null;
+
         return Inertia::render('dispatch-detail', [
+            'advice_prefill' => $advicePrefill,
+            'advice_notice' => $adviceId > 0 && $advicePrefill === null ? 'That suggestion is no longer current. Review available resources manually.' : null,
             'project_context' => $projectShift !== null && PlanningAccess::view($user) ? [
                 'name' => $projectShift->phase->plan->name,
                 'phase' => $projectShift->phase->name,
@@ -194,7 +204,9 @@ final class DispatchJobController extends Controller
                 'reopen' => Gate::forUser($user)->allows('reopen', $job),
                 'archive' => Gate::forUser($user)->allows('archive', $job),
                 'restore' => Gate::forUser($user)->allows('restore', $job),
-                'request_gpt_assistance' => $user->can(PermissionName::GptUseDispatch->value) || $user->can(PermissionName::GptUseOperations->value),
+                'request_gpt_assistance' => ! config('services.openai.blocker_resolution_enabled', false)
+                    && ($user->can(PermissionName::GptUseDispatch->value) || $user->can(PermissionName::GptUseOperations->value)),
+                'blocker_resolution_enabled' => (bool) config('services.openai.blocker_resolution_enabled', false),
             ],
         ]);
     }

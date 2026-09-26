@@ -1,6 +1,6 @@
 # Office dispatch workspace
 
-Implemented behavior, updated 2026-09-25.
+Implemented behavior, updated 2026-09-27.
 
 Core 1 owns project management. Core 2 schedules dispatch jobs, assigns eligible
 people and assets, coordinates operational coverage, and follows field execution.
@@ -56,12 +56,21 @@ Asset rows distinguish a maintenance block, a missing inspection clearance, and
 a non-dispatchable operational status. Selecting a dispatch continues to show
 its assigned personnel and assigned equipment as separate groups.
 
-Each selected dispatch also has **AI assistance**. A dispatch recommendation is
-scoped to the selected job and the `dispatch_assignment` purpose, and shows its
-proposed crew, equipment, rationale, and recorded constraints. A dispatcher must
-review and confirm or decline it. The AI surface does not apply assignments on
-its own; the server revalidates authorization, freshness, eligibility, and safety
-when a recommendation is accepted.
+Each selected dispatch also has **AI assistance**. With
+`OPENAI_BLOCKER_RESOLUTION_ENABLED=true`, it addresses one actionable resource
+blocker at a time. The server vets up to three eligible crew or asset options;
+OpenAI GPT-6 Luna ranks them and selects which verified fact to emphasize. The
+server renders each reason from that fact. **Review option** opens the
+existing assignment or reassignment picker with that candidate selected. The
+dispatcher confirms the change there, and the normal authorization, version,
+eligibility, conflict, safety, and approval checks still govern saving. Advice
+expires after 15 minutes or when its dispatch context changes. If no eligible
+option exists, the card gives manual guidance without a model call. Project
+shifts guide authorized planners to **Fill coverage** in their project plan.
+Approvals, permits, and safety blockers remain in the readiness workflow; AI
+advice never clears them.
+Older `dispatch_assignment` recommendations stay available in governance
+history. The new flow is disabled by default until rollout.
 
 Active dispatches opened through **Monitor field execution** use an execution
 focused view for office users. It leads with the recorded dispatch status, recent

@@ -7,6 +7,7 @@ use App\Modules\Assignment\Models\DispatchPersonnelAssignment;
 use App\Modules\Dispatch\Enums\DispatchPriority;
 use App\Modules\Dispatch\Enums\DispatchSourceType;
 use App\Modules\Dispatch\Enums\DispatchStatus;
+use App\Modules\Dispatch\Planning\Models\ProjectShift;
 use App\Modules\Dvir\Models\DvirInspection;
 use App\Modules\Fuel\Models\FuelRequest;
 use App\Modules\Rental\Models\RentalHandoverEvidence;
@@ -98,6 +99,12 @@ class DispatchJob extends Model
     public function currentAttempt(): HasOne
     {
         return $this->hasOne(DispatchExecutionAttempt::class, 'legacy_dispatch_job_id')->latestOfMany('attempt_number');
+    }
+
+    /** @return HasOne<ProjectShift, $this> */
+    public function projectShift(): HasOne
+    {
+        return $this->hasOne(ProjectShift::class, 'dispatch_job_id');
     }
 
     /** @return HasMany<DispatchPersonnelAssignment, $this> */

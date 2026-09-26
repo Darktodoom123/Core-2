@@ -24,6 +24,7 @@ export function CurrentAssignments({
     personnelPage,
     assetPage,
     onAssignResources,
+    advicePrefill,
 }: {
     job: DispatchDetailPageProps['job'];
     capabilities: DispatchDetailPageProps['capabilities'];
@@ -34,6 +35,7 @@ export function CurrentAssignments({
     personnelPage?: CandidatePageViewModel<PersonnelCandidateViewModel>;
     assetPage?: CandidatePageViewModel<AssetCandidateViewModel>;
     onAssignResources?: () => void;
+    advicePrefill?: DispatchDetailPageProps['advice_prefill'];
 }) {
     const { auth, errors } = usePage().props;
     const authUser = auth?.user;
@@ -51,6 +53,31 @@ export function CurrentAssignments({
         name: string;
         type: string;
     } | null>(null);
+    const [dismissedAdvice, setDismissedAdvice] = useState<string | null>(null);
+    const adviceKey = advicePrefill
+        ? `${advicePrefill.advice_id}:${advicePrefill.option_id}`
+        : null;
+    const advisedAssignment =
+        advicePrefill?.action === 'reassign' &&
+        advicePrefill.replace_assignment_id !== null
+            ? (advicePrefill.resource_kind === 'personnel'
+                  ? job.personnel_assignments
+                  : job.asset_assignments
+              ).find(
+                  (assignment) =>
+                      assignment.id === advicePrefill.replace_assignment_id,
+              )
+            : undefined;
+    const activeReassignmentTarget =
+        reassignmentTarget ??
+        (advisedAssignment && adviceKey !== dismissedAdvice && advicePrefill
+            ? {
+                  kind: advicePrefill.resource_kind,
+                  id: advisedAssignment.id,
+                  name: advisedAssignment.name,
+                  type: advisedAssignment.type,
+              }
+            : null);
 
     const handleAccept = (assignmentId: number) => {
         setSubmittingId(assignmentId);
@@ -550,15 +577,45 @@ export function CurrentAssignments({
                 </div>
             )}
 
-            {reassignmentTarget && (
+            {activeReassignmentTarget && (
                 <ReassignmentModal
                     job={job}
-                    target={reassignmentTarget}
-                    personnelCandidates={personnelCandidates}
-                    assetCandidates={assetCandidates}
+                    target={activeReassignmentTarget}
+                    advicePrefill={advicePrefill}
+                    personnelCandidates={
+                        advicePrefill?.action === 'reassign' &&
+                        advicePrefill.resource_kind === 'personnel' &&
+                        !('code' in advicePrefill.candidate)
+                            ? [
+                                  advicePrefill.candidate,
+                                  ...personnelCandidates.filter(
+                                      (candidate) =>
+                                          candidate.id !==
+                                          advicePrefill.candidate.id,
+                                  ),
+                              ]
+                            : personnelCandidates
+                    }
+                    assetCandidates={
+                        advicePrefill?.action === 'reassign' &&
+                        advicePrefill.resource_kind === 'asset' &&
+                        'code' in advicePrefill.candidate
+                            ? [
+                                  advicePrefill.candidate,
+                                  ...assetCandidates.filter(
+                                      (candidate) =>
+                                          candidate.id !==
+                                          advicePrefill.candidate.id,
+                                  ),
+                              ]
+                            : assetCandidates
+                    }
                     personnelPage={personnelPage}
                     assetPage={assetPage}
-                    onClose={() => setReassignmentTarget(null)}
+                    onClose={() => {
+                        setReassignmentTarget(null);
+                        setDismissedAdvice(adviceKey);
+                    }}
                 />
             )}
         </Panel>

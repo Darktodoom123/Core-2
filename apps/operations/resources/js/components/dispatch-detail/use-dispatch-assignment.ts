@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent, MouseEvent } from 'react';
 import type {
     AssetCandidateViewModel,
+    DispatchDetailPageProps,
     PersonnelCandidateViewModel,
 } from '@/types/workspace';
 import type { AssignmentRequestPayload } from './types';
@@ -49,19 +50,61 @@ export function useDispatchAssignment(
     candidates: CandidateSnapshotInputs,
     initialStep: 1 | 2 | 3 = 2,
     jobVersion?: number,
+    advicePrefill?: DispatchDetailPageProps['advice_prefill'],
 ) {
+    const advisedPersonnel =
+        advicePrefill?.action === 'assign' &&
+        advicePrefill.resource_kind === 'personnel' &&
+        !('code' in advicePrefill.candidate)
+            ? advicePrefill.candidate
+            : null;
+    const advisedAsset =
+        advicePrefill?.action === 'assign' &&
+        advicePrefill.resource_kind === 'asset' &&
+        'code' in advicePrefill.candidate
+            ? advicePrefill.candidate
+            : null;
     const form = useForm<AssignmentRequestPayload>({
-        personnel: [],
-        assets: [],
+        personnel: advisedPersonnel
+            ? [
+                  {
+                      user_id: advisedPersonnel.id,
+                      assignment_type: advisedPersonnel.assignment_type,
+                  },
+              ]
+            : [],
+        assets: advisedAsset
+            ? [
+                  {
+                      operational_asset_id: advisedAsset.id,
+                      assignment_type: advisedAsset.assignment_type,
+                  },
+              ]
+            : [],
         version: jobVersion,
+        advice_id:
+            advicePrefill?.action === 'assign'
+                ? advicePrefill.advice_id
+                : undefined,
+        option_id:
+            advicePrefill?.action === 'assign'
+                ? advicePrefill.option_id
+                : undefined,
     });
-    const [activeStep, setActiveStep] = useState<1 | 2 | 3>(initialStep);
+    const [activeStep, setActiveStep] = useState<1 | 2 | 3>(
+        advicePrefill?.action === 'assign' ? 2 : initialStep,
+    );
     const selectedCount = form.data.personnel.length + form.data.assets.length;
     const hasPendingSelections = selectedCount > 0;
     const skipNextNavigationGuard = useRef(false);
     const bypassNavigationGuard = useRef(false);
     const [candidateSnapshots, setCandidateSnapshots] =
-        useState<CandidateSnapshots>({ personnel: {}, assets: {} });
+        useState<CandidateSnapshots>({
+            personnel: advisedPersonnel
+                ? { [advisedPersonnel.id]: advisedPersonnel }
+                : {},
+            assets: advisedAsset ? { [advisedAsset.id]: advisedAsset } : {},
+        });
 
     const rememberPersonnelCandidates = useCallback(
         (seenCandidates: PersonnelCandidateViewModel[]) => {
@@ -248,7 +291,11 @@ export function useDispatchAssignment(
         form.post(`/operations/dispatch-jobs/${jobId}/assignments`, {
             preserveScroll: true,
             onSuccess: () => {
-                form.reset();
+                form.setData({
+                    personnel: [],
+                    assets: [],
+                    version: jobVersion,
+                });
                 setCandidateSnapshots({ personnel: {}, assets: {} });
             },
             onFinish: () => {

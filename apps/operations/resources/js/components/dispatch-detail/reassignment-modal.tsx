@@ -12,6 +12,7 @@ import type { ReassignmentTarget } from './resource-picker';
 export function ReassignmentModal({
     job,
     target,
+    advicePrefill,
     personnelCandidates,
     assetCandidates,
     personnelPage,
@@ -20,6 +21,7 @@ export function ReassignmentModal({
 }: {
     job: DispatchDetailPageProps['job'];
     target: ReassignmentTarget;
+    advicePrefill?: DispatchDetailPageProps['advice_prefill'];
     personnelCandidates: PersonnelCandidateViewModel[];
     assetCandidates: AssetCandidateViewModel[];
     personnelPage?: CandidatePageViewModel<PersonnelCandidateViewModel>;
@@ -31,7 +33,7 @@ export function ReassignmentModal({
     const [error, setError] = useState<string | null>(null);
     const [selectedCandidate, setSelectedCandidate] = useState<
         PersonnelCandidateViewModel | AssetCandidateViewModel | null
-    >(null);
+    >(advicePrefill?.action === 'reassign' ? advicePrefill.candidate : null);
 
     const handleSelection = (
         candidate: PersonnelCandidateViewModel | AssetCandidateViewModel,
@@ -56,6 +58,8 @@ export function ReassignmentModal({
         const payload: Record<string, unknown> = {
             version: job.version,
             reason: reason.trim() || undefined,
+            advice_id: advicePrefill?.advice_id,
+            option_id: advicePrefill?.option_id,
         };
 
         if (target.kind === 'personnel' && !('code' in selectedCandidate)) {
@@ -118,6 +122,11 @@ export function ReassignmentModal({
             mode="replacement"
             job={job}
             target={target}
+            initialReplacementCandidate={
+                advicePrefill?.action === 'reassign'
+                    ? advicePrefill.candidate
+                    : null
+            }
             personnelCandidates={personnelCandidates}
             assetCandidates={assetCandidates}
             personnelPage={personnelPage}

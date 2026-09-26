@@ -35,6 +35,8 @@ final class ReassignDispatchResourcesRequest extends FormRequest
             'assets.*.assignment_type' => ['required', 'string', Rule::in(['truck', 'crane', 'mobile_crane', 'equipment'])],
             'reason' => ['nullable', 'string', 'max:1000'],
             'version' => ['required', 'integer', 'min:1'],
+            'advice_id' => ['required_with:option_id', 'integer', 'min:1'],
+            'option_id' => ['required_with:advice_id', 'integer', 'min:1'],
         ];
     }
 }

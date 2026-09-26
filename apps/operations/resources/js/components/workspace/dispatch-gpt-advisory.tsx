@@ -1,6 +1,7 @@
 import { router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
 import { DispatchAdvisoryCard } from '@/components/workspace/dispatch-advisory-card';
+import { DispatchBlockerAdvisory } from '@/components/workspace/dispatch-blocker-advisory';
 import {
     AcceptGptModal,
     RecommendationDetails,
@@ -24,7 +25,7 @@ function assignmentWorkspaceUrl(jobId: number, returnTo: string): string {
     return `/operations/dispatch-jobs/${jobId}?${query}`;
 }
 
-export function DispatchGptAdvisory({
+function LegacyDispatchGptAdvisory({
     job,
     recommendations = [],
     capabilities,
@@ -219,4 +220,18 @@ export function DispatchGptAdvisory({
             )}
         </>
     );
+}
+
+export function DispatchGptAdvisory(props: DispatchGptAdvisoryProps) {
+    if (props.capabilities.blocker_resolution_enabled) {
+        return (
+            <DispatchBlockerAdvisory
+                job={props.job}
+                recommendations={props.recommendations ?? []}
+                capabilities={props.capabilities}
+            />
+        );
+    }
+
+    return <LegacyDispatchGptAdvisory {...props} />;
 }
