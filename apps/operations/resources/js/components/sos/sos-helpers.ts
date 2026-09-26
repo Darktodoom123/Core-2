@@ -25,7 +25,8 @@ export function formatSosTimestamp(value: string | null): string {
 }
 
 export function formatSosAge(value: string, now = Date.now()): string {
-    const timestamp = new Date(value).getTime();
+    // new Date(null) is the epoch, so a missing time must not reach Date.
+    const timestamp = value ? new Date(value).getTime() : Number.NaN;
 
     if (Number.isNaN(timestamp)) {
         return 'age unavailable';

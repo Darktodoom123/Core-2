@@ -17,6 +17,12 @@ const HATCHED_WARNING: CSSProperties = {
         'repeating-linear-gradient(135deg, var(--color-warning) 0 3px, var(--color-warning-soft) 3px 6px)',
 };
 
+/** Faint hatching for filled areas that also carry text, such as timeline bars. */
+export const SOFT_WARNING_HATCH: CSSProperties = {
+    backgroundImage:
+        'repeating-linear-gradient(135deg, color-mix(in oklab, var(--color-warning) 24%, transparent) 0 3px, transparent 3px 8px)',
+};
+
 /** Solid or hatched fill; hatching keeps "needs resources" distinct without colour. */
 export function swatchFill(tone: SwatchTone): {
     className: string;

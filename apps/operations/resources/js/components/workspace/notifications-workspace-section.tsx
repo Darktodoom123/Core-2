@@ -486,7 +486,8 @@ export function NotificationsSurface({
                                                     : 'hover:bg-surface-subtle/40',
                                             )}
                                         >
-                                            <div className="flex min-w-0 flex-1 items-start gap-3.5">
+                                            {/* basis-60 lets "Mark as read" wrap below on phones instead of crushing the text. */}
+                                            <div className="flex min-w-0 flex-1 basis-60 items-start gap-3.5">
                                                 <span
                                                     className={cn(
                                                         'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg shadow-xs',

@@ -35,7 +35,7 @@ export function ManagerDashboardHeader({
     ].filter(Boolean);
 
     return (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0">
                 <h1 className="text-2xl font-semibold tracking-[-0.02em] text-ink">
                     Operation Dashboard
@@ -85,7 +85,7 @@ function DataFreshness({
 
     return (
         <div
-            className="shrink-0 text-xs leading-5 text-ink-soft tabular-nums sm:text-right"
+            className="shrink-0 text-xs leading-5 text-ink-soft tabular-nums lg:text-right"
             aria-live="polite"
         >
             <p
@@ -106,7 +106,7 @@ function DataFreshness({
                     : 'Live updates offline · checking every 15 s'}
             </p>
             {refresh?.status === 'refreshing' ? (
-                <p className="flex items-center gap-1.5 sm:justify-end">
+                <p className="flex items-center gap-1.5 lg:justify-end">
                     <RefreshCw
                         className="size-3 animate-spin motion-reduce:animate-none"
                         aria-hidden="true"
@@ -114,7 +114,7 @@ function DataFreshness({
                     Refreshing workspace data…
                 </p>
             ) : refresh?.status === 'failed' ? (
-                <p className="flex items-center gap-1.5 font-medium text-warning-strong sm:justify-end">
+                <p className="flex items-center gap-1.5 font-medium text-warning-strong lg:justify-end">
                     <AlertTriangle className="size-3" aria-hidden="true" />
                     Refresh failed
                     {refreshedAt

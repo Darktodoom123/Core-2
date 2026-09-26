@@ -122,15 +122,21 @@ export function LiveTrackingPreview({
                     </div>
                 </div>
                 {onOpenTracking && (
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="min-h-11 shrink-0"
-                        onClick={onOpenTracking}
-                    >
-                        Open full tracking
-                        <ArrowUpRight className="size-3.5" aria-hidden="true" />
-                    </Button>
+                    // Buttons take their font from the parent (app.css resets `button { font: inherit }`).
+                    <div className="shrink-0 text-xs font-semibold">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="min-h-11"
+                            onClick={onOpenTracking}
+                        >
+                            Open full tracking
+                            <ArrowUpRight
+                                className="size-3.5"
+                                aria-hidden="true"
+                            />
+                        </Button>
+                    </div>
                 )}
             </header>
 

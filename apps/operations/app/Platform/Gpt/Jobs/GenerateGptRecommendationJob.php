@@ -14,11 +14,11 @@ use App\Platform\Gpt\Services\RecordGptOperationalMetric;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
 use App\Shared\Assets\Models\OperationalAsset;
+use Carbon\CarbonInterface;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
@@ -126,7 +126,7 @@ final class GenerateGptRecommendationJob implements ShouldQueue
                         'purpose' => $recommendation->purpose,
                         'model' => $recommendation->model,
                         'cost_usd' => $result['cost_usd'],
-                        'expires_at' => $recommendation->expires_at instanceof Carbon ? $recommendation->expires_at->toIso8601String() : null,
+                        'expires_at' => $recommendation->expires_at instanceof CarbonInterface ? $recommendation->expires_at->toIso8601String() : null,
                     ]
                 );
             }

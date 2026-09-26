@@ -35,6 +35,7 @@ use App\Platform\Tracking\Models\LocationUpdate;
 use App\Shared\Assets\Enums\AssetCategory;
 use App\Shared\Assets\Models\OperationalAsset;
 use BackedEnum;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -1132,7 +1133,7 @@ final class OperationsWorkspaceViewModel
     {
         $value = $model->getAttribute($attribute);
 
-        return $value instanceof Carbon ? $value->toIso8601String() : (is_string($value) ? $value : null);
+        return $value instanceof CarbonInterface ? $value->toIso8601String() : (is_string($value) ? $value : null);
     }
 
     /** @return array<string, mixed>|null */
@@ -1146,7 +1147,7 @@ final class OperationsWorkspaceViewModel
         }
 
         $capturedAt = $model->getAttribute('location_captured_at') ?? $model->getAttribute('captured_at');
-        $capturedAt = $capturedAt instanceof Carbon ? $capturedAt->toIso8601String() : (is_string($capturedAt) ? $capturedAt : null);
+        $capturedAt = $capturedAt instanceof CarbonInterface ? $capturedAt->toIso8601String() : (is_string($capturedAt) ? $capturedAt : null);
         $age = $capturedAt === null ? null : (int) abs(now()->diffInSeconds(Carbon::parse($capturedAt)));
 
         return [
@@ -1399,8 +1400,8 @@ final class OperationsWorkspaceViewModel
                 'generated_at' => $rec->generated_at?->toIso8601String(),
                 'latency_ms' => $rec->latency_ms,
                 'purge_at' => $rec->purge_at?->toIso8601String(),
-                'expires_at' => $rec->expires_at instanceof Carbon ? $rec->expires_at->toIso8601String() : null,
-                'expires_in_seconds' => $rec->expires_at instanceof Carbon ? max(0, (int) now()->diffInSeconds($rec->expires_at, false)) : 0,
+                'expires_at' => $rec->expires_at instanceof CarbonInterface ? $rec->expires_at->toIso8601String() : null,
+                'expires_in_seconds' => $rec->expires_at instanceof CarbonInterface ? max(0, (int) now()->diffInSeconds($rec->expires_at, false)) : 0,
                 'is_expired' => $rec->isExpired(),
                 'is_retryable' => $rec->status !== GptRecommendationStatus::Accepted
                     && ($rec->status->isTerminal() || ($rec->status === GptRecommendationStatus::PendingReview && $rec->isExpired())),
@@ -1415,8 +1416,8 @@ final class OperationsWorkspaceViewModel
                     'name' => $rec->decidedBy->name,
                 ],
                 'decided_by_name' => $rec->decidedBy?->name,
-                'decided_at' => $rec->decided_at instanceof Carbon ? $rec->decided_at->toIso8601String() : null,
-                'created_at' => $rec->created_at instanceof Carbon ? $rec->created_at->toIso8601String() : null,
+                'decided_at' => $rec->decided_at instanceof CarbonInterface ? $rec->decided_at->toIso8601String() : null,
+                'created_at' => $rec->created_at instanceof CarbonInterface ? $rec->created_at->toIso8601String() : null,
                 'is_advisory' => true,
             ];
         })->values()->all();
@@ -1580,7 +1581,7 @@ final class OperationsWorkspaceViewModel
             'status' => $notification->status,
             'data' => $notification->data,
             'read_at' => $notification->read_at?->toIso8601String(),
-            'created_at' => $notification->created_at instanceof Carbon ? $notification->created_at->toIso8601String() : null,
+            'created_at' => $notification->created_at instanceof CarbonInterface ? $notification->created_at->toIso8601String() : null,
             'dispatch_job' => $notification->dispatchJob !== null ? [
                 'id' => (int) $notification->dispatchJob->getKey(),
                 'reference' => $notification->dispatchJob->reference,

@@ -46,14 +46,14 @@ import {
     FilterButton,
     FilterGroup,
     LegendSwatch,
+    SOFT_WARNING_HATCH,
     SourceChip,
-    swatchFill,
 } from './manager-ui';
 import type { TodayDispatches } from './use-today-dispatches';
 
 const SCHEDULE_PREVIEW_LIMIT = 6;
 const SCHEDULE_ROWS_ID = 'manager-schedule-rows';
-const LABEL_COLUMN = '11.5rem';
+const LABEL_COLUMN = '13rem';
 
 const SOURCE_FILTERS: Array<{ value: ScheduleSourceFilter; label: string }> = [
     { value: 'all', label: 'All' },
@@ -81,7 +81,7 @@ const BAR_STYLES: Record<
     },
     needs_resources: {
         icon: AlertTriangle,
-        className: 'border-warning/50 text-warning-strong',
+        className: 'border-warning/50 bg-warning-soft text-warning-strong',
     },
 };
 
@@ -165,14 +165,20 @@ export function ManagerSchedulePanel({
                     </p>
                 </div>
                 {canOpenDispatch && (
-                    <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={onOpenDispatch}
-                    >
-                        Open schedule
-                        <ArrowRight className="size-3.5" aria-hidden="true" />
-                    </Button>
+                    // Buttons take their font from the parent (app.css resets `button { font: inherit }`).
+                    <div className="shrink-0 text-xs font-semibold">
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={onOpenDispatch}
+                        >
+                            Open schedule
+                            <ArrowRight
+                                className="size-3.5"
+                                aria-hidden="true"
+                            />
+                        </Button>
+                    </div>
                 )}
             </header>
 
@@ -460,10 +466,7 @@ function ScheduleRow({
     const bar = timelineBar(job, timeline);
     const style = BAR_STYLES[state];
     const BarIcon = style.icon;
-    const hatch =
-        state === 'needs_resources'
-            ? swatchFill('warning-hatched').style
-            : undefined;
+    const hatch = state === 'needs_resources' ? SOFT_WARNING_HATCH : undefined;
     const delay = state === 'in_progress' ? job.latest_delay : null;
     const barLabel =
         state === 'in_progress'
@@ -486,12 +489,12 @@ function ScheduleRow({
 
     return (
         <li className="min-h-14 py-2 md:py-0">
-            <div className="grid items-center gap-y-1 md:grid-cols-[11.5rem_minmax(0,1fr)]">
+            <div className="grid items-center gap-y-1 md:grid-cols-[13rem_minmax(0,1fr)]">
                 <div className="min-w-0 pr-3">
                     <p className="flex items-center gap-1.5">
                         <Link
                             href={dispatchDetailHref(job.id)}
-                            className="rounded-sm text-sm font-semibold text-ink hover:underline focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
+                            className="rounded-sm text-sm font-semibold whitespace-nowrap text-ink hover:underline focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                         >
                             {job.reference}
                         </Link>
@@ -536,7 +539,8 @@ function ScheduleRow({
                         <div
                             title={description}
                             className={cn(
-                                'absolute top-3.5 z-[2] flex h-7 items-center gap-1.5 overflow-hidden rounded-md border px-2 text-xs font-semibold whitespace-nowrap',
+                                // @container: narrow bars show only the icon (full label in the title).
+                                '@container absolute top-3.5 z-[2] flex h-7 items-center gap-1.5 overflow-hidden rounded-md border px-2 text-xs font-semibold whitespace-nowrap',
                                 style.className,
                                 bar.startsBeforeWindow &&
                                     'rounded-l-none border-l-0',
@@ -553,7 +557,9 @@ function ScheduleRow({
                                 <span className="font-normal">◂</span>
                             )}
                             <BarIcon className="size-3.5 shrink-0" />
-                            <span className="truncate">{barLabel}</span>
+                            <span className="hidden truncate @min-[8.5rem]:block">
+                                {barLabel}
+                            </span>
                             {delay && (
                                 <span className="inline-flex shrink-0 items-center gap-1 text-danger-strong">
                                     <Clock3 className="size-3" />

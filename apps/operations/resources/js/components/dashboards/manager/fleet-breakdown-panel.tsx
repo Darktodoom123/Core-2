@@ -41,15 +41,21 @@ export function FleetBreakdownPanel({
                     Governance &amp; Fleet Breakdown
                 </h2>
                 {canOpenAssets && (
-                    <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={onOpenAssets}
-                        aria-label="View fleet in Fleet & Equipment"
-                    >
-                        View fleet
-                        <ArrowRight className="size-3.5" aria-hidden="true" />
-                    </Button>
+                    // Buttons take their font from the parent (app.css resets `button { font: inherit }`).
+                    <div className="shrink-0 text-xs font-semibold">
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={onOpenAssets}
+                            aria-label="View fleet in Fleet & Equipment"
+                        >
+                            View fleet
+                            <ArrowRight
+                                className="size-3.5"
+                                aria-hidden="true"
+                            />
+                        </Button>
+                    </div>
                 )}
             </header>
 

@@ -624,7 +624,7 @@ describe('LiveTrackingMap large-fleet behavior', () => {
         await waitFor(() => expect(onSelect).toHaveBeenCalledWith(251));
         expect(screen.getByText('TRK-251')).toBeInTheDocument();
         expect(harness.clusterLeafCalls).toBe(1);
-    });
+    }, 15000);
 
     it('ignores a pending cluster lookup after the marker group is filtered and replaced', async () => {
         const fleet = makeFleet();

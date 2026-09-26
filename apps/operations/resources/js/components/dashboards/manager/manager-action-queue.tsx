@@ -463,17 +463,11 @@ function QueueRowActions({
                 </Button>
             ) : null;
         case 'approval': {
-            const subjectId = item.approval.subject?.id;
-            const reference =
-                item.approval.subject?.reference ??
-                (item.approval as unknown as { title?: string }).title ??
-                'dispatch';
+            const { id, reference } = item.approval.subject;
 
             return (
                 <Link
-                    href={
-                        subjectId ? dispatchDetailHref(subjectId) : '/#dispatch'
-                    }
+                    href={dispatchDetailHref(id)}
                     aria-label={
                         item.approval.can_decide
                             ? `Review approval for ${reference}`

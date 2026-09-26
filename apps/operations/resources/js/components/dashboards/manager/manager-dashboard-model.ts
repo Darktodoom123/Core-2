@@ -335,8 +335,7 @@ function blockedAssetItem(asset: AssetViewModel): ManagerQueueItem {
 }
 
 function approvalTitle(approval: ApprovalViewModel): string {
-    const fallbackTitle = (approval as unknown as { title?: string }).title;
-    const reference = approval.subject?.reference ?? fallbackTitle ?? 'request';
+    const reference = approval.subject.reference;
 
     switch (approval.kind) {
         case 'dispatch_activation':
@@ -346,9 +345,7 @@ function approvalTitle(approval: ApprovalViewModel): string {
         case 'reassignment_override':
             return `Approve reassignment for ${reference}`;
         default:
-            return approval.kind
-                ? `Review ${humanize(approval.kind)} for ${reference}`
-                : (fallbackTitle ?? `Review approval for ${reference}`);
+            return `Review ${humanize(approval.kind)} for ${reference}`;
     }
 }
 
@@ -356,23 +353,19 @@ function approvalItem(
     approval: ApprovalViewModel,
     now: number,
 ): ManagerQueueItem {
-    const priority = approval.subject?.priority;
+    const priority = approval.subject.priority;
     const detail = approval.can_decide
         ? [
               priority && priority.value !== 'routine'
                   ? `${priority.label} job`
                   : null,
-              approval.requester?.name
-                  ? `requested by ${approval.requester.name}`
-                  : null,
-              formatStartLabel(approval.subject?.scheduled_start, now),
+              `requested by ${approval.requester.name}`,
+              formatStartLabel(approval.subject.scheduled_start, now),
           ]
               .filter(Boolean)
               .join(' · ')
         : (approval.decision_blocker ??
           'Another authorized manager must decide this request.');
-
-    const fallbackTitle = (approval as unknown as { title?: string }).title;
 
     return {
         kind: 'approval',
@@ -382,13 +375,9 @@ function approvalItem(
         approval,
         title: approvalTitle(approval),
         detail,
-        subject:
-            approval.subject?.title ??
-            approval.subject?.reference ??
-            fallbackTitle ??
-            'Approval',
-        subjectDetail: approval.subject?.site ?? '',
-        since: approval.created_at ?? null,
+        subject: approval.subject.title ?? approval.subject.reference,
+        subjectDetail: approval.subject.site ?? '',
+        since: approval.created_at,
         sinceLabel: 'waiting',
     };
 }
@@ -549,20 +538,18 @@ export function buildManagerQueue(
         });
 
     const approvals = input.approvals
-        .filter(
-            (approval) => (approval.status?.value ?? 'pending') === 'pending',
-        )
+        .filter((approval) => approval.status.value === 'pending')
         .sort(
             (left, right) =>
                 Number(right.can_decide) - Number(left.can_decide) ||
-                (PRIORITY_RANK[left.subject?.priority?.value ?? 'routine'] ??
+                (PRIORITY_RANK[left.subject.priority?.value ?? 'routine'] ??
                     2) -
                     (PRIORITY_RANK[
-                        right.subject?.priority?.value ?? 'routine'
+                        right.subject.priority?.value ?? 'routine'
                     ] ?? 2) ||
                 compareNullableTimestamps(
-                    left.subject?.scheduled_start,
-                    right.subject?.scheduled_start,
+                    left.subject.scheduled_start,
+                    right.subject.scheduled_start,
                 ) ||
                 compareNullableTimestamps(left.created_at, right.created_at),
         )

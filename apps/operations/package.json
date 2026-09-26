@@ -30,7 +30,7 @@
         "globals": "^15.14.0",
         "image-size": "file:../../third_party/image-size",
         "laravel-echo": "^2.4.0",
-        "laravel-vite-plugin": "^3.1",
+        "laravel-vite-plugin": "^3.2.0",
         "lucide-react": "^1.24.0",
         "maplibre-gl": "^6.4.1",
         "motion": "^12.43.0",
