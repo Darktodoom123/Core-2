@@ -57,7 +57,7 @@ if (-not (Test-Path -LiteralPath $env:DB_DATABASE)) {
     New-Item -ItemType File -Path $env:DB_DATABASE | Out-Null
 }
 php artisan migrate --force
-php artisan db:seed --class=ProjectPlanningDemoSeeder
+php artisan db:seed --class='Database\Seeders\Development\ProjectPlanningDemoSeeder'
 php artisan serve --host=127.0.0.1 --port=8001
 ```
 
