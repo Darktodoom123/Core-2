@@ -267,10 +267,11 @@ opportunistically in code you touch:
   `shadows.md`).
 - `createMachinedStyles` in `src/theme/index.tsx` (uppercase "pedal" buttons and
   panels) has no callers.
-- Very large screen files: `AppNavigator.tsx` and `DvirScreen.tsx` are each
-  over 3,000 lines. `HosScreen.tsx` was split into `src/screens/hos/` (largest
-  file 667 lines); its section components still receive raw state setters
-  (for example `setIsSaved`) and could take intent-named callbacks instead.
+- Very large screen files: `AppNavigator.tsx` is over 3,000 lines.
+  `HosScreen.tsx` and `DvirScreen.tsx` were split into `src/screens/hos/` and
+  `src/screens/dvir/` (largest files 667 and 737 lines); their section
+  components still receive raw state setters (for example `setIsSaved`) and
+  could take intent-named callbacks instead.
 
 ## Mobile design QA checklist
 
