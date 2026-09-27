@@ -48,6 +48,15 @@ Changes from the v1.0 baseline:
    assigned unit until dispatch reassigns the job. Taking over a unit from
    another operator still uses the PIN-protected relief handover. An
    operator-side substitution needs a server endpoint first.
+9. **Hours of Service shows the DOLE rule only (2026-09-27).** The field
+   client's shift clock is operating + driving time against the DOLE-OSHC
+   10h cap, with the warning at 9h, as in section 5. It no longer shows US
+   trucking limits (11h drive, 14h window, 70h/8-day cycle, 30-minute
+   break). The server still calculates those values; they are not a product
+   rule. A duty change counts only once the server accepts it, and a
+   rejected change is shown with its reason and can be discarded. The
+   4.5-hour prompt is a fatigue suggestion, not a legal limit. The +10%
+   night-shift differential is not implemented yet.
 
 All other requirements are unchanged from v1.0.
 
