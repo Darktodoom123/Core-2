@@ -335,6 +335,26 @@ export function getHumanReadableActionType(cmd: OutboxCommand): {
             break;
         }
 
+        case 'link_unit': {
+            title = 'Link Unit';
+            reference =
+                typeof payload.asset_code === 'string'
+                    ? `Unit ${payload.asset_code}`
+                    : 'Unit';
+            subtitle = 'On site, start of work';
+            break;
+        }
+
+        case 'release_unit': {
+            title = 'Release Unit';
+            reference =
+                typeof payload.asset_code === 'string'
+                    ? `Unit ${payload.asset_code}`
+                    : 'Unit';
+            subtitle = 'Unit released, tracking off';
+            break;
+        }
+
         case 'record_fuel_log': {
             title = 'Fuel Log';
             const requestId = payload.fuel_request_id;

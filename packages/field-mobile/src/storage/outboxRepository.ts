@@ -49,6 +49,8 @@ const commandTypes: OutboxCommandType[] = [
     'submit_fuel_request',
     'record_fuel_log',
     'withdraw_fuel_request',
+    'link_unit',
+    'release_unit',
 ];
 const commandStates: OutboxCommandState[] = [
     'queued',

@@ -21,6 +21,8 @@ import type {
     OutboxCommandPriority,
     OutboxCommandType,
     HosCertifyCommandPayload,
+    LinkUnitCommandPayload,
+    ReleaseUnitCommandPayload,
     HosDutyStatusCommandPayload,
     HosStartCommandPayload,
     RentalHandoverCommandPayload,
@@ -572,6 +574,28 @@ export class CommandOutboxManager {
         }
 
         return this.enqueue('record_fuel_log', null, null, payloadRecord);
+    }
+
+    public enqueueLinkUnit(
+        payload: LinkUnitCommandPayload,
+    ): Promise<OutboxCommand> {
+        return this.enqueue(
+            'link_unit',
+            payload.dispatch_job_id ?? null,
+            null,
+            payload as unknown as Record<string, unknown>,
+        );
+    }
+
+    public enqueueReleaseUnit(
+        payload: ReleaseUnitCommandPayload,
+    ): Promise<OutboxCommand> {
+        return this.enqueue(
+            'release_unit',
+            null,
+            null,
+            payload as unknown as Record<string, unknown>,
+        );
     }
 
     public enqueueWithdrawFuelRequest(
@@ -1582,6 +1606,13 @@ export class CommandOutboxManager {
                     payload.reason,
                     command.id,
                 );
+            } else if (command.type === 'link_unit') {
+                response = await apiClient.linkUnit(
+                    command.payload as unknown as LinkUnitCommandPayload,
+                    command.id,
+                );
+            } else if (command.type === 'release_unit') {
+                response = await apiClient.releaseUnit(command.id);
             } else if (command.type === 'record_fuel_log') {
                 const payload =
                     command.payload as unknown as FuelLogCommandPayload;

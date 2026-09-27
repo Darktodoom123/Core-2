@@ -19,7 +19,9 @@ import type {
     JobHistoryPage,
     HosClocks,
     JobReportCommandPayload,
+    LinkUnitCommandPayload,
     LocationSharePayload,
+    ServerUnitLink,
     SosConfiguration,
     SosIncident,
     SosIncidentCategory,
@@ -472,6 +474,53 @@ export class FieldApiClient {
         );
 
         return this.handleResponse<MobileFuelRequest>(response);
+    }
+
+    /** The unit this operator is bound to on the server, or null. */
+    public async fetchUnitLink(): Promise<ServerUnitLink | null> {
+        const response = await this.fetchFn(
+            `${this.baseUrl}/api/v1/unit-link`,
+            {
+                method: 'GET',
+                headers: this.getHeaders(),
+            },
+        );
+
+        return this.handleResponse<ServerUnitLink | null>(response);
+    }
+
+    public async linkUnit(
+        payload: LinkUnitCommandPayload,
+        commandId?: string,
+    ): Promise<ServerUnitLink> {
+        const response = await this.fetchFn(
+            `${this.baseUrl}/api/v1/unit-link`,
+            {
+                method: 'POST',
+                headers: this.getHeaders(commandId),
+                body: JSON.stringify({
+                    operational_asset_id: payload.operational_asset_id,
+                    dispatch_job_id: payload.dispatch_job_id ?? null,
+                }),
+            },
+        );
+
+        return this.handleResponse<ServerUnitLink>(response);
+    }
+
+    public async releaseUnit(
+        commandId?: string,
+    ): Promise<ServerUnitLink | null> {
+        const response = await this.fetchFn(
+            `${this.baseUrl}/api/v1/unit-link/release`,
+            {
+                method: 'POST',
+                headers: this.getHeaders(commandId),
+                body: JSON.stringify({}),
+            },
+        );
+
+        return this.handleResponse<ServerUnitLink | null>(response);
     }
 
     public async fetchMe(): Promise<User> {

@@ -322,7 +322,9 @@ export type OutboxCommandType =
     | 'issue_work_stoppage'
     | 'submit_fuel_request'
     | 'record_fuel_log'
-    | 'withdraw_fuel_request';
+    | 'withdraw_fuel_request'
+    | 'link_unit'
+    | 'release_unit';
 
 export interface SafetyHazardCommandPayload {
     project_site: string;
@@ -387,6 +389,29 @@ export interface HosDutyStatusCommandPayload {
     location_source?: string | null;
     location_name?: string | null;
     remarks?: string | null;
+}
+
+/** Bind the operator to a unit on site; the server refuses a unit someone else holds. */
+export interface LinkUnitCommandPayload {
+    operational_asset_id: number;
+    dispatch_job_id?: number | null;
+    asset_code: string;
+}
+
+export interface ReleaseUnitCommandPayload {
+    asset_code: string;
+}
+
+/** The unit link as the server holds it. */
+export interface ServerUnitLink {
+    id: number;
+    operational_asset_id: number;
+    asset_code: string;
+    asset_name: string;
+    dispatch_job_id: number | null;
+    linked_at: string;
+    released_at: string | null;
+    release_reason: string | null;
 }
 
 export interface HosCertifyCommandPayload {

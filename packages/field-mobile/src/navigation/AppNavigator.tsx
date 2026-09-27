@@ -602,13 +602,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     const [timelineHistory, setTimelineHistory] = useState<
         TimelineDayHistory[]
     >([]);
-    // Saved on the phone so a restart keeps the link; release removes it.
-    const {
-        unitLink,
-        link: linkUnit,
-        unlink: unlinkUnit,
-    } = useUnitLink(user?.id, unitLinkStore);
-    const isUnitLinked = unitLink !== null;
     // Unit code of the last post-trip DVIR saved this shift; cleared on release.
     const [postTripDoneFor, setPostTripDoneFor] = useState<string | null>(null);
     // ISO start of the server's active shift; bounds which post-trips count.
@@ -698,6 +691,23 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         () => new LocationSharingService(commandOutbox),
         [commandOutbox],
     );
+    // Held by the server so every phone agrees; saved on the phone so a
+    // restart or a dead zone keeps it. Release removes it.
+    const {
+        unitLink,
+        link: linkUnit,
+        unlink: unlinkUnit,
+    } = useUnitLink(
+        user?.id,
+        {
+            canFetch: status === 'authenticated' && isOnline === true,
+            apiClient,
+            outbox: commandOutbox,
+            outboxCommands,
+        },
+        unitLinkStore,
+    );
+    const isUnitLinked = unitLink !== null;
     const getCurrentLocation = useCallback(
         (isStationary = false) =>
             nativeLocationAdapter.getCurrentLocation(isStationary),
@@ -2366,6 +2376,24 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         unitLink !== null &&
         (postTripDoneFor === unitLink.assetCode || serverPostTripDone);
 
+    // The server needs the unit's id and job, found from the assigned jobs.
+    const handleLinkUnit = (assetCode: string) => {
+        const job = jobs.find((candidate) =>
+            candidate.asset_assignments?.some(
+                (a) => a.asset_code === assetCode,
+            ),
+        );
+        const assignment = job?.asset_assignments?.find(
+            (a) => a.asset_code === assetCode,
+        );
+
+        linkUnit({
+            assetCode,
+            assetId: assignment?.operational_asset_id ?? null,
+            jobId: job?.id ?? null,
+        });
+    };
+
     // One release for home and Hours of Service: unlink and stop tracking.
     const releaseUnit = () => {
         unlinkUnit();
@@ -3024,7 +3052,9 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                         resolvedAssetCode !== ''
                                     }
                                     onLinkUnit={(assetCode) =>
-                                        linkUnit(assetCode || resolvedAssetCode)
+                                        handleLinkUnit(
+                                            assetCode || resolvedAssetCode,
+                                        )
                                     }
                                     dvirStatus={dvirStatus}
                                     preTripDefectLockout={
