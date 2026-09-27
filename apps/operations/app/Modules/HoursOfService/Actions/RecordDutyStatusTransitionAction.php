@@ -8,6 +8,7 @@ use App\Modules\HoursOfService\Enums\StandbyReason;
 use App\Modules\HoursOfService\Models\OperatorDutyLog;
 use App\Modules\HoursOfService\Models\OperatorShift;
 use App\Modules\HoursOfService\Services\DutyLocationSnapshotService;
+use App\Modules\HoursOfService\Support\DoleOperatingLimit;
 use App\Modules\HoursOfService\Support\DutyEventTime;
 use App\Platform\Identity\Models\User;
 use Carbon\Carbon;
@@ -127,6 +128,11 @@ class RecordDutyStatusTransitionAction
                 ->latest('started_at')
                 ->lockForUpdate()
                 ->first();
+
+            // DOLE-OSHC: no operating or driving past 10 hours in a shift.
+            if ($activeLog === null || $activeLog->duty_status !== $nextStatus) {
+                DoleOperatingLimit::assertMayStart($nextStatus, $shift, $activeLog, $eventAt);
+            }
 
             if ($activeLog !== null) {
                 if ($eventAt->lt($activeLog->started_at)) {

@@ -46,12 +46,10 @@ it('returns current shift and calculated ELD clocks for an operator', function (
                     'daily_operating_hours',
                     'limit_counter_minutes',
                     'limit_counter_label',
-                    'drive_remaining_minutes',
-                    'shift_window_remaining_minutes',
-                    'break_countdown_minutes',
-                    'cycle_remaining_minutes',
-                    'cycle_accumulated_minutes',
-                    'cycle_limit_minutes',
+                    'limit_counter_minutes',
+                    'limit_remaining_minutes',
+                    'limit_warning_minutes',
+                    'limit_cap_minutes',
                     'timeline_segments',
                     'recent_logs',
                     'active_demurrage',
@@ -791,4 +789,111 @@ it('includes the server time in clocks when no shift is running', function (): v
         ->assertOk()
         ->assertJsonPath('data.clocks.shift_active', false)
         ->assertJsonStructure(['data' => ['clocks' => ['server_time']]]);
+});
+
+/**
+ * An active shift that has already used $operatingMinutes of operating time
+ * and is now on standby.
+ */
+function hosShiftOnStandbyAfter(User $operator, int $operatingMinutes): OperatorShift
+{
+    $now = now();
+    $shift = OperatorShift::query()->create([
+        'user_id' => $operator->id,
+        'status' => ShiftStatus::ACTIVE,
+        'started_at' => $now->copy()->subMinutes($operatingMinutes + 30),
+        'operating_minutes' => $operatingMinutes,
+    ]);
+    OperatorDutyLog::query()->create([
+        'user_id' => $operator->id,
+        'operator_shift_id' => $shift->id,
+        'duty_status' => DutyStatus::STANDBY,
+        'standby_reason' => 'other',
+        'started_at' => $now->copy()->subMinutes(10),
+    ]);
+
+    return $shift;
+}
+
+it('blocks operating and driving once the shift reaches the DOLE 10-hour limit', function (string $status): void {
+    $this->travelTo(Carbon::parse('2026-09-27 18:00:00'));
+
+    /** @var User $operator */
+    $operator = User::factory()->create(['is_active' => true]);
+    $token = $operator->createToken('Mobile Token')->plainTextToken;
+    hosShiftOnStandbyAfter($operator, 600);
+
+    $this->withToken($token)
+        ->postJson('/api/v1/hos/duty-status', ['duty_status' => $status])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('duty_status');
+
+    expect(OperatorDutyLog::query()->where('user_id', $operator->id)->where('duty_status', $status)->exists())
+        ->toBeFalse();
+})->with(['operating', 'driving']);
+
+it('still allows standby, a break or going off duty at the 10-hour limit', function (): void {
+    $this->travelTo(Carbon::parse('2026-09-27 18:00:00'));
+
+    /** @var User $operator */
+    $operator = User::factory()->create(['is_active' => true]);
+    $token = $operator->createToken('Mobile Token')->plainTextToken;
+    hosShiftOnStandbyAfter($operator, 600);
+
+    $this->withToken($token)
+        ->postJson('/api/v1/hos/duty-status', ['duty_status' => 'on_break'])
+        ->assertOk()
+        ->assertJsonPath('data.clocks.current_duty_status', 'on_break');
+
+    $this->travel(5)->minutes();
+
+    $this->withToken($token)
+        ->postJson('/api/v1/hos/shifts/certify', [
+            'certification_statement' => 'I certify that these duty status entries and hours of service are true, complete, and accurate for this shift.',
+        ])
+        ->assertOk()
+        ->assertJsonPath('data.shift.status', 'completed');
+});
+
+it('allows operating just under the 10-hour limit', function (): void {
+    $this->travelTo(Carbon::parse('2026-09-27 18:00:00'));
+
+    /** @var User $operator */
+    $operator = User::factory()->create(['is_active' => true]);
+    $token = $operator->createToken('Mobile Token')->plainTextToken;
+    hosShiftOnStandbyAfter($operator, 599);
+
+    $this->withToken($token)
+        ->postJson('/api/v1/hos/duty-status', ['duty_status' => 'operating'])
+        ->assertOk();
+});
+
+it('reports the DOLE limit, not US trucking limits', function (): void {
+    $this->travelTo(Carbon::parse('2026-09-27 18:00:00'));
+
+    /** @var User $operator */
+    $operator = User::factory()->create(['is_active' => true]);
+    $token = $operator->createToken('Mobile Token')->plainTextToken;
+    hosShiftOnStandbyAfter($operator, 420);
+
+    $clocks = $this->withToken($token)
+        ->getJson('/api/v1/hos/current-shift')
+        ->assertOk()
+        ->assertJsonPath('data.clocks.limit_counter_minutes', 420)
+        ->assertJsonPath('data.clocks.limit_remaining_minutes', 180)
+        ->assertJsonPath('data.clocks.limit_warning_minutes', 540)
+        ->assertJsonPath('data.clocks.limit_cap_minutes', 600)
+        ->assertJsonPath('data.clocks.fatigue_status', 'normal')
+        ->json('data.clocks');
+
+    foreach ([
+        'drive_remaining_minutes',
+        'shift_window_remaining_minutes',
+        'break_countdown_minutes',
+        'cycle_remaining_minutes',
+        'cycle_accumulated_minutes',
+        'cycle_limit_minutes',
+    ] as $usField) {
+        expect($clocks)->not->toHaveKey($usField);
+    }
 });

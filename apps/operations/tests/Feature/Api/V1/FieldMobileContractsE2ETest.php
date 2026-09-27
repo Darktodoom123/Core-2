@@ -205,10 +205,9 @@ it('Tier 1: R2 HoS Live Clocks - calculates active shift duration, driving minut
                     'shift_status',
                     'current_duty_status',
                     'hours_elapsed',
-                    'drive_remaining_minutes',
-                    'shift_window_remaining_minutes',
-                    'break_countdown_minutes',
-                    'cycle_remaining_minutes',
+                    'limit_counter_minutes',
+                    'limit_remaining_minutes',
+                    'limit_cap_minutes',
                     'timeline_segments',
                     'recent_logs',
                 ],
@@ -216,7 +215,7 @@ it('Tier 1: R2 HoS Live Clocks - calculates active shift duration, driving minut
         ]);
 
     expect((float) $response->json('data.clocks.hours_elapsed'))->toBeGreaterThanOrEqual(0.0);
-    expect($response->json('data.clocks.drive_remaining_minutes'))->toBeLessThanOrEqual(660);
+    expect($response->json('data.clocks.limit_cap_minutes'))->toBe(600);
 
     // Test GET /api/v1/hos/cycle-history
     $cycleResponse = $this->withToken($token)

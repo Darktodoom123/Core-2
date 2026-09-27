@@ -6,6 +6,7 @@ use App\Modules\HoursOfService\Enums\DutyStatus;
 use App\Modules\HoursOfService\Enums\ShiftStatus;
 use App\Modules\HoursOfService\Models\OperatorDutyLog;
 use App\Modules\HoursOfService\Models\OperatorShift;
+use App\Modules\HoursOfService\Support\DoleOperatingLimit;
 use App\Platform\Identity\Models\User;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
@@ -13,17 +14,11 @@ use Illuminate\Database\Eloquent\Collection;
 
 class CalculateHosClocksQuery
 {
-    public const MAX_DRIVE_MINUTES = 660; // 11 Hours
+    // DOLE-OSHC operating limit (operating + driving per shift). This is the
+    // only limit applied; see DoleOperatingLimit.
+    public const DOLE_WARNING_MINUTES = DoleOperatingLimit::WARNING_MINUTES;
 
-    public const MAX_SHIFT_WINDOW_MINUTES = 840; // 14 Hours
-
-    public const DOLE_WARNING_MINUTES = 540; // 9 Hours of operating + driving
-
-    public const DOLE_CAP_MINUTES = 600; // 10 Hours of operating + driving
-
-    public const MAX_CONTINUOUS_WORK_BEFORE_BREAK_MINUTES = 480; // 8 Hours
-
-    public const MAX_CYCLE_MINUTES = 4200; // 70 Hours in 8 Days
+    public const DOLE_CAP_MINUTES = DoleOperatingLimit::CAP_MINUTES;
 
     /**
      * @return array{
@@ -45,12 +40,9 @@ class CalculateHosClocksQuery
      *     daily_operating_hours: float|null,
      *     limit_counter_minutes: int|null,
      *     limit_counter_label: string,
-     *     drive_remaining_minutes: int,
-     *     shift_window_remaining_minutes: int,
-     *     break_countdown_minutes: int,
-     *     cycle_remaining_minutes: int|null,
-     *     cycle_accumulated_minutes: int|null,
-     *     cycle_limit_minutes: int,
+     *     limit_remaining_minutes: int|null,
+     *     limit_warning_minutes: int,
+     *     limit_cap_minutes: int,
      *     timeline_segments: array<int, array<string, mixed>>,
      *     recent_logs: array<int, array<string, mixed>>,
      *     active_demurrage: bool,
@@ -65,7 +57,6 @@ class CalculateHosClocksQuery
     {
         $now = Carbon::now();
         $todayStart = Carbon::today();
-        $eightDaysAgo = Carbon::now()->subDays(8)->startOfDay();
 
         /** @var OperatorShift|null $activeShift */
         $activeShift = OperatorShift::query()
@@ -74,25 +65,6 @@ class CalculateHosClocksQuery
             ->whereIn('status', [ShiftStatus::ACTIVE, ShiftStatus::ON_BREAK])
             ->latest('started_at')
             ->first();
-
-        // 8-Day rolling cycle calculation
-        $cycleDutyLogs = OperatorDutyLog::query()
-            ->where('user_id', $user->id)
-            ->whereIn('duty_status', [DutyStatus::OPERATING, DutyStatus::DRIVING, DutyStatus::STANDBY])
-            ->where('started_at', '>=', $eightDaysAgo)
-            ->get();
-
-        $cycleMinutesLogged = (int) $cycleDutyLogs->sum(function (OperatorDutyLog $log) use ($now): int {
-            if ($log->duration_minutes !== null) {
-                return $log->duration_minutes;
-            }
-
-            $end = $log->ended_at ?? $now;
-
-            return (int) max(0, $log->started_at->diffInMinutes($end));
-        });
-
-        $cycleRemainingMinutes = max(0, self::MAX_CYCLE_MINUTES - $cycleMinutesLogged);
 
         if ($activeShift === null) {
             /** @var OperatorShift|null $lastShift */
@@ -134,12 +106,9 @@ class CalculateHosClocksQuery
                 'daily_operating_hours' => null,
                 'limit_counter_minutes' => null,
                 'limit_counter_label' => 'Operating + driving',
-                'drive_remaining_minutes' => self::MAX_DRIVE_MINUTES,
-                'shift_window_remaining_minutes' => self::MAX_SHIFT_WINDOW_MINUTES,
-                'break_countdown_minutes' => self::MAX_CONTINUOUS_WORK_BEFORE_BREAK_MINUTES,
-                'cycle_remaining_minutes' => $cycleRemainingMinutes,
-                'cycle_accumulated_minutes' => $cycleMinutesLogged,
-                'cycle_limit_minutes' => self::MAX_CYCLE_MINUTES,
+                'limit_remaining_minutes' => null,
+                'limit_warning_minutes' => self::DOLE_WARNING_MINUTES,
+                'limit_cap_minutes' => self::DOLE_CAP_MINUTES,
                 'timeline_segments' => $this->buildTimelineSegments($user, $timelineStart, $now),
                 'recent_logs' => $this->buildRecentLogs($user, $timelineStart),
                 'active_demurrage' => false,
@@ -171,10 +140,7 @@ class CalculateHosClocksQuery
         }
         $timelineStart = $shiftStart->lt($todayStart) ? $shiftStart : $todayStart;
 
-        return array_merge($this->activeShiftSummary($activeShift, $cycleMinutesLogged), [
-            'cycle_remaining_minutes' => $cycleRemainingMinutes,
-            'cycle_accumulated_minutes' => $cycleMinutesLogged,
-            'cycle_limit_minutes' => self::MAX_CYCLE_MINUTES,
+        return array_merge($this->activeShiftSummary($activeShift), [
             'timeline_segments' => $this->buildTimelineSegments($user, $timelineStart, $now),
             'recent_logs' => $this->buildRecentLogs($user, $timelineStart),
         ]);
@@ -204,12 +170,9 @@ class CalculateHosClocksQuery
      *     daily_operating_hours: float,
      *     limit_counter_minutes: int,
      *     limit_counter_label: string,
-     *     drive_remaining_minutes: int,
-     *     shift_window_remaining_minutes: int,
-     *     break_countdown_minutes: int,
-     *     cycle_remaining_minutes: int|null,
-     *     cycle_accumulated_minutes: int|null,
-     *     cycle_limit_minutes: int,
+     *     limit_remaining_minutes: int|null,
+     *     limit_warning_minutes: int,
+     *     limit_cap_minutes: int,
      *     active_demurrage: bool,
      *     is_certified: bool,
      *     fatigue_status: string,
@@ -218,7 +181,7 @@ class CalculateHosClocksQuery
      *     equipment_usage: array<string, mixed>
      * }
      */
-    public function activeShiftSummary(OperatorShift $activeShift, ?int $cycleMinutesLogged = null): array
+    public function activeShiftSummary(OperatorShift $activeShift): array
     {
         $now = Carbon::now();
         $activeShift->loadMissing([
@@ -246,17 +209,7 @@ class CalculateHosClocksQuery
             + ($currentDuty === DutyStatus::STANDBY ? $activeDutyDuration : 0);
         $breakMinutes = $activeShift->break_minutes
             + ($currentDuty === DutyStatus::ON_BREAK ? $activeDutyDuration : 0);
-        $driveOperatingTotal = $operatingMinutes + $drivingMinutes;
-
-        $driveRemainingMinutes = max(0, self::MAX_DRIVE_MINUTES - $driveOperatingTotal);
-        $shiftWindowRemainingMinutes = max(0, self::MAX_SHIFT_WINDOW_MINUTES - $shiftElapsedMinutes);
-        $continuousWork = $breakMinutes > 0
-            ? max(0, $shiftElapsedMinutes - ($breakMinutes * 2))
-            : $shiftElapsedMinutes;
-        $breakCountdownMinutes = max(0, self::MAX_CONTINUOUS_WORK_BEFORE_BREAK_MINUTES - $continuousWork);
-        $cycleRemainingMinutes = $cycleMinutesLogged === null
-            ? null
-            : max(0, self::MAX_CYCLE_MINUTES - $cycleMinutesLogged);
+        $driveOperatingTotal = DoleOperatingLimit::minutesUsed($activeShift, $activeDutyLog, $now);
         $lastAcceptedDutyAt = $activeDutyLog !== null
             ? ($activeDutyLog->accepted_at ?? $activeDutyLog->created_at)
             : null;
@@ -264,19 +217,9 @@ class CalculateHosClocksQuery
 
         $doleWarning = $driveOperatingTotal >= self::DOLE_WARNING_MINUTES;
         $fatigueStatus = match (true) {
-            $shiftWindowRemainingMinutes <= 0
-                || $driveRemainingMinutes <= 0
-                || $breakCountdownMinutes <= 0
-                || ($cycleRemainingMinutes !== null && $cycleRemainingMinutes <= 0)
-                || $driveOperatingTotal > self::DOLE_CAP_MINUTES => 'violation',
-            $shiftWindowRemainingMinutes <= 60
-                || $driveRemainingMinutes <= 60
-                || $breakCountdownMinutes <= 30
-                || $driveOperatingTotal >= self::DOLE_CAP_MINUTES => 'critical',
-            $shiftWindowRemainingMinutes <= 120
-                || $driveRemainingMinutes <= 120
-                || $breakCountdownMinutes <= 60
-                || $driveOperatingTotal >= self::DOLE_WARNING_MINUTES => 'warning',
+            $driveOperatingTotal > self::DOLE_CAP_MINUTES => 'violation',
+            $driveOperatingTotal >= self::DOLE_CAP_MINUTES => 'critical',
+            $driveOperatingTotal >= self::DOLE_WARNING_MINUTES => 'warning',
             default => 'normal',
         };
 
@@ -300,12 +243,9 @@ class CalculateHosClocksQuery
             'daily_operating_hours' => round($driveOperatingTotal / 60, 2),
             'limit_counter_minutes' => $driveOperatingTotal,
             'limit_counter_label' => 'Operating + driving',
-            'drive_remaining_minutes' => $driveRemainingMinutes,
-            'shift_window_remaining_minutes' => $shiftWindowRemainingMinutes,
-            'break_countdown_minutes' => $breakCountdownMinutes,
-            'cycle_remaining_minutes' => $cycleRemainingMinutes,
-            'cycle_accumulated_minutes' => $cycleMinutesLogged,
-            'cycle_limit_minutes' => self::MAX_CYCLE_MINUTES,
+            'limit_remaining_minutes' => max(0, self::DOLE_CAP_MINUTES - $driveOperatingTotal),
+            'limit_warning_minutes' => self::DOLE_WARNING_MINUTES,
+            'limit_cap_minutes' => self::DOLE_CAP_MINUTES,
             'active_demurrage' => $currentDuty === DutyStatus::STANDBY
                 && $activeDutyLog !== null
                 && $activeDutyLog->is_demurrage_billable,

@@ -451,11 +451,11 @@ it('enforces DOLE shift limits and provides calculated ELD clocks to mobile clie
     $response->assertOk()
         ->assertJsonPath('data.clocks.shift_active', true)
         ->assertJsonPath('data.clocks.current_duty_status', 'operating')
-        ->assertJsonPath('data.clocks.cycle_limit_minutes', 4200)
-        ->assertJsonPath('data.clocks.drive_remaining_minutes', 660);
+        ->assertJsonPath('data.clocks.limit_cap_minutes', 600)
+        ->assertJsonPath('data.clocks.limit_warning_minutes', 540);
 
-    expect($response->json('data.clocks.break_countdown_minutes'))->toBeGreaterThan(0)
-        ->and($response->json('data.clocks.shift_window_remaining_minutes'))->toBeGreaterThan(0);
+    expect($response->json('data.clocks.limit_remaining_minutes'))->toBeGreaterThan(0)
+        ->and($response->json('data.clocks.limit_remaining_minutes'))->toBeLessThanOrEqual(600);
 });
 
 it('executes smart dual equipment handover from operator A to relief operator B with zero coordinate drop', function (): void {

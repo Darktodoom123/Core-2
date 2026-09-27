@@ -246,7 +246,7 @@ describe('Milestone 1 Challenger 2: Hours of Service (HoS) Calculations', functi
         expect($clocks['recent_logs'])->toHaveCount(2);
     });
 
-    it('verifies HoS clock calculation: hours_elapsed is 4.5 and shift_window_remaining_minutes is 570 for active shift', function (): void {
+    it('verifies HoS clock calculation: hours_elapsed is 4.5 and the DOLE counter follows the operating log', function (): void {
         $this->seed(OperationalTestSeeder::class);
 
         /** @var User $operator */
@@ -259,15 +259,15 @@ describe('Milestone 1 Challenger 2: Hours of Service (HoS) Calculations', functi
         $clocks = $response->json('data.clocks');
 
         // Shift started 4.5 hours ago.
-        // Expected: hours_elapsed = 4.5, shift_window_remaining_minutes = 570, operating log duration = 240
+        // Expected: hours_elapsed = 4.5; the DOLE limit is 600 minutes of operating + driving.
         expect((float) $clocks['hours_elapsed'])->toBe(4.5);
-        expect($clocks['shift_window_remaining_minutes'])->toBe(570);
+        expect($clocks['limit_remaining_minutes'])->toBe(600 - $clocks['limit_counter_minutes']);
         expect($clocks['timeline_segments'][1]['duration_minutes'])->toBe(240);
         expect($clocks['fatigue_status'])->toBe('normal');
         expect($clocks['dole_warning'])->toBeFalse();
     });
 
-    it('verifies mathematical fix: absolute diffInMinutes produces accurate 4.5 hours elapsed and 570 minutes remaining', function (): void {
+    it('verifies mathematical fix: absolute diffInMinutes produces accurate 4.5 hours elapsed', function (): void {
         $this->seed(OperationalTestSeeder::class);
 
         /** @var OperatorShift $shift */
@@ -289,39 +289,33 @@ describe('Milestone 1 Challenger 2: Hours of Service (HoS) Calculations', functi
 
         // Correct calculations with absolute diff:
         $hoursElapsed = round($absoluteDiff / 60, 2);
-        $windowRemaining = max(0, 840 - $absoluteDiff);
 
         expect($hoursElapsed)->toBe(4.5);
-        expect($windowRemaining)->toBe(570);
 
     });
 
-    it('demonstrates that time travel dynamically advances hours_elapsed and decrements shift window', function (): void {
+    it('demonstrates that time travel dynamically advances hours_elapsed', function (): void {
         $this->seed(OperationalTestSeeder::class);
 
         /** @var User $operator */
         $operator = User::query()->where('email', 'operator@example.com')->firstOrFail();
         $token = $operator->createToken('Mobile Token')->plainTextToken;
 
-        // Baseline request (4.5 hours elapsed, 570 window remaining)
+        // Baseline request (4.5 hours elapsed)
         $response1 = $this->withToken($token)->getJson('/api/v1/hos/current-shift');
         $response1->assertOk();
         $initialElapsed = (float) $response1->json('data.clocks.hours_elapsed');
-        $initialWindowRemaining = (int) $response1->json('data.clocks.shift_window_remaining_minutes');
 
         expect($initialElapsed)->toBe(4.5);
-        expect($initialWindowRemaining)->toBe(570);
 
-        // Fast-forward 2 hours (now 6.5 hours elapsed, 450 window remaining)
+        // Fast-forward 2 hours (now 6.5 hours elapsed)
         $this->travel(2)->hours();
 
         $response2 = $this->withToken($token)->getJson('/api/v1/hos/current-shift');
         $response2->assertOk();
         $advancedElapsed = (float) $response2->json('data.clocks.hours_elapsed');
-        $advancedWindowRemaining = (int) $response2->json('data.clocks.shift_window_remaining_minutes');
 
         expect($advancedElapsed)->toBe(6.5);
-        expect($advancedWindowRemaining)->toBe(450);
 
         $this->travelBack();
     });
