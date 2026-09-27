@@ -509,3 +509,47 @@ it('gracefully falls back to public disk when r2 disk is unconfigured', function
     expect($photoRecord->storage_disk)->toBe('public');
     Storage::disk('public')->assertExists($photoRecord->file_path);
 });
+
+it('accepts a cab / dashboard photo and defect close-ups alongside the walkaround', function (): void {
+    Storage::fake('public');
+    config(['filesystems.dvir_disk' => 'public']);
+
+    /** @var User $operator */
+    $operator = User::factory()->create(['is_active' => true]);
+    $photo = fn (string $angle): array => [
+        'angle' => $angle,
+        'file_name' => "{$angle}.jpg",
+        'file_size' => 64,
+        'base64' => 'data:image/jpeg;base64,'.base64_encode("bytes-{$angle}"),
+    ];
+
+    $this->withToken($operator->createToken('Mobile Token')->plainTextToken)
+        ->postJson('/api/v1/dvir/inspections', dvirPayload([
+            'has_defects' => true,
+            'photos' => [
+                $photo('front'),
+                $photo('back'),
+                $photo('driver_side'),
+                $photo('passenger_side'),
+                $photo('cab'),
+                $photo('defect'),
+            ],
+        ]))
+        ->assertCreated()
+        ->assertJsonCount(6, 'data.photos');
+
+    $this->assertDatabaseHas('dvir_inspection_photos', ['angle' => 'cab']);
+    $this->assertDatabaseHas('dvir_inspection_photos', ['angle' => 'defect']);
+});
+
+it('still rejects photo angles it does not know', function (): void {
+    /** @var User $operator */
+    $operator = User::factory()->create(['is_active' => true]);
+
+    $this->withToken($operator->createToken('Mobile Token')->plainTextToken)
+        ->postJson('/api/v1/dvir/inspections', dvirPayload([
+            'photos' => [['angle' => 'roof', 'base64' => 'data:image/jpeg;base64,'.base64_encode('x')]],
+        ]))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['photos.0.angle']);
+});

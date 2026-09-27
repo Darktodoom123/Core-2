@@ -45,7 +45,7 @@ class CreateDvirInspectionRequest extends FormRequest
             'checks.*.status_label' => ['nullable', 'string', 'max:255'],
             'checks.*.notes' => ['nullable', 'string', 'max:2000'],
             'photos' => ['nullable', 'array', 'max:8'],
-            'photos.*.angle' => ['required', 'string', 'in:front,back,driver_side,passenger_side,defect'],
+            'photos.*.angle' => ['required', 'string', 'in:front,back,driver_side,passenger_side,cab,defect'],
             'photos.*.file_name' => ['nullable', 'string', 'max:255'],
             'photos.*.file_size' => ['nullable', 'integer', 'max:15728640'],
             'photos.*.base64' => ['nullable', 'string'],

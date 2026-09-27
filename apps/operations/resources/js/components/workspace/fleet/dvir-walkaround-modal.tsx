@@ -30,7 +30,10 @@ const ANGLE_LABELS: Record<string, string> = {
     front: 'Front Angle',
     passenger_side: 'Passenger Side',
     rear: 'Rear Angle',
+    back: 'Rear Angle',
     driver_side: 'Driver Side',
+    cab: 'Cab / Dashboard',
+    defect: 'Defect Close-up',
 };
 
 export function DvirWalkaroundModal({
