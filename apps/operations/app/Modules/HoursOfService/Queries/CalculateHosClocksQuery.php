@@ -116,6 +116,7 @@ class CalculateHosClocksQuery
 
             return [
                 'shift_active' => false,
+                'server_time' => $now->toIso8601String(),
                 'shift_status' => ShiftStatus::COMPLETED->value,
                 'current_duty_status' => DutyStatus::OFF_DUTY->value,
                 'current_duty_status_label' => DutyStatus::OFF_DUTY->label(),

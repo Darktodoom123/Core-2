@@ -3,6 +3,7 @@
 namespace App\Modules\HoursOfService\Http\Requests\Api\V1;
 
 use App\Modules\HoursOfService\Enums\DutyStatus;
+use App\Modules\HoursOfService\Support\DutyEventTime;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Enum;
 
@@ -22,7 +23,7 @@ class StartShiftRequest extends FormRequest
             'operational_asset_id' => ['nullable', 'integer', 'exists:operational_assets,id'],
             'dispatch_job_id' => ['nullable', 'integer', 'exists:dispatch_jobs,id'],
             'duty_status' => ['nullable', new Enum(DutyStatus::class)],
-            'occurred_at' => ['nullable', 'date', 'before_or_equal:now'],
+            'occurred_at' => ['nullable', 'date', 'before_or_equal:'.DutyEventTime::latestAccepted()],
             'latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitude'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitude'],
             'accuracy_metres' => ['nullable', 'numeric', 'between:0,10000'],

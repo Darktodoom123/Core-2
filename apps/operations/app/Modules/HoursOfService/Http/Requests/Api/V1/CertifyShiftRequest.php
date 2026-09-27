@@ -2,6 +2,7 @@
 
 namespace App\Modules\HoursOfService\Http\Requests\Api\V1;
 
+use App\Modules\HoursOfService\Support\DutyEventTime;
 use Illuminate\Foundation\Http\FormRequest;
 
 class CertifyShiftRequest extends FormRequest
@@ -18,7 +19,7 @@ class CertifyShiftRequest extends FormRequest
     {
         return [
             'certification_statement' => ['required', 'string', 'min:5', 'max:1000'],
-            'occurred_at' => ['nullable', 'date', 'before_or_equal:now'],
+            'occurred_at' => ['nullable', 'date', 'before_or_equal:'.DutyEventTime::latestAccepted()],
             'operational_asset_id' => ['nullable', 'integer', 'exists:operational_assets,id'],
             'dispatch_job_id' => ['nullable', 'integer', 'exists:dispatch_jobs,id'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitude'],

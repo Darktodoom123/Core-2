@@ -719,3 +719,76 @@ it('returns separate accepted equipment durations without inventing usage hours 
 
     expect($asset->refresh()->meter_value)->toBe('55.00');
 });
+
+it('accepts a duty event from a phone whose clock runs slightly ahead, recording it at server time', function (): void {
+    Carbon::setTestNow(Carbon::parse('2026-09-27 08:00:00', 'UTC'));
+
+    /** @var User $operator */
+    $operator = User::factory()->create(['is_active' => true]);
+    $token = $operator->createToken('Mobile Token')->plainTextToken;
+
+    $this->withToken($token)
+        ->postJson('/api/v1/hos/shifts/start', [
+            'duty_status' => 'operating',
+            'occurred_at' => now()->addSeconds(45)->toIso8601String(),
+        ])
+        ->assertCreated();
+
+    $shift = OperatorShift::query()->where('user_id', $operator->id)->sole();
+    expect($shift->started_at->equalTo(now()))->toBeTrue();
+
+    $this->withToken($token)
+        ->postJson('/api/v1/hos/duty-status', [
+            'duty_status' => 'standby',
+            'standby_reason' => 'waiting_on_client',
+            'occurred_at' => now()->addSeconds(90)->toIso8601String(),
+        ])
+        ->assertOk()
+        ->assertJsonPath('data.clocks.current_duty_status', 'standby');
+
+    Carbon::setTestNow();
+});
+
+it('still rejects a duty event far in the future', function (): void {
+    /** @var User $operator */
+    $operator = User::factory()->create(['is_active' => true]);
+    $token = $operator->createToken('Mobile Token')->plainTextToken;
+
+    $this->withToken($token)
+        ->postJson('/api/v1/hos/shifts/start', [
+            'duty_status' => 'operating',
+            'occurred_at' => now()->addMinutes(10)->toIso8601String(),
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('occurred_at');
+
+    expect(OperatorShift::query()->where('user_id', $operator->id)->exists())->toBeFalse();
+});
+
+it('treats going off duty with no shift to end as already done, not an error', function (): void {
+    /** @var User $operator */
+    $operator = User::factory()->create(['is_active' => true]);
+    $token = $operator->createToken('Mobile Token')->plainTextToken;
+
+    $this->withToken($token)
+        ->postJson('/api/v1/hos/shifts/certify', [
+            'certification_statement' => 'I certify that these duty status entries and hours of service are true, complete, and accurate for this shift.',
+        ])
+        ->assertOk()
+        ->assertJsonPath('data.shift', null)
+        ->assertJsonPath('data.clocks.shift_active', false);
+
+    expect(OperatorShift::query()->where('user_id', $operator->id)->exists())->toBeFalse();
+});
+
+it('includes the server time in clocks when no shift is running', function (): void {
+    /** @var User $operator */
+    $operator = User::factory()->create(['is_active' => true]);
+    $token = $operator->createToken('Mobile Token')->plainTextToken;
+
+    $this->withToken($token)
+        ->getJson('/api/v1/hos/current-shift')
+        ->assertOk()
+        ->assertJsonPath('data.clocks.shift_active', false)
+        ->assertJsonStructure(['data' => ['clocks' => ['server_time']]]);
+});

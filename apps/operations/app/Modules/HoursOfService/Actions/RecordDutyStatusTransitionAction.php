@@ -8,6 +8,7 @@ use App\Modules\HoursOfService\Enums\StandbyReason;
 use App\Modules\HoursOfService\Models\OperatorDutyLog;
 use App\Modules\HoursOfService\Models\OperatorShift;
 use App\Modules\HoursOfService\Services\DutyLocationSnapshotService;
+use App\Modules\HoursOfService\Support\DutyEventTime;
 use App\Platform\Identity\Models\User;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
@@ -52,13 +53,7 @@ class RecordDutyStatusTransitionAction
             $occurredAt,
         ): OperatorShift {
             $now = Carbon::now();
-            $eventAt = $occurredAt !== null ? Carbon::instance($occurredAt) : $now;
-
-            if ($eventAt->gt($now)) {
-                throw ValidationException::withMessages([
-                    'occurred_at' => 'The duty event cannot occur in the future.',
-                ]);
-            }
+            $eventAt = DutyEventTime::resolve($occurredAt, $now);
 
             $location = $this->locationSnapshotService->resolve(
                 latitude: $latitude,

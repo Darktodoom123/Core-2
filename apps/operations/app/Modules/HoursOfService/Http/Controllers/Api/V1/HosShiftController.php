@@ -187,9 +187,11 @@ class HosShiftController extends Controller
             $clocks = $clocksQuery->execute($user);
 
             return response()->json([
-                'message' => 'Shift certified and completed successfully.',
+                'message' => $shift !== null
+                    ? 'Shift certified and completed successfully.'
+                    : 'No shift to end; already off duty.',
                 'data' => [
-                    'shift' => new HosShiftResource($shift),
+                    'shift' => $shift !== null ? new HosShiftResource($shift) : null,
                     'clocks' => $clocks,
                 ],
             ]);

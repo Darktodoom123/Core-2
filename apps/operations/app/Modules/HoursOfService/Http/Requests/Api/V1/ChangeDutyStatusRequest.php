@@ -4,6 +4,7 @@ namespace App\Modules\HoursOfService\Http\Requests\Api\V1;
 
 use App\Modules\HoursOfService\Enums\DutyStatus;
 use App\Modules\HoursOfService\Enums\StandbyReason;
+use App\Modules\HoursOfService\Support\DutyEventTime;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Enum;
 
@@ -23,7 +24,7 @@ class ChangeDutyStatusRequest extends FormRequest
             'duty_status' => ['required', new Enum(DutyStatus::class)],
             'operational_asset_id' => ['nullable', 'integer', 'exists:operational_assets,id'],
             'dispatch_job_id' => ['nullable', 'integer', 'exists:dispatch_jobs,id'],
-            'occurred_at' => ['nullable', 'date', 'before_or_equal:now'],
+            'occurred_at' => ['nullable', 'date', 'before_or_equal:'.DutyEventTime::latestAccepted()],
             'standby_reason' => ['nullable', new Enum(StandbyReason::class)],
             'latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitude'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitude'],

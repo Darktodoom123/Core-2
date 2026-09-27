@@ -7,6 +7,7 @@ use App\Modules\HoursOfService\Enums\ShiftStatus;
 use App\Modules\HoursOfService\Models\OperatorDutyLog;
 use App\Modules\HoursOfService\Models\OperatorShift;
 use App\Modules\HoursOfService\Services\DutyLocationSnapshotService;
+use App\Modules\HoursOfService\Support\DutyEventTime;
 use App\Platform\Identity\Models\User;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
@@ -32,7 +33,7 @@ class CertifyAndCompleteShiftAction
         ?string $locationSource = null,
         ?string $locationName = null,
         ?CarbonInterface $occurredAt = null,
-    ): OperatorShift {
+    ): ?OperatorShift {
         return DB::transaction(function () use (
             $user,
             $certificationStatement,
@@ -46,15 +47,9 @@ class CertifyAndCompleteShiftAction
             $locationSource,
             $locationName,
             $occurredAt,
-        ): OperatorShift {
+        ): ?OperatorShift {
             $now = Carbon::now();
-            $eventAt = $occurredAt !== null ? Carbon::instance($occurredAt) : $now;
-
-            if ($eventAt->gt($now)) {
-                throw ValidationException::withMessages([
-                    'occurred_at' => 'The duty event cannot occur in the future.',
-                ]);
-            }
+            $eventAt = DutyEventTime::resolve($occurredAt, $now);
 
             $location = $this->locationSnapshotService->resolve(
                 latitude: $latitude,
@@ -78,12 +73,16 @@ class CertifyAndCompleteShiftAction
                 ->first();
 
             if ($shift === null) {
-                /** @var OperatorShift $lastShift */
                 $lastShift = OperatorShift::query()
                     ->where('user_id', $user->id)
                     ->latest('started_at')
                     ->lockForUpdate()
-                    ->firstOrFail();
+                    ->first();
+
+                // Nothing to end: the operator is already off duty.
+                if ($lastShift === null) {
+                    return null;
+                }
 
                 if ($lastShift->ended_at !== null && $eventAt->lt($lastShift->ended_at)) {
                     throw ValidationException::withMessages([
