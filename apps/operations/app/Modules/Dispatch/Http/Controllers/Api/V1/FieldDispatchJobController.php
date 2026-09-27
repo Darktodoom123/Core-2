@@ -22,6 +22,7 @@ use App\Modules\Dispatch\Http\Resources\V1\DispatchJobResource;
 use App\Modules\Dispatch\Models\DispatchExecutionAttempt;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dispatch\Models\DispatchJobDelay;
+use App\Modules\Dispatch\Queries\FieldJobHistoryQuery;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Idempotency\Services\IdempotentCommandService;
 use App\Platform\Identity\Enums\PermissionName;
@@ -40,11 +41,11 @@ use Illuminate\Validation\ValidationException;
 
 final class FieldDispatchJobController extends Controller
 {
-    private const FINISHED_STATUSES = [DispatchStatus::Completed, DispatchStatus::Cancelled];
-
     private const HISTORY_DEFAULT_DAYS = 30;
 
     private const HISTORY_MAX_DAYS = 90;
+
+    public function __construct(private readonly FieldJobHistoryQuery $history) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -56,7 +57,7 @@ final class FieldDispatchJobController extends Controller
         ]);
 
         $query = ($filters['scope'] ?? 'active') === 'history'
-            ? $this->historyQuery($user, (int) ($filters['days'] ?? self::HISTORY_DEFAULT_DAYS))
+            ? $this->history->recent($user, (int) ($filters['days'] ?? self::HISTORY_DEFAULT_DAYS))
             : $this->activeQuery($user);
 
         $jobs = $query
@@ -78,36 +79,8 @@ final class FieldDispatchJobController extends Controller
                 ->open()
                 ->where('user_id', $user->id)
                 ->select('dispatch_job_id'))
-            ->whereNotIn('status', self::FINISHED_STATUSES)
+            ->whereNotIn('status', FieldJobHistoryQuery::FINISHED_STATUSES)
             ->latest('scheduled_start');
-    }
-
-    /**
-     * Finished jobs the operator was still on when the job finished. Declined
-     * jobs and jobs they were reassigned off beforehand are not their history.
-     *
-     * @return Builder<DispatchJob>
-     */
-    private function historyQuery(User $user, int $days): Builder
-    {
-        $finishedAt = 'COALESCE(dispatch_jobs.completed_at, dispatch_jobs.cancelled_at, dispatch_jobs.updated_at)';
-
-        return DispatchJob::query()
-            ->whereIn('status', self::FINISHED_STATUSES)
-            ->whereExists(function ($query) use ($user, $finishedAt): void {
-                $query->selectRaw('1')
-                    ->from('dispatch_personnel_assignments')
-                    ->whereColumn('dispatch_personnel_assignments.dispatch_job_id', 'dispatch_jobs.id')
-                    ->where('dispatch_personnel_assignments.user_id', $user->id)
-                    ->where('dispatch_personnel_assignments.response_status', '!=', AssignmentResponse::Rejected->value)
-                    ->where(function ($query) use ($finishedAt): void {
-                        $query->whereNull('dispatch_personnel_assignments.active_until')
-                            ->orWhereRaw("dispatch_personnel_assignments.active_until >= {$finishedAt}");
-                    });
-            })
-            ->whereRaw("{$finishedAt} >= ?", [now()->subDays($days)])
-            ->orderByRaw("{$finishedAt} DESC")
-            ->orderByDesc('id');
     }
 
     public function show(Request $request, DispatchJob $dispatchJob): JsonResponse
