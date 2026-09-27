@@ -237,7 +237,7 @@ describe('Mobile Application Audit Resolutions Component Tests', () => {
     };
 
     describe('Issue 4, 5, 7, 9: AssignedJobsListScreen UX Flow Improvements', () => {
-        it('renders Standby banner and relief handover trigger when jobs list is empty', async () => {
+        it('renders one no-unit card with the relief handover inside it when jobs list is empty', async () => {
             const view = await render(
                 <AssignedJobsListScreen
                     {...baseScreenProps}
@@ -248,14 +248,13 @@ describe('Mobile Application Audit Resolutions Component Tests', () => {
                 />,
             );
 
-            // Standby banner should display
-            expect(view.getByTestId('standby-no-dispatch-banner')).toBeTruthy();
-            expect(view.getByText('Standby / No Active Dispatch')).toBeTruthy();
-            expect(
-                view.getByText(
-                    'No equipment assigned to current shift. Waiting for central dispatch orders.',
-                ),
-            ).toBeTruthy();
+            // One neutral card replaces the "UNASSIGNED" vehicle card and the
+            // separate standby banner; it claims no inspection result.
+            expect(view.getByTestId('no-unit-card')).toBeTruthy();
+            expect(view.getByText('No unit assigned')).toBeTruthy();
+            expect(view.queryByTestId('hero-vehicle-card')).toBeNull();
+            expect(view.queryByTestId('standby-no-dispatch-banner')).toBeNull();
+            expect(view.queryByText('DVIR Cleared')).toBeNull();
 
             // Unassigned start unit button should NOT display
             expect(view.queryByTestId('start-unit-on-site-btn')).toBeNull();
@@ -264,7 +263,7 @@ describe('Mobile Application Audit Resolutions Component Tests', () => {
             const claimBtn = view.getByTestId('incoming-handover-claim-btn');
             expect(claimBtn).toBeTruthy();
             expect(
-                view.getByText('Claim Equipment Handover (Relief)'),
+                view.getByText('Relief handover — claim a unit'),
             ).toBeTruthy();
 
             // Pressing claim handover opens ReliefHandoverModal in incoming_claim mode

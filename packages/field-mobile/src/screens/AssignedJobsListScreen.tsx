@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
     Alert,
     Platform,
     Pressable,
@@ -15,6 +14,9 @@ import type { DvirReadinessStatus } from '../components/cards/AssetVehicleCard';
 import { FailedCommandsList } from '../components/cards/FailedCommandsList';
 import { LocationWeatherCard } from '../components/cards/LocationWeatherCard';
 import { Icon } from '../components/common/Icon';
+import { AssignmentSummaryCard } from '../components/home/assignment-summary-card';
+import { NoUnitCard } from '../components/home/no-unit-card';
+import { ReliefClaimButton } from '../components/home/relief-claim-button';
 import { FieldBottomNav } from '../components/layout/field-bottom-nav';
 import type { FieldNavItem } from '../components/layout/field-bottom-nav';
 import type { FieldScreen } from '../components/layout/field-bottom-nav';
@@ -22,7 +24,7 @@ import { FieldHeader } from '../components/layout/field-header';
 import type { SyncTone } from '../components/layout/field-header';
 import type { HomeTile } from '../components/layout/home-tile-grid';
 import { HomeTileGrid } from '../components/layout/home-tile-grid';
-import { colors, shadows, sharedStyles } from '../components/nativeStyles';
+import { colors, shadows } from '../components/nativeStyles';
 import { PlannedRoutePanel } from '../components/panels/planned-route-panel';
 import { SyncStatusPanel } from '../components/panels/sync-status-panel';
 import { ChangeUnitModal } from '../components/sheets/ChangeUnitModal';
@@ -300,7 +302,9 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
         (job) => job.my_assignment?.response_status === 'pending',
     ).length;
     const syncAttentionCount = failedCount + conflictCount;
-    const totalNotificationCount = syncAttentionCount + pendingResponseCount;
+    // The bell counts only items for the operator from other people; sync
+    // problems are shown once, in the status pill.
+    const totalNotificationCount = pendingResponseCount;
     const hasOutboxActivity =
         syncAttentionCount > 0 || queuedCount > 0 || syncingCount > 0;
 
@@ -308,13 +312,6 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     const syncStatusLabel = projection.headerPill.label;
     const syncStatusMessage = projection.headerPill.message;
     const syncTone: SyncTone = projection.headerPill.tone;
-
-    const workSummary =
-        isLoading && jobs.length === 0
-            ? 'Loading active assignments...'
-            : jobs.length === 0
-              ? 'No active assignments'
-              : `${jobs.length} ${jobs.length === 1 ? 'active assignment' : 'active assignments'}${pendingResponseCount > 0 ? ` · ${pendingResponseCount} response${pendingResponseCount === 1 ? '' : 's'} needed` : ''}`;
 
     const [overriddenDutyStatus, setOverriddenDutyStatus] = useState<{
         propStatus?: DutyStatus;
@@ -386,6 +383,12 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
         (activeJob ? 'Assigned Unit' : 'UNASSIGNED');
     const effectiveAssetCode = overriddenAssetCode || assetCode;
     const isLinked = isUnitLinked !== undefined ? isUnitLinked : isLinkedLocal;
+    // No job, no swapped-in unit, no lockout: the shift has no unit at all.
+    const hasNoUnit = !activeJob && !overriddenAssetCode && !isLinked;
+    const openReliefClaim = () => {
+        setReliefHandoverMode('incoming_claim');
+        setReliefHandoverOpen(true);
+    };
     const currentDvirStatus =
         dvirStatus !== undefined ? dvirStatus : localDvirStatus;
     const isDefectLockout =
@@ -901,41 +904,45 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 </Pressable>
 
                 {/* Assigned Vehicle & Rigging Hero Card */}
-                <AssetVehicleCard
-                    activeJob={activeJob}
-                    assetCode={effectiveAssetCode}
-                    assetKind={primaryAsset?.asset_kind || 'mobile_crane'}
-                    assetName={
-                        primaryAsset?.asset_name ||
-                        (activeJob ? 'Assigned Unit' : 'No Vehicle Assigned')
-                    }
-                    attachments={
-                        primaryAsset?.attachments &&
-                        primaryAsset.attachments.length > 0
-                            ? primaryAsset.attachments
-                            : []
-                    }
-                    dispatchPrefix="Ref: "
-                    dvirStatus={
-                        isDefectLockout
-                            ? 'defect'
-                            : currentDvirStatus === 'cleared' ||
-                                currentDvirStatus === 'passed'
-                              ? 'cleared'
-                              : isLinked
-                                ? 'pending'
-                                : 'cleared'
-                    }
-                    engineHours={
-                        primaryAsset?.engine_hours
-                            ? `${primaryAsset.engine_hours.toLocaleString()} hrs`
-                            : '-- hrs'
-                    }
-                    onPress={onOpenVehicle}
-                    ratedCapacity={primaryAsset?.rated_capacity || '--'}
-                    variant="hero"
-                    latestDelay={primaryAsset?.latest_delay}
-                />
+                {hasNoUnit && !isDefectLockout ? (
+                    <NoUnitCard onClaimRelief={openReliefClaim} />
+                ) : (
+                    <AssetVehicleCard
+                        activeJob={activeJob}
+                        assetCode={effectiveAssetCode}
+                        assetKind={primaryAsset?.asset_kind || 'mobile_crane'}
+                        assetName={
+                            primaryAsset?.asset_name ||
+                            (activeJob
+                                ? 'Assigned Unit'
+                                : 'No Vehicle Assigned')
+                        }
+                        attachments={
+                            primaryAsset?.attachments &&
+                            primaryAsset.attachments.length > 0
+                                ? primaryAsset.attachments
+                                : []
+                        }
+                        dispatchPrefix="Ref: "
+                        dvirStatus={
+                            isDefectLockout
+                                ? 'defect'
+                                : currentDvirStatus === 'cleared' ||
+                                    currentDvirStatus === 'passed'
+                                  ? 'cleared'
+                                  : 'pending'
+                        }
+                        engineHours={
+                            primaryAsset?.engine_hours
+                                ? `${primaryAsset.engine_hours.toLocaleString()} hrs`
+                                : '-- hrs'
+                        }
+                        onPress={onOpenVehicle}
+                        ratedCapacity={primaryAsset?.rated_capacity || '--'}
+                        variant="hero"
+                        latestDelay={primaryAsset?.latest_delay}
+                    />
+                )}
 
                 {/* Dynamic Button Transition on Link / DVIR Lifecycle */}
                 {isDefectLockout ? (
@@ -1036,76 +1043,16 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 ) : !isLinked ? (
                     /* State 1: When Unlinked */
                     jobs.length === 0 ? (
-                        <View style={styles.unlinkedUnitBlock}>
-                            <View
-                                style={[
-                                    styles.standbyNoDispatchCard,
-                                    isDarkHud &&
-                                        styles.darkStandbyNoDispatchCard,
-                                ]}
-                                testID="standby-no-dispatch-banner"
-                            >
-                                <View style={styles.standbyNoDispatchHeader}>
-                                    <Icon
-                                        color={
-                                            isDarkHud ? '#FFBF00' : '#806000'
-                                        }
-                                        name="clock"
-                                        size={16}
-                                    />
-                                    <Text
-                                        style={[
-                                            styles.standbyNoDispatchTitle,
-                                            isDarkHud &&
-                                                styles.darkStandbyNoDispatchTitle,
-                                        ]}
-                                    >
-                                        Standby / No Active Dispatch
-                                    </Text>
-                                </View>
-                                <Text
-                                    style={[
-                                        styles.standbyNoDispatchSubtitle,
-                                        isDarkHud &&
-                                            styles.darkStandbyNoDispatchSubtitle,
-                                    ]}
-                                >
-                                    No equipment assigned to current shift.
-                                    Waiting for central dispatch orders.
-                                </Text>
-                            </View>
-
-                            <Pressable
-                                accessibilityLabel="Claim equipment handover for relief"
-                                accessibilityRole="button"
-                                onPress={() => {
-                                    setReliefHandoverMode('incoming_claim');
-                                    setReliefHandoverOpen(true);
-                                }}
-                                style={({ pressed }) => [
-                                    styles.claimHandoverTriggerBtn,
-                                    isDarkHud &&
-                                        styles.darkClaimHandoverTriggerBtn,
-                                    pressed && styles.pressed,
-                                ]}
-                                testID="incoming-handover-claim-btn"
-                            >
-                                <Icon
-                                    color={isDarkHud ? '#38BDF8' : '#0284C7'}
-                                    name="sync"
-                                    size={14}
+                        // With no unit the NoUnitCard above already offers the
+                        // relief claim; a swapped-in unit still needs it here.
+                        hasNoUnit ? null : (
+                            <View style={styles.unlinkedUnitBlock}>
+                                <ReliefClaimButton
+                                    assetCode={effectiveAssetCode}
+                                    onPress={openReliefClaim}
                                 />
-                                <Text
-                                    style={[
-                                        styles.claimHandoverTriggerBtnText,
-                                        isDarkHud &&
-                                            styles.darkClaimHandoverTriggerBtnText,
-                                    ]}
-                                >
-                                    Claim Equipment Handover (Relief)
-                                </Text>
-                            </Pressable>
-                        </View>
+                            </View>
+                        )
                     ) : (
                         <View style={styles.unlinkedUnitBlock}>
                             <Pressable
@@ -1131,36 +1078,10 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                 </Text>
                             </Pressable>
 
-                            <Pressable
-                                accessibilityLabel={`Claim equipment handover for ${effectiveAssetCode}`}
-                                accessibilityRole="button"
-                                onPress={() => {
-                                    setReliefHandoverMode('incoming_claim');
-                                    setReliefHandoverOpen(true);
-                                }}
-                                style={({ pressed }) => [
-                                    styles.claimHandoverTriggerBtn,
-                                    isDarkHud &&
-                                        styles.darkClaimHandoverTriggerBtn,
-                                    pressed && styles.pressed,
-                                ]}
-                                testID="incoming-handover-claim-btn"
-                            >
-                                <Icon
-                                    color={isDarkHud ? '#38BDF8' : '#0284C7'}
-                                    name="sync"
-                                    size={14}
-                                />
-                                <Text
-                                    style={[
-                                        styles.claimHandoverTriggerBtnText,
-                                        isDarkHud &&
-                                            styles.darkClaimHandoverTriggerBtnText,
-                                    ]}
-                                >
-                                    Claim Equipment Handover (Relief)
-                                </Text>
-                            </Pressable>
+                            <ReliefClaimButton
+                                assetCode={effectiveAssetCode}
+                                onPress={openReliefClaim}
+                            />
                         </View>
                     )
                 ) : currentDvirStatus === 'cleared' ||
@@ -1399,112 +1320,16 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
 
                 {activeNavItem === 'today' || activeNavItem === 'profile' ? (
                     <>
-                        {/* Visible Assignment Summary Card */}
-                        <View
-                            style={[
-                                styles.assignmentSummaryCard,
-                                isDarkHud && styles.darkAssignmentSummaryCard,
-                            ]}
-                            testID="home-assignment-summary-card"
-                        >
-                            <View style={styles.assignmentSummaryHeader}>
-                                <View style={styles.assignmentIconTitleGroup}>
-                                    <Icon
-                                        color={
-                                            isDarkHud ? '#60A5FA' : '#2563EB'
-                                        }
-                                        name="clipboard"
-                                        size={18}
-                                    />
-                                    <Text
-                                        style={[
-                                            styles.assignmentTitleText,
-                                            isDarkHud &&
-                                                styles.darkAssignmentTitleText,
-                                        ]}
-                                    >
-                                        Your assignments
-                                    </Text>
-                                </View>
-                                {jobs.length > 0 ? (
-                                    <Pressable
-                                        accessibilityLabel="View dispatch orders"
-                                        accessibilityRole="button"
-                                        onPress={() =>
-                                            setDispatchIntakeOpen(true)
-                                        }
-                                        style={styles.assignmentActionBadge}
-                                        testID="home-view-orders-btn"
-                                    >
-                                        <Text
-                                            style={
-                                                styles.assignmentActionBadgeText
-                                            }
-                                        >
-                                            View Orders ({jobs.length})
-                                        </Text>
-                                    </Pressable>
-                                ) : null}
-                            </View>
-                            <Text
-                                style={[
-                                    styles.assignmentSummaryBody,
-                                    isDarkHud &&
-                                        styles.darkAssignmentSummaryBody,
-                                ]}
-                            >
-                                {workSummary}
-                            </Text>
-
-                            {jobs.length > 0 && jobs[0] ? (
-                                <Pressable
-                                    accessibilityLabel={`Open dispatch assignment ${jobs[0].reference || jobs[0].id}`}
-                                    accessibilityRole="button"
-                                    onPress={() => {
-                                        onSelectJob?.(jobs[0].id);
-                                        setDispatchIntakeOpen(true);
-                                    }}
-                                    style={({ pressed }) => [
-                                        styles.activeJobPillRow,
-                                        isDarkHud &&
-                                            styles.darkActiveJobPillRow,
-                                        pressed && styles.pressed,
-                                    ]}
-                                    testID="home-active-job-pill"
-                                >
-                                    <View style={styles.activeJobPillLeft}>
-                                        <Text
-                                            style={[
-                                                styles.activeJobPillRef,
-                                                isDarkHud &&
-                                                    styles.darkActiveJobPillRef,
-                                            ]}
-                                        >
-                                            {jobs[0].reference ||
-                                                `Job #${jobs[0].id}`}
-                                        </Text>
-                                        <Text
-                                            numberOfLines={1}
-                                            style={[
-                                                styles.activeJobPillTitle,
-                                                isDarkHud &&
-                                                    styles.darkActiveJobPillTitle,
-                                            ]}
-                                        >
-                                            {jobs[0].title ||
-                                                'Dispatch Assignment'}
-                                        </Text>
-                                    </View>
-                                    <Icon
-                                        color={
-                                            isDarkHud ? '#94A3B8' : '#64748B'
-                                        }
-                                        name="chevron-right"
-                                        size={16}
-                                    />
-                                </Pressable>
-                            ) : null}
-                        </View>
+                        <AssignmentSummaryCard
+                            isLoading={isLoading}
+                            jobs={jobs}
+                            onOpenJob={(job) => {
+                                onSelectJob?.(job.id);
+                                setDispatchIntakeOpen(true);
+                            }}
+                            onViewOrders={() => setDispatchIntakeOpen(true)}
+                            pendingResponseCount={pendingResponseCount}
+                        />
 
                         {/* Hidden/accessible outbox container to keep the main Today dashboard clean */}
                         <View style={styles.accessibleOutbox}>
@@ -1541,62 +1366,6 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                     style={styles.errorText}
                                 >
                                     {error}
-                                </Text>
-                            </View>
-                        ) : null}
-
-                        {isLoading && jobs.length === 0 ? (
-                            <View
-                                accessibilityLiveRegion="polite"
-                                style={styles.loadingBox}
-                            >
-                                <ActivityIndicator color={colors.amber} />
-                                <Text style={sharedStyles.statusText}>
-                                    Loading assignments…
-                                </Text>
-                            </View>
-                        ) : null}
-
-                        {jobs.length === 0 && !isLoading ? (
-                            <View
-                                style={[
-                                    styles.emptyBox,
-                                    isDarkHud && styles.darkEmptyBox,
-                                ]}
-                                testID="empty-assignments-msg"
-                            >
-                                <View
-                                    style={[
-                                        styles.emptyMark,
-                                        isDarkHud && styles.darkEmptyMark,
-                                    ]}
-                                >
-                                    <Icon
-                                        name="clipboard"
-                                        size={22}
-                                        color={
-                                            isDarkHud
-                                                ? '#FFBF00'
-                                                : colors.primaryDark
-                                        }
-                                    />
-                                </View>
-                                <Text
-                                    style={[
-                                        styles.emptyTitle,
-                                        isDarkHud && styles.darkEmptyTitle,
-                                    ]}
-                                >
-                                    No work assigned yet
-                                </Text>
-                                <Text
-                                    style={[
-                                        styles.emptyText,
-                                        isDarkHud && styles.darkEmptyText,
-                                    ]}
-                                >
-                                    New assignments will appear in Dispatch.
-                                    Pull down to refresh and check again.
                                 </Text>
                             </View>
                         ) : null}
@@ -1671,6 +1440,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
             />
 
             <NotificationsSheet
+                includeSyncItems={false}
                 conflictCount={conflictCount}
                 failedCommands={failedCommands}
                 failedCount={failedCount}
@@ -2024,61 +1794,6 @@ const styles = StyleSheet.create({
     },
     darkErrorText: {
         color: '#FCA5A5',
-    },
-    loadingBox: {
-        alignItems: 'center',
-        gap: 10,
-        padding: 32,
-    },
-    emptyBox: {
-        alignItems: 'center',
-        backgroundColor: colors.surface,
-        borderColor: colors.border,
-        borderRadius: 16,
-        borderWidth: 1,
-        marginBottom: 20,
-        paddingHorizontal: 20,
-        paddingVertical: 20,
-        ...shadows.sm,
-    },
-    darkEmptyBox: {
-        backgroundColor: '#1E293B',
-        borderColor: '#334155',
-    },
-    emptyMark: {
-        alignItems: 'center',
-        backgroundColor: colors.primarySoft,
-        borderColor: colors.primaryBorder,
-        borderRadius: 20,
-        borderWidth: 1,
-        height: 40,
-        justifyContent: 'center',
-        marginBottom: 10,
-        width: 40,
-    },
-    darkEmptyMark: {
-        backgroundColor: 'rgba(255, 191, 0, 0.16)',
-        borderColor: '#FFBF00',
-    },
-    emptyTitle: {
-        color: colors.text,
-        fontSize: 15,
-        fontWeight: '800',
-        letterSpacing: -0.2,
-    },
-    darkEmptyTitle: {
-        color: '#F8FAFC',
-    },
-    emptyText: {
-        color: colors.secondary,
-        fontSize: 13,
-        lineHeight: 18,
-        marginTop: 4,
-        maxWidth: 280,
-        textAlign: 'center',
-    },
-    darkEmptyText: {
-        color: '#94A3B8',
     },
     pressed: {
         opacity: 0.78,
@@ -2538,153 +2253,9 @@ const styles = StyleSheet.create({
         color: '#FFBF00',
     },
     unlinkedUnitBlock: {
+        gap: 10,
+        marginBottom: 12,
         width: '100%',
-    },
-    standbyNoDispatchCard: {
-        backgroundColor: '#FFFBEB',
-        borderColor: '#FDE68A',
-        borderWidth: 1,
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 12,
-    },
-    darkStandbyNoDispatchCard: {
-        backgroundColor: '#78350F25',
-        borderColor: '#D97706',
-    },
-    standbyNoDispatchHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        marginBottom: 6,
-    },
-    standbyNoDispatchTitle: {
-        fontSize: 15,
-        fontWeight: '700',
-        color: '#92400E',
-    },
-    darkStandbyNoDispatchTitle: {
-        color: '#FCD34D',
-    },
-    standbyNoDispatchSubtitle: {
-        fontSize: 13,
-        lineHeight: 18,
-        color: '#B45309',
-    },
-    darkStandbyNoDispatchSubtitle: {
-        color: '#FDE68A',
-    },
-    claimHandoverTriggerBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        backgroundColor: '#F0F9FF',
-        borderWidth: 1,
-        borderColor: '#BAE6FD',
-        borderRadius: 10,
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        marginTop: 6,
-        marginBottom: 12,
-    },
-    darkClaimHandoverTriggerBtn: {
-        backgroundColor: '#0C4A6E40',
-        borderColor: '#0284C7',
-    },
-    claimHandoverTriggerBtnText: {
-        fontSize: 13,
-        fontWeight: '700',
-        color: '#0369A1',
-    },
-    darkClaimHandoverTriggerBtnText: {
-        color: '#38BDF8',
-    },
-    assignmentSummaryCard: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 12,
-        padding: 14,
-        marginHorizontal: 16,
-        marginTop: 12,
-        marginBottom: 8,
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
-        ...shadows.sm,
-    },
-    darkAssignmentSummaryCard: {
-        backgroundColor: '#1E293B',
-        borderColor: '#334155',
-    },
-    assignmentSummaryHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 8,
-    },
-    assignmentIconTitleGroup: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    assignmentTitleText: {
-        fontSize: 15,
-        fontWeight: '700',
-        color: '#0F172A',
-    },
-    darkAssignmentTitleText: {
-        color: '#F8FAFC',
-    },
-    assignmentActionBadge: {
-        backgroundColor: '#EFF6FF',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 6,
-    },
-    assignmentActionBadgeText: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: '#2563EB',
-    },
-    assignmentSummaryBody: {
-        fontSize: 13,
-        lineHeight: 18,
-        color: '#64748B',
-    },
-    darkAssignmentSummaryBody: {
-        color: '#94A3B8',
-    },
-    activeJobPillRow: {
-        marginTop: 10,
-        paddingTop: 10,
-        borderTopWidth: 1,
-        borderTopColor: '#F1F5F9',
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-    },
-    darkActiveJobPillRow: {
-        borderTopColor: '#334155',
-    },
-    activeJobPillLeft: {
-        flex: 1,
-        marginRight: 8,
-    },
-    activeJobPillRef: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: '#2563EB',
-    },
-    darkActiveJobPillRef: {
-        color: '#60A5FA',
-    },
-    activeJobPillTitle: {
-        fontSize: 13,
-        fontWeight: '500',
-        color: '#334155',
-        marginTop: 2,
-    },
-    darkActiveJobPillTitle: {
-        color: '#CBD5E1',
     },
     accessibleOutbox: {
         height: 1,

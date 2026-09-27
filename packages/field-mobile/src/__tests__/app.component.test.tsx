@@ -464,10 +464,12 @@ describe('native application component tree', () => {
         );
         await signIn();
 
+        // With no work, home says so once in the no-unit card.
         expect(
             await screen.findByTestId('empty-assignments-msg'),
         ).toBeVisible();
-        expect(screen.getByText('No work assigned yet')).toBeVisible();
+        expect(screen.getByText('No unit assigned')).toBeVisible();
+        expect(screen.queryByTestId('home-assignment-summary-card')).toBeNull();
         expect(tokenStorage.setCalls).toEqual([rawToken]);
         expect(screen.queryByText(rawToken)).toBeNull();
     });
