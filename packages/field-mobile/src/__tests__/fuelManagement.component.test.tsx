@@ -1049,7 +1049,8 @@ it('opens the request named by a fuel notification', async () => {
 it.each([
     ['queued', 'Waiting to sync', 'Saved on this device.'],
     ['syncing', 'Syncing', 'Not yet confirmed.'],
-    ['failed', 'Needs attention', 'Purpose is required.'],
+    ['failed', 'Not accepted', 'Purpose is required.'],
+    ['conflict', 'Needs attention', 'Saved on this device.'],
 ] as const)(
     'labels a %s request command without claiming office receipt',
     async (state, label, detail) => {

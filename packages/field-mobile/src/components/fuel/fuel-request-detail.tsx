@@ -7,7 +7,6 @@ import { fuelStatusLabels } from '../../types/fuel';
 import type { FuelStatus, MobileFuelRequest } from '../../types/fuel';
 import { Icon } from '../common/Icon';
 import type { IconName } from '../common/Icon';
-import { colors } from '../nativeStyles';
 import { FuelBanner, FuelButton, FuelField, fuelStyles } from './fuel-controls';
 
 export function formatFuelDate(value: string | null | undefined): string {
@@ -21,70 +20,93 @@ export function formatFuelDate(value: string | null | undefined): string {
         : 'Not recorded';
 }
 
-function statusVisual(
-    status: FuelStatus,
-    theme: ThemeColors,
-): { icon: IconName; bg: string; fg: string } {
+interface StatusVisual {
+    icon: IconName;
+    bg: string;
+    border: string;
+    iconColor: string;
+    text: string;
+}
+
+type PillStatus = FuelStatus | 'queued' | 'queued_attention' | 'queued_failed';
+
+/**
+ * Role colors for a fuel request. Waiting on the office is neutral, approved
+ * is informational cobalt, ready and recorded are green, rejected is red. No
+ * status is drawn in brand gold, which is reserved for actions.
+ */
+function statusVisual(status: PillStatus, theme: ThemeColors): StatusVisual {
+    const info = {
+        bg: theme.actionCobaltLight,
+        border: theme.actionCobalt,
+        iconColor: theme.actionCobalt,
+        text: theme.textPrimary,
+    };
+    const success = {
+        bg: theme.successEmeraldLight,
+        border: theme.successEmerald,
+        iconColor: theme.successEmeraldText,
+        text: theme.successEmeraldText,
+    };
+    const neutral = {
+        bg: theme.surfaceHighlight,
+        border: theme.borderStrong,
+        iconColor: theme.textSecondary,
+        text: theme.textSecondary,
+    };
+
     switch (status) {
         case 'verified':
-            return {
-                icon: 'fuel',
-                bg: theme.successEmeraldLight,
-                fg: theme.successEmerald,
-            };
+            return { ...success, icon: 'fuel' };
         case 'logged':
-            return {
-                icon: 'check-circle',
-                bg: theme.successEmeraldLight,
-                fg: theme.successEmerald,
-            };
+            return { ...success, icon: 'check-circle' };
         case 'approved':
+            return { ...info, icon: 'check' };
+        case 'queued':
+            return { ...info, icon: 'sync' };
+        case 'queued_attention':
             return {
-                icon: 'check',
-                bg: theme.actionCobaltLight,
-                fg: theme.actionCobalt,
+                bg: theme.warningOrangeLight,
+                border: theme.warningOrange,
+                iconColor: theme.warningOrangeText,
+                text: theme.warningOrangeText,
+                icon: 'alert',
             };
         case 'rejected':
+        case 'queued_failed':
             return {
-                icon: 'alert-circle',
                 bg: theme.hazardRedLight,
-                fg: theme.hazardRed,
+                border: theme.hazardRed,
+                iconColor: theme.hazardRedText,
+                text: theme.hazardRedText,
+                icon: 'alert-circle',
             };
         case 'withdrawn':
-            return {
-                icon: 'close',
-                bg: theme.surfaceHighlight,
-                fg: theme.textSecondary,
-            };
+            return { ...neutral, icon: 'close' };
         default:
-            return {
-                icon: 'clock',
-                bg: theme.brandAmberLight,
-                fg: colors.amberDark,
-            };
+            return { ...neutral, icon: 'clock' };
     }
 }
+
+const QUEUED_LABELS: Record<string, string> = {
+    queued: 'Waiting to sync',
+    queued_attention: 'Needs attention',
+    queued_failed: 'Not accepted',
+};
 
 export function FuelStatusPill({
     status,
     label,
 }: {
-    status: FuelStatus | 'queued';
+    status: PillStatus;
     label?: string;
 }) {
     const { theme } = useTheme();
-    const visual =
-        status === 'queued'
-            ? {
-                  icon: 'sync' as IconName,
-                  bg: theme.actionCobaltLight,
-                  fg: theme.actionCobalt,
-              }
-            : statusVisual(status, theme);
+    const visual = statusVisual(status, theme);
     const text =
         label ??
-        (status === 'queued' ? 'Waiting to sync' : fuelStatusLabels[status]);
-    const fg = theme.mode === 'dark_hud' ? theme.textPrimary : visual.fg;
+        QUEUED_LABELS[status] ??
+        fuelStatusLabels[status as FuelStatus];
 
     return (
         <View
@@ -94,13 +116,18 @@ export function FuelStatusPill({
                 gap: 6,
                 alignSelf: 'flex-start',
                 backgroundColor: visual.bg,
+                borderColor: visual.border,
+                borderWidth: 1,
                 borderRadius: 999,
                 paddingHorizontal: 10,
                 paddingVertical: 4,
             }}
+            testID={`fuel-status-${status}`}
         >
-            <Icon name={visual.icon} size={14} color={fg} />
-            <Text style={{ color: fg, fontWeight: '700', fontSize: 13 }}>
+            <Icon name={visual.icon} size={14} color={visual.iconColor} />
+            <Text
+                style={{ color: visual.text, fontWeight: '700', fontSize: 13 }}
+            >
                 {text}
             </Text>
         </View>
@@ -115,7 +142,7 @@ function UrgencyPill({ urgency }: { urgency?: string }) {
     }
 
     const critical = urgency === 'critical';
-    const fg = critical ? theme.hazardRed : colors.amberDark;
+    const fg = critical ? theme.hazardRedText : theme.warningOrangeText;
 
     return (
         <View
@@ -126,24 +153,16 @@ function UrgencyPill({ urgency }: { urgency?: string }) {
                 alignSelf: 'flex-start',
                 backgroundColor: critical
                     ? theme.hazardRedLight
-                    : theme.brandAmberLight,
+                    : theme.warningOrangeLight,
+                borderColor: critical ? theme.hazardRed : theme.warningOrange,
+                borderWidth: 1,
                 borderRadius: 999,
                 paddingHorizontal: 10,
                 paddingVertical: 4,
             }}
         >
-            <Icon
-                name="alert"
-                size={14}
-                color={theme.mode === 'dark_hud' ? theme.textPrimary : fg}
-            />
-            <Text
-                style={{
-                    color: theme.mode === 'dark_hud' ? theme.textPrimary : fg,
-                    fontWeight: '700',
-                    fontSize: 13,
-                }}
-            >
+            <Icon name="alert" size={14} color={fg} />
+            <Text style={{ color: fg, fontWeight: '700', fontSize: 13 }}>
                 {critical ? 'Critical' : 'Urgent'}
             </Text>
         </View>
@@ -308,12 +327,25 @@ export function QueuedFuelRequestItem({
     queued: QueuedFuelRequest;
 }) {
     const { theme } = useTheme();
+    // A failed send is critical (red); a conflict, unresolved or expired
+    // command needs the operator's attention (orange).
+    const failed = queued.state === 'failed';
     const needsAttention =
-        queued.state === 'failed' ||
+        failed ||
         queued.state === 'conflict' ||
         queued.state === 'unresolved' ||
         queued.state === 'expired';
     const syncing = queued.state === 'syncing';
+    const pillStatus = failed
+        ? 'queued_failed'
+        : needsAttention
+          ? 'queued_attention'
+          : 'queued';
+    const borderColor = failed
+        ? theme.hazardRed
+        : needsAttention
+          ? theme.warningOrange
+          : theme.actionCobalt;
 
     return (
         <View
@@ -321,9 +353,7 @@ export function QueuedFuelRequestItem({
                 fuelStyles.card,
                 {
                     backgroundColor: theme.surface,
-                    borderColor: needsAttention
-                        ? theme.hazardRed
-                        : theme.actionCobalt,
+                    borderColor,
                     borderStyle: 'dashed',
                 },
             ]}
@@ -331,14 +361,8 @@ export function QueuedFuelRequestItem({
             accessibilityLabel={`Fuel request waiting to sync, ${queued.payload.quantity_litres} litres`}
         >
             <FuelStatusPill
-                status="queued"
-                label={
-                    needsAttention
-                        ? 'Needs attention'
-                        : syncing
-                          ? 'Syncing'
-                          : 'Waiting to sync'
-                }
+                label={syncing ? 'Syncing' : undefined}
+                status={pillStatus}
             />
             <Text
                 style={{

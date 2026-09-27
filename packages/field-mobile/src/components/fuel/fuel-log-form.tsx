@@ -370,7 +370,7 @@ export function FuelLogForm({
                                     <Text
                                         style={{
                                             color: theme.textPrimary,
-                                            fontWeight: '600',
+                                            fontWeight: '700',
                                             flex: 1,
                                         }}
                                         numberOfLines={1}
@@ -408,7 +408,7 @@ export function FuelLogForm({
                                 <Text
                                     style={{
                                         color: theme.textPrimary,
-                                        fontWeight: '600',
+                                        fontWeight: '700',
                                         flex: 1,
                                     }}
                                 >
@@ -490,8 +490,9 @@ export function FuelLogForm({
                             <Text
                                 style={{
                                     flex: 1,
-                                    color: theme.actionCobalt,
-                                    fontWeight: '600',
+                                    color: theme.textPrimary,
+                                    fontWeight: '700',
+                                    textDecorationLine: 'underline',
                                 }}
                             >
                                 {noReceiptReason
@@ -501,7 +502,7 @@ export function FuelLogForm({
                             <Icon
                                 name="chevron-right"
                                 size={18}
-                                color={theme.actionCobalt}
+                                color={theme.textSecondary}
                             />
                         </Pressable>
                     )}
@@ -610,7 +611,7 @@ function SmallAction({
             ]}
         >
             <Icon name={icon} size={16} color={theme.textPrimary} />
-            <Text style={{ color: theme.textPrimary, fontWeight: '600' }}>
+            <Text style={{ color: theme.textPrimary, fontWeight: '700' }}>
                 {title}
             </Text>
         </Pressable>
