@@ -486,7 +486,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
             {
                 id: 'vehicle',
                 title: 'Machine\nProfile',
-                sublabel: 'Setup & Fleet',
+                sublabel: 'Specs & readiness',
                 iconName: 'crane',
             },
             {

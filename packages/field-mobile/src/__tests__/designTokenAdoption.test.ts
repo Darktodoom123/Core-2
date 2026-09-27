@@ -24,6 +24,10 @@ const MIGRATED = [
     'components/layout/profile-summary.tsx',
     'components/layout/sync-status-pill.tsx',
     'components/layout/tile-screen-header.tsx',
+    'components/sheets/OutboxStatusSheet.tsx',
+    ...fs
+        .readdirSync(path.join(SRC, 'components', 'sheets', 'outbox'))
+        .map((file) => `components/sheets/outbox/${file}`),
     'components/sheets/ReportDelayModal.tsx',
     ...fs
         .readdirSync(path.join(SRC, 'components', 'sheets', 'report-delay'))
@@ -31,6 +35,10 @@ const MIGRATED = [
     'screens/DispatchOrdersScreen.tsx',
     'screens/DocumentsWalletScreen.tsx',
     'screens/FuelScreen.tsx',
+    'screens/MachineProfileScreen.tsx',
+    ...fs
+        .readdirSync(path.join(SRC, 'screens', 'machine-profile'))
+        .map((file) => `screens/machine-profile/${file}`),
     ...fs
         .readdirSync(path.join(SRC, 'screens', 'documents'))
         .map((file) => `screens/documents/${file}`),

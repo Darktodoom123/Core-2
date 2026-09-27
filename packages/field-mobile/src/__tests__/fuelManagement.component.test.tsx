@@ -9,7 +9,6 @@ import * as ImagePicker from 'expo-image-picker';
 import React from 'react';
 import { QueuedFuelRequestItem } from '../components/fuel/fuel-request-detail';
 import type { FuelCommandQueue } from '../hooks/useFuelManagement';
-import { EquipmentInspectionScreen } from '../screens/EquipmentInspectionScreen';
 import { FuelScreen } from '../screens/FuelScreen';
 import { ApiClientError } from '../services/apiClient';
 import { durableAttachmentStorage } from '../services/durableAttachmentStorage';
@@ -712,22 +711,6 @@ it('keeps an offline fuel log and its receipt in the durable outbox', async () =
         ),
     ).toBe(true);
     expect(api.recordFuel).not.toHaveBeenCalled();
-});
-
-it('routes equipment fuel to the live workflow instead of sample logs', async () => {
-    const open = jest.fn();
-    const screen = await render(
-        <EquipmentInspectionScreen assetCode="CRN-2" onOpenFuel={open} />,
-    );
-    await fireEvent.press(screen.getByTestId('tab-fuel'));
-    expect(screen.getByTestId('fuel-management-link')).toBeTruthy();
-    expect(screen.queryByText('RCPT-PETRO-9921')).toBeNull();
-    expect(screen.queryByText('Fuel Receipt & Dispense Logging')).toBeNull();
-    expect(screen.queryByTestId('fuel-liters-input')).toBeNull();
-    await fireEvent.press(
-        screen.getByRole('button', { name: 'Open Fuel Management' }),
-    );
-    expect(open).toHaveBeenCalledTimes(1);
 });
 
 it('defaults a new request to the current unit and job', async () => {

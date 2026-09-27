@@ -159,6 +159,22 @@ Rules for new and touched code:
   a response); sync problems are counted once, in the pill. The bell's sheet
   opens with `includeSyncItems={false}`, so it never lists sync failures or
   claims the outbox is clear.
+- The outbox sheet ("Saved actions", `components/sheets/outbox/`) uses plain
+  words and one set of counts (on the filter tabs). The summary card is
+  neutral, orange when something can be retried or reviewed, red when the
+  server turned an action down. Items are toned the same way
+  (`outbox-tone.ts`); sending is cobalt, synced is green. The summary's
+  "Retry and sync" / "Sync now" is the one gold action; a card's Retry is
+  secondary and Discard is outlined red. Every command type has a human
+  label in `outboxProjection.ts`; never show a raw command type.
+- Machine Profile (`MachineProfileScreen.tsx`, `screens/machine-profile/`)
+  is the operator's view of the assigned machine: identity, readiness from
+  the DVIR (green cleared, orange pre-trip due with a gold "Start pre-trip
+  inspection", red locked out), specifications, attachments, "Report a
+  defect" (through the DVIR) and its documents. Missing fields read "Not
+  recorded"; never show placeholder specs. Maintenance work orders,
+  post-repair release, technician handover and fuel are not part of it: the
+  field app signs in operators only, and fuel has its own tile.
 - Job lifecycle status (`job-card/job-status-tone.ts`): awaiting response is
   warning orange, scheduled/dispatched/accepted are neutral, en route/arrived/
   working are cobalt (info), completed is green, cancelled is red. Each has an

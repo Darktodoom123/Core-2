@@ -24,7 +24,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth, offlineSessionVerificationError } from '../auth/AuthContext';
 import { isAuthorizedFieldRole } from '../auth/fieldRoles';
 import { LoginScreen } from '../auth/LoginScreen';
-import type { PhotoAttachment } from '../components/attachments/PhotoAttachmentPicker';
 import { colors, sharedStyles } from '../components/nativeStyles';
 import { OutboxStatusSheet } from '../components/sheets/OutboxStatusSheet';
 import type { DigitalSignatureData } from '../components/signature/DigitalSignatureModal';
@@ -43,7 +42,6 @@ import { AssignedJobsListScreen } from '../screens/AssignedJobsListScreen';
 import { DispatchOrdersScreen } from '../screens/DispatchOrdersScreen';
 import { DocumentsWalletScreen } from '../screens/DocumentsWalletScreen';
 import { DvirScreen } from '../screens/DvirScreen';
-import { EquipmentInspectionScreen } from '../screens/EquipmentInspectionScreen';
 import { FieldSafetyScreen } from '../screens/FieldSafetyScreen';
 import { FuelScreen } from '../screens/FuelScreen';
 import { HeavyCraneDriveModeScreen } from '../screens/HeavyCraneDriveModeScreen';
@@ -53,6 +51,7 @@ import type {
     TimelineDayHistory,
     TimelineSegment,
 } from '../screens/HosScreen';
+import { MachineProfileScreen } from '../screens/MachineProfileScreen';
 import { ProfileScreen } from '../screens/profile/ProfileScreen';
 import type {
     RentalCheckoutData,
@@ -64,7 +63,6 @@ import {
     CommandOutboxManager,
     createCommandId,
 } from '../services/commandOutbox';
-import { durableAttachmentStorage } from '../services/durableAttachmentStorage';
 import { LocationSharingService } from '../services/locationService';
 import {
     checkNotificationPermissions,
@@ -99,8 +97,6 @@ import type {
     ShiftStatus,
     StandbyReason,
     WeatherTelemetry,
-    TechnicianInspectionCheck,
-    MaintenanceWorkOrder,
     DelayReasonCode,
     ReportDelayPayload,
     SafetyHazardCommandPayload,
@@ -2285,165 +2281,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         ],
     );
 
-    const handleSaveInspection = useCallback(
-        async (
-            checks: TechnicianInspectionCheck[],
-            targetAssetId?: number,
-            workOrderId?: string,
-        ) => {
-            const linkedJob = activeJob;
-            const assignments = linkedJob?.asset_assignments || [];
-            const assetId =
-                targetAssetId ??
-                selectedAssetId ??
-                (assignments.length === 1
-                    ? assignments[0].operational_asset_id
-                    : null);
-
-            if (!linkedJob) {
-                await handleRequestFailure(
-                    new Error(
-                        'Explicit dispatch job must be selected before submitting equipment inspection.',
-                    ),
-                    'Please select an assigned dispatch job before submitting inspection.',
-                );
-
-                return;
-            }
-
-            if (!assetId) {
-                await handleRequestFailure(
-                    new Error(
-                        assignments.length > 1
-                            ? 'Multiple assets are assigned to this job. Please explicitly select an asset before submitting inspection.'
-                            : 'No operational asset is assigned to this job.',
-                    ),
-                    assignments.length > 1
-                        ? 'Please select which asset to inspect before submitting.'
-                        : 'No asset assigned to this job.',
-                );
-
-                return;
-            }
-
-            try {
-                const passed = checks.every(
-                    (c) => c.status === 'good' || c.status === 'attention',
-                );
-                await commandOutbox.enqueueSubmitEquipmentInspection({
-                    operational_asset_id: assetId,
-                    dispatch_job_id: linkedJob.id,
-                    type: 'post_repair',
-                    result: passed ? 'passed' : 'failed',
-                    checklist: checks,
-                    findings: workOrderId
-                        ? `Completed from mobile post-repair verification for work order ${workOrderId}`
-                        : 'Completed from mobile post-repair verification',
-                    work_order_id: workOrderId ?? null,
-                });
-                await syncQueue();
-            } catch (error: unknown) {
-                await handleRequestFailure(error, 'Inspection queued locally.');
-            } finally {
-                setActiveAppView('main');
-            }
-        },
-        [
-            activeJob,
-            commandOutbox,
-            handleRequestFailure,
-            selectedAssetId,
-            syncQueue,
-        ],
-    );
-
-    const handleLogWorkOrder = useCallback(
-        async (workOrder: MaintenanceWorkOrder, targetAssetId?: number) => {
-            const linkedJob = activeJob;
-            const assignments = linkedJob?.asset_assignments || [];
-            const assetId =
-                targetAssetId ??
-                selectedAssetId ??
-                (assignments.length === 1
-                    ? assignments[0].operational_asset_id
-                    : null);
-
-            if (!linkedJob) {
-                await handleRequestFailure(
-                    new Error(
-                        'Explicit dispatch job must be selected before reporting defect or logging work order.',
-                    ),
-                    'Please select an assigned dispatch job before logging a work order.',
-                );
-
-                return;
-            }
-
-            if (!assetId) {
-                await handleRequestFailure(
-                    new Error(
-                        assignments.length > 1
-                            ? 'Multiple assets are assigned to this job. Please explicitly select an asset before logging a work order.'
-                            : 'No operational asset is assigned to this job.',
-                    ),
-                    assignments.length > 1
-                        ? 'Please select which asset to log work order for.'
-                        : 'No asset assigned to this job.',
-                );
-
-                return;
-            }
-
-            try {
-                const actorId = user?.id ?? 'system';
-                const durablePhotos: PhotoAttachment[] = [];
-
-                if (workOrder.attachments && workOrder.attachments.length > 0) {
-                    for (const photo of workOrder.attachments) {
-                        const stored =
-                            await durableAttachmentStorage.saveAttachmentDurably(
-                                {
-                                    uri: photo.uri,
-                                    base64: photo.base64,
-                                    fileName: photo.fileName,
-                                },
-                                actorId,
-                            );
-                        durablePhotos.push({
-                            uri: stored.uri,
-                            fileName: stored.fileName,
-                            fileSize: stored.fileSize ?? photo.fileSize,
-                            base64: photo.base64,
-                        });
-                    }
-                }
-
-                await commandOutbox.enqueueSubmitMaintenanceWorkOrder({
-                    operational_asset_id: assetId,
-                    dispatch_job_id: linkedJob.id,
-                    defect: workOrder.defectTitle,
-                    remarks: workOrder.description,
-                    dispatch_blocking: workOrder.severity === 'safety_critical',
-                    attachments:
-                        durablePhotos.length > 0 ? durablePhotos : undefined,
-                });
-                await syncQueue();
-            } catch (error: unknown) {
-                await handleRequestFailure(error, 'Work order queued locally.');
-            } finally {
-                setActiveAppView('main');
-            }
-        },
-        [
-            activeJob,
-            commandOutbox,
-            handleRequestFailure,
-            selectedAssetId,
-            syncQueue,
-            user,
-        ],
-    );
-
     const currentAsset =
         activeJob?.asset_assignments?.find(
             (a) => a.operational_asset_id === selectedAssetId,
@@ -2909,18 +2746,19 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 }}
                             />
                         ) : activeAppView === 'inspection' ? (
-                            <EquipmentInspectionScreen
-                                assetAssignments={activeJob?.asset_assignments}
-                                assetCode={resolvedAssetCode}
-                                assetName={resolvedAssetName}
+                            <MachineProfileScreen
+                                assets={
+                                    activeJob?.asset_assignments ??
+                                    (currentAsset ? [currentAsset] : [])
+                                }
+                                dvirStatus={dvirStatus}
                                 onBack={() => setActiveAppView('main')}
-                                onLogWorkOrder={handleLogWorkOrder}
+                                onOpenDocuments={() =>
+                                    setActiveAppView('documents')
+                                }
                                 onOpenDvir={() => setActiveAppView('dvir')}
-                                onOpenFuel={() => setActiveAppView('fuel')}
-                                onSaveInspection={handleSaveInspection}
                                 onSelectAsset={(id) => setSelectedAssetId(id)}
                                 selectedAssetId={selectedAssetId}
-                                technicianName={resolvedOperatorName}
                             />
                         ) : activeAppView === 'routes' ? (
                             <HeavyCraneDriveModeScreen

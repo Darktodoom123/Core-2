@@ -8,7 +8,7 @@ export interface StatusBarAppearance {
 
 // Cockpit screens that still draw their own always-dark palette. Remove a view
 // from this list once its screen reads colors from the theme.
-const ALWAYS_DARK_VIEWS = new Set(['inspection', 'routes']);
+const ALWAYS_DARK_VIEWS = new Set(['routes']);
 
 /**
  * Status bar and top-inset colors for the active app view. The inset sits on
