@@ -374,10 +374,11 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     // Primary Active Vehicle & Dispatch
     const activeJob = jobs[0] || null;
     const primaryAsset = activeJob?.asset_assignments?.[0] || null;
-    const assetCode =
-        primaryAsset?.asset_code ||
-        (activeJob ? 'Assigned Unit' : 'UNASSIGNED');
+    // The real unit code, or empty. Callbacks and guards only ever see this.
+    const assetCode = primaryAsset?.asset_code || '';
     const effectiveAssetCode = assetCode;
+    // Display text only; never sent anywhere as a unit code.
+    const unitLabel = assetCode || (activeJob ? 'Assigned unit' : 'No unit');
     const isLinked = isUnitLinked !== undefined ? isUnitLinked : isLinkedLocal;
     // No job and no linked unit: the shift has no unit at all.
     const hasNoUnit = !activeJob && !isLinked;
@@ -914,7 +915,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                     isDarkHud && styles.darkDefectUnitCode,
                                 ]}
                             >
-                                {effectiveAssetCode}
+                                {unitLabel}
                             </Text>
                         </Pressable>
                         <Text
@@ -1002,7 +1003,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                     ) : (
                         <View style={styles.unlinkedUnitBlock}>
                             <Pressable
-                                accessibilityLabel={`I'm On Site — Start Unit for ${effectiveAssetCode}`}
+                                accessibilityLabel={`I'm On Site — Start Unit for ${unitLabel}`}
                                 accessibilityRole="button"
                                 onPress={() => setOnSiteConfirmationOpen(true)}
                                 style={({ pressed }) => [
@@ -1019,8 +1020,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                             styles.darkStartUnitBtnText,
                                     ]}
                                 >
-                                    I'm On Site — Start Unit (
-                                    {effectiveAssetCode})
+                                    I'm On Site — Start Unit ({unitLabel})
                                 </Text>
                             </Pressable>
 
@@ -1053,7 +1053,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                     isDarkHud && styles.darkOperatingUnitCode,
                                 ]}
                             >
-                                {effectiveAssetCode}
+                                {unitLabel}
                             </Text>
                         </View>
                         <View style={styles.quickActionsRow}>
@@ -1133,7 +1133,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                 </Text>
                             </Pressable>
                             <Pressable
-                                accessibilityLabel={`Release Unit ${effectiveAssetCode}`}
+                                accessibilityLabel={`Release Unit ${unitLabel}`}
                                 accessibilityRole="button"
                                 onPress={() => {
                                     setIsLinkedLocal(false);
@@ -1205,7 +1205,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                     isDarkHud && styles.darkDvirPendingUnitCode,
                                 ]}
                             >
-                                {effectiveAssetCode}
+                                {unitLabel}
                             </Text>
                         </View>
                         <Text
@@ -1218,7 +1218,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                             operation.
                         </Text>
                         <Pressable
-                            accessibilityLabel={`Start Pre-Trip DVIR Inspection for ${effectiveAssetCode}`}
+                            accessibilityLabel={`Start Pre-Trip DVIR Inspection for ${unitLabel}`}
                             accessibilityRole="button"
                             onPress={() => onOpenDvir?.('pre_trip')}
                             style={({ pressed }) => [
@@ -1489,7 +1489,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
 
             {/* On-Site Confirmation Modal */}
             <OnSiteConfirmationModal
-                assetCode={effectiveAssetCode}
+                assetCode={effectiveAssetCode || undefined}
                 onCancel={() => setOnSiteConfirmationOpen(false)}
                 onConfirm={() => {
                     setOnSiteConfirmationOpen(false);
@@ -1505,7 +1505,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
 
             {/* End Shift Safeguard Intercept Modal */}
             <EndShiftSafeguardModal
-                assetCode={effectiveAssetCode}
+                assetCode={effectiveAssetCode || undefined}
                 onCancel={() => {
                     setEndShiftSafeguardOpen(false);
                     setPendingOffDutyRemarks(undefined);
@@ -1555,7 +1555,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
 
             {/* Pre-Trip Defect Fallback Modal */}
             <PreTripDefectFallbackModal
-                assetCode={effectiveAssetCode}
+                assetCode={effectiveAssetCode || undefined}
                 onClose={() => setDefectFallbackModalOpen(false)}
                 onStandby={() => {
                     setDefectFallbackModalOpen(false);

@@ -2299,13 +2299,8 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
             ? liveJobs[0].asset_assignments[0]
             : null) ||
         null;
-    const resolvedAssetCode =
-        currentAsset?.asset_code ||
-        (activeJob?.asset_assignments && activeJob.asset_assignments.length > 1
-            ? ''
-            : liveJobs.length > 0
-              ? 'Assigned Unit'
-              : 'UNASSIGNED');
+    // The real unit code, or empty when there isn't exactly one unit.
+    const resolvedAssetCode = currentAsset?.asset_code || '';
     const resolvedAssetName =
         currentAsset?.asset_name ||
         (activeJob?.asset_assignments && activeJob.asset_assignments.length > 1
@@ -2317,12 +2312,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     const resolvedJobReference = currentJob?.reference || 'NO-DISPATCH';
     const resolvedClientName = currentJob?.client || 'Client Account';
 
-    // Placeholder labels are for display only; never look up documents by them.
-    const walletAssetCode =
-        resolvedAssetCode === 'UNASSIGNED' ||
-        resolvedAssetCode === 'Assigned Unit'
-            ? ''
-            : resolvedAssetCode;
+    const walletAssetCode = resolvedAssetCode;
 
     const availableAssets = useMemo(() => {
         const map = new Map<string, string>();
