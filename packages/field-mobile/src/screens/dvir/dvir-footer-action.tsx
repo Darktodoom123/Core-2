@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useThemedStyles } from '../../theme';
+import { Icon } from '../../components/common/Icon';
+import { useTheme, useThemedStyles } from '../../theme';
 import type { ThemeColors } from '../../theme';
 import { createDvirSharedStyles } from './dvir-shared-styles';
 
@@ -9,8 +10,8 @@ export interface DvirFooterActionProps {
     hasUnselectedMultiAsset: boolean;
     isSaved: boolean;
     isUnassigned: boolean;
-    /** Something required is missing (readings, confirmation, remarks). */
-    isIncomplete?: boolean;
+    /** What still has to be filled in; Next stays disabled until it's empty. */
+    missing?: string[];
 }
 
 export const DvirFooterAction: React.FC<DvirFooterActionProps> = ({
@@ -18,16 +19,34 @@ export const DvirFooterAction: React.FC<DvirFooterActionProps> = ({
     hasUnselectedMultiAsset,
     isSaved,
     isUnassigned,
-    isIncomplete = false,
+    missing = [],
 }) => {
+    const isIncomplete = missing.length > 0;
     const isBlocked =
         !isSaved && (isUnassigned || hasUnselectedMultiAsset || isIncomplete);
 
+    const { theme } = useTheme();
     const styles = useThemedStyles(createStyles);
     const dvirSharedStyles = useThemedStyles(createDvirSharedStyles);
 
     return (
         <View style={[styles.footerContainer]}>
+            {!isSaved && isIncomplete ? (
+                <View
+                    accessibilityLiveRegion="polite"
+                    style={styles.missing}
+                    testID="dvir-missing"
+                >
+                    <Icon
+                        color={theme.textSecondary}
+                        name="alert-circle"
+                        size={14}
+                    />
+                    <Text style={styles.missingText}>
+                        {`Still needed: ${missing.join(', ')}`}
+                    </Text>
+                </View>
+            ) : null}
             <Pressable
                 accessibilityLabel={isSaved ? 'Saved, back to home' : 'Next'}
                 accessibilityRole="button"
@@ -55,7 +74,19 @@ const createStyles = (theme: ThemeColors) =>
             backgroundColor: theme.surface,
             borderTopColor: theme.border,
             borderTopWidth: 1,
+            gap: 10,
             padding: 16,
+        },
+        missing: {
+            alignItems: 'flex-start',
+            flexDirection: 'row',
+            gap: 6,
+        },
+        missingText: {
+            color: theme.textSecondary,
+            flex: 1,
+            fontSize: 13,
+            lineHeight: 18,
         },
         nextButton: {
             alignItems: 'center',

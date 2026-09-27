@@ -62,6 +62,7 @@ jest.mock('../services/walletService', () => ({
 import { DvirScreen } from '../screens/DvirScreen';
 import { lightThemeColors } from '../theme/tokens';
 import type { DispatchJob } from '../types/index';
+import { takeWalkaroundPhotos } from './dvir-test-photos';
 
 describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
     afterEach(async () => {
@@ -544,6 +545,7 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
                     onSaveInspectionRecord={onSave}
                 />,
             );
+            await takeWalkaroundPhotos(view);
 
             expect(view.getByText('Vehicle Inspection')).toBeTruthy();
             expect(view.getByText('Create DVIR')).toBeTruthy();

@@ -6,6 +6,7 @@ import { FieldApiClient } from '../services/apiClient';
 import { ThemeProvider } from '../theme';
 import type { ThemeColors, ThemeMode } from '../theme';
 import { darkHudThemeColors, lightThemeColors } from '../theme/tokens';
+import { takeWalkaroundPhotos } from './dvir-test-photos';
 
 const MODES = [
     ['light', lightThemeColors],
@@ -50,6 +51,7 @@ describe.each(MODES)('DVIR attestation (%s)', (mode, theme: ThemeColors) => {
     it('will not finish until the operator ticks the confirmation', async () => {
         const onSave = jest.fn();
         const view = await renderDvir(mode, { onSaveInspectionRecord: onSave });
+        await takeWalkaroundPhotos(view);
 
         await fireEvent.changeText(
             view.getByTestId('input-engine-hours'),
@@ -102,6 +104,7 @@ describe.each(MODES)('DVIR attestation (%s)', (mode, theme: ThemeColors) => {
             fetchFn: fetchFn as unknown as typeof fetch,
         });
         const view = await renderDvir(mode, { apiClient });
+        await takeWalkaroundPhotos(view);
 
         await fireEvent.changeText(
             view.getByTestId('input-engine-hours'),

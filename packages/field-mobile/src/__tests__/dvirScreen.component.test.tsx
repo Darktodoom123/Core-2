@@ -6,6 +6,7 @@ import { DvirScreen } from '../screens/DvirScreen';
 import { FieldApiClient } from '../services/apiClient';
 import { ThemeProvider } from '../theme';
 import type { AssetAssignment } from '../types/index';
+import { takeWalkaroundPhotos } from './dvir-test-photos';
 
 /** DVIR readings start empty and must be confirmed; tests that complete one do both. */
 const enterEngineHours = async (view: { getByTestId: (id: string) => any }) => {
@@ -209,6 +210,7 @@ describe('DvirScreen Component & Workflows', () => {
                 onSaveInspectionRecord={onSave}
             />,
         );
+        await takeWalkaroundPhotos(view);
 
         // Update odometer & hours
         await fireEvent.changeText(view.getByTestId('input-odometer'), '42200');
@@ -490,6 +492,7 @@ describe('DvirScreen Component & Workflows', () => {
                 onSaveInspectionRecord={onSave}
             />,
         );
+        await takeWalkaroundPhotos(view);
 
         // Update odometer & hours
         await fireEvent.changeText(view.getByTestId('input-odometer'), '42200');
@@ -612,8 +615,7 @@ describe('DvirScreen Component & Workflows', () => {
             />,
         );
 
-        // Click driver side photo slot
-        await fireEvent.press(view.getByTestId('slot-driver-side'));
+        await takeWalkaroundPhotos(view);
 
         // Complete DVIR
         await enterEngineHours(view);
@@ -622,8 +624,9 @@ describe('DvirScreen Component & Workflows', () => {
         await waitFor(() => {
             expect(capturedBody).not.toBeNull();
             expect(capturedBody.photos).toBeDefined();
-            expect(capturedBody.photos.length).toBe(1);
-            expect(capturedBody.photos[0].angle).toBe('driver_side');
+            expect(
+                capturedBody.photos.map((p: { angle: string }) => p.angle),
+            ).toEqual(['driver_side', 'front', 'passenger_side', 'back']);
             expect(capturedBody.photos[0].base64).toBe(
                 'fake_base64_photo_data',
             );
@@ -865,6 +868,7 @@ describe('DvirScreen Component & Workflows', () => {
                 onPreTripPassed={onPreTripPassed}
             />,
         );
+        await takeWalkaroundPhotos(view);
 
         // Submit default safe inspection
         await enterEngineHours(view);
@@ -892,6 +896,7 @@ describe('DvirScreen Component & Workflows', () => {
                 onPreTripPassed={onPreTripPassed}
             />,
         );
+        await takeWalkaroundPhotos(view);
 
         // First tap: signs & submits inspection
         await enterEngineHours(view);
@@ -913,6 +918,7 @@ describe('DvirScreen Component & Workflows', () => {
                 onPreTripPassed={onPreTripPassed}
             />,
         );
+        await takeWalkaroundPhotos(view);
 
         await enterEngineHours(view);
         await fireEvent.press(view.getByTestId('complete-dvir-button'));
@@ -970,7 +976,9 @@ describe('DvirScreen Component & Workflows', () => {
 
         // Banner should disappear and submission should succeed
         expect(view.queryByTestId('dvir-no-asset-selected-banner')).toBeNull();
-        // Switching unit clears readings and the confirmation; enter them for this unit.
+        // Switching unit clears readings, photos and the confirmation;
+        // take them again for this unit.
+        await takeWalkaroundPhotos(view);
         await enterEngineHours(view);
         await fireEvent.press(view.getByTestId('complete-dvir-button'));
         expect(onPreTripPassed).toHaveBeenCalledWith(
@@ -1015,6 +1023,7 @@ describe('DvirScreen Component & Workflows', () => {
                 onPreTripPassed={onPreTripPassed}
             />,
         );
+        await takeWalkaroundPhotos(view);
 
         expect(view.queryByTestId('dvir-unassigned-banner')).toBeNull();
         expect(view.getByText('Inspection Checklist')).toBeTruthy();

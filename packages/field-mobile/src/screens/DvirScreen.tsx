@@ -8,6 +8,7 @@ import {
     DefectSheet,
     DvirWalkaroundPhotos,
     findDefects,
+    WALKAROUND_ANGLES,
 } from '../components/inspection';
 import type {
     WalkaroundAngle,
@@ -38,6 +39,7 @@ import { DvirHistoryToggle } from './dvir/dvir-history-toggle';
 import { DvirInspectionTypeSection } from './dvir/dvir-inspection-type-section';
 import { DvirLockoutWarning } from './dvir/dvir-lockout-warning';
 import { DvirMetersRow } from './dvir/dvir-meters-row';
+import { dvirMissingItems } from './dvir/dvir-missing';
 import { DvirNoticeBanner } from './dvir/dvir-notice-banner';
 import { DvirParkedSecuredChecklist } from './dvir/dvir-parked-secured-checklist';
 import { checkReadings } from './dvir/dvir-readings';
@@ -279,8 +281,8 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
         ? failedPostTripChecks(postTripChecks, postTripAnswers)
         : [];
     const postTripUnanswered = isPostTrip
-        ? unansweredPostTripChecks(postTripChecks, postTripAnswers).length > 0
-        : false;
+        ? unansweredPostTripChecks(postTripChecks, postTripAnswers).length
+        : 0;
     // A "no" on a shutdown check is a reported defect, as on the server.
     const isUnsafe =
         safetyStatus === 'unsafe' ||
@@ -289,6 +291,20 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     const needsDefectPhotos = isUnsafe;
     // A reported problem needs words: where it is and how bad it is.
     const remarksMissing = needsDefectPhotos && remarks.trim() === '';
+    // A clean pre-trip needs all four walkaround photos. Reporting a defect
+    // is never blocked by a missing photo.
+    const walkaroundRequired = mode === 'pre_trip' && !isUnsafe;
+    const walkaroundMissing = walkaroundRequired
+        ? WALKAROUND_ANGLES.filter((angle) => !walkaroundPhotos[angle.key])
+              .length
+        : 0;
+    const missing = dvirMissingItems({
+        readingsValid: readings.isValid,
+        photosMissing: walkaroundMissing,
+        shutdownChecksUnanswered: postTripUnanswered,
+        remarksMissing,
+        attested,
+    });
 
     const handleCapturePhoto = (
         angle: WalkaroundAngle,
@@ -433,14 +449,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
             return;
         }
 
-        if (
-            isUnassigned ||
-            hasUnselectedMultiAsset ||
-            !readings.isValid ||
-            !attested ||
-            remarksMissing ||
-            postTripUnanswered
-        ) {
+        if (isUnassigned || hasUnselectedMultiAsset || missing.length > 0) {
             return;
         }
 
@@ -600,6 +609,9 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                             onCapturePhoto={handleCapturePhoto}
                             onRemovePhoto={handleRemovePhoto}
                             photos={walkaroundPhotos}
+                            requirement={
+                                walkaroundRequired ? 'required' : 'optional'
+                            }
                             title="Take walkaround photos"
                         />
                         <DvirCabPhotoCard
@@ -695,12 +707,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                     hasUnselectedMultiAsset={hasUnselectedMultiAsset}
                     isSaved={isSaved}
                     isUnassigned={isUnassigned}
-                    isIncomplete={
-                        !readings.isValid ||
-                        !attested ||
-                        remarksMissing ||
-                        postTripUnanswered
-                    }
+                    missing={missing}
                 />
             ) : null}
             {/* Defects Modal (Screenshot 3) */}

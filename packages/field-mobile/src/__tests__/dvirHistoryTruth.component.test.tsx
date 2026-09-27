@@ -7,6 +7,7 @@ import {
 import React from 'react';
 import { DvirScreen } from '../screens/DvirScreen';
 import { FieldApiClient } from '../services/apiClient';
+import { takeWalkaroundPhotos } from './dvir-test-photos';
 
 const SAMPLE_IDS = [
     'DVIR-2026-0831-01',
@@ -110,6 +111,7 @@ describe('DVIR history only shows real inspections', () => {
                 inspectorName="BJ Bello"
             />,
         );
+        await takeWalkaroundPhotos(view);
 
         await fireEvent.changeText(view.getByTestId('input-odometer'), '42200');
         await fireEvent.changeText(

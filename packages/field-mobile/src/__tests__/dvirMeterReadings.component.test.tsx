@@ -2,6 +2,7 @@ import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 import { DvirScreen } from '../screens/DvirScreen';
 import type { AssetAssignment } from '../types/index';
+import { takeWalkaroundPhotos } from './dvir-test-photos';
 
 const crane: AssetAssignment = {
     id: 1,
@@ -84,6 +85,7 @@ describe('DVIR meter readings are the operator’s, never pre-filled', () => {
     it('saves exactly what was entered: a blank odometer stays blank and no remarks are invented', async () => {
         const onSave = jest.fn();
         const view = await renderDvir({ onSaveInspectionRecord: onSave });
+        await takeWalkaroundPhotos(view);
 
         await fireEvent.changeText(
             view.getByTestId('input-engine-hours'),

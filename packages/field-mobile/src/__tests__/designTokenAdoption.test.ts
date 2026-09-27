@@ -23,6 +23,8 @@ const MIGRATED = [
     ...fs
         .readdirSync(path.join(SRC, 'components', 'inspection', 'defects'))
         .map((file) => `components/inspection/defects/${file}`),
+    'components/inspection/DvirWalkaroundPhotos.tsx',
+    'components/inspection/use-photo-capture.ts',
     'components/layout/field-header.tsx',
     'components/layout/profile-summary.tsx',
     'components/layout/sync-status-pill.tsx',
@@ -35,6 +37,11 @@ const MIGRATED = [
     ...fs
         .readdirSync(path.join(SRC, 'components', 'sheets', 'relief-handover'))
         .map((file) => `components/sheets/relief-handover/${file}`),
+    ...fs
+        .readdirSync(
+            path.join(SRC, 'components', 'sheets', 'replacement-request'),
+        )
+        .map((file) => `components/sheets/replacement-request/${file}`),
     'components/sheets/ReportDelayModal.tsx',
     ...fs
         .readdirSync(path.join(SRC, 'components', 'sheets', 'report-delay'))

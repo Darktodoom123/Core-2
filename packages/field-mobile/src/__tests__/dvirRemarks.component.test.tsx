@@ -1,6 +1,7 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 import { DvirScreen } from '../screens/DvirScreen';
+import { takeWalkaroundPhotos } from './dvir-test-photos';
 
 const renderReady = async (onSave = jest.fn()) => {
     const view = await render(
@@ -14,6 +15,7 @@ const renderReady = async (onSave = jest.fn()) => {
 
     await fireEvent.changeText(view.getByTestId('input-engine-hours'), '1855');
     await fireEvent.press(view.getByTestId('dvir-attestation'));
+    await takeWalkaroundPhotos(view);
 
     return view;
 };
