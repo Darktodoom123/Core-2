@@ -116,6 +116,7 @@ export default [
     {
         ignores: [
             '.claude/**',
+            '.ai-reports/**',
             'vendor',
             'third_party/**',
             'node_modules',

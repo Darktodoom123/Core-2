@@ -53,6 +53,8 @@ const assetCandidate = {
     id: 12,
     code: 'TR-104',
     name: 'Harbor truck',
+    subtype: 'low bed',
+    capacity: '25 t',
     assignment_type: 'truck',
     assignment_label: 'Truck',
     eligible: true,
@@ -102,6 +104,7 @@ describe('resource picker', () => {
         );
 
         fireEvent.click(screen.getByRole('tab', { name: /Assets/ }));
+        expect(screen.getByText('low bed · 25 t capacity')).toBeInTheDocument();
         fireEvent.click(screen.getByLabelText(/Select TR-104 Harbor truck/));
         fireEvent.click(screen.getByRole('tab', { name: /Employees/ }));
         fireEvent.click(screen.getByLabelText(/Select Jordan Cruz as Driver/));
@@ -114,6 +117,30 @@ describe('resource picker', () => {
                 name: 'Assign selected resources',
             }),
         ).toHaveAttribute('form', 'assignment-selection-form');
+    });
+
+    it('offers driver licence evaluation from the employee picker', () => {
+        render(
+            <ResourcePicker
+                open
+                mode="initial"
+                job={job}
+                personnelCandidates={[]}
+                assetCandidates={[]}
+                selectedPersonnelIds={[]}
+                selectedAssetIds={[]}
+                canSelect
+                onTogglePersonnel={vi.fn()}
+                onToggleAsset={vi.fn()}
+                onClose={vi.fn()}
+                onConfirm={vi.fn()}
+            />,
+        );
+
+        fireEvent.click(
+            screen.getByRole('button', { name: 'Check licensed drivers' }),
+        );
+        expect(screen.getByLabelText('Filter by role')).toHaveValue('driver');
     });
 
     it('requires one compatible replacement and submits it atomically', () => {
@@ -236,6 +263,43 @@ describe('resource picker', () => {
         expect(
             screen.getByText('Results include blocked resources.'),
         ).toBeInTheDocument();
+    });
+
+    it('shows a mobile crane as a compatible replacement for a crane assignment', () => {
+        render(
+            <ResourcePicker
+                open
+                mode="replacement"
+                job={job}
+                target={{
+                    kind: 'asset',
+                    id: 91,
+                    name: 'Current crane',
+                    type: 'crane',
+                }}
+                personnelCandidates={[]}
+                assetCandidates={[
+                    {
+                        ...assetCandidate,
+                        code: 'MC-104',
+                        assignment_type: 'mobile_crane',
+                        assignment_label: 'Mobile Crane',
+                    },
+                ]}
+                selectedPersonnelIds={[]}
+                selectedAssetIds={[]}
+                canSelect
+                onTogglePersonnel={vi.fn()}
+                onToggleAsset={vi.fn()}
+                onClose={vi.fn()}
+                onConfirm={vi.fn()}
+            />,
+        );
+
+        expect(screen.getByText('1 result')).toBeInTheDocument();
+        expect(
+            screen.getByLabelText(/Select MC-104 Harbor truck/),
+        ).toBeEnabled();
     });
 
     it('normalizes legacy operator assignments to crane operator candidates', () => {

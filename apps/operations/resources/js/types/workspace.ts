@@ -96,6 +96,7 @@ export interface DispatchAssetAssignmentViewModel {
     type: string;
     kind?: string;
     subtype?: string | null;
+    capacity?: string | null;
     site_latitude?: number | null;
     site_longitude?: number | null;
     jib_length_meters?: number | null;
@@ -1357,7 +1358,15 @@ export interface AssetCandidateViewModel {
     id: number;
     code: string;
     name: string;
-    assignment_type: 'truck' | 'crane' | 'mobile_crane' | 'equipment';
+    subtype: string | null;
+    capacity: string | null;
+    assignment_type:
+        | 'truck'
+        | 'vehicle'
+        | 'crane'
+        | 'mobile_crane'
+        | 'tower_crane'
+        | 'equipment';
     assignment_label: string;
     eligible: boolean;
     reasons: string[];

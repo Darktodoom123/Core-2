@@ -6,6 +6,7 @@ use App\Modules\Assignment\Data\CandidatePage;
 use App\Modules\Assignment\Http\Requests\ListDispatchCandidatesRequest;
 use App\Modules\Assignment\Services\DispatchResourceEligibility;
 use App\Modules\Dispatch\Models\DispatchJob;
+use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -20,6 +21,10 @@ final class PersonnelCandidateQuery
             return CandidatePage::error($job, 'Personnel candidates were not requested.');
         }
 
+        if ($filters->eligibleOnly()) {
+            return $this->eligiblePage($job, $filters);
+        }
+
         $results = $this->query($job, $filters)->paginate(
             perPage: $filters->perPage(),
             columns: ['users.id', 'users.name', 'users.is_active', 'users.suspended_at'],
@@ -28,20 +33,7 @@ final class PersonnelCandidateQuery
         );
 
         $data = collect($results->items())
-            ->map(function (User $user) use ($job): ?array {
-                $assignmentType = $this->eligibility->personnelAssignmentType($user);
-                if ($assignmentType === null) {
-                    return null;
-                }
-
-                return [
-                    'id' => (int) $user->getKey(),
-                    'name' => $user->name,
-                    'assignment_type' => $assignmentType,
-                    'assignment_label' => $this->eligibility->personnelAssignmentLabel($assignmentType),
-                    ...$this->eligibility->personnel($user, $assignmentType, $job),
-                ];
-            })
+            ->map(fn (User $user): ?array => $this->assess($user, $job, $filters))
             ->filter()
             ->sortBy([
                 ['eligible', 'desc'],
@@ -51,13 +43,46 @@ final class PersonnelCandidateQuery
             ->values()
             ->all();
 
-        if ($filters->eligibleOnly()) {
-            $data = array_values(array_filter($data, static fn (array $candidate): bool => $candidate['eligible'] === true));
-        }
-
         $data = array_values($data);
 
         return CandidatePage::fromPaginator($results, $job, $data);
+    }
+
+    /** @return CandidatePage<array<string, mixed>> */
+    private function eligiblePage(DispatchJob $job, ListDispatchCandidatesRequest $filters): CandidatePage
+    {
+        $eligible = [];
+        $this->query($job, $filters)->reorder('users.id')->chunkById(100, function ($users) use ($job, $filters, &$eligible): void {
+            foreach ($users as $user) {
+                $candidate = $this->assess($user, $job, $filters);
+                if ($candidate !== null && $candidate['eligible']) {
+                    $eligible[] = $candidate;
+                }
+            }
+        }, 'users.id', 'id');
+
+        usort($eligible, static fn (array $left, array $right): int => [$left['name'], $left['id']] <=> [$right['name'], $right['id']]);
+
+        return CandidatePage::fromEvaluated($eligible, $job, $filters->perPage(), $filters->page());
+    }
+
+    /** @return array<string, mixed>|null */
+    private function assess(User $user, DispatchJob $job, ListDispatchCandidatesRequest $filters): ?array
+    {
+        $assignmentType = $filters->type() === 'driver'
+            ? 'driver'
+            : $this->eligibility->personnelAssignmentType($user);
+        if ($assignmentType === null) {
+            return null;
+        }
+
+        return [
+            'id' => (int) $user->getKey(),
+            'name' => $user->name,
+            'assignment_type' => $assignmentType,
+            'assignment_label' => $this->eligibility->personnelAssignmentLabel($assignmentType),
+            ...$this->eligibility->personnel($user, $assignmentType, $job),
+        ];
     }
 
     /** @return Builder<User> */
@@ -73,7 +98,10 @@ final class PersonnelCandidateQuery
             ->whereNull('users.suspended_at')
             ->whereHas('roles', function (Builder $query) use ($roles, $filters): void {
                 $query->whereIn('name', $roles)
-                    ->when($filters->type() !== null, fn (Builder $role): Builder => $role->where('name', $filters->type()));
+                    ->when($filters->type() !== null, fn (Builder $role): Builder => $role->where(
+                        'name',
+                        $filters->type() === 'driver' ? RoleName::CraneOperator->value : $filters->type(),
+                    ));
             })
             ->with([
                 'roles:id,name',

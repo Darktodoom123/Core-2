@@ -957,6 +957,50 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         expect(results.violations).toEqual([]);
     });
 
+    test('dispatch candidate filters expose driver, vehicle, and tower crane paths', async ({
+        page,
+    }) => {
+        const fixtures = browserFixtures();
+
+        await signIn(page, fixtures.users.dispatcher, fixtures.password);
+        await page.goto(`/operations/dispatch-jobs/${fixtures.job_id}`);
+        await page
+            .getByRole('button', {
+                name: /Next: Select resources|2.*Assign resources/i,
+            })
+            .first()
+            .click();
+
+        await expect(
+            page
+                .getByRole('button', { name: 'Check licensed drivers' })
+                .first(),
+        ).toBeVisible();
+        await page
+            .getByRole('button', { name: 'Check licensed drivers' })
+            .first()
+            .click();
+        await expect(page.getByLabel('Filter personnel type')).toHaveValue(
+            'driver',
+        );
+        await expect(
+            page.getByRole('group', { name: 'Drivers' }),
+        ).toBeVisible();
+
+        const assetFilter = page.getByLabel('Filter asset type');
+        await assetFilter.selectOption('vehicle');
+        await expect(
+            page.getByRole('group', { name: 'Vehicles' }),
+        ).toBeVisible();
+        await assetFilter.selectOption('tower_crane');
+        await expect(
+            page.getByRole('group', { name: 'Tower cranes' }),
+        ).toBeVisible();
+        await expect(
+            page.getByText(/Show eligible only \(.*on this page\)/).first(),
+        ).toBeVisible();
+    });
+
     test('dispatch details hand off to assignment setup with a return path', async ({
         page,
     }) => {

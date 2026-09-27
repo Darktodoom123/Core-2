@@ -11,7 +11,7 @@ final class ListDispatchCandidatesRequest extends FormRequest
     private const PERSONNEL_TYPES = ['driver', 'crane_operator', 'rigger'];
 
     /** @var list<string> */
-    private const ASSET_TYPES = ['truck', 'crane', 'mobile_crane', 'equipment'];
+    private const ASSET_TYPES = ['truck', 'vehicle', 'crane', 'mobile_crane', 'tower_crane', 'equipment'];
 
     public function authorize(): bool
     {

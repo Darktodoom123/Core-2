@@ -535,6 +535,18 @@ export function CurrentAssignments({
                                                 {assignment.name ||
                                                     humanize(assignment.type)}
                                             </p>
+                                            {(assignment.subtype ||
+                                                assignment.capacity) && (
+                                                <p className="mt-0.5 text-xs text-ink-soft">
+                                                    {[
+                                                        assignment.subtype,
+                                                        assignment.capacity &&
+                                                            `${assignment.capacity} capacity`,
+                                                    ]
+                                                        .filter(Boolean)
+                                                        .join(' · ')}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                     {capabilities?.reassign_resources && (

@@ -605,7 +605,10 @@ export default function DispatchDetail({
                                                                         Assets
                                                                     </h3>
                                                                     <p className="mt-0.5 text-xs text-ink-soft">
-                                                                        Trucks,
+                                                                        Fleet
+                                                                        vehicles,
+                                                                        cranes,
+                                                                        tower
                                                                         cranes,
                                                                         and
                                                                         equipment

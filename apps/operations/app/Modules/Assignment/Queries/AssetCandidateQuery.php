@@ -23,9 +23,13 @@ final class AssetCandidateQuery
             return CandidatePage::error($job, 'Asset candidates were not requested.');
         }
 
+        if ($filters->eligibleOnly()) {
+            return $this->eligiblePage($job, $filters);
+        }
+
         $results = $this->query($filters)->paginate(
             perPage: $filters->perPage(),
-            columns: ['operational_assets.id', 'operational_assets.code', 'operational_assets.name', 'operational_assets.kind', 'operational_assets.status'],
+            columns: ['operational_assets.id', 'operational_assets.code', 'operational_assets.name', 'operational_assets.kind', 'operational_assets.subtype', 'operational_assets.rated_capacity', 'operational_assets.capacity_unit', 'operational_assets.status'],
             pageName: 'asset_page',
             page: $filters->page(),
         );
@@ -43,13 +47,30 @@ final class AssetCandidateQuery
             ->values()
             ->all();
 
-        if ($filters->eligibleOnly()) {
-            $data = array_values(array_filter($data, static fn (array $candidate): bool => $candidate['eligible'] === true));
-        }
-
         $data = array_values($data);
 
         return CandidatePage::fromPaginator($results, $job, $data);
+    }
+
+    /** @return CandidatePage<array<string, mixed>> */
+    private function eligiblePage(DispatchJob $job, ListDispatchCandidatesRequest $filters): CandidatePage
+    {
+        $eligible = [];
+        $this->query($filters)->reorder('operational_assets.id')->chunkById(100, function ($assets) use ($job, &$eligible): void {
+            $ids = array_values($assets->pluck('id')->map(static fn (mixed $id): int => (int) $id)->all());
+            $evidence = $this->evidence($ids, $job);
+
+            foreach ($assets as $asset) {
+                $candidate = $this->assess($asset, $job, $evidence);
+                if ($candidate['eligible']) {
+                    $eligible[] = $candidate;
+                }
+            }
+        }, 'operational_assets.id', 'id');
+
+        usort($eligible, static fn (array $left, array $right): int => [$left['code'], $left['id']] <=> [$right['code'], $right['id']]);
+
+        return CandidatePage::fromEvaluated($eligible, $job, $filters->perPage(), $filters->page());
     }
 
     /**
@@ -136,7 +157,7 @@ final class AssetCandidateQuery
     private function query(ListDispatchCandidatesRequest $filters): Builder
     {
         return OperationalAsset::query()
-            ->select(['operational_assets.id', 'operational_assets.code', 'operational_assets.name', 'operational_assets.kind', 'operational_assets.status'])
+            ->select(['operational_assets.id', 'operational_assets.code', 'operational_assets.name', 'operational_assets.kind', 'operational_assets.subtype', 'operational_assets.rated_capacity', 'operational_assets.capacity_unit', 'operational_assets.status'])
             ->whereIn('operational_assets.kind', ListDispatchCandidatesRequest::assetTypes())
             ->when($filters->type() !== null, function (Builder $query) use ($filters): void {
                 if ($filters->type() === 'crane') {
@@ -158,7 +179,7 @@ final class AssetCandidateQuery
 
     /**
      * @param  array<int, array{maintenance: int, inspections: Collection<int, Inspection>, dispatch: Collection<int, DispatchAssetAssignment>, rentals: Collection<int, object>}>  $evidence
-     * @return array{id: int, code: string, name: string, assignment_type: string, assignment_label: string, eligible: bool, reasons: list<string>, readiness: array{value: string, label: string}, blocking_maintenance_count: int, schedule_conflicts: list<array{id: int, reference: string, scheduled_start: string|null, scheduled_end: string|null}>, already_assigned: bool}
+     * @return array{id: int, code: string, name: string, subtype: string|null, capacity: string|null, assignment_type: string, assignment_label: string, eligible: bool, reasons: list<string>, readiness: array{value: string, label: string}, blocking_maintenance_count: int, schedule_conflicts: list<array{id: int, reference: string, scheduled_start: string|null, scheduled_end: string|null}>, already_assigned: bool}
      */
     public function assess(OperationalAsset $asset, DispatchJob $job, array $evidence): array
     {
@@ -207,11 +228,17 @@ final class AssetCandidateQuery
             'id' => (int) $asset->getKey(),
             'code' => $asset->code,
             'name' => $asset->name,
+            'subtype' => $asset->subtype,
+            'capacity' => $asset->rated_capacity !== null
+                ? trim(((float) $asset->rated_capacity).' '.$asset->capacity_unit)
+                : null,
             'assignment_type' => $asset->kind,
             'assignment_label' => match ($asset->kind) {
                 'truck' => 'Truck',
+                'vehicle' => 'Vehicle',
                 'crane' => 'Crane',
                 'mobile_crane' => 'Mobile Crane',
+                'tower_crane' => 'Tower Crane',
                 'equipment' => 'Equipment',
                 default => 'Asset',
             },

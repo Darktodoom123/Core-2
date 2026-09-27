@@ -66,7 +66,7 @@ it('shows server-authoritative personnel eligibility, credentials, asset readine
 
     $job = assignmentWorkspaceJob($dispatcher, 'CON-5101');
     $conflictingJob = assignmentWorkspaceJob($dispatcher, 'CON-5100');
-    $readyTruck = OperationalAsset::query()->create(['code' => 'TR-5101', 'name' => 'Ready Truck', 'kind' => 'truck', 'status' => AssetStatus::ReadyForService]);
+    $readyTruck = OperationalAsset::query()->create(['code' => 'TR-5101', 'name' => 'Ready Truck', 'kind' => 'truck', 'subtype' => 'low bed', 'rated_capacity' => 25, 'capacity_unit' => 't', 'status' => AssetStatus::ReadyForService]);
     $blockedCrane = OperationalAsset::query()->create(['code' => 'CR-5101', 'name' => 'Blocked Crane', 'kind' => 'crane', 'status' => AssetStatus::Available]);
     $blockedCrane->maintenanceWorkOrders()->create([
         'technician_id' => $unavailableDriver->id,
@@ -107,6 +107,8 @@ it('shows server-authoritative personnel eligibility, credentials, asset readine
                 ->where('personnel_candidates.data.2.eligible', false)
                 ->has('asset_candidates.data', 3)
                 ->where('asset_candidates.data.0.code', 'TR-5101')
+                ->where('asset_candidates.data.0.subtype', 'low bed')
+                ->where('asset_candidates.data.0.capacity', '25 t')
                 ->where('asset_candidates.data.0.readiness.value', 'ready_for_service')
                 ->where('asset_candidates.data.0.eligible', true)
                 ->where('asset_candidates.data.1.code', 'CR-5101')
@@ -145,4 +147,40 @@ it('does not expose the assignment candidate pool to assigned field personnel', 
     $this->actingAs($otherDriver)
         ->get("/operations/dispatch-jobs/{$job->id}")
         ->assertNotFound();
+});
+
+it('shows the assigned asset subtype and recorded jib length from the equipment catalog', function () {
+    $dispatcher = assignmentWorkspaceUser(RoleName::OperationsManager, 'Dispatcher');
+    $job = assignmentWorkspaceJob($dispatcher, 'CON-5301');
+    $crane = OperationalAsset::query()->create([
+        'code' => 'CR-5301',
+        'name' => 'Tower Crane',
+        'kind' => 'crane',
+        'subtype' => 'tower crane',
+        'rated_capacity' => 50,
+        'capacity_unit' => 't',
+        'specifications' => ['jib_length_meters' => 72],
+        'status' => AssetStatus::Available,
+    ]);
+    $job->assetAssignments()->create([
+        'operational_asset_id' => $crane->id,
+        'assignment_type' => 'crane',
+        'assigned_by' => $dispatcher->id,
+        'active_from' => $job->scheduled_start,
+    ]);
+
+    $this->actingAs($dispatcher)
+        ->get("/operations/dispatch-jobs/{$job->id}")
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('dispatch-detail')
+            ->where('job.asset_assignments.0.subtype', 'tower crane')
+            ->where('job.asset_assignments.0.capacity', '50 t')
+            ->where('job.asset_assignments.0.jib_length_meters', 72));
+
+    $this->getJson('/operations/dispatch-jobs')
+        ->assertOk()
+        ->assertJsonPath('data.data.0.asset_assignments.0.subtype', 'tower crane')
+        ->assertJsonPath('data.data.0.asset_assignments.0.capacity', '50 t')
+        ->assertJsonPath('data.data.0.asset_assignments.0.jib_length_meters', 72);
 });

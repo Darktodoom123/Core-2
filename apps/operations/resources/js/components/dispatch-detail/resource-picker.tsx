@@ -53,6 +53,8 @@ export function isCompatibleCandidate(
 
     return (
         candidate.assignment_type === targetType ||
+        (targetType === 'crane' &&
+            candidate.assignment_type === 'mobile_crane') ||
         (targetType === 'operator' &&
             candidate.assignment_type === 'crane_operator')
     );
@@ -101,8 +103,10 @@ const assetTypes: Array<{
     label: string;
 }> = [
     { value: 'truck', label: 'Trucks' },
+    { value: 'vehicle', label: 'Vehicles' },
     { value: 'crane', label: 'Cranes' },
     { value: 'mobile_crane', label: 'Mobile cranes' },
+    { value: 'tower_crane', label: 'Tower cranes' },
     { value: 'equipment', label: 'Equipment' },
 ];
 
@@ -256,7 +260,10 @@ export function ResourcePicker({
         return candidates.filter(
             (candidate) =>
                 (resourceTypeFilter === 'all' ||
-                    candidate.assignment_type === resourceTypeFilter) &&
+                    candidate.assignment_type === resourceTypeFilter ||
+                    (resourceTab === 'assets' &&
+                        resourceTypeFilter === 'crane' &&
+                        candidate.assignment_type === 'mobile_crane')) &&
                 (!eligibleOnly || candidate.eligible),
         );
     }, [
@@ -610,6 +617,24 @@ export function ResourcePicker({
                         </div>
                     </div>
 
+                    {mode === 'initial' &&
+                        resourceTab === 'personnel' &&
+                        resourceTypeFilter === 'all' && (
+                            <p className="text-xs text-ink-soft">
+                                Need a driver?{' '}
+                                <button
+                                    type="button"
+                                    className="font-semibold text-brand-strong underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-brand-strong"
+                                    onClick={() => {
+                                        setTypeFilter('driver');
+                                        setCurrentPage(1);
+                                    }}
+                                >
+                                    Check licensed drivers
+                                </button>{' '}
+                                to evaluate driver licences for this schedule.
+                            </p>
+                        )}
                     {mode === 'replacement' && (
                         <div className="flex flex-none flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-soft">
                             <span className="font-semibold text-ink">
@@ -1266,6 +1291,17 @@ function AssetPickerRow({
                                 {candidate.assignment_label} ·{' '}
                                 {candidate.readiness.label}
                             </p>
+                            {(candidate.subtype || candidate.capacity) && (
+                                <p className="mt-0.5 text-xs break-words text-ink-soft">
+                                    {[
+                                        candidate.subtype,
+                                        candidate.capacity &&
+                                            `${candidate.capacity} capacity`,
+                                    ]
+                                        .filter(Boolean)
+                                        .join(' · ')}
+                                </p>
+                            )}
                         </div>
                         <div className="shrink-0 pt-0.5">
                             <CandidateStatus

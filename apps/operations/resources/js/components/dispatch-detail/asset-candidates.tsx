@@ -52,8 +52,10 @@ export function AssetCandidates({
         label: string;
     }> = [
         { type: 'truck', label: 'Trucks' },
+        { type: 'vehicle', label: 'Vehicles' },
         { type: 'crane', label: 'Cranes' },
         { type: 'mobile_crane', label: 'Mobile cranes' },
+        { type: 'tower_crane', label: 'Tower cranes' },
         { type: 'equipment', label: 'Equipment' },
     ];
 
@@ -149,7 +151,9 @@ export function AssetCandidates({
                     >
                         <option value="all">All types</option>
                         <option value="truck">Trucks</option>
+                        <option value="vehicle">Vehicles</option>
                         <option value="crane">Cranes</option>
+                        <option value="tower_crane">Tower cranes</option>
                         <option value="equipment">Equipment</option>
                     </select>
                     <label className="inline-flex cursor-pointer items-center gap-2 font-medium text-ink-soft select-none hover:text-ink">
@@ -163,7 +167,7 @@ export function AssetCandidates({
                         />
                         <span>
                             Show eligible only ({eligibleCount}/
-                            {candidates.length})
+                            {candidates.length} on this page)
                         </span>
                     </label>
                 </div>
@@ -189,18 +193,21 @@ export function AssetCandidates({
                                     candidate.assignment_type === typeFilter) &&
                                 candidate.assignment_type === group.type,
                         );
-                        const catalogAccess =
-                            group.type === 'truck'
-                                ? assetCatalogAccess.fleet
-                                : assetCatalogAccess.equipment;
-                        const catalogHref =
-                            group.type === 'truck'
-                                ? '/operations/fleet/assets'
-                                : '/operations/equipment/assets';
-                        const catalogLabel =
-                            group.type === 'truck'
-                                ? 'Open fleet asset catalog'
-                                : 'Open equipment catalog';
+                        const catalogAccess = ['truck', 'vehicle'].includes(
+                            group.type,
+                        )
+                            ? assetCatalogAccess.fleet
+                            : assetCatalogAccess.equipment;
+                        const catalogHref = ['truck', 'vehicle'].includes(
+                            group.type,
+                        )
+                            ? '/operations/fleet/assets'
+                            : '/operations/equipment/assets';
+                        const catalogLabel = ['truck', 'vehicle'].includes(
+                            group.type,
+                        )
+                            ? 'Open fleet asset catalog'
+                            : 'Open equipment catalog';
 
                         const filtered = groupCandidates.filter((c) => {
                             if (showEligibleOnly && !c.eligible) {
@@ -240,7 +247,8 @@ export function AssetCandidates({
                                                         resource.eligible,
                                                 ).length
                                             }{' '}
-                                            eligible of {groupCandidates.length}
+                                            eligible of {groupCandidates.length}{' '}
+                                            on this page
                                         </p>
                                     </div>
                                     <div className="flex items-center gap-2">
@@ -306,7 +314,7 @@ export function AssetCandidates({
                     {page.error}
                 </p>
             )}
-            {page && page.pagination.last_page > 1 && (
+            {page && (
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-surface px-3 py-2 text-xs text-ink-soft">
                     <p aria-live="polite">
                         Showing {page.pagination.from ?? 0}–
@@ -314,35 +322,39 @@ export function AssetCandidates({
                         assets · evaluated{' '}
                         {new Date(page.evaluated_at).toLocaleTimeString()}
                     </p>
-                    <div className="flex gap-2">
-                        <button
-                            type="button"
-                            className="min-h-9 rounded-md border border-line px-3 font-medium disabled:opacity-50"
-                            disabled={currentPage <= 1}
-                            onClick={() =>
-                                setCurrentPage((current) =>
-                                    Math.max(1, current - 1),
-                                )
-                            }
-                        >
-                            Previous
-                        </button>
-                        <button
-                            type="button"
-                            className="min-h-9 rounded-md border border-line px-3 font-medium disabled:opacity-50"
-                            disabled={currentPage >= page.pagination.last_page}
-                            onClick={() =>
-                                setCurrentPage((current) =>
-                                    Math.min(
-                                        page.pagination.last_page,
-                                        current + 1,
-                                    ),
-                                )
-                            }
-                        >
-                            Next
-                        </button>
-                    </div>
+                    {page.pagination.last_page > 1 && (
+                        <div className="flex gap-2">
+                            <button
+                                type="button"
+                                className="min-h-9 rounded-md border border-line px-3 font-medium disabled:opacity-50"
+                                disabled={currentPage <= 1}
+                                onClick={() =>
+                                    setCurrentPage((current) =>
+                                        Math.max(1, current - 1),
+                                    )
+                                }
+                            >
+                                Previous
+                            </button>
+                            <button
+                                type="button"
+                                className="min-h-9 rounded-md border border-line px-3 font-medium disabled:opacity-50"
+                                disabled={
+                                    currentPage >= page.pagination.last_page
+                                }
+                                onClick={() =>
+                                    setCurrentPage((current) =>
+                                        Math.min(
+                                            page.pagination.last_page,
+                                            current + 1,
+                                        ),
+                                    )
+                                }
+                            >
+                                Next
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
         </div>
@@ -366,7 +378,8 @@ export function AssetCandidate({
         <li
             className={cn(
                 'p-4 transition-colors',
-                selected && 'bg-brand-soft/50 ring-1 ring-brand-strong/25 ring-inset',
+                selected &&
+                    'bg-brand-soft/50 ring-1 ring-brand-strong/25 ring-inset',
                 !candidate.eligible && 'bg-surface-subtle/50',
             )}
         >
@@ -402,6 +415,17 @@ export function AssetCandidate({
                             <p className="mt-0.5 text-xs text-ink-soft">
                                 {candidate.name}
                             </p>
+                            {(candidate.subtype || candidate.capacity) && (
+                                <p className="mt-0.5 text-xs text-ink-soft">
+                                    {[
+                                        candidate.subtype,
+                                        candidate.capacity &&
+                                            `${candidate.capacity} capacity`,
+                                    ]
+                                        .filter(Boolean)
+                                        .join(' · ')}
+                                </p>
+                            )}
                         </div>
                         <EligibilityBadge eligible={candidate.eligible} />
                     </div>

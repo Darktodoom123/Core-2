@@ -112,6 +112,35 @@ it('keeps the candidate page query count fixed as the asset pool grows', functio
         ->and($largeCount)->toBeLessThanOrEqual(8);
 });
 
+it('batches eligible-only evaluation across asset chunks', function (): void {
+    $dispatcher = candidatePerformanceDispatcher();
+    $job = candidatePerformanceJob($dispatcher, 'CAND-1005');
+
+    foreach (range(1, 201) as $index) {
+        OperationalAsset::query()->create([
+            'code' => sprintf('EL-%03d', $index),
+            'name' => 'Eligible pool asset',
+            'kind' => 'equipment',
+            'status' => AssetStatus::Available,
+        ]);
+    }
+
+    $page = null;
+    $queryCount = candidatePerformanceQueryCount(function () use ($job, &$page): void {
+        $page = app(AssetCandidateQuery::class)->page(
+            $job,
+            ListDispatchCandidatesRequest::create('/', 'GET', [
+                'resource' => 'assets',
+                'eligible_only' => true,
+                'per_page' => 25,
+            ]),
+        );
+    });
+
+    expect($page->pagination['total'])->toBe(201)
+        ->and($queryCount)->toBeLessThanOrEqual(20);
+});
+
 it('validates bounded candidate filters at the request boundary', function (): void {
     $dispatcher = candidatePerformanceDispatcher();
     $job = candidatePerformanceJob($dispatcher, 'CAND-1004');

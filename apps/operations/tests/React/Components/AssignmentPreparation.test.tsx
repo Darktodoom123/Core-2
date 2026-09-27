@@ -1,7 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { AssetCandidates } from '@/components/dispatch-detail/asset-candidates';
+import {
+    AssetCandidate,
+    AssetCandidates,
+} from '@/components/dispatch-detail/asset-candidates';
 import { AssignmentReadinessSummary } from '@/components/dispatch-detail/assignment-readiness-summary';
 import { PersonnelCandidates } from '@/components/dispatch-detail/personnel-candidates';
 
@@ -66,6 +69,126 @@ describe('preparation readiness', () => {
 });
 
 describe('candidate type filtering', () => {
+    it('labels page-local eligibility and shows the full result total on one page', () => {
+        render(
+            <AssetCandidates
+                candidates={[]}
+                onCandidatesSeen={vi.fn()}
+                selectedIds={[]}
+                canAssign
+                onToggle={vi.fn()}
+                assetCatalogAccess={{ fleet: false, equipment: false }}
+                page={{
+                    data: [],
+                    pagination: {
+                        current_page: 1,
+                        last_page: 1,
+                        per_page: 25,
+                        total: 0,
+                        from: null,
+                        to: null,
+                    },
+                    evaluated_at: '2026-09-27T00:00:00Z',
+                    job_version: 1,
+                    schedule_fingerprint: 'test',
+                    error: null,
+                }}
+            />,
+        );
+
+        expect(
+            screen.getByText('Show eligible only (0/0 on this page)'),
+        ).toBeInTheDocument();
+        expect(screen.getByText(/Showing 0–0 of 0 assets/)).toBeInTheDocument();
+    });
+
+    it('exposes fleet vehicles and tower cranes as distinct asset categories', () => {
+        render(
+            <AssetCandidates
+                candidates={[]}
+                onCandidatesSeen={vi.fn()}
+                selectedIds={[]}
+                canAssign
+                onToggle={vi.fn()}
+                assetCatalogAccess={{ fleet: true, equipment: true }}
+            />,
+        );
+
+        expect(
+            screen.getByRole('group', { name: 'Vehicles' }),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByRole('group', { name: 'Tower cranes' }),
+        ).toBeInTheDocument();
+        fireEvent.change(screen.getByLabelText('Filter asset type'), {
+            target: { value: 'vehicle' },
+        });
+        expect(
+            screen.getByRole('group', { name: 'Vehicles' }),
+        ).toBeInTheDocument();
+        expect(
+            screen.queryByRole('group', { name: 'Tower cranes' }),
+        ).not.toBeInTheDocument();
+    });
+
+    it('guides dispatchers to a separate driver licence evaluation', () => {
+        render(
+            <PersonnelCandidates
+                candidates={[]}
+                onCandidatesSeen={vi.fn()}
+                selectedIds={[]}
+                canAssign
+                onToggle={vi.fn()}
+            />,
+        );
+
+        expect(
+            screen.queryByRole('group', { name: 'Drivers' }),
+        ).not.toBeInTheDocument();
+        fireEvent.click(
+            screen.getByRole('button', { name: 'Check licensed drivers' }),
+        );
+        expect(screen.getByLabelText('Filter personnel type')).toHaveValue(
+            'driver',
+        );
+        expect(
+            screen.getByRole('group', { name: 'Drivers' }),
+        ).toBeInTheDocument();
+    });
+
+    it('shows catalog subtype and capacity beside asset readiness', () => {
+        render(
+            <AssetCandidate
+                candidate={{
+                    id: 12,
+                    code: 'TR-104',
+                    name: 'Harbor truck',
+                    subtype: 'low bed',
+                    capacity: '25 t',
+                    assignment_type: 'truck',
+                    assignment_label: 'Truck',
+                    eligible: true,
+                    reasons: [],
+                    readiness: {
+                        value: 'ready_for_service',
+                        label: 'Ready for service',
+                    },
+                    blocking_maintenance_count: 0,
+                    schedule_conflicts: [],
+                    already_assigned: false,
+                }}
+                selected={false}
+                canAssign
+                onToggle={vi.fn()}
+            />,
+        );
+
+        expect(screen.getByText('low bed · 25 t capacity')).toBeInTheDocument();
+        expect(
+            screen.getByText(/Readiness: Ready for service/),
+        ).toBeInTheDocument();
+    });
+
     it('only shows the selected personnel category', () => {
         render(
             <PersonnelCandidates

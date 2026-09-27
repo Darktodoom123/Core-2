@@ -4,6 +4,7 @@ namespace App\Modules\Assignment\Data;
 
 use App\Modules\Dispatch\Models\DispatchJob;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\LengthAwarePaginator as LaravelLengthAwarePaginator;
 
 /** @template T of array<string, mixed> */
 final readonly class CandidatePage
@@ -47,6 +48,22 @@ final readonly class CandidatePage
             scheduleFingerprint: self::fingerprint($job),
             error: $error,
         );
+    }
+
+    /**
+     * @param  list<T>  $data
+     * @return self<T>
+     */
+    public static function fromEvaluated(array $data, DispatchJob $job, int $perPage, int $page): self
+    {
+        $results = new LaravelLengthAwarePaginator(
+            array_slice($data, ($page - 1) * $perPage, $perPage),
+            count($data),
+            $perPage,
+            $page,
+        );
+
+        return self::fromPaginator($results, $job, array_values($results->items()));
     }
 
     /** @return self<array<string, mixed>> */

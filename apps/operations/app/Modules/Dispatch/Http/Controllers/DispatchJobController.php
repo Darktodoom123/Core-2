@@ -50,7 +50,7 @@ final class DispatchJobController extends Controller
                     ->with('user:id,name'),
                 'assetAssignments' => fn ($query) => $query
                     ->whereNull('active_until')
-                    ->with('asset:id,code,name'),
+                    ->with('asset:id,code,name,kind,subtype,specifications,rated_capacity,capacity_unit,status,deleted_at'),
                 'source',
                 'serviceRequest:id,reference',
             ])
@@ -119,7 +119,7 @@ final class DispatchJobController extends Controller
                     ]),
                 'assetAssignments' => fn ($query) => $query
                     ->whereNull('active_until')
-                    ->with('asset:id,code,name,kind,status,deleted_at'),
+                    ->with('asset:id,code,name,kind,subtype,specifications,rated_capacity,capacity_unit,status,deleted_at'),
                 'source',
                 'serviceRequest:id,reference',
                 'approvals',

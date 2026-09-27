@@ -192,6 +192,7 @@ final class DispatchResourceEligibility
     public function personnelAssignmentLabel(string $assignmentType): string
     {
         return match ($assignmentType) {
+            'driver' => 'Driver',
             'crane_operator', 'operator', 'lead', 'foreman', 'field_foreman' => 'Crane operator',
             'rigger', 'signalperson' => 'Rigger / Signalperson',
             default => 'Personnel',
@@ -202,8 +203,10 @@ final class DispatchResourceEligibility
     {
         return match ($assignmentType) {
             'truck' => 'Truck',
+            'vehicle' => 'Vehicle',
             'crane' => 'Crane',
             'mobile_crane' => 'Mobile Crane',
+            'tower_crane' => 'Tower Crane',
             'equipment' => 'Equipment',
             default => 'Asset',
         };

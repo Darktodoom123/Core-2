@@ -164,6 +164,9 @@ final class OperationsWorkspaceViewModel
                     'type' => $assignment->assignment_type,
                     'kind' => $assignment->asset->kind,
                     'subtype' => $assignment->asset->subtype,
+                    'capacity' => $assignment->asset->rated_capacity !== null
+                        ? trim(((float) $assignment->asset->rated_capacity).' '.$assignment->asset->capacity_unit)
+                        : null,
                     'site_latitude' => $assignment->site_latitude !== null ? (float) $assignment->site_latitude : null,
                     'site_longitude' => $assignment->site_longitude !== null ? (float) $assignment->site_longitude : null,
                     'jib_length_meters' => isset($assignment->asset->specifications['jib_length_meters'])
