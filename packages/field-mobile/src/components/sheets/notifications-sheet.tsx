@@ -37,6 +37,12 @@ export interface NotificationsSheetProps {
     onAcceptJob?: (jobId: number) => void;
     onDeclineJob?: (jobId: number) => void;
     isOnline?: boolean | null;
+    /**
+     * When false the sheet lists only items for the operator from other
+     * people (assignments awaiting a response). Sync failures and queued
+     * actions are left to the status pill and the outbox sheet.
+     */
+    includeSyncItems?: boolean;
 }
 
 export interface CommandDisplayInfo {
@@ -107,15 +113,16 @@ export const NotificationsSheet: React.FC<NotificationsSheetProps> = ({
     onAcceptJob,
     onDeclineJob,
     isOnline,
+    includeSyncItems = true,
 }) => {
     const { isDarkHud } = useTheme();
     const insets = useContext(SafeAreaInsetsContext);
     const bottomInset = insets?.bottom ?? 0;
     const [activeTab, setActiveTab] = useState<NotificationTab>('all');
 
-    const totalAlerts = failedCount + conflictCount;
+    const totalAlerts = includeSyncItems ? failedCount + conflictCount : 0;
     const totalDispatches = pendingJobs.length || pendingResponseCount;
-    const totalOutbox = queuedCount;
+    const totalOutbox = includeSyncItems ? queuedCount : 0;
     const totalAttention = totalAlerts + totalDispatches;
     const totalItems = totalAlerts + totalDispatches + totalOutbox;
 
@@ -173,20 +180,22 @@ export const NotificationsSheet: React.FC<NotificationsSheetProps> = ({
     });
 
     const hasAlertsSection =
+        includeSyncItems &&
         (activeTab === 'all' || activeTab === 'alerts') &&
         failedCommands.length > 0;
     const hasDispatchesSection =
         (activeTab === 'all' || activeTab === 'dispatches') &&
         pendingJobs.length > 0;
     const hasOutboxSection =
-        activeTab === 'outbox' || (activeTab === 'all' && queuedCount > 0);
+        includeSyncItems &&
+        (activeTab === 'outbox' || (activeTab === 'all' && queuedCount > 0));
 
     const isEmptyTab =
         (activeTab === 'all' &&
             totalItems === 0 &&
-            failedCommands.length === 0 &&
+            (!includeSyncItems || failedCommands.length === 0) &&
             pendingJobs.length === 0 &&
-            queuedCount === 0) ||
+            (!includeSyncItems || queuedCount === 0)) ||
         (activeTab === 'alerts' && failedCommands.length === 0) ||
         (activeTab === 'dispatches' && pendingJobs.length === 0) ||
         (activeTab === 'outbox' && queuedCount === 0);
@@ -299,139 +308,142 @@ export const NotificationsSheet: React.FC<NotificationsSheetProps> = ({
                         </View>
                     </View>
 
-                    {/* Segmented Filter Tab Controls */}
-                    <View
-                        accessibilityRole="tablist"
-                        style={[
-                            styles.segmentedBar,
-                            isDarkHud && styles.darkSegmentedBar,
-                        ]}
-                    >
-                        <Pressable
-                            accessibilityLabel={`All notifications, ${totalItems} items`}
-                            accessibilityRole="tab"
-                            accessibilityState={{
-                                selected: activeTab === 'all',
-                            }}
-                            onPress={() => setActiveTab('all')}
+                    {/* Segmented Filter Tab Controls (only when sync items are included) */}
+                    {includeSyncItems ? (
+                        <View
+                            accessibilityRole="tablist"
                             style={[
-                                styles.tabPill,
-                                activeTab === 'all' &&
-                                    (isDarkHud
-                                        ? styles.darkTabPillActive
-                                        : styles.tabPillActive),
+                                styles.segmentedBar,
+                                isDarkHud && styles.darkSegmentedBar,
                             ]}
-                            testID="notification-tab-all"
                         >
-                            <Text
+                            <Pressable
+                                accessibilityLabel={`All notifications, ${totalItems} items`}
+                                accessibilityRole="tab"
+                                accessibilityState={{
+                                    selected: activeTab === 'all',
+                                }}
+                                onPress={() => setActiveTab('all')}
                                 style={[
-                                    styles.tabText,
-                                    isDarkHud && styles.darkTabText,
+                                    styles.tabPill,
                                     activeTab === 'all' &&
                                         (isDarkHud
-                                            ? styles.darkTabTextActive
-                                            : styles.tabTextActive),
+                                            ? styles.darkTabPillActive
+                                            : styles.tabPillActive),
                                 ]}
+                                testID="notification-tab-all"
                             >
-                                All {totalItems > 0 ? `(${totalItems})` : ''}
-                            </Text>
-                        </Pressable>
+                                <Text
+                                    style={[
+                                        styles.tabText,
+                                        isDarkHud && styles.darkTabText,
+                                        activeTab === 'all' &&
+                                            (isDarkHud
+                                                ? styles.darkTabTextActive
+                                                : styles.tabTextActive),
+                                    ]}
+                                >
+                                    All{' '}
+                                    {totalItems > 0 ? `(${totalItems})` : ''}
+                                </Text>
+                            </Pressable>
 
-                        <Pressable
-                            accessibilityLabel={`Alerts, ${totalAlerts} items`}
-                            accessibilityRole="tab"
-                            accessibilityState={{
-                                selected: activeTab === 'alerts',
-                            }}
-                            onPress={() => setActiveTab('alerts')}
-                            style={[
-                                styles.tabPill,
-                                activeTab === 'alerts' &&
-                                    (isDarkHud
-                                        ? styles.darkTabPillActive
-                                        : styles.tabPillActive),
-                            ]}
-                            testID="notification-tab-alerts"
-                        >
-                            <Text
+                            <Pressable
+                                accessibilityLabel={`Alerts, ${totalAlerts} items`}
+                                accessibilityRole="tab"
+                                accessibilityState={{
+                                    selected: activeTab === 'alerts',
+                                }}
+                                onPress={() => setActiveTab('alerts')}
                                 style={[
-                                    styles.tabText,
-                                    isDarkHud && styles.darkTabText,
+                                    styles.tabPill,
                                     activeTab === 'alerts' &&
                                         (isDarkHud
-                                            ? styles.darkTabTextActive
-                                            : styles.tabTextActive),
+                                            ? styles.darkTabPillActive
+                                            : styles.tabPillActive),
                                 ]}
+                                testID="notification-tab-alerts"
                             >
-                                Alerts{' '}
-                                {totalAlerts > 0 ? `(${totalAlerts})` : ''}
-                            </Text>
-                        </Pressable>
+                                <Text
+                                    style={[
+                                        styles.tabText,
+                                        isDarkHud && styles.darkTabText,
+                                        activeTab === 'alerts' &&
+                                            (isDarkHud
+                                                ? styles.darkTabTextActive
+                                                : styles.tabTextActive),
+                                    ]}
+                                >
+                                    Alerts{' '}
+                                    {totalAlerts > 0 ? `(${totalAlerts})` : ''}
+                                </Text>
+                            </Pressable>
 
-                        <Pressable
-                            accessibilityLabel={`Dispatches, ${totalDispatches} invites`}
-                            accessibilityRole="tab"
-                            accessibilityState={{
-                                selected: activeTab === 'dispatches',
-                            }}
-                            onPress={() => setActiveTab('dispatches')}
-                            style={[
-                                styles.tabPill,
-                                activeTab === 'dispatches' &&
-                                    (isDarkHud
-                                        ? styles.darkTabPillActive
-                                        : styles.tabPillActive),
-                            ]}
-                            testID="notification-tab-dispatches"
-                        >
-                            <Text
+                            <Pressable
+                                accessibilityLabel={`Dispatches, ${totalDispatches} invites`}
+                                accessibilityRole="tab"
+                                accessibilityState={{
+                                    selected: activeTab === 'dispatches',
+                                }}
+                                onPress={() => setActiveTab('dispatches')}
                                 style={[
-                                    styles.tabText,
-                                    isDarkHud && styles.darkTabText,
+                                    styles.tabPill,
                                     activeTab === 'dispatches' &&
                                         (isDarkHud
-                                            ? styles.darkTabTextActive
-                                            : styles.tabTextActive),
+                                            ? styles.darkTabPillActive
+                                            : styles.tabPillActive),
                                 ]}
+                                testID="notification-tab-dispatches"
                             >
-                                Dispatches{' '}
-                                {totalDispatches > 0
-                                    ? `(${totalDispatches})`
-                                    : ''}
-                            </Text>
-                        </Pressable>
+                                <Text
+                                    style={[
+                                        styles.tabText,
+                                        isDarkHud && styles.darkTabText,
+                                        activeTab === 'dispatches' &&
+                                            (isDarkHud
+                                                ? styles.darkTabTextActive
+                                                : styles.tabTextActive),
+                                    ]}
+                                >
+                                    Dispatches{' '}
+                                    {totalDispatches > 0
+                                        ? `(${totalDispatches})`
+                                        : ''}
+                                </Text>
+                            </Pressable>
 
-                        <Pressable
-                            accessibilityLabel={`Outbox, ${totalOutbox} items`}
-                            accessibilityRole="tab"
-                            accessibilityState={{
-                                selected: activeTab === 'outbox',
-                            }}
-                            onPress={() => setActiveTab('outbox')}
-                            style={[
-                                styles.tabPill,
-                                activeTab === 'outbox' &&
-                                    (isDarkHud
-                                        ? styles.darkTabPillActive
-                                        : styles.tabPillActive),
-                            ]}
-                            testID="notification-tab-outbox"
-                        >
-                            <Text
+                            <Pressable
+                                accessibilityLabel={`Outbox, ${totalOutbox} items`}
+                                accessibilityRole="tab"
+                                accessibilityState={{
+                                    selected: activeTab === 'outbox',
+                                }}
+                                onPress={() => setActiveTab('outbox')}
                                 style={[
-                                    styles.tabText,
-                                    isDarkHud && styles.darkTabText,
+                                    styles.tabPill,
                                     activeTab === 'outbox' &&
                                         (isDarkHud
-                                            ? styles.darkTabTextActive
-                                            : styles.tabTextActive),
+                                            ? styles.darkTabPillActive
+                                            : styles.tabPillActive),
                                 ]}
+                                testID="notification-tab-outbox"
                             >
-                                Outbox{' '}
-                                {totalOutbox > 0 ? `(${totalOutbox})` : ''}
-                            </Text>
-                        </Pressable>
-                    </View>
+                                <Text
+                                    style={[
+                                        styles.tabText,
+                                        isDarkHud && styles.darkTabText,
+                                        activeTab === 'outbox' &&
+                                            (isDarkHud
+                                                ? styles.darkTabTextActive
+                                                : styles.tabTextActive),
+                                    ]}
+                                >
+                                    Outbox{' '}
+                                    {totalOutbox > 0 ? `(${totalOutbox})` : ''}
+                                </Text>
+                            </Pressable>
+                        </View>
+                    ) : null}
 
                     <ScrollView
                         showsVerticalScrollIndicator={false}
@@ -906,13 +918,15 @@ export const NotificationsSheet: React.FC<NotificationsSheetProps> = ({
                                         isDarkHud && styles.darkEmptyTitle,
                                     ]}
                                 >
-                                    {activeTab === 'dispatches'
-                                        ? 'No Pending Dispatches'
-                                        : activeTab === 'alerts'
-                                          ? 'No Active Alerts'
-                                          : activeTab === 'outbox'
-                                            ? 'Outbox Synchronized'
-                                            : "You're all caught up!"}
+                                    {!includeSyncItems
+                                        ? 'Nothing waiting for you'
+                                        : activeTab === 'dispatches'
+                                          ? 'No Pending Dispatches'
+                                          : activeTab === 'alerts'
+                                            ? 'No Active Alerts'
+                                            : activeTab === 'outbox'
+                                              ? 'Outbox Synchronized'
+                                              : "You're all caught up!"}
                                 </Text>
                                 <Text
                                     style={[
@@ -920,13 +934,15 @@ export const NotificationsSheet: React.FC<NotificationsSheetProps> = ({
                                         isDarkHud && styles.darkEmptyBody,
                                     ]}
                                 >
-                                    {activeTab === 'dispatches'
-                                        ? 'All dispatch assignments have been reviewed and accepted.'
-                                        : activeTab === 'alerts'
-                                          ? 'No safety warnings, errors, or failed sync commands.'
-                                          : activeTab === 'outbox'
-                                            ? 'All local field actions and telemetry logs have been synced to dispatch.'
-                                            : 'No pending alerts or unsynced actions. All field operations are up to date.'}
+                                    {!includeSyncItems
+                                        ? 'Assignments that need your response appear here. Saved actions and sync problems are in the status bar at the top.'
+                                        : activeTab === 'dispatches'
+                                          ? 'All dispatch assignments have been reviewed and accepted.'
+                                          : activeTab === 'alerts'
+                                            ? 'No safety warnings, errors, or failed sync commands.'
+                                            : activeTab === 'outbox'
+                                              ? 'All local field actions and telemetry logs have been synced to dispatch.'
+                                              : 'No pending alerts or unsynced actions. All field operations are up to date.'}
                                 </Text>
                             </View>
                         ) : null}

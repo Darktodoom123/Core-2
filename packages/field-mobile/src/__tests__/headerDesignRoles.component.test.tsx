@@ -55,35 +55,32 @@ describe.each(MODES)(
             ).toBe(theme.surfaceDark);
         });
 
-        it('shows online in cleared green', async () => {
+        it('has one status control: no separate connection pill or theme toggle', async () => {
             const view = await renderHeader(mode);
-            const pill = flat(view, 'online-synced-pill');
 
-            expect(pill.backgroundColor).toBe(theme.successEmeraldLight);
-            expect(pill.borderColor).toBe(theme.successEmerald);
-            expect(
-                StyleSheet.flatten(view.getByText('online').props.style).color,
-            ).toBe(theme.successEmeraldText);
+            expect(view.getByTestId('sync-status-pill')).toBeTruthy();
+            expect(view.queryByTestId('online-synced-pill')).toBeNull();
+            // The light/dark setting lives in the Profile sheet.
+            expect(view.queryByTestId('theme-mode-toggle')).toBeNull();
         });
 
-        it('shows offline as a warning', async () => {
+        it('shows offline in the status pill as a warning', async () => {
             const view = await renderHeader(mode, {
                 isOnline: false,
+                syncStatusLabel: 'Offline',
+                syncStatusMessage: 'Reconnect to sync',
                 syncTone: 'offline',
             });
-            const pill = flat(view, 'online-synced-pill');
+            const pill = flat(view, 'sync-status-pill');
 
             expect(pill.backgroundColor).toBe(theme.warningOrangeLight);
             expect(pill.borderColor).toBe(theme.warningOrange);
-            expect(
-                StyleSheet.flatten(view.getByText('offline').props.style).color,
-            ).toBe(theme.warningOrangeText);
         });
 
         it('draws resting header buttons with a border and no shadow', async () => {
             const view = await renderHeader(mode, { notificationCount: 1 });
 
-            for (const id of ['theme-mode-toggle', 'notification-button']) {
+            for (const id of ['notification-button']) {
                 const button = flat(view, id);
 
                 expect(button.borderWidth).toBe(1);

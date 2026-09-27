@@ -14,9 +14,7 @@ describe('Day / Night HUD theme toggle controls', () => {
         cleanup();
     });
 
-    it('toggles theme from light to dark HUD mode when header sun/moon button is pressed', async () => {
-        const onOpenProfile = jest.fn();
-
+    it('keeps the light/dark setting out of the header (it lives in Profile)', async () => {
         const view = await render(
             <ThemeProvider initialMode="light">
                 <FieldHeader
@@ -26,24 +24,12 @@ describe('Day / Night HUD theme toggle controls', () => {
                     syncTone="online"
                     userName="Alex Reyes"
                     userRole="Master Crane Operator"
-                    onOpenProfile={onOpenProfile}
+                    onOpenProfile={jest.fn()}
                 />
             </ThemeProvider>,
         );
 
-        const toggleBtn = view.getByTestId('theme-mode-toggle');
-        expect(toggleBtn).toBeTruthy();
-        expect(toggleBtn.props.accessibilityLabel).toBe(
-            'Switch to cockpit HUD night mode',
-        );
-
-        await act(async () => {
-            fireEvent.press(toggleBtn);
-        });
-
-        expect(toggleBtn.props.accessibilityLabel).toBe(
-            'Switch to daylight outdoor mode',
-        );
+        expect(view.queryByTestId('theme-mode-toggle')).toBeNull();
     });
 
     it('switches themes using the ProfileSheet display and lighting options', async () => {

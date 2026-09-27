@@ -12,6 +12,7 @@ export type { SyncStatusPillProps, SyncTone } from './sync-status-pill';
 export interface FieldHeaderProps {
     userName?: string | null;
     userRole?: string | null;
+    /** Connection is shown by the sync pill; kept for callers. */
     isOnline?: boolean | null;
     syncStatusLabel: string;
     syncStatusMessage: string;
@@ -26,7 +27,6 @@ export interface FieldHeaderProps {
 export const FieldHeader: React.FC<FieldHeaderProps> = ({
     userName,
     userRole,
-    isOnline,
     syncStatusLabel,
     syncStatusMessage,
     syncTone,
@@ -46,13 +46,10 @@ export const FieldHeader: React.FC<FieldHeaderProps> = ({
 
         {userName || userRole ? (
             <ProfileSummary
-                isOnline={isOnline}
                 notificationCount={notificationCount}
                 onOpenNotifications={onOpenNotifications}
                 onOpenProfile={onOpenProfile}
-                onOpenSyncSheet={onOpenSyncSheet}
                 profileOpen={profileOpen}
-                syncTone={syncTone}
                 userName={userName}
                 userRole={userRole}
             />

@@ -3,7 +3,6 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTheme, useThemedStyles } from '../../theme';
 import type { ThemeColors } from '../../theme';
 import { Icon } from '../common/Icon';
-import type { SyncTone } from './sync-status-pill';
 
 export interface BellIconProps {
     color?: string;
@@ -19,23 +18,12 @@ export const BellIcon: React.FC<BellIconProps> = ({ color, size = 20 }) => {
 export interface ProfileSummaryProps {
     userName?: string | null;
     userRole?: string | null;
-    isOnline?: boolean | null;
-    syncTone?: SyncTone;
     profileOpen: boolean;
     onOpenProfile: () => void;
 
     notificationCount?: number;
     onOpenNotifications?: () => void;
-    onOpenSyncSheet?: () => void;
 }
-
-type ConnectionState = 'online' | 'offline' | 'checking';
-
-const CONNECTION_LABEL: Record<ConnectionState, string> = {
-    online: 'online',
-    checking: 'checking…',
-    offline: 'offline',
-};
 
 const initialsFor = (userName?: string | null): string => {
     const initials = (userName || 'Field worker')
@@ -49,56 +37,20 @@ const initialsFor = (userName?: string | null): string => {
     return initials || 'FW';
 };
 
-const resolveConnection = (
-    isOnline: boolean | null | undefined,
-    syncTone: SyncTone,
-): ConnectionState => {
-    const resolved =
-        isOnline !== undefined
-            ? isOnline
-            : syncTone === 'offline'
-              ? false
-              : syncTone === 'checking'
-                ? null
-                : true;
-
-    if (resolved === null) {
-        return 'checking';
-    }
-
-    return resolved ? 'online' : 'offline';
-};
-
+/**
+ * Who is signed in, plus the bell. Connection and sync state live in the
+ * SyncStatusPill above (one status control), and the light/dark setting lives
+ * in the Profile sheet. The bell counts only items for the operator from
+ * other people, such as assignments waiting for a response.
+ */
 export const ProfileSummary: React.FC<ProfileSummaryProps> = ({
     userName,
-    isOnline,
-    syncTone = 'online',
     profileOpen,
     onOpenProfile,
     notificationCount = 0,
     onOpenNotifications,
-    onOpenSyncSheet,
 }) => {
-    const { isDarkHud, theme, toggleMode } = useTheme();
     const styles = useThemedStyles(createStyles);
-    const connectionState = resolveConnection(isOnline, syncTone);
-    const connection = {
-        online: {
-            surface: theme.successEmeraldLight,
-            edge: theme.successEmerald,
-            text: theme.successEmeraldText,
-        },
-        offline: {
-            surface: theme.warningOrangeLight,
-            edge: theme.warningOrange,
-            text: theme.warningOrangeText,
-        },
-        checking: {
-            surface: theme.surface,
-            edge: theme.border,
-            text: theme.textSecondary,
-        },
-    }[connectionState];
     const unread = notificationCount ?? 0;
 
     return (
@@ -133,70 +85,12 @@ export const ProfileSummary: React.FC<ProfileSummaryProps> = ({
             </Pressable>
 
             <View style={styles.headerActions}>
-                {/* Connection pill: device internet connectivity only. */}
                 <Pressable
-                    accessibilityHint="Opens outbox synchronization status sheet"
-                    accessibilityLabel={`Connection status: ${
-                        connectionState === 'checking'
-                            ? 'checking connection'
-                            : connectionState
-                    }`}
-                    accessibilityRole="button"
-                    onPress={onOpenSyncSheet}
-                    style={({ pressed }) => [
-                        styles.connectionPill,
-                        {
-                            backgroundColor: connection.surface,
-                            borderColor: connection.edge,
-                        },
-                        pressed && styles.pressed,
-                    ]}
-                    testID="online-synced-pill"
-                >
-                    <View
-                        style={[
-                            styles.connectionDot,
-                            { backgroundColor: connection.edge },
-                        ]}
-                    />
-                    <Text
-                        style={[
-                            styles.connectionText,
-                            { color: connection.text },
-                        ]}
-                    >
-                        {CONNECTION_LABEL[connectionState]}
-                    </Text>
-                </Pressable>
-
-                <Pressable
-                    accessibilityHint="Toggles between daylight and cockpit night HUD lighting"
-                    accessibilityLabel={
-                        isDarkHud
-                            ? 'Switch to daylight outdoor mode'
-                            : 'Switch to cockpit HUD night mode'
-                    }
-                    accessibilityRole="button"
-                    onPress={toggleMode}
-                    style={({ pressed }) => [
-                        styles.headerIconButton,
-                        pressed && styles.pressed,
-                    ]}
-                    testID="theme-mode-toggle"
-                >
-                    <Icon
-                        color={theme.textPrimary}
-                        name={isDarkHud ? 'sun' : 'moon'}
-                        size={20}
-                    />
-                </Pressable>
-
-                <Pressable
-                    accessibilityHint="Opens field notifications, alerts, and system sync sheet"
+                    accessibilityHint="Opens assignments waiting for your response"
                     accessibilityLabel={
                         unread > 0
-                            ? `Notifications: ${unread} unread items`
-                            : 'Notifications: No unread alerts'
+                            ? `Notifications: ${unread} waiting for you`
+                            : 'Notifications: nothing waiting for you'
                     }
                     accessibilityRole="button"
                     onPress={onOpenNotifications || onOpenProfile}
@@ -240,24 +134,6 @@ const createStyles = (theme: ThemeColors) =>
             fontSize: 16,
             fontWeight: '700',
             letterSpacing: 0.5,
-        },
-        connectionDot: {
-            borderRadius: 4,
-            height: 8,
-            width: 8,
-        },
-        connectionPill: {
-            alignItems: 'center',
-            borderRadius: 999,
-            borderWidth: 1,
-            flexDirection: 'row',
-            gap: 6,
-            minHeight: 48,
-            paddingHorizontal: 12,
-        },
-        connectionText: {
-            fontSize: 12,
-            fontWeight: '700',
         },
         headerActions: {
             alignItems: 'center',

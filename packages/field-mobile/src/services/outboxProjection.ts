@@ -958,7 +958,7 @@ export function projectOutbox(
         pillTone = attentionTone;
     } else if (attentionCount > 0) {
         pillLabel = `${attentionCount} need${attentionCount === 1 ? 's' : ''} attention`;
-        pillMessage = 'Tap to review outbox';
+        pillMessage = 'Tap to review';
         pillTone = attentionTone;
     } else if (submittingUserActions > 0) {
         const totalSubmittingAndWaiting =

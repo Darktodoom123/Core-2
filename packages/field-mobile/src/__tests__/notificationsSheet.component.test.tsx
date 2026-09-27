@@ -109,7 +109,7 @@ describe('Field Mobile Notification Bell & Sheet UI/UX', () => {
             const bellBtn = view.getByTestId('notification-button');
             expect(bellBtn).toBeTruthy();
             expect(bellBtn.props.accessibilityLabel).toBe(
-                'Notifications: No unread alerts',
+                'Notifications: nothing waiting for you',
             );
 
             // Badge should not be rendered when count is 0
@@ -141,7 +141,7 @@ describe('Field Mobile Notification Bell & Sheet UI/UX', () => {
 
             const bellBtn = view.getByTestId('notification-button');
             expect(bellBtn.props.accessibilityLabel).toBe(
-                'Notifications: 4 unread items',
+                'Notifications: 4 waiting for you',
             );
             expect(view.getByText('4')).toBeTruthy();
         });
@@ -166,30 +166,7 @@ describe('Field Mobile Notification Bell & Sheet UI/UX', () => {
             expect(view.getByText('9+')).toBeTruthy();
         });
 
-        it('displays "online" and not "offline" when connected to internet even if actions need attention', async () => {
-            const view = await render(
-                <ThemeProvider initialMode="light">
-                    <FieldHeader
-                        isOnline={true}
-                        notificationCount={1}
-                        onOpenNotifications={jest.fn()}
-                        onOpenProfile={jest.fn()}
-                        profileOpen={false}
-                        syncStatusLabel="Needs review"
-                        syncStatusMessage="Action needed"
-                        syncTone="attention"
-                        userName="Alex Rivera"
-                        userRole="Crane Operator"
-                    />
-                </ThemeProvider>,
-            );
-
-            expect(view.getByText('online')).toBeTruthy();
-            expect(view.queryByText('offline')).toBeNull();
-            expect(view.queryByText('needs review')).toBeNull();
-        });
-
-        it('displays "offline" when disconnected from internet', async () => {
+        it('shows connection only in the status pill, not as a second header pill', async () => {
             const view = await render(
                 <ThemeProvider initialMode="light">
                     <FieldHeader
@@ -198,7 +175,7 @@ describe('Field Mobile Notification Bell & Sheet UI/UX', () => {
                         onOpenNotifications={jest.fn()}
                         onOpenProfile={jest.fn()}
                         profileOpen={false}
-                        syncStatusLabel="Disconnected"
+                        syncStatusLabel="Offline"
                         syncStatusMessage="Reconnect to sync"
                         syncTone="offline"
                         userName="Alex Rivera"
@@ -207,32 +184,63 @@ describe('Field Mobile Notification Bell & Sheet UI/UX', () => {
                 </ThemeProvider>,
             );
 
-            expect(view.getByText('offline')).toBeTruthy();
-            expect(view.queryByText('online')).toBeNull();
-        });
-
-        it('displays "online" when syncTone is online', async () => {
-            const view = await render(
-                <ThemeProvider initialMode="light">
-                    <FieldHeader
-                        notificationCount={0}
-                        onOpenNotifications={jest.fn()}
-                        onOpenProfile={jest.fn()}
-                        profileOpen={false}
-                        syncStatusLabel="Synced"
-                        syncStatusMessage="Just now"
-                        syncTone="online"
-                        userName="Alex Rivera"
-                        userRole="Crane Operator"
-                    />
-                </ThemeProvider>,
-            );
-
-            expect(view.getByText('online')).toBeTruthy();
+            expect(view.getByText('Offline')).toBeTruthy();
+            expect(view.queryByTestId('online-synced-pill')).toBeNull();
+            expect(view.queryByText('offline')).toBeNull();
         });
     });
 
     describe('NotificationsSheet Drawer & Gestures', () => {
+        it('shows only items for the operator when sync items are excluded', async () => {
+            const view = await render(
+                <ThemeProvider initialMode="light">
+                    <NotificationsSheet
+                        conflictCount={1}
+                        failedCommands={mockFailedCommands}
+                        failedCount={3}
+                        includeSyncItems={false}
+                        onAcceptJob={jest.fn()}
+                        onClose={jest.fn()}
+                        onDeclineJob={jest.fn()}
+                        pendingJobs={mockPendingJobs}
+                        pendingResponseCount={1}
+                        queuedCount={2}
+                        visible
+                    />
+                </ThemeProvider>,
+            );
+
+            // Assignments waiting for a response are listed.
+            expect(
+                view.getByTestId('notification-accept-job-201'),
+            ).toBeTruthy();
+            // Sync problems belong to the status pill and outbox, not the bell.
+            expect(
+                view.queryByText('Network timeout during status update.'),
+            ).toBeNull();
+            expect(view.queryByText(/^Outbox/)).toBeNull();
+            expect(view.queryByText(/^Alerts/)).toBeNull();
+            expect(view.getByText('1 Action')).toBeTruthy();
+        });
+
+        it('does not claim everything is synced when sync items are excluded', async () => {
+            const view = await render(
+                <ThemeProvider initialMode="light">
+                    <NotificationsSheet
+                        failedCount={2}
+                        includeSyncItems={false}
+                        onClose={jest.fn()}
+                        queuedCount={1}
+                        visible
+                    />
+                </ThemeProvider>,
+            );
+
+            expect(view.getByText('Nothing waiting for you')).toBeTruthy();
+            expect(view.queryByText(/unsynced actions/)).toBeNull();
+            expect(view.queryByText(/up to date/)).toBeNull();
+        });
+
         it('renders sheet header, action count badge, close button, and dismiss scrim', async () => {
             const onClose = jest.fn();
 
