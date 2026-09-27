@@ -394,10 +394,42 @@ export function getHumanReadableActionType(cmd: OutboxCommand): {
             break;
         }
 
+        case 'start_hos_shift': {
+            title = 'Start shift';
+            reference = 'Hours of Service';
+            subtitle = 'Shift start and first duty status';
+            break;
+        }
+
+        case 'change_hos_duty_status': {
+            const duty =
+                typeof payload.duty_status === 'string'
+                    ? payload.duty_status
+                          .split('_')
+                          .map(
+                              (word) =>
+                                  word.charAt(0).toUpperCase() + word.slice(1),
+                          )
+                          .join(' ')
+                    : 'New status';
+            title = 'Duty status change';
+            reference = 'Hours of Service';
+            subtitle = `To: ${duty}`;
+            break;
+        }
+
+        case 'certify_hos_shift': {
+            title = 'Shift certification';
+            reference = 'Hours of Service';
+            subtitle = 'Certified duty log and shift closure';
+            break;
+        }
+
         default: {
-            title = `Action: ${String(cmd.type).replaceAll('_', ' ')}`;
-            reference = cmd.jobId ? `Job #${cmd.jobId}` : 'Local Outbox';
-            subtitle = 'Unrecognized action type';
+            // Never show a raw command type to the operator.
+            title = 'Saved action';
+            reference = cmd.jobId ? `Job #${cmd.jobId}` : 'Saved on this phone';
+            subtitle = 'Details are not available on this app version';
             break;
         }
     }
@@ -769,7 +801,8 @@ export function projectCommandToDisplay(
             retryable = false;
         } else {
             stateLabel = 'Waiting to sync';
-            explanation = 'Ready for upload. Synchronization in progress.';
+            explanation =
+                'Saved on this phone and ready to send. It goes on the next sync.';
             retryable = true;
         }
     }

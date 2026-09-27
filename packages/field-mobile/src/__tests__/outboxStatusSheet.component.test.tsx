@@ -387,7 +387,7 @@ describe('OutboxStatusSheet & FieldHeader Integration Component Tests', () => {
         );
 
         expect(view.getByTestId('outbox-empty-state')).toBeTruthy();
-        expect(view.getByText('Outbox is clear')).toBeTruthy();
+        expect(view.getByText('Nothing waiting to send')).toBeTruthy();
     });
 
     it('invokes onSyncNow when Sync Now button is pressed', async () => {
@@ -474,9 +474,7 @@ describe('OutboxStatusSheet & FieldHeader Integration Component Tests', () => {
         expect(view.getByTestId('outbox-empty-state')).toBeTruthy();
         expect(view.getByText('No actions require attention')).toBeTruthy();
         expect(
-            view.getByText(
-                'All queued actions are healthy or syncing normally.',
-            ),
+            view.getByText('Everything saved is sending normally.'),
         ).toBeTruthy();
     });
 
