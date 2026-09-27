@@ -1572,6 +1572,66 @@ describe('native application component tree', () => {
         }
     });
 
+    it('never shares location against a job the server has finished', async () => {
+        const previousAppState = AppState.currentState;
+        AppState.currentState = 'active';
+        const finishedJob: DispatchJob = {
+            ...driverJob,
+            status: { value: 'completed', label: 'Completed' },
+            my_assignment: {
+                id: 501,
+                response_status: 'accepted',
+                response_status_label: 'Accepted',
+            },
+            asset_assignments: [
+                {
+                    id: 601,
+                    dispatch_job_id: driverJob.id,
+                    operational_asset_id: 701,
+                    asset_code: 'CRN-101',
+                    asset_name: 'Mobile Crane',
+                    asset_kind: 'crane',
+                },
+            ],
+            capabilities: {
+                ...driverJob.capabilities,
+                can_share_location: true,
+            },
+        };
+        const locationSpy = jest
+            .spyOn(nativeLocationAdapter, 'getCurrentLocation')
+            .mockResolvedValue({ latitude: 14.6, longitude: 120.98 });
+        const { calls, fetchFn } = createApi({ assignedJobs: [finishedJob] });
+
+        try {
+            await renderScreen(
+                <App
+                    baseUrl={apiBaseUrl}
+                    fetchFn={fetchFn}
+                    tokenStorage={new TestTokenStorage(rawToken)}
+                />,
+            );
+
+            // The finished job's crane is not offered as today's unit.
+            expect(await screen.findByText('No unit assigned')).toBeVisible();
+            expect(screen.queryByTestId('start-unit-on-site-btn')).toBeNull();
+            expect(
+                screen.queryByTestId('home-assignment-summary-card'),
+            ).toBeNull();
+
+            await act(async () => {
+                await new Promise((resolve) => setTimeout(resolve, 50));
+            });
+            expect(locationSpy).not.toHaveBeenCalled();
+            expect(
+                calls.filter((call) => call.url.includes('/api/v1/locations')),
+            ).toHaveLength(0);
+        } finally {
+            AppState.currentState = previousAppState;
+            locationSpy.mockRestore();
+        }
+    });
+
     it('hides the unused Drive Routes tile from the dashboard', async () => {
         const { fetchFn } = createApi({ assignedJobs: [driverJob] });
 

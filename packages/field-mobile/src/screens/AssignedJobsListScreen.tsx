@@ -12,6 +12,7 @@ import {
 import { AssetVehicleCard } from '../components/cards/AssetVehicleCard';
 import type { DvirReadinessStatus } from '../components/cards/AssetVehicleCard';
 import { FailedCommandsList } from '../components/cards/FailedCommandsList';
+import { activeJobs } from '../components/cards/job-card/job-lifecycle';
 import { LocationWeatherCard } from '../components/cards/LocationWeatherCard';
 import { Icon } from '../components/common/Icon';
 import { AssignmentSummaryCard } from '../components/home/assignment-summary-card';
@@ -136,7 +137,7 @@ type TileId =
 type TileItem = HomeTile<TileId>;
 
 export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
-    jobs = [],
+    jobs: allJobs = [],
     outboxCommands = [],
     isLoading,
     isOnline = null,
@@ -288,6 +289,8 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
             command.state === 'failed' || command.state === 'unresolved',
     );
 
+    // Home works only with live jobs; finished ones belong to Dispatch history.
+    const jobs = useMemo(() => activeJobs(allJobs), [allJobs]);
     const pendingResponseCount = jobs.filter(
         (job) => job.my_assignment?.response_status === 'pending',
     ).length;
@@ -1373,7 +1376,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 conflictedCommands={outboxCommands.filter(
                     (command) => command.state === 'conflict',
                 )}
-                jobs={jobs}
+                jobs={allJobs}
                 onAcceptAssignment={onAcceptAssignment}
                 onAcceptServerState={onAcceptServerState}
                 onClose={() => setDispatchIntakeOpen(false)}
@@ -1398,7 +1401,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 failedCount={failedCount}
                 isOnline={isOnline}
                 onAcceptJob={(jobId) => {
-                    const targetJob = jobs.find((j) => j.id === jobId);
+                    const targetJob = allJobs.find((j) => j.id === jobId);
 
                     if (targetJob?.my_assignment?.id && onAcceptAssignment) {
                         onAcceptAssignment(
@@ -1414,7 +1417,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 }}
                 onClose={() => setNotificationsSheetOpen(false)}
                 onDeclineJob={(jobId) => {
-                    const targetJob = jobs.find((j) => j.id === jobId);
+                    const targetJob = allJobs.find((j) => j.id === jobId);
 
                     if (targetJob?.my_assignment?.id && onRejectAssignment) {
                         const defaultReason =

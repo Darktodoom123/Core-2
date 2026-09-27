@@ -24,6 +24,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth, offlineSessionVerificationError } from '../auth/AuthContext';
 import { isAuthorizedFieldRole } from '../auth/fieldRoles';
 import { LoginScreen } from '../auth/LoginScreen';
+import {
+    activeJobs,
+    currentJobFor,
+} from '../components/cards/job-card/job-lifecycle';
 import { colors, sharedStyles } from '../components/nativeStyles';
 import { OutboxStatusSheet } from '../components/sheets/OutboxStatusSheet';
 import type { DigitalSignatureData } from '../components/signature/DigitalSignatureModal';
@@ -530,6 +534,8 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
     const [selectedAssetId, setSelectedAssetId] = useState<number | null>(null);
     const [jobs, setJobs] = useState<DispatchJob[]>([]);
+    // Finished jobs are history: they never drive tracking, the unit or the site.
+    const liveJobs = useMemo(() => activeJobs(jobs), [jobs]);
     const [jobsError, setJobsError] = useState<string | null>(null);
     const [outboxCommands, setOutboxCommands] = useState<OutboxCommand[]>([]);
     const [isLoadingJobs, setIsLoadingJobs] = useState(false);
@@ -1606,8 +1612,8 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
 
             try {
                 const targetJob =
-                    jobs.find((job) => job.id === selectedJobId) ??
-                    (jobs.length === 1 ? jobs[0] : null);
+                    liveJobs.find((job) => job.id === selectedJobId) ??
+                    (liveJobs.length === 1 ? liveJobs[0] : null);
                 const operationalAssetId =
                     selectedAssetId ??
                     (targetJob?.asset_assignments?.length === 1
@@ -1721,7 +1727,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
             commandOutbox,
             captureDutyLocation,
             handleRequestFailure,
-            jobs,
+            liveJobs,
             outboxCommands,
             selectedAssetId,
             selectedJobId,
@@ -1731,8 +1737,9 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         ],
     );
 
-    const activeJob = jobs.find((job) => job.id === selectedJobId) || null;
-    const activeTrackingJob = activeJob || jobs[0] || null;
+    const activeJob = liveJobs.find((job) => job.id === selectedJobId) || null;
+    const currentJob = currentJobFor(jobs, selectedJobId);
+    const activeTrackingJob = currentJob;
     const activeTrackingAssetId =
         activeTrackingJob?.asset_assignments?.find(
             (assignment) => assignment.operational_asset_id === selectedAssetId,
@@ -1929,7 +1936,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
             setDvirStatus('pending');
             setLocationSharingActive(true);
 
-            const effectiveJob = activeJob || jobs[0];
+            const effectiveJob = currentJob;
 
             if (effectiveJob) {
                 try {
@@ -1952,7 +1959,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                 }
             }
         },
-        [activeJob, commandOutbox, jobs, syncQueue],
+        [commandOutbox, currentJob, syncQueue],
     );
 
     const handleReportSafetyHazard = useCallback(
@@ -2286,8 +2293,8 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         activeJob.asset_assignments.length === 1
             ? activeJob.asset_assignments[0]
             : null) ||
-        (jobs.length === 1 && jobs[0]?.asset_assignments?.length === 1
-            ? jobs[0].asset_assignments[0]
+        (liveJobs.length === 1 && liveJobs[0]?.asset_assignments?.length === 1
+            ? liveJobs[0].asset_assignments[0]
             : null) ||
         null;
     const resolvedAssetCode =
@@ -2295,21 +2302,19 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         currentAsset?.asset_code ||
         (activeJob?.asset_assignments && activeJob.asset_assignments.length > 1
             ? ''
-            : jobs.length > 0
+            : liveJobs.length > 0
               ? 'Assigned Unit'
               : 'UNASSIGNED');
     const resolvedAssetName =
         currentAsset?.asset_name ||
         (activeJob?.asset_assignments && activeJob.asset_assignments.length > 1
             ? ''
-            : jobs.length > 0
+            : liveJobs.length > 0
               ? 'Heavy Equipment Unit'
               : 'No Equipment Assigned');
     const resolvedOperatorName = user?.name || 'Field Operator';
-    const resolvedJobReference =
-        activeJob?.reference || jobs[0]?.reference || 'NO-DISPATCH';
-    const resolvedClientName =
-        activeJob?.client || jobs[0]?.client || 'Client Account';
+    const resolvedJobReference = currentJob?.reference || 'NO-DISPATCH';
+    const resolvedClientName = currentJob?.client || 'Client Account';
 
     // Placeholder labels are for display only; never look up documents by them.
     const walletAssetCode =
@@ -2605,9 +2610,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                         {activeAppView === 'safety' ? (
                             <FieldSafetyScreen
                                 actorId={user?.id}
-                                activeSite={
-                                    activeJob?.site ?? jobs[0]?.site ?? null
-                                }
+                                activeSite={currentJob?.site ?? null}
                                 commands={outboxCommands.filter(
                                     (command) =>
                                         command.type ===
@@ -2624,7 +2627,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                             />
                         ) : activeAppView === 'hos' ? (
                             <HosScreen
-                                activeJobId={activeJob?.id || jobs[0]?.id}
+                                activeJobId={currentJob?.id}
                                 apiClient={apiClient}
                                 linkedAssetCode={
                                     currentAsset?.asset_code || null
@@ -2814,7 +2817,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 <ProfileScreen
                                     apiClient={apiClient}
                                     assignedAssetLabel={
-                                        jobs.flatMap(
+                                        liveJobs.flatMap(
                                             (j) => j.asset_assignments || [],
                                         )[0]?.asset_name || null
                                     }
