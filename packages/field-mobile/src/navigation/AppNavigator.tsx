@@ -38,6 +38,7 @@ import {
     isFetchError,
 } from '../connectivity/networkMonitor';
 import type { NetworkMonitor } from '../connectivity/networkMonitor';
+import { useServerPostTrip } from '../hooks/useServerPostTrip';
 import {
     startBackgroundLocationUpdates,
     stopBackgroundLocationUpdates,
@@ -600,6 +601,10 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     const [isUnitLinked, setIsUnitLinked] = useState<boolean>(false);
     // Unit code of the last post-trip DVIR saved this shift; cleared on release.
     const [postTripDoneFor, setPostTripDoneFor] = useState<string | null>(null);
+    // ISO start of the server's active shift; bounds which post-trips count.
+    const [shiftStartedAtIso, setShiftStartedAtIso] = useState<string | null>(
+        null,
+    );
     // Where the DVIR's back button returns to (HoS opens the post-trip).
     const [dvirReturnView, setDvirReturnView] = useState<'main' | 'hos'>(
         'main',
@@ -1258,6 +1263,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                 };
                 const dutyStatus: DutyStatus =
                     statusMap[clock.current_duty_status] ?? 'operating';
+                setShiftStartedAtIso(clock.started_at ?? null);
                 const nextShiftStatus: ShiftStatus =
                     dutyStatus === 'off_duty'
                         ? 'off_shift'
@@ -1291,6 +1297,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                     doleWarning: clock.dole_warning ?? false,
                 });
             } else if (currentShift && !currentShift.clocks?.shift_active) {
+                setShiftStartedAtIso(null);
                 setShiftInfo({
                     status: 'off_shift',
                     dutyStatus: 'off_duty',
@@ -2321,6 +2328,22 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
 
     const walletAssetCode = resolvedAssetCode;
 
+    const serverPostTripDone = useServerPostTrip({
+        canFetch:
+            activeAppView === 'hos' &&
+            status === 'authenticated' &&
+            isOnline === true,
+        apiClient,
+        assetId: isUnitLinked ? currentAsset?.operational_asset_id : null,
+        assetCode: currentAsset?.asset_code,
+        shiftStartedAt: shiftStartedAtIso,
+        outboxCommands,
+    });
+    const postTripDone =
+        isUnitLinked &&
+        Boolean(currentAsset?.asset_code) &&
+        (postTripDoneFor === currentAsset?.asset_code || serverPostTripDone);
+
     const availableAssets = useMemo(() => {
         const map = new Map<string, string>();
 
@@ -2655,11 +2678,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                     setDvirReturnView('hos');
                                     setActiveAppView('dvir');
                                 }}
-                                postTripDone={
-                                    isUnitLinked &&
-                                    Boolean(currentAsset?.asset_code) &&
-                                    postTripDoneFor === currentAsset?.asset_code
-                                }
+                                postTripDone={postTripDone}
                                 onToggleShift={handleToggleShift}
                                 onUpdateDutyStatus={handleChangeDutyStatus}
                                 operatorName={resolvedOperatorName}
