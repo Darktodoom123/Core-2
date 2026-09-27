@@ -260,6 +260,8 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     const hasCriticalDefects = selectedDefects.some((d) => d.critical);
     const isUnsafe = safetyStatus === 'unsafe' || hasCriticalDefects;
     const needsDefectPhotos = isUnsafe || selectedDefects.length > 0;
+    // A reported problem needs words: where it is and how bad it is.
+    const remarksMissing = needsDefectPhotos && remarks.trim() === '';
 
     const handleCapturePhoto = (
         angle: WalkaroundAngle,
@@ -409,7 +411,8 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
             isUnassigned ||
             hasUnselectedMultiAsset ||
             !readings.isValid ||
-            !attested
+            !attested ||
+            remarksMissing
         ) {
             return;
         }
@@ -641,6 +644,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                         <DvirRemarksSection
                             mode={mode}
                             remarks={remarks}
+                            required={needsDefectPhotos}
                             setIsSaved={setIsSaved}
                             setRemarks={setRemarks}
                         />
@@ -662,7 +666,9 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                     hasUnselectedMultiAsset={hasUnselectedMultiAsset}
                     isSaved={isSaved}
                     isUnassigned={isUnassigned}
-                    readingsInvalid={!readings.isValid || !attested}
+                    isIncomplete={
+                        !readings.isValid || !attested || remarksMissing
+                    }
                 />
             ) : null}
             {/* Defects Modal (Screenshot 3) */}

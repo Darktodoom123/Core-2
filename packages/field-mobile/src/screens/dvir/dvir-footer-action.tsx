@@ -9,8 +9,8 @@ export interface DvirFooterActionProps {
     hasUnselectedMultiAsset: boolean;
     isSaved: boolean;
     isUnassigned: boolean;
-    /** Meter readings are missing or invalid; completing is blocked. */
-    readingsInvalid?: boolean;
+    /** Something required is missing (readings, confirmation, remarks). */
+    isIncomplete?: boolean;
 }
 
 export const DvirFooterAction: React.FC<DvirFooterActionProps> = ({
@@ -18,11 +18,10 @@ export const DvirFooterAction: React.FC<DvirFooterActionProps> = ({
     hasUnselectedMultiAsset,
     isSaved,
     isUnassigned,
-    readingsInvalid = false,
+    isIncomplete = false,
 }) => {
     const isBlocked =
-        !isSaved &&
-        (isUnassigned || hasUnselectedMultiAsset || readingsInvalid);
+        !isSaved && (isUnassigned || hasUnselectedMultiAsset || isIncomplete);
 
     const styles = useThemedStyles(createStyles);
     const dvirSharedStyles = useThemedStyles(createDvirSharedStyles);

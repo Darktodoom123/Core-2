@@ -800,6 +800,10 @@ describe('DvirScreen Component & Workflows', () => {
 
         // Complete DVIR
         await enterEngineHours(view);
+        await fireEvent.changeText(
+            view.getByTestId('dvir-remarks-input'),
+            'Boom hoist brake slipping under load.',
+        );
         await fireEvent.press(view.getByTestId('complete-dvir-button'));
 
         // Lockout callback is invoked and modal appears
@@ -852,6 +856,10 @@ describe('DvirScreen Component & Workflows', () => {
         // Toggle Unsafe and complete DVIR
         await fireEvent.press(view.getByTestId('safety-status-unsafe'));
         await enterEngineHours(view);
+        await fireEvent.changeText(
+            view.getByTestId('dvir-remarks-input'),
+            'Boom hoist brake slipping under load.',
+        );
         await fireEvent.press(view.getByTestId('complete-dvir-button'));
 
         expect(view.getByTestId('pre-trip-defect-fallback-modal')).toBeTruthy();
