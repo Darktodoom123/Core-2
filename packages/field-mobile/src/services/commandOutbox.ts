@@ -33,7 +33,13 @@ import type {
 import type { FieldApiClient } from './apiClient';
 import { ApiClientError } from './apiClient';
 import { durableAttachmentStorage } from './durableAttachmentStorage';
-import { hasLaterDependent, isUnitLinkCommand } from './outboxDependencies';
+import {
+    hasLaterDependent,
+    isLocationPing,
+    isUnitLinkCommand,
+    pingCanBeResent,
+    pingIsSettledAside,
+} from './outboxDependencies';
 
 export type OutboxListener = (commands: OutboxCommand[]) => void;
 
@@ -104,6 +110,12 @@ function commandScope(command: OutboxCommand): string {
     // command (e.g. a location ping) never holds up the unit link.
     if (isUnitLinkCommand(command)) {
         return `unit-link:${command.actorId}`;
+    }
+
+    // Pings run in their own line so they never wait on, or hold up, the
+    // job's status and evidence commands.
+    if (isLocationPing(command)) {
+        return `location:${command.jobId ?? command.actorId}`;
     }
 
     return command.jobId === null || command.jobId === undefined
@@ -754,7 +766,17 @@ export class CommandOutboxManager {
             })) {
                 const scope = commandScope(command);
 
+                if (pingCanBeResent(command)) {
+                    command.state = 'queued';
+                    command.nextAttemptAt = null;
+                    await this.persist(command);
+                }
+
                 if (command.state !== 'queued') {
+                    if (pingIsSettledAside(command)) {
+                        continue;
+                    }
+
                     if (
                         command.state === 'failed' ||
                         command.state === 'conflict' ||
@@ -796,7 +818,10 @@ export class CommandOutboxManager {
                     continue;
                 }
 
-                if (command.attempts >= this.maxAutomaticAttempts) {
+                if (
+                    command.attempts >= this.maxAutomaticAttempts &&
+                    !isLocationPing(command)
+                ) {
                     command.state = 'failed';
                     command.nextAttemptAt = null;
                     command.error = {
@@ -1807,7 +1832,11 @@ export class CommandOutboxManager {
             return;
         }
 
-        if (command.attempts >= this.maxAutomaticAttempts) {
+        // Resending a ping is harmless, so it backs off instead of giving up.
+        if (
+            command.attempts >= this.maxAutomaticAttempts &&
+            !isLocationPing(command)
+        ) {
             if (isUncertainTransportError(error)) {
                 const errorObject =
                     typeof error === 'object' && error !== null

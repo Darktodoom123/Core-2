@@ -1704,3 +1704,151 @@ describe('unit link commands', () => {
         assert.equal(outbox.getCommand(release.id)?.state, 'queued');
     });
 });
+
+describe('location pings', () => {
+    function ping(capturedAt: string) {
+        return {
+            dispatch_job_id: 1,
+            latitude: 14.5,
+            longitude: 121,
+            sharing_enabled: true,
+            captured_at: capturedAt,
+        };
+    }
+
+    // A ping left unresolved by an earlier version of the app.
+    async function outboxWithLegacyUnresolvedPing(actorId: number) {
+        const repository = new MemoryOutboxRepository();
+        const first = await createOutbox(actorId, { repository });
+        const old = await first.enqueueShareLocation(
+            ping('2026-09-26T08:00:00.000Z'),
+        );
+        old.state = 'unresolved';
+        old.attempts = 5;
+        old.error = {
+            code: 'OUTCOME_UNRESOLVED',
+            status: 503,
+            message: 'The retry limit was reached.',
+            retryable: false,
+        };
+        await repository.save(old);
+        first.deactivateActor();
+
+        return { outbox: await createOutbox(actorId, { repository }), old };
+    }
+
+    test('an unresolved ping is sent again, and the later pings follow', async () => {
+        const { outbox, old } = await outboxWithLegacyUnresolvedPing(41);
+        const next = await outbox.enqueueShareLocation(
+            ping('2026-09-28T08:00:00.000Z'),
+        );
+        const sent: string[] = [];
+
+        await outbox.processQueue({
+            shareLocation: async (_payload: unknown, commandId: string) => {
+                sent.push(commandId);
+
+                return {};
+            },
+        } as unknown as FieldApiClient);
+
+        // Same command id, so the server ignores it if it already has it.
+        assert.deepEqual(sent, [old.id, next.id]);
+        assert.equal(outbox.getCommand(old.id)?.state, 'completed');
+        assert.equal(outbox.getCommand(next.id)?.state, 'completed');
+    });
+
+    test('while the server is down a ping keeps retrying and never gives up', async () => {
+        let currentTime = new Date('2026-09-28T08:00:00.000Z');
+        const outbox = await createOutbox(42, {
+            now: () => currentTime,
+            maxAutomaticAttempts: 2,
+            baseRetryDelayMs: 1_000,
+        });
+        const first = await outbox.enqueueShareLocation(
+            ping('2026-09-28T08:00:00.000Z'),
+        );
+        const second = await outbox.enqueueShareLocation(
+            ping('2026-09-28T08:00:15.000Z'),
+        );
+        let calls = 0;
+        const down = {
+            shareLocation: async () => {
+                calls += 1;
+
+                throw new ApiClientError('Tracking unavailable.', 503);
+            },
+        } as unknown as FieldApiClient;
+
+        for (let round = 0; round < 5; round += 1) {
+            await outbox.processQueue(down);
+            currentTime = new Date(currentTime.getTime() + 10 * 60 * 1000);
+        }
+
+        // Only the first ping is tried, so an outage is not hammered.
+        assert.equal(calls, 5);
+        assert.equal(outbox.getCommand(first.id)?.state, 'queued');
+        assert.equal(outbox.getCommand(second.id)?.state, 'queued');
+
+        await outbox.processQueue({
+            shareLocation: async () => ({}),
+        } as unknown as FieldApiClient);
+
+        assert.equal(outbox.getCommand(first.id)?.state, 'completed');
+        assert.equal(outbox.getCommand(second.id)?.state, 'completed');
+    });
+
+    test('a ping the server refused does not hold up later pings', async () => {
+        const outbox = await createOutbox(43);
+        const refused = await outbox.enqueueShareLocation(
+            ping('2026-09-28T08:00:00.000Z'),
+        );
+        await outbox.processQueue({
+            shareLocation: async () => {
+                throw new ApiClientError('Not assigned.', 422);
+            },
+        } as unknown as FieldApiClient);
+        assert.equal(outbox.getCommand(refused.id)?.state, 'failed');
+        const next = await outbox.enqueueShareLocation(
+            ping('2026-09-28T08:00:15.000Z'),
+        );
+
+        await outbox.processQueue({
+            shareLocation: async () => ({}),
+        } as unknown as FieldApiClient);
+
+        assert.equal(outbox.getCommand(next.id)?.state, 'completed');
+    });
+
+    test('a waiting ping does not hold up the job', async () => {
+        const outbox = await createOutbox(44);
+        await outbox.enqueueShareLocation(ping('2026-09-28T08:00:00.000Z'));
+        const arrive = await outbox.enqueueTransitionStatus(1, 'arrived', 1);
+
+        await outbox.processQueue({
+            shareLocation: async () => {
+                throw new ApiClientError('Tracking unavailable.', 503);
+            },
+            transitionStatus: async () => ({}),
+        } as unknown as FieldApiClient);
+
+        assert.equal(outbox.getCommand(arrive.id)?.state, 'completed');
+    });
+
+    test('a refused ping can be discarded while later job commands wait', async () => {
+        const outbox = await createOutbox(45);
+        const refused = await outbox.enqueueShareLocation(
+            ping('2026-09-28T08:00:00.000Z'),
+        );
+        await outbox.processQueue({
+            shareLocation: async () => {
+                throw new ApiClientError('Not assigned.', 422);
+            },
+        } as unknown as FieldApiClient);
+        await outbox.enqueueTransitionStatus(1, 'arrived', 1);
+
+        await outbox.discardCommand(refused.id);
+
+        assert.equal(outbox.getCommand(refused.id), undefined);
+    });
+});
