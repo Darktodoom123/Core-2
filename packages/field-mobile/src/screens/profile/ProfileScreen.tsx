@@ -37,7 +37,8 @@ export interface ProfileScreenProps {
     isOnline?: boolean | null;
     queuedCount?: number;
     outboxCommands?: OutboxCommand[];
-    pushNotificationsEnabled?: boolean;
+    /** Null while the device permission is still being checked. */
+    pushNotificationsEnabled?: boolean | null;
     onRequestPushPermissions?: () => void;
     onSyncNow?: () => void;
     onOpenOutboxDetails?: () => void;
@@ -59,7 +60,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     lastSuccessfulSyncAt,
     queuedCount = 0,
     outboxCommands,
-    pushNotificationsEnabled = true,
+    pushNotificationsEnabled = null,
     onRequestPushPermissions,
     onSyncNow,
     onOpenOutboxDetails,

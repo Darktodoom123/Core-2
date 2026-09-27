@@ -261,4 +261,16 @@ describe('Settings counts only actions that have not synced', () => {
         ).toBeTruthy();
         expect(view.queryByText(/IOException/)).toBeNull();
     });
+
+    it('says push alerts are being checked until the device answers', async () => {
+        const checking = await inTheme(<SettingsSyncTab isOnline />);
+        expect(checking.getByText('Checking…')).toBeTruthy();
+        expect(checking.queryByText('Active')).toBeNull();
+        cleanup();
+
+        const on = await inTheme(
+            <SettingsSyncTab isOnline pushNotificationsEnabled />,
+        );
+        expect(on.getByText('Active')).toBeTruthy();
+    });
 });

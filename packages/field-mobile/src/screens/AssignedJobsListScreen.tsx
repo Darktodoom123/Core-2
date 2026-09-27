@@ -32,7 +32,6 @@ import { NotificationsSheet } from '../components/sheets/notifications-sheet';
 import { OnSiteConfirmationModal } from '../components/sheets/OnSiteConfirmationModal';
 import { OutboxStatusSheet } from '../components/sheets/OutboxStatusSheet';
 import { PreTripDefectFallbackModal } from '../components/sheets/PreTripDefectFallbackModal';
-import { ProfileSheet } from '../components/sheets/profile-sheet';
 import { ReliefHandoverModal } from '../components/sheets/ReliefHandoverModal';
 import { ReplacementRequestSheet } from '../components/sheets/replacement-request/replacement-request-sheet';
 import { ReportDelayModal } from '../components/sheets/ReportDelayModal';
@@ -123,8 +122,6 @@ export interface AssignedJobsListScreenProps {
     weatherError?: string | null;
     onRefreshWeather?: () => void;
     apiClient?: FieldApiClient;
-    pushNotificationsEnabled?: boolean;
-    onRequestPushPermissions?: () => void;
     onOpenProfile?: () => void;
     onOpenAccountSettings?: () => void;
     lastSuccessfulSyncAt?: string | null;
@@ -189,8 +186,6 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     weatherError,
     onRefreshWeather,
     apiClient,
-    pushNotificationsEnabled,
-    onRequestPushPermissions,
     onOpenProfile,
     onOpenAccountSettings,
     lastSuccessfulSyncAt,
@@ -201,11 +196,8 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     const [delayModalJob, setDelayModalJob] = useState<DispatchJob | null>(
         null,
     );
-    const [profileSheetOpen, setProfileSheetOpen] = useState(false);
     const [notificationsSheetOpen, setNotificationsSheetOpen] = useState(false);
     const [outboxSheetOpen, setOutboxSheetOpen] = useState(false);
-    const [signOutConfirmationOpen, setSignOutConfirmationOpen] =
-        useState(false);
     const [dispatchIntakeOpen, setDispatchIntakeOpen] = useState(false);
     const [onSiteConfirmationOpen, setOnSiteConfirmationOpen] = useState(false);
     const [reliefHandoverOpen, setReliefHandoverOpen] = useState(false);
@@ -497,44 +489,9 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
         }
     };
 
+    // Profile is its own screen, opened by the navigator.
     const handleOpenProfile = () => {
-        if (onOpenProfile) {
-            onOpenProfile();
-
-            return;
-        }
-
-        if (onOpenAccountSettings) {
-            onOpenAccountSettings();
-
-            return;
-        }
-
-        setProfileSheetOpen(true);
-        setSignOutConfirmationOpen(false);
-        setActiveNavItem('profile');
-    };
-
-    const handleCloseProfile = (nextItem: FieldScreen = 'today') => {
-        setProfileSheetOpen(false);
-        setSignOutConfirmationOpen(false);
-        setActiveNavItem(nextItem);
-    };
-
-    const handleStartSignOut = () => {
-        setSignOutConfirmationOpen(true);
-    };
-
-    const handleCancelSignOut = () => {
-        setSignOutConfirmationOpen(false);
-    };
-
-    const handleLogout = () => {
-        handleCloseProfile();
-
-        if (onLogout) {
-            onLogout();
-        }
+        (onOpenProfile ?? onOpenAccountSettings)?.();
     };
 
     const handleOpenNotifications = () => {
@@ -560,7 +517,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
             return;
         }
 
-        handleCloseProfile(item);
+        setActiveNavItem(item);
     };
 
     return (
@@ -585,7 +542,6 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                     onOpenNotifications={handleOpenNotifications}
                     onOpenProfile={handleOpenProfile}
                     onOpenSyncSheet={() => setOutboxSheetOpen(true)}
-                    profileOpen={profileSheetOpen}
                     syncStatusLabel={syncStatusLabel}
                     syncStatusMessage={syncStatusMessage}
                     syncTone={syncTone}
@@ -1390,30 +1346,6 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 pendingResponseCount={pendingResponseCount}
                 queuedCount={queuedCount}
                 visible={notificationsSheetOpen}
-            />
-
-            <ProfileSheet
-                assignedAssetLabel={
-                    jobs.flatMap((j) => j.asset_assignments || [])[0]
-                        ?.asset_name || null
-                }
-                isAuthenticated={isAuthenticated}
-                isOnline={isOnline}
-                onCancelSignOut={handleCancelSignOut}
-                onClose={() => handleCloseProfile()}
-                onLogout={handleLogout}
-                onOpenAccountSettings={onOpenAccountSettings || onOpenProfile}
-                onOpenOutboxDetails={() => setOutboxSheetOpen(true)}
-                onRequestPushPermissions={onRequestPushPermissions}
-                onStartSignOut={handleStartSignOut}
-                onSyncNow={onSyncNow}
-                outboxCommands={outboxCommands}
-                pushNotificationsEnabled={pushNotificationsEnabled}
-                queuedCount={queuedCount}
-                signOutConfirmationOpen={signOutConfirmationOpen}
-                userName={userName}
-                userRole={userRole}
-                visible={profileSheetOpen}
             />
 
             <OutboxStatusSheet

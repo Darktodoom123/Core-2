@@ -126,7 +126,6 @@ describe('OutboxStatusSheet & FieldHeader Integration Component Tests', () => {
                     onOpenNotifications={jest.fn()}
                     onOpenProfile={jest.fn()}
                     onOpenSyncSheet={onOpenSyncSheet}
-                    profileOpen={false}
                     syncStatusLabel="4 need attention"
                     syncStatusMessage="Tap to review outbox"
                     syncTone="attention"

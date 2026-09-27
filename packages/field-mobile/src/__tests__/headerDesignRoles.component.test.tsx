@@ -28,7 +28,6 @@ const renderHeader = (mode: ThemeMode, props: Partial<FieldHeaderProps> = {}) =>
             <FieldHeader
                 isOnline
                 onOpenProfile={jest.fn()}
-                profileOpen={false}
                 syncStatusLabel="Synced"
                 syncStatusMessage="Up to date"
                 syncTone="online"

@@ -18,7 +18,6 @@ export const BellIcon: React.FC<BellIconProps> = ({ color, size = 20 }) => {
 export interface ProfileSummaryProps {
     userName?: string | null;
     userRole?: string | null;
-    profileOpen: boolean;
     onOpenProfile: () => void;
 
     notificationCount?: number;
@@ -40,12 +39,11 @@ const initialsFor = (userName?: string | null): string => {
 /**
  * Who is signed in, plus the bell. Connection and sync state live in the
  * SyncStatusPill above (one status control), and the light/dark setting lives
- * in the Profile sheet. The bell counts only items for the operator from
+ * in the Profile screen. The bell counts only items for the operator from
  * other people, such as assignments waiting for a response.
  */
 export const ProfileSummary: React.FC<ProfileSummaryProps> = ({
     userName,
-    profileOpen,
     onOpenProfile,
     notificationCount = 0,
     onOpenNotifications,
@@ -59,7 +57,6 @@ export const ProfileSummary: React.FC<ProfileSummaryProps> = ({
                 accessibilityHint="Shows profile and account actions"
                 accessibilityLabel="Open profile"
                 accessibilityRole="button"
-                accessibilityState={{ expanded: profileOpen }}
                 onPress={onOpenProfile}
                 style={({ pressed }) => [
                     styles.profileCard,

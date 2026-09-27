@@ -6,7 +6,7 @@ import {
 } from '@testing-library/react-native/pure';
 import React from 'react';
 import { FieldHeader } from '../components/layout/field-header';
-import { ProfileSheet } from '../components/sheets/profile-sheet';
+import { SettingsSyncTab } from '../screens/profile/components/SettingsSyncTab';
 import { ThemeProvider } from '../theme';
 
 describe('Day / Night HUD theme toggle controls', () => {
@@ -18,7 +18,6 @@ describe('Day / Night HUD theme toggle controls', () => {
         const view = await render(
             <ThemeProvider initialMode="light">
                 <FieldHeader
-                    profileOpen={false}
                     syncStatusLabel="Synced"
                     syncStatusMessage="Just now"
                     syncTone="online"
@@ -32,22 +31,10 @@ describe('Day / Night HUD theme toggle controls', () => {
         expect(view.queryByTestId('theme-mode-toggle')).toBeNull();
     });
 
-    it('switches themes using the ProfileSheet display and lighting options', async () => {
-        const onClose = jest.fn();
-        const onStartSignOut = jest.fn();
-        const onCancelSignOut = jest.fn();
-
+    it('switches themes using the Profile settings display and lighting options', async () => {
         const view = await render(
             <ThemeProvider initialMode="light">
-                <ProfileSheet
-                    onCancelSignOut={onCancelSignOut}
-                    onClose={onClose}
-                    onStartSignOut={onStartSignOut}
-                    signOutConfirmationOpen={false}
-                    userName="Alex Reyes"
-                    userRole="Master Crane Operator"
-                    visible={true}
-                />
+                <SettingsSyncTab isOnline />
             </ThemeProvider>,
         );
 

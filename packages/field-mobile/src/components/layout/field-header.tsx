@@ -17,7 +17,6 @@ export interface FieldHeaderProps {
     syncStatusLabel: string;
     syncStatusMessage: string;
     syncTone: SyncTone;
-    profileOpen: boolean;
     onOpenProfile: () => void;
     notificationCount?: number;
     onOpenNotifications?: () => void;
@@ -30,7 +29,6 @@ export const FieldHeader: React.FC<FieldHeaderProps> = ({
     syncStatusLabel,
     syncStatusMessage,
     syncTone,
-    profileOpen,
     onOpenProfile,
     notificationCount,
     onOpenNotifications,
@@ -49,7 +47,6 @@ export const FieldHeader: React.FC<FieldHeaderProps> = ({
                 notificationCount={notificationCount}
                 onOpenNotifications={onOpenNotifications}
                 onOpenProfile={onOpenProfile}
-                profileOpen={profileOpen}
                 userName={userName}
                 userRole={userRole}
             />

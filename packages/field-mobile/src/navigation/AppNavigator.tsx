@@ -624,8 +624,10 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     const [weather, setWeather] = useState<WeatherTelemetry | null>(null);
     const [isLoadingWeather, setIsLoadingWeather] = useState(false);
     const [weatherError, setWeatherError] = useState<string | null>(null);
-    const [pushNotificationsEnabled, setPushNotificationsEnabled] =
-        useState<boolean>(true);
+    // Null until the device answers; the UI shows "Checking…", not "Active".
+    const [pushNotificationsEnabled, setPushNotificationsEnabled] = useState<
+        boolean | null
+    >(null);
     const [sosResponderNotice, setSosResponderNotice] = useState<{
         incidentId: string;
         reporterName: string;
@@ -3172,12 +3174,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                     weatherError={weatherError}
                                     onRefreshWeather={() =>
                                         void refreshWeather()
-                                    }
-                                    pushNotificationsEnabled={
-                                        pushNotificationsEnabled
-                                    }
-                                    onRequestPushPermissions={
-                                        handleRequestPushPermissions
                                     }
                                 />
                             </View>

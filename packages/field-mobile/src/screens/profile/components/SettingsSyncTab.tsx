@@ -20,7 +20,8 @@ export interface SettingsSyncTabProps {
     lastSuccessfulSyncAt?: string | null;
     queuedCount?: number;
     outboxCommands?: OutboxCommand[];
-    pushNotificationsEnabled?: boolean;
+    /** Null while the device permission is still being checked. */
+    pushNotificationsEnabled?: boolean | null;
     onSyncNow?: () => void;
     onOpenOutboxDetails?: () => void;
     onRequestPushPermissions?: () => void;
@@ -33,7 +34,7 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
     lastSuccessfulSyncAt,
     queuedCount = 0,
     outboxCommands,
-    pushNotificationsEnabled = true,
+    pushNotificationsEnabled = null,
     onSyncNow,
     onOpenOutboxDetails,
     onRequestPushPermissions,
@@ -508,7 +509,7 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                             <View
                                 style={[
                                     styles.healthSquircle,
-                                    pushNotificationsEnabled === false
+                                    pushNotificationsEnabled !== true
                                         ? isDarkHud
                                             ? styles.darkHealthSquircleNeutral
                                             : styles.healthSquircleNeutral
@@ -519,7 +520,7 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                             >
                                 <Icon
                                     color={
-                                        pushNotificationsEnabled === false
+                                        pushNotificationsEnabled !== true
                                             ? isDarkHud
                                                 ? '#94A3B8'
                                                 : '#64748B'
@@ -544,7 +545,7 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                             <View
                                 style={[
                                     styles.statusDot,
-                                    pushNotificationsEnabled === false
+                                    pushNotificationsEnabled !== true
                                         ? styles.statusDotOffline
                                         : styles.statusDotOnline,
                                 ]}
@@ -555,9 +556,11 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                                     isDarkHud && styles.darkHealthValue,
                                 ]}
                             >
-                                {pushNotificationsEnabled === false
-                                    ? 'Disabled'
-                                    : 'Active'}
+                                {pushNotificationsEnabled === null
+                                    ? 'Checking…'
+                                    : pushNotificationsEnabled
+                                      ? 'Active'
+                                      : 'Disabled'}
                             </Text>
                         </View>
                     </View>

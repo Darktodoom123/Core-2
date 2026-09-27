@@ -881,7 +881,7 @@ describe('ProfileScreen component tests', () => {
             expect(onOpenProfile).toHaveBeenCalledTimes(1);
         });
 
-        it('AssignedJobsListScreen falls back to ProfileSheet when neither onOpenProfile nor onOpenAccountSettings is provided', async () => {
+        it('AssignedJobsListScreen opens no leftover profile sheet without a handler', async () => {
             const view = await render(
                 <ThemeProvider initialMode="dark_hud">
                     <AssignedJobsListScreen
@@ -896,39 +896,12 @@ describe('ProfileScreen component tests', () => {
                 </ThemeProvider>,
             );
 
-            expect(view.queryByTestId('profile-sheet')).toBeNull();
-
-            const profileBtn = view.getByTestId('profile-button');
             await act(async () => {
-                fireEvent.press(profileBtn);
+                fireEvent.press(view.getByTestId('profile-button'));
+                fireEvent.press(view.getByTestId('bottom-nav-profile'));
             });
 
-            expect(view.getByTestId('profile-sheet')).toBeTruthy();
-        });
-
-        it('AssignedJobsListScreen bottom nav falls back to ProfileSheet when neither handler is provided', async () => {
-            const view = await render(
-                <ThemeProvider initialMode="dark_hud">
-                    <AssignedJobsListScreen
-                        isLoading={false}
-                        jobs={[]}
-                        onRefresh={jest.fn()}
-                        onSelectJob={jest.fn()}
-                        onSosHoldComplete={jest.fn()}
-                        outboxCommands={[]}
-                        userName="Dev Crane Operator"
-                    />
-                </ThemeProvider>,
-            );
-
             expect(view.queryByTestId('profile-sheet')).toBeNull();
-
-            const navProfileBtn = view.getByTestId('bottom-nav-profile');
-            await act(async () => {
-                fireEvent.press(navProfileBtn);
-            });
-
-            expect(view.getByTestId('profile-sheet')).toBeTruthy();
         });
     });
 });
