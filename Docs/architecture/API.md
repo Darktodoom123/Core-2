@@ -374,6 +374,9 @@ The `/api/v1` prefix is composed from module- and platform-owned route files. Al
 - `POST /api/v1/dispatch-jobs/{dispatchJob}/assignments/{assignment}/response`: Accept or reject assignment offer.
 - `POST /api/v1/dispatch-jobs/{dispatchJob}/handover/initiate`: Initiate equipment custody handover.
 - `POST /api/v1/dispatch-jobs/{dispatchJob}/handover/claim`: Claim transferred equipment custody.
+- `GET /api/v1/unit-link`: The unit the authenticated operator is bound to, or `null`.
+- `POST /api/v1/unit-link`: Bind the operator to an assigned unit (`operational_asset_id`, optional `dispatch_job_id`; idempotent with `X-Command-Id`). Returns `409` when another operator holds the unit or the operator holds a different one, and `422` when the unit is out of service or not assigned to them.
+- `POST /api/v1/unit-link/release`: Release the operator's unit; releasing when nothing is linked returns `data: null`.
 
 ### Driver Vehicle Inspection Report (DVIR) (`/api/v1/dvir`)
 - `GET /api/v1/dvir/inspections` (`throttle:60,1`): List inspection history for operator/asset.

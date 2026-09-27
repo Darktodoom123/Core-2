@@ -7,6 +7,10 @@ use App\Modules\Assignment\Models\DispatchPersonnelAssignment;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Models\User;
+use App\Shared\Assets\Enums\UnitLinkReleaseReason;
+use App\Shared\Assets\Models\OperationalAsset;
+use App\Shared\Assets\Models\UnitLink;
+use App\Shared\Assets\Services\UnitLinkReleaser;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -20,7 +24,10 @@ final class ClaimEquipmentHandover
 {
     public const MAX_WRONG_PINS = 5;
 
-    public function __construct(private readonly RecordAuditEvent $audit) {}
+    public function __construct(
+        private readonly RecordAuditEvent $audit,
+        private readonly UnitLinkReleaser $unitLinks,
+    ) {}
 
     /** @param array<string, mixed> $handover */
     public static function remember(array $handover, \DateTimeInterface $expiresAt): void
@@ -133,6 +140,8 @@ final class ClaimEquipmentHandover
 
             $job->increment('version');
 
+            $this->transferUnitLink($actor, $job, (string) $handover['asset_code']);
+
             $this->audit->handle(
                 $actor,
                 $job,
@@ -153,6 +162,31 @@ final class ClaimEquipmentHandover
                 'active_operator_name' => $actor->name,
             ];
         });
+    }
+
+    /** The relief operator takes over the unit's binding with no gap. */
+    private function transferUnitLink(User $actor, DispatchJob $job, string $assetCode): void
+    {
+        /** @var OperationalAsset|null $asset */
+        $asset = $job->assetAssignments()->open()
+            ->whereHas('asset', fn ($query) => $query->where('code', $assetCode))
+            ->with('asset')
+            ->first()
+            ?->asset;
+
+        if ($asset === null) {
+            return;
+        }
+
+        $this->unitLinks->forAsset($asset->id, UnitLinkReleaseReason::Handover);
+        $this->unitLinks->forUser($actor->id, UnitLinkReleaseReason::Handover);
+
+        UnitLink::query()->create([
+            'operational_asset_id' => $asset->id,
+            'user_id' => $actor->id,
+            'dispatch_job_id' => $job->id,
+            'linked_at' => now(),
+        ]);
     }
 
     /** @param array<string, mixed> $handover */

@@ -13,9 +13,11 @@ use App\Platform\Storage\Contracts\StorageFallbackServiceInterface;
 use App\Shared\Assets\Data\AssetUsageRequest;
 use App\Shared\Assets\Enums\AssetStatus;
 use App\Shared\Assets\Enums\AssetUsageType;
+use App\Shared\Assets\Enums\UnitLinkReleaseReason;
 use App\Shared\Assets\Models\MaintenanceWorkOrder;
 use App\Shared\Assets\Models\OperationalAsset;
 use App\Shared\Assets\Services\OperationalAssetStatusGuard;
+use App\Shared\Assets\Services\UnitLinkReleaser;
 use finfo;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -28,6 +30,7 @@ class CreateDvirInspectionAction
         private readonly ?StorageFallbackServiceInterface $storageFallback = null,
         private readonly ?OperationalAssetStatusGuard $statusGuard = null,
         private readonly ?RecordAuditEvent $audit = null,
+        private readonly ?UnitLinkReleaser $unitLinks = null,
     ) {}
 
     /**
@@ -269,6 +272,10 @@ class CreateDvirInspectionAction
             usageType: AssetUsageType::AssetStatusChange,
             targetStatus: AssetStatus::UnderMaintenance,
         ));
+
+        // A locked-out unit has no operator bound to it (lifecycle v1.1, 4.4).
+        ($this->unitLinks ?? app(UnitLinkReleaser::class))
+            ->forAsset((int) $asset->id, UnitLinkReleaseReason::SafetyLockout);
 
         $defectLines = collect($defectChecks)->map(function (array $check): string {
             $category = $check['category'] ?? 'General';

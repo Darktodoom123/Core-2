@@ -2,6 +2,7 @@
 
 use App\Modules\Assignment\Http\Controllers\Api\V1\AssignmentResponseController;
 use App\Modules\Assignment\Http\Controllers\Api\V1\EquipmentHandoverController;
+use App\Modules\Assignment\Http\Controllers\Api\V1\UnitLinkController;
 use App\Modules\Assignment\Http\Controllers\Api\V2\AssignmentOfferV2Controller;
 use Illuminate\Support\Facades\Route;
 
@@ -17,6 +18,9 @@ Route::prefix('v1')->name('api.v1.')->middleware(['auth:sanctum', 'active', 'api
     Route::post('/equipment-handovers/claim', [EquipmentHandoverController::class, 'claimByUnit'])
         ->middleware('throttle:handover-claims')
         ->name('equipment-handovers.claim');
+    Route::get('/unit-link', [UnitLinkController::class, 'show'])->name('unit-link.show');
+    Route::post('/unit-link', [UnitLinkController::class, 'store'])->name('unit-link.store');
+    Route::post('/unit-link/release', [UnitLinkController::class, 'release'])->name('unit-link.release');
 });
 
 Route::prefix('v2')->name('api.v2.')->middleware(['auth:sanctum', 'active', 'api-token', 'throttle:120,1'])->group(function (): void {

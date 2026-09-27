@@ -9,6 +9,8 @@ use App\Modules\HoursOfService\Models\OperatorShift;
 use App\Modules\HoursOfService\Services\DutyLocationSnapshotService;
 use App\Modules\HoursOfService\Support\DutyEventTime;
 use App\Platform\Identity\Models\User;
+use App\Shared\Assets\Enums\UnitLinkReleaseReason;
+use App\Shared\Assets\Services\UnitLinkReleaser;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +20,7 @@ class CertifyAndCompleteShiftAction
 {
     public function __construct(
         private readonly DutyLocationSnapshotService $locationSnapshotService,
+        private readonly UnitLinkReleaser $unitLinks,
     ) {}
 
     public function execute(
@@ -160,6 +163,9 @@ class CertifyAndCompleteShiftAction
                 'certification_statement' => $certificationStatement,
                 'remarks' => $remarks ?? $shift->remarks,
             ]);
+
+            // Ending the shift frees the unit the operator was bound to.
+            $this->unitLinks->forUser($user->id, UnitLinkReleaseReason::ShiftEnded);
 
             return $shift->fresh(['dutyLogs', 'activeDutyLog']);
         });

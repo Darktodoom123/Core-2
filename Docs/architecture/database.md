@@ -151,6 +151,7 @@ collision behavior.
 - `operational_assets`: unique code/registration, kind/subtype, manufacturer/model, specifications, capacity, meter, location, lifecycle status, `baseline_burn_rate`, `burn_rate_unit`, soft delete.
 - `inspections`: asset, technician/operator, type, result, checklist, findings, completion time.
 - `maintenance_work_orders`: asset, technician/operator, status, defect, blocking flag, schedule/due dates, work, parts, release evidence and verifier.
+- `unit_links`: which operator (`user_id`) is physically bound to which unit (`operational_asset_id`) on which job (`dispatch_job_id`), from `linked_at` to `released_at`, with `release_reason` (`released`, `shift_ended`, `handover`, `safety_lockout`). Partial unique indexes allow one open link per unit and one per operator. Ending a shift, a DVIR safety lockout, or a claimed handover closes the link.
 
 ### Module 5: Fuel management and shared platform records
 
