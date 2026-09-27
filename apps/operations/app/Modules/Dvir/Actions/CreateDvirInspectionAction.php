@@ -101,7 +101,10 @@ class CreateDvirInspectionAction
                     $checksPayload,
                     fn (array $c): bool => in_array($c['status'] ?? '', [DvirCheckStatus::CRITICAL->value, DvirCheckStatus::ATTENTION->value, 'critical', 'attention'], true),
                 ));
-                $isLockoutRequired = ($inspection->critical_defects_count > 0) || ! empty($defectChecks);
+                // Any reported defect, or the operator declaring the unit unsafe, takes it out of service.
+                $isLockoutRequired = $inspection->has_defects
+                    || ($inspection->critical_defects_count > 0)
+                    || ! empty($defectChecks);
 
                 if ($isLockoutRequired && $inspection->operational_asset_id !== null) {
                     $this->applySafetyLockout((int) $inspection->operational_asset_id, $inspection, $defectChecks, $user);
@@ -277,7 +280,7 @@ class CreateDvirInspectionAction
         })->implode("\n");
 
         $defectDescription = "Critical DVIR Defect Flagged ({$inspection->reference}):\n"
-            .($defectLines ?: 'Critical defects flagged during inspection walkaround.');
+            .($defectLines ?: '• Operator declared the unit unsafe to operate; no specific defect was picked.');
 
         if (! empty($inspection->remarks)) {
             $defectDescription .= "\nRemarks: {$inspection->remarks}";

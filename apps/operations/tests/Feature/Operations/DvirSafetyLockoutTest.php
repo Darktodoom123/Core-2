@@ -9,7 +9,11 @@ use App\Shared\Assets\Enums\AssetStatus;
 use App\Shared\Assets\Models\MaintenanceWorkOrder;
 use App\Shared\Assets\Models\OperationalAsset;
 use Database\Seeders\RolePermissionSeeder;
+use Illuminate\Broadcasting\Broadcasters\Broadcaster;
+use Illuminate\Broadcasting\BroadcastException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
 
@@ -324,4 +328,161 @@ it('allows authorized operations manager to clear lockout via managerial overrid
         'action' => 'maintenance.released',
         'subject_id' => (string) $workOrder->id,
     ]);
+});
+
+it('locks the unit when the operator declares it unsafe without picking a defect', function (): void {
+    $operator = User::factory()->create(['is_active' => true]);
+    $token = $operator->createToken('Mobile Token')->plainTextToken;
+
+    $asset = OperationalAsset::query()->create([
+        'code' => 'CRN-UNSAFE-01',
+        'name' => 'Tadano GR-600',
+        'kind' => 'crane',
+        'status' => AssetStatus::Available,
+    ]);
+
+    $this->withToken($token)
+        ->postJson('/api/v1/dvir/inspections', [
+            'inspection_type' => 'pre_trip',
+            'operational_asset_id' => $asset->id,
+            'has_defects' => true,
+            'signature_captured' => true,
+            'remarks' => 'Strange grinding from the slew drive.',
+            'checks' => [
+                ['category' => 'structural', 'label' => 'Boom & jib structure', 'status' => 'good'],
+            ],
+        ])->assertCreated();
+
+    expect($asset->refresh()->status)->toBe(AssetStatus::UnderMaintenance);
+
+    $workOrder = MaintenanceWorkOrder::query()->where('operational_asset_id', $asset->id)->first();
+    expect($workOrder?->dispatch_blocking)->toBeTrue()
+        ->and($workOrder?->defect)->toContain('Operator declared the unit unsafe')
+        ->and($workOrder?->defect)->toContain('Strange grinding from the slew drive.');
+});
+
+it('leaves the unit available after a clean inspection', function (): void {
+    $operator = User::factory()->create(['is_active' => true]);
+    $token = $operator->createToken('Mobile Token')->plainTextToken;
+
+    $asset = OperationalAsset::query()->create([
+        'code' => 'CRN-CLEAN-01',
+        'name' => 'Grove GMK 4100',
+        'kind' => 'crane',
+        'status' => AssetStatus::Available,
+    ]);
+
+    $this->withToken($token)
+        ->postJson('/api/v1/dvir/inspections', [
+            'inspection_type' => 'pre_trip',
+            'operational_asset_id' => $asset->id,
+            'has_defects' => false,
+            'signature_captured' => true,
+            'checks' => [
+                ['category' => 'structural', 'label' => 'Boom & jib structure', 'status' => 'good'],
+            ],
+        ])->assertCreated();
+
+    expect($asset->refresh()->status)->toBe(AssetStatus::Available)
+        ->and(MaintenanceWorkOrder::query()->where('operational_asset_id', $asset->id)->exists())->toBeFalse();
+});
+
+it('locks a tower crane from the payload the field phone sends', function (): void {
+    $operator = User::factory()->create(['is_active' => true]);
+    $token = $operator->createToken('Mobile Token')->plainTextToken;
+
+    $asset = OperationalAsset::query()->create([
+        'code' => 'TWR-PHONE-01',
+        'name' => 'Potain MDT 219',
+        'kind' => 'tower_crane',
+        'status' => AssetStatus::Available,
+    ]);
+
+    // Mirrors buildDvirSubmitPayload in packages/field-mobile/src/screens/dvir/dvir-record-builder.ts.
+    $this->withToken($token)
+        ->postJson('/api/v1/dvir/inspections', [
+            'inspection_type' => 'pre_trip',
+            'asset_code' => 'TWR-PHONE-01',
+            'asset_name' => 'Potain MDT 219',
+            'inspector_name' => $operator->name,
+            'starting_odometer_km' => null,
+            'ending_odometer_km' => null,
+            'engine_hours' => 1520.5,
+            'has_defects' => true,
+            'signature_captured' => true,
+            'remarks' => null,
+            'checks' => [
+                [
+                    'id' => 'tower_catwalk_lifeline',
+                    'category' => 'structural',
+                    'label' => 'Tower Crane: Jib & Weather-Vaning: Catwalk lifeline',
+                    'status' => 'attention',
+                    'status_label' => 'Needs attention · Reported defect',
+                ],
+                [
+                    'id' => 'tower_cab_panel_isolator',
+                    'category' => 'electrical',
+                    'label' => 'Tower Crane: Electrical: Main isolator',
+                    'status' => 'critical',
+                    'status_label' => 'Critical Defect · Block dispatch',
+                ],
+            ],
+        ])->assertCreated()
+        ->assertJsonPath('data.critical_defects_count', 1);
+
+    expect($asset->refresh()->status)->toBe(AssetStatus::UnderMaintenance);
+
+    $workOrder = MaintenanceWorkOrder::query()->where('operational_asset_id', $asset->id)->sole();
+    expect($workOrder->dispatch_blocking)->toBeTrue()
+        ->and($workOrder->defect)->toContain('[ATTENTION] Tower Crane: Jib & Weather-Vaning: Catwalk lifeline (structural)')
+        ->and($workOrder->defect)->toContain('[CRITICAL] Tower Crane: Electrical: Main isolator (electrical)');
+});
+
+it('still answers 201 with the unit locked when live updates are down, so the phone does not resubmit', function (): void {
+    Broadcast::extend('unreachable', fn () => new class extends Broadcaster
+    {
+        public function auth($request): mixed
+        {
+            return null;
+        }
+
+        public function validAuthenticationResponse($request, $result): mixed
+        {
+            return null;
+        }
+
+        public function broadcast(array $channels, $event, array $payload = []): void
+        {
+            throw new BroadcastException('Reverb is unreachable.');
+        }
+    });
+    config([
+        'broadcasting.connections.unreachable' => ['driver' => 'unreachable'],
+        'broadcasting.default' => 'unreachable',
+    ]);
+
+    $operator = User::factory()->create(['is_active' => true]);
+    $token = $operator->createToken('Mobile Token')->plainTextToken;
+
+    $asset = OperationalAsset::query()->create([
+        'code' => 'CRN-NOREVERB-01',
+        'name' => 'Kato SR-250',
+        'kind' => 'crane',
+        'status' => AssetStatus::Available,
+    ]);
+
+    $this->withToken($token)
+        ->withHeader('X-Command-Id', (string) Str::uuid())
+        ->postJson('/api/v1/dvir/inspections', [
+            'inspection_type' => 'pre_trip',
+            'operational_asset_id' => $asset->id,
+            'has_defects' => true,
+            'signature_captured' => true,
+            'checks' => [
+                ['category' => 'safety_devices', 'label' => 'Operator declared the unit unsafe to operate', 'status' => 'critical'],
+            ],
+        ])->assertCreated();
+
+    expect($asset->refresh()->status)->toBe(AssetStatus::UnderMaintenance)
+        ->and(MaintenanceWorkOrder::query()->where('operational_asset_id', $asset->id)->count())->toBe(1);
 });

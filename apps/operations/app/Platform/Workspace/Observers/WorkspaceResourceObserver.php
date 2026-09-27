@@ -42,8 +42,10 @@ final class WorkspaceResourceObserver
             return;
         }
 
+        // Live updates are best-effort: the write is already committed, so a
+        // socket outage must not turn it into an error the client retries.
         DB::afterCommit(static function () use ($resourceType, $action): void {
-            WorkspaceUpdated::dispatch($resourceType, $action);
+            rescue(static fn () => WorkspaceUpdated::dispatch($resourceType, $action));
         });
     }
 
