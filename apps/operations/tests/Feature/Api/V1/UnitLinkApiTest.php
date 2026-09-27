@@ -44,6 +44,11 @@ function unitLinkCrane(string $code, AssetStatus $status = AssetStatus::Availabl
 /** A working job with the crane assigned and each operator accepted on it. */
 function unitLinkJob(OperationalAsset $crane, User ...$operators): DispatchJob
 {
+    return unitLinkJobWithStatus(DispatchStatus::Working, $crane, ...$operators);
+}
+
+function unitLinkJobWithStatus(DispatchStatus $status, OperationalAsset $crane, User ...$operators): DispatchJob
+{
     /** @var DispatchJob $job */
     $job = DispatchJob::query()->create([
         'reference' => 'DSP-UL-'.Str::upper(Str::random(5)),
@@ -51,7 +56,7 @@ function unitLinkJob(OperationalAsset $crane, User ...$operators): DispatchJob
         'title' => 'Tandem lift',
         'site' => 'Pier 4',
         'priority' => DispatchPriority::Routine,
-        'status' => DispatchStatus::Working,
+        'status' => $status,
         'version' => 1,
         'created_by' => $operators[0]->id,
     ]);
@@ -277,4 +282,20 @@ it('a handover moves the unit link to the relief operator', function (): void {
         ->assertOk()
         ->assertJsonPath('data.asset_code', 'UL-CRN-1');
     $this->assertDatabaseHas('unit_links', ['user_id' => $outgoing->id, 'release_reason' => 'handover']);
+});
+
+it('links on a scheduled job the operator accepted, but not on a finished or unapproved one', function (): void {
+    $operator = unitLinkOperator('Operator A');
+    $scheduled = unitLinkCrane('UL-CRN-1');
+    unitLinkJobWithStatus(DispatchStatus::Scheduled, $scheduled, $operator);
+    linkAs($operator, $scheduled)->assertCreated();
+
+    $other = unitLinkOperator('Operator B');
+    $finished = unitLinkCrane('UL-CRN-2');
+    $draft = unitLinkCrane('UL-CRN-3');
+    unitLinkJobWithStatus(DispatchStatus::Completed, $finished, $other);
+    unitLinkJobWithStatus(DispatchStatus::Draft, $draft, $other);
+
+    linkAs($other, $finished)->assertStatus(422);
+    linkAs($other, $draft)->assertStatus(422);
 });

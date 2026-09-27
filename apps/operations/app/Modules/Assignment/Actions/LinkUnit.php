@@ -22,8 +22,9 @@ use Illuminate\Support\Facades\DB;
  */
 final class LinkUnit
 {
-    /** Jobs an operator can be working a unit on. */
+    /** Approved jobs an operator can be on site for; the phone shows these as live. */
     private const LIVE_JOB_STATUSES = [
+        DispatchStatus::Scheduled,
         DispatchStatus::Dispatched,
         DispatchStatus::Accepted,
         DispatchStatus::EnRoute,
