@@ -1,6 +1,7 @@
 <?php
 
 use App\Platform\Attachments\Http\Controllers\AttachmentController;
+use App\Platform\Safety\Http\Controllers\Api\V1\FieldSafetyReportController;
 use App\Platform\Safety\Http\Controllers\Api\V1\SafetyGovernanceApiController;
 use App\Platform\Safety\Http\Controllers\Api\V1\SosIncidentController;
 use Illuminate\Support\Facades\Route;
@@ -25,6 +26,7 @@ Route::prefix('v1')->name('api.v1.')->middleware(['auth:sanctum', 'active', 'api
 
     Route::prefix('safety')->name('safety.')->middleware('throttle:safety')->group(function (): void {
         Route::get('/metrics', [SafetyGovernanceApiController::class, 'metrics'])->name('metrics');
+        Route::get('/my-reports', [FieldSafetyReportController::class, 'index'])->name('my-reports');
         Route::get('/hazards', [SafetyGovernanceApiController::class, 'indexHazards'])->name('hazards.index');
         Route::get('/lift-plans', [SafetyGovernanceApiController::class, 'indexCriticalLiftPlans'])->name('lift-plans.index');
         Route::get('/toolbox-meetings', [SafetyGovernanceApiController::class, 'indexToolboxMeetings'])->name('tbm.index');
