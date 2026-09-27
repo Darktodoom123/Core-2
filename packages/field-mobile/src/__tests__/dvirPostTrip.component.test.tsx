@@ -5,6 +5,7 @@ import type { StyleProp, ViewStyle } from 'react-native';
 import { DvirScreen } from '../screens/DvirScreen';
 import { ThemeProvider } from '../theme';
 import { lightThemeColors as theme } from '../theme/tokens';
+import { takeWalkaroundPhotos } from './dvir-test-photos';
 
 const renderPostTrip = async (
     props: Partial<React.ComponentProps<typeof DvirScreen>> = {},
@@ -23,6 +24,7 @@ const renderPostTrip = async (
 
     await fireEvent.changeText(view.getByTestId('input-engine-hours'), '1855');
     await fireEvent.press(view.getByTestId('dvir-attestation'));
+    await takeWalkaroundPhotos(view);
 
     return view;
 };

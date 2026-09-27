@@ -95,8 +95,37 @@ describe.each(MODES)(
             );
         });
 
-        it('are optional on a post-trip', async () => {
+        it('are required on a clean post-trip too, to record the unit as it was parked', async () => {
             const view = await renderReady(mode, { initialMode: 'post_trip' });
+
+            for (const check of [
+                'post-trip-parking-brake',
+                'post-trip-wheel-chocks',
+                'post-trip-outriggers',
+                'post-trip-hook-secured',
+                'post-trip-power-isolated',
+            ]) {
+                await fireEvent.press(
+                    view.getByTestId(`post-trip-${check}-yes`),
+                );
+            }
+
+            expect(badge(view)).toHaveTextContent(/REQUIRED · 0 of 4/);
+            expect(view.getByTestId('complete-dvir-button')).toBeDisabled();
+            expect(view.getByTestId('dvir-missing')).toHaveTextContent(
+                /Still needed: 4 walkaround photos$/,
+            );
+
+            await takeWalkaroundPhotos(view);
+            expect(view.getByTestId('complete-dvir-button')).toBeEnabled();
+        });
+
+        it('never block a post-trip that reports a problem', async () => {
+            const view = await renderReady(mode, { initialMode: 'post_trip' });
+
+            await fireEvent.press(
+                view.getByTestId('post-trip-post-trip-outriggers-no'),
+            );
 
             expect(badge(view)).toHaveTextContent(/OPTIONAL/);
         });

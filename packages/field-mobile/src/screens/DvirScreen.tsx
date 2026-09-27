@@ -291,9 +291,10 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     const needsDefectPhotos = isUnsafe;
     // A reported problem needs words: where it is and how bad it is.
     const remarksMissing = needsDefectPhotos && remarks.trim() === '';
-    // A clean pre-trip needs all four walkaround photos. Reporting a defect
-    // is never blocked by a missing photo.
-    const walkaroundRequired = mode === 'pre_trip' && !isUnsafe;
+    // A clean inspection, pre- or post-trip, needs all four walkaround
+    // photos: the unit as taken over and as parked. Reporting a defect is
+    // never blocked by a missing photo.
+    const walkaroundRequired = mode !== 'history' && !isUnsafe;
     const walkaroundMissing = walkaroundRequired
         ? WALKAROUND_ANGLES.filter((angle) => !walkaroundPhotos[angle.key])
               .length
