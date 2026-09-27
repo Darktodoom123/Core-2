@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import { UNIT_TYPES } from '../components/inspection/defects/unit-type';
 import { TileScreenHeader } from '../components/layout/tile-screen-header';
-import { EndShiftSafeguardModal } from '../components/sheets/EndShiftSafeguardModal';
 import { ReliefHandoverModal } from '../components/sheets/ReliefHandoverModal';
 import { useHosCompliance } from '../hooks/useHosCompliance';
 import type { FieldApiClient } from '../services/apiClient';
@@ -26,6 +25,8 @@ import {
 } from './hos/hos-constants';
 import { HosContinuousRestBanner } from './hos/hos-continuous-rest-banner';
 import { HosDutyStatusSelector } from './hos/hos-duty-status-selector';
+import { endShiftStepFor } from './hos/hos-end-shift';
+import { HosEndShiftNotice } from './hos/hos-end-shift-notice';
 import { HosShiftLimitBanner } from './hos/hos-shift-limit-banner';
 import { HosShiftLog } from './hos/hos-shift-log';
 import { HosStandbyReasonSelector } from './hos/hos-standby-reason-selector';
@@ -48,6 +49,10 @@ export interface HosScreenProps {
     linkedAssetCode?: string | null;
     /** The linked machine's type; decides which standby reasons apply. */
     linkedAssetType?: DesignatedEquipmentType | null;
+    /** A post-trip DVIR was saved for the linked machine this shift. */
+    postTripDone?: boolean;
+    /** Opens the DVIR in post-trip mode for the linked machine. */
+    onStartPostTrip?: () => void;
     timelineHistory?: TimelineDayHistory[];
     apiClient?: FieldApiClient;
     activeJobId?: number;
@@ -80,6 +85,8 @@ export const HosScreen: React.FC<HosScreenProps> = ({
     shiftInfo = OFF_SHIFT,
     linkedAssetCode = null,
     linkedAssetType = null,
+    postTripDone = false,
+    onStartPostTrip,
     timelineHistory = [],
     apiClient,
     activeJobId,
@@ -153,7 +160,6 @@ export const HosScreen: React.FC<HosScreenProps> = ({
     // The operator ticks the certification themselves; it never starts ticked.
     const [isCertified, setIsCertified] = useState(false);
     const [isSaved, setIsSaved] = useState(false);
-    const [safeguardModalOpen, setSafeguardModalOpen] = useState(false);
     const [reliefHandoverOpen, setReliefHandoverOpen] = useState(false);
     // Confirmation & Micro-interaction Animations (Apple HIG spring & hardware-accelerated transforms)
     const stampScale = useMemo(() => new Animated.Value(0.95), []);
@@ -229,12 +235,20 @@ export const HosScreen: React.FC<HosScreenProps> = ({
         }
     };
 
+    // Lifecycle step 7 then 8: a linked machine gets its post-trip DVIR,
+    // is released, and only then does the shift end.
+    const endShiftStep = endShiftStepFor(linkedAssetCode, postTripDone);
+
     const handleConfirm = () => {
         if (selectedStatus === 'off_duty') {
-            if (linkedAssetCode) {
-                setSafeguardModalOpen(true);
+            if (endShiftStep === 'post_trip') {
+                onStartPostTrip?.();
 
                 return;
+            }
+
+            if (linkedAssetCode) {
+                onReleaseUnit?.(linkedAssetCode);
             }
 
             setSelectedStatus('off_duty');
@@ -361,9 +375,17 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                         standbyReason={chosenReason}
                     />
                 ) : null}
+                {selectedStatus === 'off_duty' && linkedAssetCode ? (
+                    <HosEndShiftNotice
+                        assetCode={linkedAssetCode}
+                        step={endShiftStep}
+                    />
+                ) : null}
                 {/* 6. Remarks & Duty Transition Submission Card */}
                 <HosCertifyCard
                     activeConfig={activeConfig}
+                    endShiftStep={endShiftStep}
+                    linkedAssetCode={linkedAssetCode}
                     blockedLabel={
                         reasonMissing ? 'Choose a standby reason' : null
                     }
@@ -392,25 +414,6 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                 {/* 8. Chronological Shift Log Events History */}
                 <HosShiftLog selectedDay={selectedDay} />
             </ScrollView>
-
-            {/* End Shift Safeguard Intercept Modal */}
-            <EndShiftSafeguardModal
-                assetCode={linkedAssetCode ?? undefined}
-                onCancel={() => setSafeguardModalOpen(false)}
-                onConfirmReleaseAndClockOut={() => {
-                    setSafeguardModalOpen(false);
-
-                    if (linkedAssetCode) {
-                        onReleaseUnit?.(linkedAssetCode);
-                    }
-
-                    setSelectedStatus('off_duty');
-                    executeDutyUpdate('off_duty');
-                    onToggleShift?.('off_shift');
-                    onEndShift?.();
-                }}
-                visible={safeguardModalOpen}
-            />
 
             {/* Smart Dual Hot-Seating Relief Handover Modal */}
             <ReliefHandoverModal

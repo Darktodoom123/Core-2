@@ -10,7 +10,6 @@ export * from './cards/AssignmentResponseCard';
 export * from './cards/JobListItemCard';
 export * from './cards/LocationWeatherCard';
 export * from './sheets/OnSiteConfirmationModal';
-export * from './sheets/EndShiftSafeguardModal';
 export * from './sheets/ReliefHandoverModal';
 export * from './sheets/replacement-request/replacement-request-sheet';
 export * from './sheets/PreTripDefectFallbackModal';

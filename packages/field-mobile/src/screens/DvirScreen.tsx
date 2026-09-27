@@ -84,6 +84,8 @@ export interface DvirScreenProps {
     canRequestReplacement?: boolean;
     onSwitchToStandby?: () => void;
     onPreTripPassed?: (assetCode: string, record: DvirInspectionRecord) => void;
+    /** Where Back goes after saving; shown on the button. */
+    returnLabel?: string;
 }
 
 export const DvirScreen: React.FC<DvirScreenProps> = ({
@@ -107,6 +109,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     canRequestReplacement = false,
     onSwitchToStandby,
     onPreTripPassed,
+    returnLabel,
 }) => {
     const { theme } = useTheme();
     const styles = useThemedStyles(createStyles);
@@ -709,6 +712,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                     isSaved={isSaved}
                     isUnassigned={isUnassigned}
                     missing={missing}
+                    returnLabel={returnLabel}
                 />
             ) : null}
             {/* Defects Modal (Screenshot 3) */}

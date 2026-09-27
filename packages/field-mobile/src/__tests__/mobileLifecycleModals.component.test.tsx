@@ -2,7 +2,6 @@ import { cleanup, fireEvent, render } from '@testing-library/react-native/pure';
 import '@testing-library/react-native/matchers';
 import React from 'react';
 import {
-    EndShiftSafeguardModal,
     OnSiteConfirmationModal,
     PreTripDefectFallbackModal,
     ReplacementRequestSheet,
@@ -84,36 +83,6 @@ describe('Mobile Lifecycle Modals & Operational Safeguards', () => {
             expect(onConfirm).toHaveBeenCalledTimes(1);
 
             await fireEvent.press(view.getByTestId('cancel-on-site-btn'));
-            expect(onCancel).toHaveBeenCalledTimes(1);
-        });
-    });
-
-    describe('EndShiftSafeguardModal', () => {
-        it('intercepts shift end while linked to unit and confirms unbinding', async () => {
-            const onConfirm = jest.fn();
-            const onCancel = jest.fn();
-
-            const view = await render(
-                <EndShiftSafeguardModal
-                    assetCode="CRN-101"
-                    onCancel={onCancel}
-                    onConfirmReleaseAndClockOut={onConfirm}
-                    visible={true}
-                />,
-            );
-
-            expect(view.getByTestId('end-shift-safeguard-modal')).toBeTruthy();
-            expect(view.getByText('Active Equipment Warning')).toBeTruthy();
-            expect(
-                view.getByText(
-                    /You are still linked to.*CRN-101.*Release unit and turn off tracking\?/,
-                ),
-            ).toBeTruthy();
-
-            await fireEvent.press(view.getByTestId('confirm-safeguard-btn'));
-            expect(onConfirm).toHaveBeenCalledTimes(1);
-
-            await fireEvent.press(view.getByTestId('cancel-safeguard-btn'));
             expect(onCancel).toHaveBeenCalledTimes(1);
         });
     });
@@ -576,13 +545,9 @@ describe('Mobile Lifecycle Modals & Operational Safeguards', () => {
     });
 
     describe('HosScreen DOLE & Safeguard Integration', () => {
-        it('displays DOLE warning banner and intercepts off-duty transition with safeguard modal', async () => {
-            const onUpdateDutyStatus = jest.fn();
-
+        it('shows the DOLE warning banner near the 10h limit', async () => {
             const view = await render(
                 <HosScreen
-                    linkedAssetCode="CRN-101"
-                    onUpdateDutyStatus={onUpdateDutyStatus}
                     shiftInfo={{
                         status: 'on_shift',
                         dutyStatus: 'operating',
@@ -594,29 +559,95 @@ describe('Mobile Lifecycle Modals & Operational Safeguards', () => {
                 />,
             );
 
-            // Verify DOLE 9.0h warning
             expect(view.getByTestId('dole-shift-limit-banner')).toBeTruthy();
             expect(
                 view.getByText(
                     'Approaching the 10h operating limit. Prepare your handover or end your shift.',
                 ),
             ).toBeTruthy();
+        });
+
+        it('sends a linked operator to the post-trip inspection before ending the shift', async () => {
+            const onStartPostTrip = jest.fn();
+            const onUpdateDutyStatus = jest.fn();
+            const onReleaseUnit = jest.fn();
+
+            const view = await render(
+                <HosScreen
+                    linkedAssetCode="CRN-101"
+                    linkedAssetType="mobile_crane"
+                    onReleaseUnit={onReleaseUnit}
+                    onStartPostTrip={onStartPostTrip}
+                    onUpdateDutyStatus={onUpdateDutyStatus}
+                    shiftInfo={{
+                        status: 'on_shift',
+                        dutyStatus: 'operating',
+                        startedAt: '06:00 AM',
+                        hoursElapsed: 8,
+                        limitCounterMinutes: 420,
+                    }}
+                />,
+            );
 
             await fireEvent.press(view.getByTestId('duty-option-off_duty'));
-            await fireEvent.press(view.getByTestId('hos-cert-check'));
+
+            expect(view.getByTestId('hos-end-shift-notice')).toHaveTextContent(
+                /You're linked to CRN-101/,
+            );
+            expect(view.getByText('Do post-trip inspection')).toBeTruthy();
+            // Opening the inspection needs no certification tick.
+            expect(
+                view.getByTestId('confirm-hos-btn').props.accessibilityState,
+            ).toMatchObject({ disabled: false });
+
             await fireEvent.press(view.getByTestId('confirm-hos-btn'));
 
-            // Intercept modal should appear
-            expect(view.getByTestId('end-shift-safeguard-modal')).toBeTruthy();
+            expect(onStartPostTrip).toHaveBeenCalled();
             expect(onUpdateDutyStatus).not.toHaveBeenCalled();
+            expect(onReleaseUnit).not.toHaveBeenCalled();
+            expect(view.queryByTestId('end-shift-safeguard-modal')).toBeNull();
+        });
 
-            // Confirm release in modal
-            await fireEvent.press(view.getByTestId('confirm-safeguard-btn'));
+        it('releases the unit and ends the shift in one step once the post-trip is done', async () => {
+            const onUpdateDutyStatus = jest.fn();
+            const onReleaseUnit = jest.fn();
+            const onEndShift = jest.fn();
+
+            const view = await render(
+                <HosScreen
+                    linkedAssetCode="CRN-101"
+                    linkedAssetType="mobile_crane"
+                    onEndShift={onEndShift}
+                    onReleaseUnit={onReleaseUnit}
+                    onUpdateDutyStatus={onUpdateDutyStatus}
+                    postTripDone
+                    shiftInfo={{
+                        status: 'on_shift',
+                        dutyStatus: 'standby',
+                        startedAt: '06:00 AM',
+                        hoursElapsed: 8,
+                        limitCounterMinutes: 420,
+                    }}
+                />,
+            );
+
+            await fireEvent.press(view.getByTestId('duty-option-off_duty'));
+
+            expect(view.getByTestId('hos-end-shift-notice')).toHaveTextContent(
+                /Post-trip inspection done/,
+            );
+            await fireEvent.press(view.getByTestId('hos-cert-check'));
+            expect(view.getByText('Release CRN-101 & end shift')).toBeTruthy();
+
+            await fireEvent.press(view.getByTestId('confirm-hos-btn'));
+
+            expect(onReleaseUnit).toHaveBeenCalledWith('CRN-101');
             expect(onUpdateDutyStatus).toHaveBeenCalledWith(
                 'off_duty',
                 undefined,
                 undefined,
             );
+            expect(onEndShift).toHaveBeenCalled();
         });
 
         it('ends shift directly without safeguard modal in HosScreen when confirming off_duty from duty options and linkedAssetCode is null', async () => {

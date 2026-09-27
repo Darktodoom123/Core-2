@@ -10,6 +10,7 @@ import {
 import { useTheme, useThemedStyles } from '../../theme';
 import type { ThemeColors } from '../../theme';
 import type { DutyStatus } from '../../types/index';
+import type { EndShiftStep } from './hos-end-shift';
 import { createHosSharedStyles } from './hos-shared-styles';
 import type { DutyStatusOptionConfig } from './hos-types';
 
@@ -17,6 +18,9 @@ export interface HosCertifyCardProps {
     activeConfig: DutyStatusOptionConfig;
     /** Why the change can't be confirmed yet, shown on the button. */
     blockedLabel?: string | null;
+    /** For Off Duty: what ending the shift needs next. */
+    endShiftStep?: EndShiftStep;
+    linkedAssetCode?: string | null;
     /** The status the server last accepted. */
     currentStatus: DutyStatus;
     certCheckScale: Animated.Value;
@@ -35,6 +39,8 @@ export interface HosCertifyCardProps {
 export const HosCertifyCard: React.FC<HosCertifyCardProps> = ({
     activeConfig,
     blockedLabel = null,
+    endShiftStep = 'end',
+    linkedAssetCode = null,
     currentStatus,
     certCheckScale,
     handleConfirm,
@@ -74,14 +80,22 @@ export const HosCertifyCard: React.FC<HosCertifyCardProps> = ({
                 };
     const isCurrent = currentStatus === activeConfig.status;
     const isOffDuty = activeConfig.status === 'off_duty';
-    const canConfirm = isCertified && !isCurrent && !blockedLabel;
+    // Opening the post-trip DVIR is a step, not a certified change.
+    const needsPostTrip =
+        isOffDuty && !isCurrent && endShiftStep === 'post_trip';
+    const canConfirm =
+        needsPostTrip || (isCertified && !isCurrent && !blockedLabel);
     const actionLabel = isCurrent
         ? 'This is your current status'
         : blockedLabel
           ? blockedLabel
-          : isOffDuty
-            ? 'End shift & go off duty'
-            : `Change to ${activeConfig.title}`;
+          : needsPostTrip
+            ? 'Do post-trip inspection'
+            : isOffDuty && endShiftStep === 'release' && linkedAssetCode
+              ? `Release ${linkedAssetCode} & end shift`
+              : isOffDuty
+                ? 'End shift & go off duty'
+                : `Change to ${activeConfig.title}`;
     const hosSharedStyles = useThemedStyles(createHosSharedStyles);
 
     return (

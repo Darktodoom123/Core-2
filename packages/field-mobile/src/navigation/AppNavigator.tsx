@@ -598,6 +598,12 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         TimelineDayHistory[]
     >([]);
     const [isUnitLinked, setIsUnitLinked] = useState<boolean>(false);
+    // Unit code of the last post-trip DVIR saved this shift; cleared on release.
+    const [postTripDoneFor, setPostTripDoneFor] = useState<string | null>(null);
+    // Where the DVIR's back button returns to (HoS opens the post-trip).
+    const [dvirReturnView, setDvirReturnView] = useState<'main' | 'hos'>(
+        'main',
+    );
     const [dvirStatus, setDvirStatus] = useState<
         'pending' | 'cleared' | 'passed' | 'defect'
     >('pending');
@@ -2641,7 +2647,19 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 }}
                                 onReleaseUnit={() => {
                                     setLocationSharingActive(false);
+                                    setIsUnitLinked(false);
+                                    setPostTripDoneFor(null);
                                 }}
+                                onStartPostTrip={() => {
+                                    setDvirInitialMode('post_trip');
+                                    setDvirReturnView('hos');
+                                    setActiveAppView('dvir');
+                                }}
+                                postTripDone={
+                                    isUnitLinked &&
+                                    Boolean(currentAsset?.asset_code) &&
+                                    postTripDoneFor === currentAsset?.asset_code
+                                }
                                 onToggleShift={handleToggleShift}
                                 onUpdateDutyStatus={handleChangeDutyStatus}
                                 operatorName={resolvedOperatorName}
@@ -2665,7 +2683,20 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 commandOutbox={commandOutbox}
                                 initialMode={dvirInitialMode}
                                 inspectorName={resolvedOperatorName}
-                                onBack={() => setActiveAppView('main')}
+                                returnLabel={
+                                    dvirReturnView === 'hos'
+                                        ? 'Hours of Service'
+                                        : 'home'
+                                }
+                                onBack={() => {
+                                    setActiveAppView(dvirReturnView);
+                                    setDvirReturnView('main');
+                                }}
+                                onSaveInspectionRecord={(record) => {
+                                    if (record.type === 'post_trip') {
+                                        setPostTripDoneFor(record.assetCode);
+                                    }
+                                }}
                                 onDefectLockout={() => {
                                     setLocationSharingActive(false);
                                     locationService.stopAutoTracking();

@@ -12,6 +12,8 @@ export interface DvirFooterActionProps {
     isUnassigned: boolean;
     /** What still has to be filled in; Next stays disabled until it's empty. */
     missing?: string[];
+    /** Where Back goes after saving, e.g. "home" or "Hours of Service". */
+    returnLabel?: string;
 }
 
 export const DvirFooterAction: React.FC<DvirFooterActionProps> = ({
@@ -20,6 +22,7 @@ export const DvirFooterAction: React.FC<DvirFooterActionProps> = ({
     isSaved,
     isUnassigned,
     missing = [],
+    returnLabel = 'home',
 }) => {
     const isIncomplete = missing.length > 0;
     const isBlocked =
@@ -48,7 +51,9 @@ export const DvirFooterAction: React.FC<DvirFooterActionProps> = ({
                 </View>
             ) : null}
             <Pressable
-                accessibilityLabel={isSaved ? 'Saved, back to home' : 'Next'}
+                accessibilityLabel={
+                    isSaved ? `Saved, back to ${returnLabel}` : 'Next'
+                }
                 accessibilityRole="button"
                 accessibilityState={{ disabled: isBlocked }}
                 disabled={isBlocked}
@@ -61,7 +66,7 @@ export const DvirFooterAction: React.FC<DvirFooterActionProps> = ({
                 testID="complete-dvir-button"
             >
                 <Text style={[styles.nextButtonText]}>
-                    {isSaved ? 'Saved · Back to home' : 'Next'}
+                    {isSaved ? `Saved · Back to ${returnLabel}` : 'Next'}
                 </Text>
             </Pressable>
         </View>
