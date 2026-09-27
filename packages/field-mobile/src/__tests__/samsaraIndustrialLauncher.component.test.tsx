@@ -144,7 +144,17 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
             const view = await render(
                 <AssignedJobsListScreen
                     isLoading={false}
-                    jobs={[mockJob]}
+                    jobs={[
+                        {
+                            ...mockJob,
+                            // Waiting for a reply, so Dispatch is badged.
+                            my_assignment: {
+                                id: 1,
+                                response_status: 'pending',
+                                response_status_label: 'Pending',
+                            },
+                        } as DispatchJob,
+                    ]}
                     onOpenDocuments={onOpenDocs}
                     onOpenDvir={onOpenDvir}
                     onOpenFuel={onOpenFuel}

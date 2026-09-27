@@ -440,12 +440,10 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 title: 'Dispatch',
                 sublabel: 'Intake & Orders',
                 iconName: 'file-text',
+                // Only jobs waiting for the operator's reply, the same
+                // count as the Respond tab; read aloud as "N pending".
                 badgeCount:
-                    pendingResponseCount > 0
-                        ? pendingResponseCount
-                        : jobs.length > 0
-                          ? jobs.length
-                          : undefined,
+                    pendingResponseCount > 0 ? pendingResponseCount : undefined,
             },
             {
                 id: 'rental',
@@ -454,7 +452,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 iconName: 'truck',
             },
         ],
-        [jobs.length, pendingResponseCount],
+        [pendingResponseCount],
     );
 
     // Lifecycle actions lead the grid; Fuel is a full-width tile below it.

@@ -61,7 +61,8 @@ describe('Home ignores finished jobs', () => {
         expect(within(card).getByText('JOB-2')).toBeTruthy();
         expect(within(card).queryByText('JOB-1')).toBeNull();
         expect(within(card).getByText('0 active · 1 scheduled')).toBeTruthy();
-        expect(view.getByTestId('tile-forms-badge')).toHaveTextContent('1');
+        // An accepted job needs no reply, so the Dispatch tile has no badge.
+        expect(view.queryByTestId('tile-forms-badge')).toBeNull();
     });
 
     it('shows no work, no badge and no unit when every job is finished', async () => {
@@ -81,5 +82,15 @@ describe('Home ignores finished jobs', () => {
 
         expect(view.queryByTestId('tile-forms-badge')).toBeNull();
         expect(view.queryByText(/response needed/)).toBeNull();
+    });
+
+    it('badges the Dispatch tile only with jobs waiting for a reply', async () => {
+        const view = await renderHome([
+            jobWith(4, 'working'),
+            jobWith(5, 'accepted'),
+            jobWith(6, 'dispatched', 'pending'),
+        ]);
+
+        expect(view.getByTestId('tile-forms-badge')).toHaveTextContent('1');
     });
 });
