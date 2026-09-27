@@ -141,6 +141,15 @@ Rules for new and touched code:
   Delay is a neutral secondary action. A delay still in the outbox reads
   "Delay waiting to send" (cobalt); only the server's `latest_delay` reads
   "Delay Reported" (orange).
+- Document validity (`screens/documents/document-status-tone.ts`): valid and
+  permanent are green, expiring soon is orange, expired and revoked are red,
+  superseded and no-expiry are neutral. A missing or unrecognised status is
+  neutral "Status Unknown", never "Valid".
+- The document viewer shows the record as data: status first, then the
+  recorded facts, conditions, the real file (image preview when saved), and
+  the true last-sync date or "Not synced on this device yet". Never draw an
+  imitation certificate (seals, barcodes, "This certifies…" text, government
+  mastheads): an operator may show this screen to an inspector.
 - The tile screen header's category eyebrow is a label, so it uses
   `textSecondary`, not gold or a per-screen accent.
 
