@@ -130,6 +130,21 @@ describe.each(MODES)(
             ).toBeTruthy();
         });
 
+        it('does not show a file row for a record with no file', async () => {
+            const view = await renderWallet(mode, [
+                { ...neverSynced, fileUri: null, localFileUri: null },
+            ]);
+
+            await fireEvent.press(view.getByTestId('view-doc-btn-permit-10'));
+            await view.findByTestId('certificate-modal');
+
+            expect(
+                view.getByText('No file is attached to this record.'),
+            ).toBeTruthy();
+            expect(view.queryByText('Source file')).toBeNull();
+            expect(view.queryByTestId('make-offline-btn')).toBeNull();
+        });
+
         it('makes saving offline the gold primary action with dark ink', async () => {
             const view = await renderWallet(mode, [expiredPermit]);
 

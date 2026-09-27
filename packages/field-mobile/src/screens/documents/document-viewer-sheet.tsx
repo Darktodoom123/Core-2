@@ -25,15 +25,21 @@ export interface DocumentViewerSheetProps {
 
 interface FactProps {
     label: string;
+    isLast?: boolean;
     value?: string | null;
     mono?: boolean;
 }
 
-const Fact: React.FC<FactProps> = ({ label, value, mono = false }) => {
+const Fact: React.FC<FactProps> = ({
+    label,
+    value,
+    mono = false,
+    isLast = false,
+}) => {
     const styles = useThemedStyles(createStyles);
 
     return (
-        <View style={styles.factRow}>
+        <View style={[styles.factRow, isLast && styles.factRowLast]}>
             <Text style={styles.factLabel}>{label}</Text>
             <Text selectable style={[styles.factValue, mono && styles.mono]}>
                 {value || '—'}
@@ -159,6 +165,7 @@ export const DocumentViewerSheet: React.FC<DocumentViewerSheetProps> = ({
                             />
                             <Fact label="Issued" value={doc.issuedDate} />
                             <Fact
+                                isLast
                                 label="Expires"
                                 value={doc.expiryDate || 'No expiry date'}
                             />
@@ -324,6 +331,9 @@ const createStyles = (theme: ThemeColors) =>
             borderBottomColor: theme.border,
             borderBottomWidth: 1,
             paddingVertical: 10,
+        },
+        factRowLast: {
+            borderBottomWidth: 0,
         },
         factLabel: {
             color: theme.textSecondary,

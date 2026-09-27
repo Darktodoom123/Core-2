@@ -32,23 +32,30 @@ export const DocumentViewerFile: React.FC<DocumentViewerFileProps> = ({
 }) => {
     const { theme } = useTheme();
     const styles = useThemedStyles(createStyles);
+    const hasFile = Boolean(doc.fileUri || doc.localFileUri);
     const fileName =
         doc.fileName || fileNameFromUri(doc.localFileUri) || doc.documentNumber;
 
     return (
         <View style={styles.section} testID="doc-viewer-file">
             <Text style={styles.sectionTitle}>FILE</Text>
-            <View style={styles.fileRow}>
-                <Icon color={theme.textSecondary} name="file-text" size={18} />
-                <View style={styles.fileText}>
-                    <Text numberOfLines={1} style={styles.fileName}>
-                        {fileName}
-                    </Text>
-                    <Text style={styles.fileMeta}>
-                        {doc.fileSizeLabel || 'Source file'}
-                    </Text>
+            {hasFile ? (
+                <View style={styles.fileRow}>
+                    <Icon
+                        color={theme.textSecondary}
+                        name="file-text"
+                        size={18}
+                    />
+                    <View style={styles.fileText}>
+                        <Text numberOfLines={1} style={styles.fileName}>
+                            {fileName}
+                        </Text>
+                        <Text style={styles.fileMeta}>
+                            {doc.fileSizeLabel || 'Source file'}
+                        </Text>
+                    </View>
                 </View>
-            </View>
+            ) : null}
 
             {isImageFile(doc.localFileUri) ? (
                 <Image
