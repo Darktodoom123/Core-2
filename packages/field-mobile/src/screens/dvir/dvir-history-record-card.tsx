@@ -71,6 +71,14 @@ export const DvirHistoryRecordCard: React.FC<DvirHistoryRecordCardProps> = ({
             <Text style={[dvirSharedStyles.historyMeta]}>
                 Logged: {new Date(item.completedAt).toLocaleString()}
             </Text>
+            {item.syncState === 'on_phone' ? (
+                <View style={styles.onPhoneRow}>
+                    <Icon color={theme.textSecondary} name="sync" size={13} />
+                    <Text style={[dvirSharedStyles.historyMeta]}>
+                        Saved on this phone
+                    </Text>
+                </View>
+            ) : null}
             {item.remarks ? (
                 <Text style={[styles.historyRemarks]}>"{item.remarks}"</Text>
             ) : null}
@@ -80,6 +88,11 @@ export const DvirHistoryRecordCard: React.FC<DvirHistoryRecordCardProps> = ({
 
 const createStyles = (theme: ThemeColors) =>
     StyleSheet.create({
+        onPhoneRow: {
+            alignItems: 'center',
+            flexDirection: 'row',
+            gap: 6,
+        },
         historyAsset: {
             color: theme.textPrimary,
             fontSize: 13,

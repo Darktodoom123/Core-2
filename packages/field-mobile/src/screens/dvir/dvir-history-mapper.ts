@@ -9,6 +9,7 @@ import type {
  */
 export const mapApiRecordToHistory = (record: any): DvirInspectionRecord => ({
     id: String(record.id ?? ''),
+    syncState: 'server',
     type: record.type === 'post_trip' ? 'post_trip' : 'pre_trip',
     assetCode: record.asset_code ?? '',
     assetName: record.asset_name ?? '',

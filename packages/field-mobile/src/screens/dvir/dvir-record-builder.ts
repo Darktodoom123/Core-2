@@ -157,6 +157,7 @@ export function buildDvirRecord({
 }): DvirInspectionRecord {
     const record: DvirInspectionRecord = {
         id: `DVIR-${Date.now().toString(36).toUpperCase()}`,
+        syncState: 'on_phone',
         type: mode === 'post_trip' ? 'post_trip' : 'pre_trip',
         assetCode: localAssetCode,
         assetName: currentAssetName,

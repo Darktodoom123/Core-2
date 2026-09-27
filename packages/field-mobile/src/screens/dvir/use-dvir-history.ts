@@ -1,60 +1,70 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FieldApiClient } from '../../services/apiClient';
 import type { DvirInspectionRecord } from '../../types/index';
-import { INITIAL_HISTORY } from './dvir-fixtures';
 import { mapApiRecordToHistory } from './dvir-history-mapper';
 
-/** Loads DVIR history from the server and groups it by compliance window. */
+export type DvirHistoryStatus = 'loading' | 'loaded' | 'error';
+
+/**
+ * DVIR history from the server, grouped by compliance window. It starts
+ * empty: nothing is shown until the server answers, and a failed load is
+ * reported as such. Inspections saved on this phone stay visible, marked.
+ */
 export function useDvirHistory(apiClient: FieldApiClient | undefined) {
-    const [history, setHistory] =
-        useState<DvirInspectionRecord[]>(INITIAL_HISTORY);
-    const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+    const [history, setHistory] = useState<DvirInspectionRecord[]>([]);
+    const [historyStatus, setHistoryStatus] = useState<DvirHistoryStatus>(
+        apiClient ? 'loading' : 'error',
+    );
     const [syncError, setSyncError] = useState<string | null>(null);
+    const mounted = useRef(true);
 
     useEffect(() => {
+        mounted.current = true;
+
+        return () => {
+            mounted.current = false;
+        };
+    }, []);
+
+    const loadHistory = useCallback(async () => {
         if (!apiClient) {
             return;
         }
 
-        let cancelled = false;
+        try {
+            const res = await apiClient.fetchDvirInspections(30);
 
-        const load = (): void => {
-            setIsHistoryLoading(true);
+            if (!mounted.current) {
+                return;
+            }
 
-            apiClient
-                .fetchDvirInspections(30)
-                .then((res) => {
-                    if (cancelled) {
-                        return;
-                    }
+            if (!Array.isArray(res?.inspections)) {
+                setHistoryStatus('error');
 
-                    if (Array.isArray(res?.inspections)) {
-                        setHistory(res.inspections.map(mapApiRecordToHistory));
-                        setSyncError(null);
-                    }
-                })
-                .catch(() => {
-                    if (cancelled) {
-                        return;
-                    }
+                return;
+            }
 
-                    setSyncError(
-                        'DVIR history could not be loaded. Showing cached records.',
-                    );
-                })
-                .finally(() => {
-                    if (!cancelled) {
-                        setIsHistoryLoading(false);
-                    }
-                });
-        };
-
-        queueMicrotask(load);
-
-        return () => {
-            cancelled = true;
-        };
+            const serverRecords = res.inspections.map(mapApiRecordToHistory);
+            setHistory((current) => [
+                ...current.filter((record) => record.syncState === 'on_phone'),
+                ...serverRecords,
+            ]);
+            setHistoryStatus('loaded');
+        } catch {
+            if (mounted.current) {
+                setHistoryStatus('error');
+            }
+        }
     }, [apiClient]);
+
+    useEffect(() => {
+        queueMicrotask(() => void loadHistory());
+    }, [loadHistory]);
+
+    const retryHistory = useCallback(() => {
+        setHistoryStatus('loading');
+        void loadHistory();
+    }, [loadHistory]);
 
     // Group history records into Today, Past 7 Days (Compliance), and Older (30-Day Archive)
     const { todayRecords, past7DaysRecords, olderRecords } = useMemo(() => {
@@ -91,9 +101,11 @@ export function useDvirHistory(apiClient: FieldApiClient | undefined) {
 
     return {
         history,
-        isHistoryLoading,
+        historyStatus,
+        isHistoryLoading: historyStatus === 'loading',
         olderRecords,
         past7DaysRecords,
+        retryHistory,
         setHistory,
         setSyncError,
         syncError,

@@ -7,7 +7,8 @@ import { DvirHistoryRecordCard } from './dvir-history-record-card';
 import { createDvirSharedStyles } from './dvir-shared-styles';
 
 export interface DvirHistoryGroupProps {
-    emptyMessage: string;
+    /** Null hides the empty message, e.g. before the server has answered. */
+    emptyMessage: string | null;
     records: DvirInspectionRecord[];
     title: string;
 }
@@ -34,13 +35,13 @@ export const DvirHistoryGroup: React.FC<DvirHistoryGroupProps> = ({
                         <DvirHistoryRecordCard item={item} key={item.id} />
                     ))}
                 </View>
-            ) : (
+            ) : emptyMessage ? (
                 <View style={styles.emptyTimelineContainer}>
                     <Text style={[styles.emptyTimelineText]}>
                         {emptyMessage}
                     </Text>
                 </View>
-            )}
+            ) : null}
         </View>
     );
 };

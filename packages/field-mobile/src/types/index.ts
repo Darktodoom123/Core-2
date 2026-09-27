@@ -691,6 +691,8 @@ export type DvirInspectionType = 'pre_trip' | 'post_trip' | 'routine';
 
 export interface DvirInspectionRecord {
     id: string;
+    /** 'on_phone' until the record comes back from the server. */
+    syncState?: 'on_phone' | 'server';
     type: DvirInspectionType;
     assetCode: string;
     assetName: string;

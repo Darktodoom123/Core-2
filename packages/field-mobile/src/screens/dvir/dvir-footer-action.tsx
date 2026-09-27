@@ -23,7 +23,7 @@ export const DvirFooterAction: React.FC<DvirFooterActionProps> = ({
     return (
         <View style={[styles.footerContainer]}>
             <Pressable
-                accessibilityLabel="Next"
+                accessibilityLabel={isSaved ? 'Saved, back to home' : 'Next'}
                 accessibilityRole="button"
                 accessibilityState={{
                     disabled: isUnassigned || hasUnselectedMultiAsset,
@@ -41,7 +41,7 @@ export const DvirFooterAction: React.FC<DvirFooterActionProps> = ({
                 testID="complete-dvir-button"
             >
                 <Text style={[styles.nextButtonText]}>
-                    {isSaved ? '✓ DVIR Certified & Synced' : 'Next'}
+                    {isSaved ? 'Saved · Back to home' : 'Next'}
                 </Text>
             </Pressable>
         </View>

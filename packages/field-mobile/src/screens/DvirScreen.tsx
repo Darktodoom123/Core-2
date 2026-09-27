@@ -33,6 +33,7 @@ import { DvirDefectsSection } from './dvir/dvir-defects-section';
 import { DvirFooterAction } from './dvir/dvir-footer-action';
 import { DvirHistoryArchive } from './dvir/dvir-history-archive';
 import { DvirHistoryGroup } from './dvir/dvir-history-group';
+import { DvirHistoryLoadError } from './dvir/dvir-history-load-error';
 import { mapApiRecordToHistory } from './dvir/dvir-history-mapper';
 import { DvirHistoryToggle } from './dvir/dvir-history-toggle';
 import { DvirInspectionTypeSection } from './dvir/dvir-inspection-type-section';
@@ -178,9 +179,11 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     const [isSaved, setIsSaved] = useState(false);
     const {
         history,
+        historyStatus,
         isHistoryLoading,
         olderRecords,
         past7DaysRecords,
+        retryHistory,
         setHistory,
         setSyncError,
         syncError,
@@ -479,18 +482,37 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                 {syncError}
                             </Text>
                         )}
-                        {/* Section 1: Today's Shift Inspections */}
-                        <DvirHistoryGroup
-                            emptyMessage="No inspections logged today yet. Use Pre-Trip or Post-Trip above."
-                            records={todayRecords}
-                            title="TODAY'S SHIFT INSPECTIONS"
-                        />
-                        {/* Section 2: Past 7 Days (Compliance Window) */}
-                        <DvirHistoryGroup
-                            emptyMessage="No prior inspections recorded within the past 7 days."
-                            records={past7DaysRecords}
-                            title="PAST 7 DAYS (SAFETY COMPLIANCE)"
-                        />
+                        {historyStatus === 'error' ? (
+                            <DvirHistoryLoadError
+                                hasLocalRecords={history.length > 0}
+                                onRetry={apiClient ? retryHistory : undefined}
+                            />
+                        ) : null}
+                        {/* Empty-window messages are only true once the server answered. */}
+                        {historyStatus === 'loaded' || history.length > 0 ? (
+                            <>
+                                {/* Section 1: Today's Shift Inspections */}
+                                <DvirHistoryGroup
+                                    emptyMessage={
+                                        historyStatus === 'loaded'
+                                            ? 'No inspections logged today yet. Use Pre-Trip or Post-Trip above.'
+                                            : null
+                                    }
+                                    records={todayRecords}
+                                    title="TODAY'S SHIFT INSPECTIONS"
+                                />
+                                {/* Section 2: Past 7 Days (Compliance Window) */}
+                                <DvirHistoryGroup
+                                    emptyMessage={
+                                        historyStatus === 'loaded'
+                                            ? 'No prior inspections recorded within the past 7 days.'
+                                            : null
+                                    }
+                                    records={past7DaysRecords}
+                                    title="PAST 7 DAYS (SAFETY COMPLIANCE)"
+                                />
+                            </>
+                        ) : null}
                         {/* Section 3: 30-Day Historical Archive */}
                         {olderRecords.length > 0 ? (
                             <DvirHistoryArchive
