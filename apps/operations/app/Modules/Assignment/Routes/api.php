@@ -10,8 +10,13 @@ Route::prefix('v1')->name('api.v1.')->middleware(['auth:sanctum', 'active', 'api
         ->name('dispatch-jobs.assignments.response');
     Route::post('/dispatch-jobs/{dispatchJob}/handover/initiate', [EquipmentHandoverController::class, 'initiate'])
         ->name('dispatch-jobs.handover.initiate');
+    // Claims are rate limited hard: the PIN is four digits.
     Route::post('/dispatch-jobs/{dispatchJob}/handover/claim', [EquipmentHandoverController::class, 'claim'])
+        ->middleware('throttle:handover-claims')
         ->name('dispatch-jobs.handover.claim');
+    Route::post('/equipment-handovers/claim', [EquipmentHandoverController::class, 'claimByUnit'])
+        ->middleware('throttle:handover-claims')
+        ->name('equipment-handovers.claim');
 });
 
 Route::prefix('v2')->name('api.v2.')->middleware(['auth:sanctum', 'active', 'api-token', 'throttle:120,1'])->group(function (): void {

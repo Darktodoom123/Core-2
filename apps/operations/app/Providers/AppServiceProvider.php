@@ -77,6 +77,9 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('gpt', static fn (Request $request): Limit => Limit::perMinute(10)->by($request->user()?->id ?: $request->ip() ?: 'unknown'));
 
+        // Handover PINs are four digits; claims also cancel after five wrong PINs.
+        RateLimiter::for('handover-claims', static fn (Request $request): Limit => Limit::perMinute(10)->by($request->user()?->id ?: $request->ip() ?: 'unknown'));
+
         RateLimiter::for('safety', static fn (Request $request): Limit => Limit::perMinute(60)->by($request->user()?->id ?: $request->ip() ?: 'unknown'));
 
         RateLimiter::for('weather', static fn (Request $request): Limit => Limit::perMinute(60)->by($request->user()?->id ?: $request->ip() ?: 'unknown'));
