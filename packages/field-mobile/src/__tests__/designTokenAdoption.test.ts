@@ -20,6 +20,9 @@ const MIGRATED = [
     ...fs
         .readdirSync(path.join(SRC, 'components', 'home'))
         .map((file) => `components/home/${file}`),
+    ...fs
+        .readdirSync(path.join(SRC, 'components', 'inspection', 'defects'))
+        .map((file) => `components/inspection/defects/${file}`),
     'components/layout/field-header.tsx',
     'components/layout/profile-summary.tsx',
     'components/layout/sync-status-pill.tsx',

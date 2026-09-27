@@ -1,5 +1,5 @@
 import type { WalkaroundPhotosMap } from '../../components/inspection';
-import type { DefectItem } from '../../components/inspection/DvirDefectsModal';
+import type { DefectItem } from '../../components/inspection/defects/defect-types';
 import type { FieldApiClient } from '../../services/apiClient';
 import type {
     DvirInspectionRecord,
@@ -29,7 +29,7 @@ export function buildDvirChecks({
     selectedDefects,
 }: {
     chocksDeployed: boolean;
-    designatedEquipment: DesignatedEquipmentType;
+    designatedEquipment: DesignatedEquipmentType | null;
     mode: DvirMode;
     outriggersStowed: boolean;
     parkingBrakeSet: boolean;

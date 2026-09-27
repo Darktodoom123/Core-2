@@ -8,12 +8,11 @@ import {
 } from '../components/index';
 import {
     DEFECT_ANGLES,
-    DVIR_DEFECT_CATEGORIES,
-    DvirDefectsModal,
+    DefectSheet,
     DvirWalkaroundPhotos,
+    findDefects,
 } from '../components/inspection';
 import type {
-    CraneEquipmentFilter,
     WalkaroundAngle,
     WalkaroundPhotosMap,
 } from '../components/inspection';
@@ -27,6 +26,7 @@ import {
     getEquipmentPresentation,
     resolveDesignatedEquipmentType,
 } from '../utils/equipmentClassification';
+import type { DesignatedEquipmentType } from '../utils/equipmentClassification';
 import { DvirAssetSelector } from './dvir/dvir-asset-selector';
 import { DvirAttestation } from './dvir/dvir-attestation';
 import { DvirCabPhotoCard } from './dvir/dvir-cab-photo-card';
@@ -58,7 +58,7 @@ export interface DvirScreenProps {
     assetCode?: string;
     assetName?: string;
     assetKind?: string;
-    equipmentType?: CraneEquipmentFilter;
+    equipmentType?: DesignatedEquipmentType;
     inspectorName?: string;
     activeJobReference?: string;
     initialMode?: 'pre_trip' | 'post_trip' | 'history';
@@ -200,6 +200,9 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     // The operator confirms the inspection; it is sent as signature_captured.
     const [attested, setAttested] = useState(false);
 
+    const [chosenUnitType, setChosenUnitType] =
+        useState<DesignatedEquipmentType | null>(null);
+
     const [prevTrackedAssetKey, setPrevTrackedAssetKey] = useState<
         string | null
     >(activeSelectedAssetId ? String(activeSelectedAssetId) : localAssetCode);
@@ -218,6 +221,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
         setEngineHours('');
         setOdometerKm('');
         setAttested(false);
+        setChosenUnitType(null);
         setIsSaved(false);
     }
 
@@ -234,15 +238,24 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     const [outriggersStowed, setOutriggersStowed] = useState(true);
 
     // Resolve designated equipment type and presentation attributes
-    const designatedEquipment = useMemo(
+    // The unit's type decides which defects exist. When it can't be
+    // recognised the operator picks it in Add defects; nothing is guessed.
+    const designatedEquipment: DesignatedEquipmentType | null = useMemo(
         () =>
+            chosenUnitType ??
             resolveDesignatedEquipmentType({
                 assetCode: localAssetCode,
                 assetName: currentAssetName,
                 assetKind: currentAssetKind,
                 equipmentType,
             }),
-        [localAssetCode, currentAssetName, currentAssetKind, equipmentType],
+        [
+            chosenUnitType,
+            localAssetCode,
+            currentAssetName,
+            currentAssetKind,
+            equipmentType,
+        ],
     );
 
     const presentation = useMemo(
@@ -251,11 +264,10 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     );
 
     // Lookup selected defects details
-    const selectedDefects = useMemo(() => {
-        const allItems = DVIR_DEFECT_CATEGORIES.flatMap((cat) => cat.items);
-
-        return allItems.filter((item) => selectedDefectIds.includes(item.id));
-    }, [selectedDefectIds]);
+    const selectedDefects = useMemo(
+        () => findDefects(selectedDefectIds),
+        [selectedDefectIds],
+    );
 
     const hasCriticalDefects = selectedDefects.some((d) => d.critical);
     const isUnsafe = safetyStatus === 'unsafe' || hasCriticalDefects;
@@ -292,8 +304,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
 
     const handleApplyDefects = (defectIds: string[]) => {
         setSelectedDefectIds(defectIds);
-        const allItems = DVIR_DEFECT_CATEGORIES.flatMap((cat) => cat.items);
-        const selected = allItems.filter((item) => defectIds.includes(item.id));
+        const selected = findDefects(defectIds);
 
         if (selected.some((item) => item.critical)) {
             setSafetyStatus('unsafe');
@@ -669,15 +680,13 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                 />
             ) : null}
             {/* Defects Modal (Screenshot 3) */}
-            <DvirDefectsModal
+            <DefectSheet
                 assetCode={localAssetCode}
-                assetKind={assetKind}
-                assetName={assetName}
-                designatedEquipment={designatedEquipment}
-                initialEquipmentFilter={designatedEquipment}
                 onApplyDefects={handleApplyDefects}
+                onChooseUnitType={setChosenUnitType}
                 onClose={() => setIsDefectsModalOpen(false)}
                 selectedDefectIds={selectedDefectIds}
+                unitType={designatedEquipment}
                 visible={isDefectsModalOpen}
             />
 

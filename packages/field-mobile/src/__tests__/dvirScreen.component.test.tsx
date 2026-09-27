@@ -135,8 +135,11 @@ describe('DvirScreen Component & Workflows', () => {
         // Modal should display search and categories
         expect(view.getByTestId('defects-search-input')).toBeTruthy();
         expect(view.getByText('Exterior - Front')).toBeTruthy();
+        await fireEvent.press(
+            view.getByTestId('category-toggle-exterior_front'),
+        );
         expect(view.getByText('Battery')).toBeTruthy();
-        expect(view.getByText('Belts Hoses')).toBeTruthy();
+        expect(view.getByText('Belts & Hoses')).toBeTruthy();
 
         // Search for "Radiator"
         await fireEvent.changeText(
@@ -146,6 +149,9 @@ describe('DvirScreen Component & Workflows', () => {
         expect(view.getByText('Radiator')).toBeTruthy();
 
         // Select Radiator
+        await fireEvent.press(
+            view.getByTestId('category-toggle-exterior_front'),
+        );
         await fireEvent.press(view.getByTestId('defect-item-front_radiator'));
 
         // Clear search and select Battery
@@ -251,28 +257,22 @@ describe('DvirScreen Component & Workflows', () => {
         // Open defects modal
         await fireEvent.press(view.getByTestId('add-defects-button'));
 
-        // Check equipment filter pills exist
-        expect(view.getByTestId('filter-all')).toBeTruthy();
-        expect(view.getByTestId('filter-mobile-crane')).toBeTruthy();
-        expect(view.getByTestId('filter-tower-crane')).toBeTruthy();
-        expect(view.getByTestId('filter-carrier')).toBeTruthy();
-
-        // Switch to Mobile Crane filter
-        await fireEvent.press(view.getByTestId('filter-mobile-crane'));
-        expect(view.getByText('Mobile Crane: Boom & Telescoping')).toBeTruthy();
-        expect(
-            view.getByText('Mobile Crane: Outriggers & Leveling'),
-        ).toBeTruthy();
-        expect(
-            view.getByText('Mobile Crane: Slewing & Upper Cab'),
-        ).toBeTruthy();
+        expect(view.getByText('Boom & Telescoping')).toBeTruthy();
+        expect(view.getByText('Outriggers & Leveling')).toBeTruthy();
+        expect(view.getByText('Slewing & Upper Cab')).toBeTruthy();
 
         // Select critical mobile crane defect: Telescopic Boom
+        await fireEvent.press(
+            view.getByTestId('category-toggle-mobile_crane_boom'),
+        );
         await fireEvent.press(
             view.getByTestId('defect-item-crane_telescopic_boom'),
         );
 
         // Select outriggers defect
+        await fireEvent.press(
+            view.getByTestId('category-toggle-mobile_crane_outriggers'),
+        );
         await fireEvent.press(
             view.getByTestId('defect-item-crane_outriggers_jacks'),
         );
@@ -302,25 +302,22 @@ describe('DvirScreen Component & Workflows', () => {
         // Open defects modal
         await fireEvent.press(view.getByTestId('add-defects-button'));
 
-        // Switch to Tower Crane filter
-        await fireEvent.press(view.getByTestId('filter-tower-crane'));
-
-        expect(
-            view.getByText('Tower Crane: Mast, Anchors & Ties'),
-        ).toBeTruthy();
-        expect(
-            view.getByText('Tower Crane: Jib & Weather-Vaning'),
-        ).toBeTruthy();
-        expect(
-            view.getByText('Tower Crane: Trolley & Luffing Drive'),
-        ).toBeTruthy();
+        expect(view.getByText('Mast, Anchors & Ties')).toBeTruthy();
+        expect(view.getByText('Jib & Weather-Vaning')).toBeTruthy();
+        expect(view.getByText('Trolley & Luffing Drive')).toBeTruthy();
 
         // Select Weather-Vaning mechanism defect
+        await fireEvent.press(
+            view.getByTestId('category-toggle-tower_crane_jib'),
+        );
         await fireEvent.press(
             view.getByTestId('defect-item-tower_weather_vaning_brake'),
         );
 
         // Select Trolley winch defect
+        await fireEvent.press(
+            view.getByTestId('category-toggle-tower_crane_trolley'),
+        );
         await fireEvent.press(
             view.getByTestId('defect-item-tower_trolley_winch'),
         );
@@ -653,10 +650,8 @@ describe('DvirScreen Component & Workflows', () => {
         await fireEvent.press(view.getByTestId('add-defects-button'));
         expect(view.getByTestId('defects-modal-container')).toBeTruthy();
         expect(view.getByTestId('defects-search-input')).toBeTruthy();
-        expect(view.getByTestId('filter-all')).toBeTruthy();
 
         // Filter and select an item in light mode
-        await fireEvent.press(view.getByTestId('filter-carrier'));
         await fireEvent.press(view.getByTestId('defects-modal-done'));
 
         // Action button renders
@@ -687,7 +682,6 @@ describe('DvirScreen Component & Workflows', () => {
         // Defects modal in dark HUD mode
         await fireEvent.press(view.getByTestId('add-defects-button'));
         expect(view.getByTestId('defects-modal-container')).toBeTruthy();
-        expect(view.getByTestId('filter-mobile-crane')).toBeTruthy();
 
         // Close modal
         await fireEvent.press(view.getByTestId('defects-modal-done'));
@@ -719,10 +713,9 @@ describe('DvirScreen Component & Workflows', () => {
         expect(view.getByText('Add Vehicle Defects')).toBeTruthy();
 
         // Designated asset banner displays vehicle context
-        expect(view.getByTestId('designated-asset-banner')).toBeTruthy();
-        expect(view.getByText('TRK-202')).toBeTruthy();
-        expect(view.getByText('Heavy Rig Truck')).toBeTruthy();
-        expect(view.getByText('Carrier & Road (Designated)')).toBeTruthy();
+        expect(view.getByTestId('defect-sheet-unit')).toHaveTextContent(
+            /TRK-202 · Truck \/ carrier/,
+        );
 
         // Vehicle categories are displayed
         expect(view.getByText('Exterior - Front')).toBeTruthy();
@@ -760,20 +753,14 @@ describe('DvirScreen Component & Workflows', () => {
         expect(view.getByText('Add Tower Crane Defects')).toBeTruthy();
 
         // Designated asset banner displays tower crane context
-        expect(view.getByTestId('designated-asset-banner')).toBeTruthy();
-        expect(view.getByText('TWR-CRN-280')).toBeTruthy();
-        expect(view.getByText('Tower Crane (Designated)')).toBeTruthy();
+        expect(view.getByTestId('defect-sheet-unit')).toHaveTextContent(
+            /TWR-CRN-280 · Tower crane/,
+        );
 
         // Tower crane categories are immediately visible without manual tab switching
-        expect(
-            view.getByText('Tower Crane: Mast, Anchors & Ties'),
-        ).toBeTruthy();
-        expect(
-            view.getByText('Tower Crane: Jib & Weather-Vaning'),
-        ).toBeTruthy();
-        expect(
-            view.getByText('Tower Crane: Trolley & Luffing Drive'),
-        ).toBeTruthy();
+        expect(view.getByText('Mast, Anchors & Ties')).toBeTruthy();
+        expect(view.getByText('Jib & Weather-Vaning')).toBeTruthy();
+        expect(view.getByText('Trolley & Luffing Drive')).toBeTruthy();
 
         // Close modal
         await fireEvent.press(view.getByTestId('defects-modal-done'));
@@ -1102,9 +1089,12 @@ describe('DvirScreen Component & Workflows', () => {
         // Add a defect to CRN-101
         await fireEvent.press(view.getByTestId('add-defects-button'));
         await fireEvent.press(
+            view.getByTestId('category-toggle-mobile_crane_boom'),
+        );
+        await fireEvent.press(
             view.getByTestId('defect-item-crane_telescopic_boom'),
         );
-        await fireEvent.press(view.getByTestId('defects-apply-btn'));
+        await fireEvent.press(view.getByTestId('defects-modal-done'));
 
         // Defect chip for CRN-101 is displayed
         expect(

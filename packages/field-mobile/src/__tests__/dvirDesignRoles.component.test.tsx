@@ -1,6 +1,7 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 import { StyleSheet } from 'react-native';
+import { ALL_DEFECTS } from '../components/inspection/defects/defect-sets';
 import { DvirScreen } from '../screens/DvirScreen';
 import { ThemeProvider } from '../theme';
 import type { ThemeColors, ThemeMode } from '../theme';
@@ -40,8 +41,10 @@ const renderDvir = (
     );
 
 async function addDefect(view: View, id: string) {
+    const group = ALL_DEFECTS.find((item) => item.id === id)!.categoryKey;
+
     await fireEvent.press(view.getByTestId('add-defects-button'));
-    await fireEvent.press(view.getByTestId('filter-mobile-crane'));
+    await fireEvent.press(view.getByTestId(`category-toggle-${group}`));
     await fireEvent.press(view.getByTestId(`defect-item-${id}`));
     await fireEvent.press(view.getByTestId('defects-modal-done'));
 }

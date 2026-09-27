@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Icon } from '../../components/common/Icon';
-import type { DefectItem } from '../../components/inspection/DvirDefectsModal';
+import type { DefectItem } from '../../components/inspection/defects/defect-types';
 import { useTheme, useThemedStyles } from '../../theme';
 import type { ThemeColors } from '../../theme';
 import type { EquipmentPresentation } from '../../utils/equipmentClassification';

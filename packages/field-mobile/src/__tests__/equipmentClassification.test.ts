@@ -8,13 +8,10 @@ import {
 
 describe('equipmentClassification utility', () => {
     describe('resolveDesignatedEquipmentType', () => {
-        it('falls back to mobile_crane if null or empty descriptor provided', () => {
-            assert.equal(resolveDesignatedEquipmentType(null), 'mobile_crane');
-            assert.equal(
-                resolveDesignatedEquipmentType(undefined),
-                'mobile_crane',
-            );
-            assert.equal(resolveDesignatedEquipmentType({}), 'mobile_crane');
+        it('returns null for an unrecognised unit instead of guessing mobile_crane', () => {
+            assert.equal(resolveDesignatedEquipmentType(null), null);
+            assert.equal(resolveDesignatedEquipmentType(undefined), null);
+            assert.equal(resolveDesignatedEquipmentType({}), null);
         });
 
         it('respects explicit equipmentType override', () => {

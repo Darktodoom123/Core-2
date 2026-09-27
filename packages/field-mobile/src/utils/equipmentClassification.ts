@@ -11,7 +11,7 @@ export interface AssetEquipmentDescriptor {
 }
 
 export interface EquipmentPresentation {
-    type: DesignatedEquipmentType;
+    type: DesignatedEquipmentType | null;
     icon: string;
     label: string;
     shortLabel: string;
@@ -26,13 +26,14 @@ export interface EquipmentPresentation {
 
 /**
  * Resolves the designated equipment type for an asset based on explicit override,
- * assetKind, or keyword patterns in asset code / name.
+ * assetKind, or keyword patterns in asset code / name. Returns null when the
+ * unit can't be recognised: the operator is asked rather than a type guessed.
  */
 export function resolveDesignatedEquipmentType(
     asset?: AssetEquipmentDescriptor | null,
-): DesignatedEquipmentType {
+): DesignatedEquipmentType | null {
     if (!asset) {
-        return 'mobile_crane';
+        return null;
     }
 
     // 1. Explicit equipmentType override
@@ -141,7 +142,6 @@ export function resolveDesignatedEquipmentType(
         combined.includes('tadano') ||
         combined.includes('all-terrain') ||
         combined.includes('all terrain') ||
-        combined.includes('crawler') ||
         combined.includes('rough-terrain') ||
         combined.includes('rough terrain') ||
         combined.includes('liebherr ltm') ||
@@ -152,8 +152,8 @@ export function resolveDesignatedEquipmentType(
         return 'mobile_crane';
     }
 
-    // Default fallback
-    return 'mobile_crane';
+    // Unrecognised (for example an excavator): don't guess.
+    return null;
 }
 
 /**
@@ -161,8 +161,25 @@ export function resolveDesignatedEquipmentType(
  * tailored to the designated equipment type.
  */
 export function getEquipmentPresentation(
-    type: DesignatedEquipmentType,
+    type: DesignatedEquipmentType | null,
 ): EquipmentPresentation {
+    if (type === null) {
+        return {
+            type: null,
+            icon: 'crane',
+            label: 'Unit',
+            shortLabel: 'Unit',
+            modalTitle: 'Add defects',
+            defectsSectionTitle: 'Add defects',
+            searchPlaceholder: 'Search defects...',
+            safetySafeLabel: 'Safe to operate',
+            safetyDisclaimer:
+                'Anything not listed as a defect is certified safe by the operator',
+            filterPillLabel: 'Unit',
+            designatedBadgeLabel: 'Unit',
+        };
+    }
+
     switch (type) {
         case 'tower_crane':
             return {
@@ -218,8 +235,13 @@ export function getEquipmentPresentation(
  * mechanical realities of the equipment.
  */
 export function getDefaultInspectionChecks(
-    type: DesignatedEquipmentType,
+    type: DesignatedEquipmentType | null,
 ): TechnicianInspectionCheck[] {
+    // An unknown unit gets no type-specific checks recorded on its behalf.
+    if (type === null) {
+        return [];
+    }
+
     switch (type) {
         case 'tower_crane':
             return [
