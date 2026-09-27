@@ -629,13 +629,13 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
                 view.getByTestId('view-doc-btn-doc-permit-01'),
             );
             expect(await view.findByTestId('certificate-modal')).toBeTruthy();
-            expect(await view.findByText('CORE-2 OPERATIONS')).toBeTruthy();
+            // The viewer leads with the reported status and the real record,
+            // never an imitation certificate.
+            expect(await view.findByTestId('doc-viewer-status')).toBeTruthy();
             expect(
                 view.getAllByText('DPWH-NCR-2026-SP-8821').length,
             ).toBeGreaterThanOrEqual(1);
-            expect(
-                view.getByText('✓ Operations Record Synchronized'),
-            ).toBeTruthy();
+            expect(view.queryByText('CORE-2 OPERATIONS')).toBeNull();
         });
     });
 });

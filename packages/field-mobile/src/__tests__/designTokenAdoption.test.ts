@@ -10,11 +10,23 @@ const SRC = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 // (see "Known deviations" in Docs/design/mobile.md).
 const MIGRATED = [
     'components/cards/AssignmentResponseCard.tsx',
+    'components/cards/JobListItemCard.tsx',
+    ...fs
+        .readdirSync(path.join(SRC, 'components', 'cards', 'job-card'))
+        .map((file) => `components/cards/job-card/${file}`),
     'components/layout/field-header.tsx',
     'components/layout/profile-summary.tsx',
     'components/layout/sync-status-pill.tsx',
     'components/layout/tile-screen-header.tsx',
+    'components/sheets/ReportDelayModal.tsx',
+    ...fs
+        .readdirSync(path.join(SRC, 'components', 'sheets', 'report-delay'))
+        .map((file) => `components/sheets/report-delay/${file}`),
     'screens/DispatchOrdersScreen.tsx',
+    'screens/DocumentsWalletScreen.tsx',
+    ...fs
+        .readdirSync(path.join(SRC, 'screens', 'documents'))
+        .map((file) => `screens/documents/${file}`),
     'screens/DvirScreen.tsx',
     ...fs
         .readdirSync(path.join(SRC, 'screens', 'dvir'))

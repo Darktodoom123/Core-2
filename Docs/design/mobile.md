@@ -129,9 +129,18 @@ Rules for new and touched code:
   Migrated so far: `DvirScreen.tsx` and `src/screens/dvir/`, `HosScreen.tsx`
   and `src/screens/hos/`, the home header (`field-header.tsx`,
   `profile-summary.tsx`, `sync-status-pill.tsx`), the shared
-  `tile-screen-header.tsx`, and the Dispatch shell (`DispatchOrdersScreen.tsx`,
-  `AssignmentResponseCard.tsx`). Dispatch's `JobListItemCard.tsx` and
-  `ReportDelayModal.tsx` are not migrated yet.
+  `tile-screen-header.tsx`, Dispatch (`DispatchOrdersScreen.tsx`,
+  `AssignmentResponseCard.tsx`, `JobListItemCard.tsx` with
+  `components/cards/job-card/`, and `ReportDelayModal.tsx` with
+  `components/sheets/report-delay/`), and Documents
+  (`DocumentsWalletScreen.tsx` with `src/screens/documents/`).
+- Job lifecycle status (`job-card/job-status-tone.ts`): awaiting response is
+  warning orange, scheduled/dispatched/accepted are neutral, en route/arrived/
+  working are cobalt (info), completed is green, cancelled is red. Each has an
+  icon. The next lifecycle step is the card's one gold primary action; Report
+  Delay is a neutral secondary action. A delay still in the outbox reads
+  "Delay waiting to send" (cobalt); only the server's `latest_delay` reads
+  "Delay Reported" (orange).
 - The tile screen header's category eyebrow is a label, so it uses
   `textSecondary`, not gold or a per-screen accent.
 

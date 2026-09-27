@@ -421,7 +421,9 @@ describe('Job Delay Reporting Mobile Components', () => {
 
             expect(view.getByTestId('queued-delay-banner-102')).toBeTruthy();
             expect(
-                view.getByText(/Queued Delay: Site Not Prepared \(\+30m\)/),
+                view.getByText(
+                    /Delay waiting to send: Site Not Prepared \(\+30m\)/,
+                ),
             ).toBeTruthy();
         });
 

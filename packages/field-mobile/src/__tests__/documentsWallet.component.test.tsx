@@ -190,8 +190,12 @@ describe('DocumentsWalletScreen Component & Offline Access Engine', () => {
         expect(view.getByText('Expiring Soon')).toBeTruthy();
 
         // Verify offline badges
-        expect(view.getAllByText('Offline').length).toBeGreaterThanOrEqual(1);
-        expect(view.getAllByText('Online').length).toBeGreaterThanOrEqual(1);
+        expect(
+            view.getAllByText('Saved offline').length,
+        ).toBeGreaterThanOrEqual(1);
+        expect(view.getAllByText('Online only').length).toBeGreaterThanOrEqual(
+            1,
+        );
     });
 
     it('filters documents by category chip', async () => {
@@ -536,20 +540,23 @@ describe('DocumentsWalletScreen Component & Offline Access Engine', () => {
         );
         expect(await view.findByTestId('certificate-modal')).toBeTruthy();
 
-        // Verify truthful compliance record header and sync info
-        expect(view.getByText('✓ Operations Record Synchronized')).toBeTruthy();
+        // Sync info states the real last sync, not a blanket "synchronized".
+        expect(
+            view.getAllByText(
+                `Last synced ${new Date('2026-09-18T10:00:00.000Z').toLocaleDateString()}`,
+            ).length,
+        ).toBeGreaterThanOrEqual(1);
         expect(
             view.getByText(
-                'Note: Offline copy. Real-time status changes require an active connection.',
+                'Offline copy. A change of status appears after the next sync.',
             ),
         ).toBeTruthy();
 
-        // Verify local durable storage footnote
+        // The saved file is named from its real local path.
         expect(
-            view.getByText(
-                'LOCAL DURABLE STORAGE • wallet_ALB_CRN_050_doc_permit_sync_99.pdf • OFFLINE READY',
-            ),
+            view.getByText('wallet_ALB_CRN_050_doc_permit_sync_99.pdf'),
         ).toBeTruthy();
+        expect(view.getByText('Saved on this device')).toBeTruthy();
     });
 
     describe('filter and status colors follow the mobile design roles', () => {
