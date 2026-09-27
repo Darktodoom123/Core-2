@@ -111,6 +111,7 @@ import type {
     SafetyHazardCommandPayload,
     WorkStoppageCommandPayload,
 } from '../types/index';
+import { resolveDesignatedEquipmentType } from '../utils/equipmentClassification';
 import { statusBarAppearance } from './status-bar-appearance';
 
 export { isAuthorizedFieldRole } from '../auth/fieldRoles';
@@ -2615,8 +2616,23 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                             <HosScreen
                                 activeJobId={currentJob?.id}
                                 apiClient={apiClient}
+                                // Only a machine the operator has linked to.
                                 linkedAssetCode={
-                                    currentAsset?.asset_code || null
+                                    isUnitLinked
+                                        ? currentAsset?.asset_code || null
+                                        : null
+                                }
+                                linkedAssetType={
+                                    isUnitLinked && currentAsset
+                                        ? resolveDesignatedEquipmentType({
+                                              assetCode:
+                                                  currentAsset.asset_code,
+                                              assetKind:
+                                                  currentAsset.asset_kind,
+                                              assetName:
+                                                  currentAsset.asset_name,
+                                          })
+                                        : null
                                 }
                                 onBack={() => setActiveAppView('main')}
                                 onEndShift={() => {

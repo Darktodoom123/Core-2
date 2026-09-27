@@ -4,18 +4,11 @@ import { Icon } from '../../components/common/Icon';
 import type { HosComplianceResult } from '../../hooks/useHosCompliance';
 import { useTheme, useThemedStyles } from '../../theme';
 import type { ThemeColors } from '../../theme';
-import type { DutyStatus, ShiftInfo, StandbyReason } from '../../types/index';
+import type { DutyStatus, ShiftInfo } from '../../types/index';
 
 export interface HosContinuousRestBannerProps {
     breakSuggestion: NonNullable<HosComplianceResult['breakSuggestion']>;
     hosCompliance: HosComplianceResult;
-    onUpdateDutyStatus:
-        | ((
-              dutyStatus: DutyStatus,
-              standbyReason?: StandbyReason,
-              remarks?: string,
-          ) => Promise<boolean | void> | boolean | void)
-        | undefined;
     setOverriddenStatus: React.Dispatch<
         React.SetStateAction<{
             propStatus?: DutyStatus;
@@ -27,13 +20,7 @@ export interface HosContinuousRestBannerProps {
 
 export const HosContinuousRestBanner: React.FC<
     HosContinuousRestBannerProps
-> = ({
-    breakSuggestion,
-    hosCompliance,
-    onUpdateDutyStatus,
-    setOverriddenStatus,
-    shiftInfo,
-}) => {
+> = ({ breakSuggestion, hosCompliance, setOverriddenStatus, shiftInfo }) => {
     const { theme } = useTheme();
     const styles = useThemedStyles(createStyles);
     // Approaching the 4.5h continuous limit is a warning; reaching it is critical.
@@ -83,15 +70,13 @@ export const HosContinuousRestBanner: React.FC<
             <Pressable
                 accessibilityLabel={breakSuggestion.actionLabel}
                 accessibilityRole="button"
+                // Chooses On Break in the picker; the operator confirms it
+                // below with the certification, like any other change.
                 onPress={() => {
                     setOverriddenStatus({
                         propStatus: shiftInfo.dutyStatus,
-                        localStatus: 'standby',
+                        localStatus: 'on_break',
                     });
-
-                    if (onUpdateDutyStatus) {
-                        void onUpdateDutyStatus('standby');
-                    }
                 }}
                 style={[styles.doleContinuousRestBtn]}
                 testID="dole-continuous-break-btn"

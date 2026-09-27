@@ -1,20 +1,26 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useThemedStyles } from '../../theme';
+import { Icon } from '../../components/common/Icon';
+import { useTheme, useThemedStyles } from '../../theme';
 import type { ThemeColors } from '../../theme';
 import type { StandbyReason } from '../../types/index';
-import { STANDBY_REASONS } from './hos-constants';
 import { createHosSharedStyles } from './hos-shared-styles';
+import type { StandbyReasonOption } from './hos-standby-reasons';
 
 export interface HosStandbyReasonSelectorProps {
-    setIsSaved: React.Dispatch<React.SetStateAction<boolean>>;
-    setStandbyReason: React.Dispatch<React.SetStateAction<StandbyReason>>;
-    standbyReason: StandbyReason;
+    /** Reasons for the linked machine; general ones when not linked. */
+    options: StandbyReasonOption[];
+    /** The operator's pick; nothing is chosen for them. */
+    standbyReason: StandbyReason | null;
+    /** The linked machine, when there is one. */
+    machineLabel?: string | null;
+    onChoose: (reason: StandbyReason) => void;
 }
 
 export const HosStandbyReasonSelector: React.FC<
     HosStandbyReasonSelectorProps
-> = ({ setIsSaved, setStandbyReason, standbyReason }) => {
+> = ({ options, standbyReason, machineLabel, onChoose }) => {
+    const { theme } = useTheme();
     const styles = useThemedStyles(createStyles);
     const hosSharedStyles = useThemedStyles(createHosSharedStyles);
 
@@ -27,46 +33,52 @@ export const HosStandbyReasonSelector: React.FC<
                 accessibilityRole="header"
                 style={[hosSharedStyles.sectionTitle]}
             >
-                STANDBY &amp; DEMURRAGE REASON
+                STANDBY REASON
             </Text>
-            <Text style={[hosSharedStyles.sectionHelper]}>
-                Required for client billable delay attribution and contractual
-                demurrage logs.
+            <Text
+                style={[hosSharedStyles.sectionHelper]}
+                testID="standby-reason-helper"
+            >
+                {machineLabel
+                    ? `Required. Reasons for ${machineLabel}.`
+                    : 'Required. Link to your machine to see reasons for it.'}
             </Text>
 
-            <View style={styles.standbyChipsGrid}>
-                {STANDBY_REASONS.map((r) => {
-                    const isSelected = standbyReason === r.reason;
+            <View accessibilityRole="radiogroup" style={styles.list}>
+                {options.map((item) => {
+                    const isSelected = standbyReason === item.reason;
 
                     return (
                         <Pressable
-                            key={r.reason}
-                            accessibilityLabel={r.label}
-                            accessibilityRole="button"
-                            onPress={() => {
-                                setStandbyReason(r.reason);
-                                setIsSaved(false);
-                            }}
+                            key={item.reason}
+                            accessibilityLabel={`${item.label}${item.billable ? ', billable to the client' : ''}`}
+                            accessibilityRole="radio"
+                            accessibilityState={{ checked: isSelected }}
+                            onPress={() => onChoose(item.reason)}
                             style={({ pressed }) => [
-                                styles.standbyChip,
-                                isSelected && styles.standbyChipSelected,
+                                styles.option,
+                                isSelected && styles.optionSelected,
                                 pressed && hosSharedStyles.pressed,
                             ]}
-                            testID={`standby-reason-${r.reason}`}
+                            testID={`standby-reason-${item.reason}`}
                         >
-                            <Text
-                                style={[
-                                    styles.standbyChipText,
-                                    isSelected &&
-                                        styles.standbyChipTextSelected,
-                                ]}
-                            >
-                                {r.label}
-                            </Text>
+                            <Text style={styles.label}>{item.label}</Text>
+                            {item.billable ? (
+                                <View
+                                    style={styles.billable}
+                                    testID={`standby-billable-${item.reason}`}
+                                >
+                                    <Text style={styles.billableText}>
+                                        Billable
+                                    </Text>
+                                </View>
+                            ) : null}
                             {isSelected ? (
-                                <Text style={[styles.standbyCheckGlyph]}>
-                                    ✓
-                                </Text>
+                                <Icon
+                                    color={theme.textPrimary}
+                                    name="check"
+                                    size={18}
+                                />
                             ) : null}
                         </Pressable>
                     );
@@ -78,40 +90,43 @@ export const HosStandbyReasonSelector: React.FC<
 
 const createStyles = (theme: ThemeColors) =>
     StyleSheet.create({
-        standbyCheckGlyph: {
-            color: theme.textPrimary,
-            fontSize: 14,
-            fontWeight: '700',
-            marginLeft: 8,
+        list: {
+            gap: 8,
         },
-        standbyChip: {
+        option: {
             alignItems: 'center',
             backgroundColor: theme.surface,
             borderColor: theme.border,
             borderRadius: 12,
             borderWidth: 1,
             flexDirection: 'row',
-            justifyContent: 'space-between',
-            minHeight: 48,
+            gap: 8,
+            minHeight: 52,
             paddingHorizontal: 14,
             paddingVertical: 12,
         },
-        standbyChipSelected: {
+        optionSelected: {
             backgroundColor: theme.brandAmberLight,
             borderColor: theme.brandAmber,
             borderWidth: 1.5,
         },
-        standbyChipText: {
-            color: theme.textSecondary,
-            flex: 1,
-            fontSize: 12.5,
-            fontWeight: '700',
-        },
-        standbyChipTextSelected: {
+        label: {
             color: theme.textPrimary,
-            fontWeight: '700',
+            flex: 1,
+            fontSize: 15,
+            fontWeight: '500',
         },
-        standbyChipsGrid: {
-            gap: 8,
+        billable: {
+            backgroundColor: theme.surfaceHighlight,
+            borderColor: theme.borderStrong,
+            borderRadius: 6,
+            borderWidth: 1,
+            paddingHorizontal: 6,
+            paddingVertical: 2,
+        },
+        billableText: {
+            color: theme.textPrimary,
+            fontSize: 12,
+            fontWeight: '700',
         },
     });

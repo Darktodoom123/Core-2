@@ -7,6 +7,7 @@ import { HosDutyGraph } from '../screens/hos/hos-duty-graph';
 import { HosDutyStatusSelector } from '../screens/hos/hos-duty-status-selector';
 import { HosShiftLimitBanner } from '../screens/hos/hos-shift-limit-banner';
 import { HosStandbyReasonSelector } from '../screens/hos/hos-standby-reason-selector';
+import { standbyReasonsFor } from '../screens/hos/hos-standby-reasons';
 import { ThemeProvider } from '../theme';
 import type { ThemeColors, ThemeMode } from '../theme';
 import { darkHudThemeColors, lightThemeColors } from '../theme/tokens';
@@ -61,8 +62,8 @@ describe.each(MODES)('HoS design roles (%s)', (mode, theme: ThemeColors) => {
         const view = await inTheme(
             mode,
             <HosStandbyReasonSelector
-                setIsSaved={jest.fn()}
-                setStandbyReason={jest.fn()}
+                onChoose={jest.fn()}
+                options={standbyReasonsFor('mobile_crane')}
                 standbyReason="waiting_on_client"
             />,
         );

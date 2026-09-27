@@ -196,6 +196,84 @@ describe('HosScreen', () => {
         }
     });
 
+    it('offers only general standby reasons until the operator links to a machine', async () => {
+        const view = await render(<HosScreen shiftInfo={onShift} />);
+
+        await fireEvent.press(view.getByTestId('duty-option-standby'));
+
+        expect(view.getByTestId('standby-reason-helper')).toHaveTextContent(
+            'Required. Link to your machine to see reasons for it.',
+        );
+        expect(view.queryByTestId('standby-reason-rigging_recheck')).toBeNull();
+        expect(
+            view.queryByTestId('standby-reason-waiting_on_concrete'),
+        ).toBeNull();
+    });
+
+    it("offers the linked machine's reasons, picks none, and needs one before confirming", async () => {
+        const onUpdateDutyStatus = jest.fn();
+        const view = await render(
+            <HosScreen
+                linkedAssetCode="CRN-501"
+                linkedAssetType="mobile_crane"
+                onUpdateDutyStatus={onUpdateDutyStatus}
+                shiftInfo={onShift}
+            />,
+        );
+
+        await fireEvent.press(view.getByTestId('duty-option-standby'));
+        await fireEvent.press(view.getByTestId('hos-cert-check'));
+
+        expect(view.getByTestId('standby-reason-helper')).toHaveTextContent(
+            'Required. Reasons for CRN-501 · Mobile crane.',
+        );
+        expect(view.getByTestId('standby-reason-rigging_recheck')).toBeTruthy();
+        expect(
+            view.getByTestId('standby-billable-waiting_on_client'),
+        ).toBeTruthy();
+
+        for (const item of ['waiting_on_client', 'rigging_recheck', 'other']) {
+            expect(
+                view.getByTestId(`standby-reason-${item}`).props
+                    .accessibilityState,
+            ).toMatchObject({ checked: false });
+        }
+
+        expect(view.getByText('Choose a standby reason')).toBeTruthy();
+        expect(
+            view.getByTestId('confirm-hos-btn').props.accessibilityState,
+        ).toMatchObject({ disabled: true });
+
+        await fireEvent.press(
+            view.getByTestId('standby-reason-rigging_recheck'),
+        );
+        await fireEvent.press(view.getByTestId('confirm-hos-btn'));
+
+        expect(onUpdateDutyStatus).toHaveBeenCalledWith(
+            'standby',
+            'rigging_recheck',
+            undefined,
+        );
+    });
+
+    it('offers a truck its own reasons, not rigging or a concrete pour', async () => {
+        const view = await render(
+            <HosScreen
+                linkedAssetCode="TRK-202"
+                linkedAssetType="carrier"
+                shiftInfo={{ ...onShift, dutyStatus: 'driving' }}
+            />,
+        );
+
+        await fireEvent.press(view.getByTestId('duty-option-standby'));
+
+        expect(view.getByText('Waiting to load or unload')).toBeTruthy();
+        expect(view.queryByTestId('standby-reason-rigging_recheck')).toBeNull();
+        expect(
+            view.queryByTestId('standby-reason-waiting_on_concrete'),
+        ).toBeNull();
+    });
+
     it('calls onBack when back button is pressed', async () => {
         const onBack = jest.fn();
         const view = await render(<HosScreen onBack={onBack} />);

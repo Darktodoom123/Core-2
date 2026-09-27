@@ -7,6 +7,7 @@ import {
     Text,
     View,
 } from 'react-native';
+import { UNIT_TYPES } from '../components/inspection/defects/unit-type';
 import { TileScreenHeader } from '../components/layout/tile-screen-header';
 import { EndShiftSafeguardModal } from '../components/sheets/EndShiftSafeguardModal';
 import { ReliefHandoverModal } from '../components/sheets/ReliefHandoverModal';
@@ -15,6 +16,7 @@ import type { FieldApiClient } from '../services/apiClient';
 import { useTheme, useThemedStyles } from '../theme';
 import type { ThemeColors } from '../theme';
 import type { DutyStatus, ShiftInfo, StandbyReason } from '../types/index';
+import type { DesignatedEquipmentType } from '../utils/equipmentClassification';
 import { HosCertifyCard } from './hos/hos-certify-card';
 import { HosClocksCard } from './hos/hos-clocks-card';
 import {
@@ -27,6 +29,7 @@ import { HosDutyStatusSelector } from './hos/hos-duty-status-selector';
 import { HosShiftLimitBanner } from './hos/hos-shift-limit-banner';
 import { HosShiftLog } from './hos/hos-shift-log';
 import { HosStandbyReasonSelector } from './hos/hos-standby-reason-selector';
+import { standbyReasonsFor } from './hos/hos-standby-reasons';
 import { HosSyncBanner } from './hos/hos-sync-banner';
 import type { HosSyncSummary } from './hos/hos-sync-summary';
 import { HosTimelineCard } from './hos/hos-timeline-card';
@@ -43,6 +46,8 @@ export interface HosScreenProps {
     operatorName?: string;
     shiftInfo?: ShiftInfo;
     linkedAssetCode?: string | null;
+    /** The linked machine's type; decides which standby reasons apply. */
+    linkedAssetType?: DesignatedEquipmentType | null;
     timelineHistory?: TimelineDayHistory[];
     apiClient?: FieldApiClient;
     activeJobId?: number;
@@ -74,6 +79,7 @@ export const HosScreen: React.FC<HosScreenProps> = ({
     // Nothing is assumed: without server data the operator is off duty.
     shiftInfo = OFF_SHIFT,
     linkedAssetCode = null,
+    linkedAssetType = null,
     timelineHistory = [],
     apiClient,
     activeJobId,
@@ -130,8 +136,19 @@ export const HosScreen: React.FC<HosScreenProps> = ({
             localStatus: status,
         });
     };
-    const [standbyReason, setStandbyReason] =
-        useState<StandbyReason>('waiting_on_client');
+    // The operator picks a standby reason; none is chosen for them.
+    const [standbyReason, setStandbyReason] = useState<StandbyReason | null>(
+        null,
+    );
+    const standbyOptions = standbyReasonsFor(
+        linkedAssetCode ? linkedAssetType : null,
+    );
+    const chosenReason = standbyOptions.some(
+        (item) => item.reason === standbyReason,
+    )
+        ? standbyReason
+        : null;
+    const reasonMissing = selectedStatus === 'standby' && chosenReason === null;
     const [remarks, setRemarks] = useState('');
     // The operator ticks the certification themselves; it never starts ticked.
     const [isCertified, setIsCertified] = useState(false);
@@ -198,7 +215,9 @@ export const HosScreen: React.FC<HosScreenProps> = ({
         try {
             const accepted = await onUpdateDutyStatus?.(
                 statusToSet,
-                statusToSet === 'standby' ? standbyReason : undefined,
+                statusToSet === 'standby'
+                    ? (chosenReason ?? undefined)
+                    : undefined,
                 remarks.trim() ? remarks.trim() : undefined,
             );
 
@@ -289,7 +308,6 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                     <HosContinuousRestBanner
                         breakSuggestion={hosCompliance.breakSuggestion}
                         hosCompliance={hosCompliance}
-                        onUpdateDutyStatus={onUpdateDutyStatus}
                         setOverriddenStatus={setOverriddenStatus}
                         shiftInfo={shiftInfo}
                     />
@@ -328,14 +346,27 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                 {/* 5. Standby & Demurrage Reason Selector (when Standby is chosen) */}
                 {selectedStatus === 'standby' ? (
                     <HosStandbyReasonSelector
-                        setIsSaved={setIsSaved}
-                        setStandbyReason={setStandbyReason}
-                        standbyReason={standbyReason}
+                        machineLabel={
+                            linkedAssetCode
+                                ? linkedAssetType
+                                    ? `${linkedAssetCode} · ${UNIT_TYPES[linkedAssetType].label}`
+                                    : linkedAssetCode
+                                : null
+                        }
+                        onChoose={(reason) => {
+                            setStandbyReason(reason);
+                            setIsSaved(false);
+                        }}
+                        options={standbyOptions}
+                        standbyReason={chosenReason}
                     />
                 ) : null}
                 {/* 6. Remarks & Duty Transition Submission Card */}
                 <HosCertifyCard
                     activeConfig={activeConfig}
+                    blockedLabel={
+                        reasonMissing ? 'Choose a standby reason' : null
+                    }
                     currentStatus={currentStatus}
                     certCheckScale={certCheckScale}
                     handleConfirm={handleConfirm}

@@ -15,6 +15,8 @@ import type { DutyStatusOptionConfig } from './hos-types';
 
 export interface HosCertifyCardProps {
     activeConfig: DutyStatusOptionConfig;
+    /** Why the change can't be confirmed yet, shown on the button. */
+    blockedLabel?: string | null;
     /** The status the server last accepted. */
     currentStatus: DutyStatus;
     certCheckScale: Animated.Value;
@@ -32,6 +34,7 @@ export interface HosCertifyCardProps {
 
 export const HosCertifyCard: React.FC<HosCertifyCardProps> = ({
     activeConfig,
+    blockedLabel = null,
     currentStatus,
     certCheckScale,
     handleConfirm,
@@ -71,12 +74,14 @@ export const HosCertifyCard: React.FC<HosCertifyCardProps> = ({
                 };
     const isCurrent = currentStatus === activeConfig.status;
     const isOffDuty = activeConfig.status === 'off_duty';
-    const canConfirm = isCertified && !isCurrent;
+    const canConfirm = isCertified && !isCurrent && !blockedLabel;
     const actionLabel = isCurrent
         ? 'This is your current status'
-        : isOffDuty
-          ? 'End shift & go off duty'
-          : `Change to ${activeConfig.title}`;
+        : blockedLabel
+          ? blockedLabel
+          : isOffDuty
+            ? 'End shift & go off duty'
+            : `Change to ${activeConfig.title}`;
     const hosSharedStyles = useThemedStyles(createHosSharedStyles);
 
     return (

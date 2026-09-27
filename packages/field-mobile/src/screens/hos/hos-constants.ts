@@ -1,4 +1,3 @@
-import type { StandbyReason } from '../../types/index';
 import type { DutyStatusOptionConfig, TimelineDayHistory } from './hos-types';
 
 /** DOLE-OSHC operating limit on operating + driving time per shift. */
@@ -47,38 +46,6 @@ export const DUTY_STATUS_OPTIONS: DutyStatusOptionConfig[] = [
         accentToken: 'textSecondary',
     },
 ];
-
-export const STANDBY_REASONS: Array<{ reason: StandbyReason; label: string }> =
-    [
-        {
-            reason: 'waiting_on_client',
-            label: 'Client Site Delay (Billable Demurrage)',
-        },
-        {
-            reason: 'waiting_on_concrete',
-            label: 'Waiting on Concrete Mixer Pour',
-        },
-        {
-            reason: 'weather_hold',
-            label: 'Weather Hold (High Wind Anemometer Cutoff)',
-        },
-        {
-            reason: 'site_access_blocked',
-            label: 'Site Access / Road Ingress Blocked',
-        },
-        {
-            reason: 'rigging_recheck',
-            label: 'Rigging & Outrigger Ground Re-checking',
-        },
-        {
-            reason: 'inspection_hold',
-            label: 'Mechanical Safety Walkaround Inspection',
-        },
-        {
-            reason: 'other',
-            label: 'Other Operational Standby Reason',
-        },
-    ];
 
 export const EMPTY_TIMELINE_DAY: TimelineDayHistory = {
     id: 'empty',

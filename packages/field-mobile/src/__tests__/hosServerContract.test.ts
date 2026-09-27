@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { STANDBY_REASONS } from '../screens/hos/hos-constants.js';
+import { ALL_STANDBY_REASON_CODES } from '../screens/hos/hos-standby-reasons.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const SERVER_ENUMS = path.resolve(
@@ -23,10 +23,7 @@ test('every standby reason the phone offers exists on the server', () => {
     const server = serverEnumValues('StandbyReason.php');
 
     assert.ok(server.length > 0, 'read the server enum');
-    assert.deepEqual(
-        STANDBY_REASONS.map((item) => item.reason).sort(),
-        [...server].sort(),
-    );
+    assert.deepEqual([...ALL_STANDBY_REASON_CODES].sort(), [...server].sort());
 });
 
 test('every duty status the phone sends exists on the server', () => {
