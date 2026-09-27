@@ -30,6 +30,7 @@ use App\Platform\Notifications\DispatchDelayNotification;
 use App\Platform\Notifications\Jobs\SendQueuedNotificationJob;
 use App\Platform\Workspace\Events\WorkspaceUpdated;
 use App\Shared\Http\Exceptions\VersionConflictException;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -39,24 +40,74 @@ use Illuminate\Validation\ValidationException;
 
 final class FieldDispatchJobController extends Controller
 {
+    private const FINISHED_STATUSES = [DispatchStatus::Completed, DispatchStatus::Cancelled];
+
+    private const HISTORY_DEFAULT_DAYS = 30;
+
+    private const HISTORY_MAX_DAYS = 90;
+
     public function index(Request $request): JsonResponse
     {
         Gate::authorize('viewAny', DispatchJob::class);
         $user = $request->user();
+        $filters = $request->validate([
+            'scope' => ['sometimes', 'string', 'in:active,history'],
+            'days' => ['sometimes', 'integer', 'min:1', 'max:'.self::HISTORY_MAX_DAYS],
+        ]);
 
-        $jobs = DispatchJob::query()
-            ->whereIn('id', DispatchPersonnelAssignment::query()
-                ->open()
-                ->where('user_id', $user->id)
-                ->select('dispatch_job_id'))
+        $query = ($filters['scope'] ?? 'active') === 'history'
+            ? $this->historyQuery($user, (int) ($filters['days'] ?? self::HISTORY_DEFAULT_DAYS))
+            : $this->activeQuery($user);
+
+        $jobs = $query
             ->with($this->assignmentRelations($user))
-            ->latest('scheduled_start')
-            ->paginate(25);
+            ->paginate(25)
+            ->withQueryString();
 
         $response = DispatchJobResource::collection($jobs)->response();
         $this->addDeprecationHeaders($response);
 
         return $response;
+    }
+
+    /** @return Builder<DispatchJob> */
+    private function activeQuery(User $user): Builder
+    {
+        return DispatchJob::query()
+            ->whereIn('id', DispatchPersonnelAssignment::query()
+                ->open()
+                ->where('user_id', $user->id)
+                ->select('dispatch_job_id'))
+            ->whereNotIn('status', self::FINISHED_STATUSES)
+            ->latest('scheduled_start');
+    }
+
+    /**
+     * Finished jobs the operator was still on when the job finished. Declined
+     * jobs and jobs they were reassigned off beforehand are not their history.
+     *
+     * @return Builder<DispatchJob>
+     */
+    private function historyQuery(User $user, int $days): Builder
+    {
+        $finishedAt = 'COALESCE(dispatch_jobs.completed_at, dispatch_jobs.cancelled_at, dispatch_jobs.updated_at)';
+
+        return DispatchJob::query()
+            ->whereIn('status', self::FINISHED_STATUSES)
+            ->whereExists(function ($query) use ($user, $finishedAt): void {
+                $query->selectRaw('1')
+                    ->from('dispatch_personnel_assignments')
+                    ->whereColumn('dispatch_personnel_assignments.dispatch_job_id', 'dispatch_jobs.id')
+                    ->where('dispatch_personnel_assignments.user_id', $user->id)
+                    ->where('dispatch_personnel_assignments.response_status', '!=', AssignmentResponse::Rejected->value)
+                    ->where(function ($query) use ($finishedAt): void {
+                        $query->whereNull('dispatch_personnel_assignments.active_until')
+                            ->orWhereRaw("dispatch_personnel_assignments.active_until >= {$finishedAt}");
+                    });
+            })
+            ->whereRaw("{$finishedAt} >= ?", [now()->subDays($days)])
+            ->orderByRaw("{$finishedAt} DESC")
+            ->orderByDesc('id');
     }
 
     public function show(Request $request, DispatchJob $dispatchJob): JsonResponse

@@ -15,6 +15,7 @@ use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
 use App\Platform\Reporting\Models\JobReport;
 use App\Platform\Tracking\Models\LocationUpdate;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -39,12 +40,36 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $scheduled_end
  * @property int|null $cancelled_by
  * @property string|null $cancellation_reason
+ * @property CarbonImmutable|null $completed_at
+ * @property CarbonImmutable|null $cancelled_at
  */
 class DispatchJob extends Model
 {
     use SoftDeletes;
 
     protected $fillable = ['service_request_id', 'source_type', 'source_id', 'source_reference', 'reference', 'client', 'title', 'site', 'site_notes', 'site_latitude', 'site_longitude', 'planned_crane_slots', 'scheduled_start', 'scheduled_end', 'priority', 'status', 'requirements', 'created_by', 'activated_by', 'cancelled_by', 'cancellation_reason', 'version'];
+
+    /**
+     * Every status write goes through the model, so the finish time is set in
+     * one place: stamped on entering a terminal state, cleared on reopening.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (DispatchJob $job): void {
+            if (! $job->isDirty('status')) {
+                return;
+            }
+
+            $status = $job->status;
+
+            $job->completed_at = $status === DispatchStatus::Completed
+                ? ($job->completed_at ?? CarbonImmutable::now())
+                : null;
+            $job->cancelled_at = $status === DispatchStatus::Cancelled
+                ? ($job->cancelled_at ?? CarbonImmutable::now())
+                : null;
+        });
+    }
 
     protected function casts(): array
     {
@@ -54,6 +79,8 @@ class DispatchJob extends Model
             'planned_crane_slots' => 'array',
             'scheduled_start' => 'datetime',
             'scheduled_end' => 'datetime',
+            'completed_at' => 'datetime',
+            'cancelled_at' => 'datetime',
             'priority' => DispatchPriority::class,
             'status' => DispatchStatus::class,
             'requirements' => 'array',

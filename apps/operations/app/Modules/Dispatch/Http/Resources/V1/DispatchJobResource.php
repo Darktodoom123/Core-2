@@ -62,6 +62,8 @@ final class DispatchJobResource extends JsonResource
                 'label' => $this->status->label(),
             ],
             'version' => $this->version,
+            'completed_at' => $this->completed_at?->toIso8601String(),
+            'cancelled_at' => $this->cancelled_at?->toIso8601String(),
             'source' => ($this->source_type !== null && $this->source_id !== null) ? [
                 'type' => $this->source_type,
                 'id' => (int) $this->source_id,
