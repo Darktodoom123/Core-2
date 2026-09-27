@@ -52,25 +52,41 @@ date that differs from that job. It
 shows permitted personnel profiles, recorded account/availability state, fleet
 readiness, and commitments found in the currently loaded dispatches for a chosen
 date. Missing commitments are explicitly not treated as proof of availability.
-Asset rows distinguish a maintenance block, a missing inspection clearance, and
+Asset rows distinguish a maintenance block, missing or failed inspection clearance, and
 a non-dispatchable operational status. Selecting a dispatch continues to show
 its assigned personnel and assigned equipment as separate groups.
+An Available asset without a completed passing workshop inspection or DVIR
+cannot be assigned or activated; a later failed or defective inspection
+invalidates earlier clearance. The Ready for service transition retains its
+separate post-maintenance verification rule.
 
-Each selected dispatch also has **AI assistance**. With
+Each selected non-terminal dispatch also has **AI assistance**. Completed and
+cancelled records show historical resources and recorded outcome evidence without
+assignment or AI request controls. With
 `OPENAI_BLOCKER_RESOLUTION_ENABLED=true`, it addresses one actionable resource
-blocker at a time. The server vets up to three eligible crew or asset options;
+blocker at a time. For a job with a typed resource plan, it selects the first
+incomplete crew role or equipment type after checking existing assignments,
+then vets up to three eligible options. When there are two or three options,
 OpenAI GPT-6 Luna ranks them and selects which verified fact to emphasize. The
-server renders each reason from that fact. **Review option** opens the
+server renders each reason from that fact. With zero or one eligible option,
+the server supplies the guidance directly, without a model call or AI quota use;
+the card labels this as a recorded eligibility check. **Review option** opens the
 existing assignment or reassignment picker with that candidate selected. The
-dispatcher confirms the change there, and the normal authorization, version,
+Operations Manager confirms the change there, and the normal authorization, version,
 eligibility, conflict, safety, and approval checks still govern saving. Advice
 expires after 15 minutes or when its dispatch context changes. If no eligible
 option exists, the card gives manual guidance without a model call. Project
 shifts guide authorized planners to **Fill coverage** in their project plan.
 Approvals, permits, and safety blockers remain in the readiness workflow; AI
 advice never clears them.
-Older `dispatch_assignment` recommendations stay available in governance
-history. The new flow is disabled by default until rollout.
+While the new flow is disabled, the existing `dispatch_assignment` advisory
+remains the on-request workspace experience. Its AI-generated explanations
+require human verification. The server rejects suggestions with clock times
+outside the job's local scheduled window, hydrates proposed resource facts
+from vetted candidates, and marks resources beyond recorded typed quantities
+as optional and unselected. The manager may select them deliberately. Prior
+recommendations stay available in governance history. The server-vetted
+blocker flow is disabled by default until a controlled rollout.
 
 Active dispatches opened through **Monitor field execution** use an execution
 focused view for office users. It leads with the recorded dispatch status, recent
@@ -91,6 +107,11 @@ The existing detail workflow reviews schedule and requirements, selects resource
 and checks readiness before activation. Server authorization, eligibility,
 conflicts, safety, approval, optimistic versions and audit behavior remain
 authoritative. The desk summarizes recorded issues; it does not bypass checks.
+The site weather panel requests Open-Meteo conditions only for pinned site
+coordinates. Missing coordinates and provider failures display an unavailable
+state. Weather observations do not assert ground bearing, lightning distance,
+or lift clearance; the approved lift plan and site measurements govern those
+decisions.
 The preparation Resources step and the assigned-resource summary expose an
 **Assign resources** entry point when the existing capability allows it. The
 picker keeps Employees and Assets in one staged review, with server-backed
@@ -98,6 +119,18 @@ search and pagination, eligibility evidence, assigned-resource protection, a
 persistent selection summary, and a footer action labelled **Assign selected
 resources**. Reassignment uses the same picker with one compatible candidate,
 keeps the current assignment visible, and leaves **End** as a separate action.
+
+Direct manual intake records minimum crew counts by role and equipment counts
+by type separately from the free-text job brief. A draft may be saved with an
+incomplete minimum plan, but activation is blocked until at least one crew
+role and one equipment type are recorded and active assignments satisfy every
+count. The Operations Manager can revise the plan on a draft or scheduled
+dispatch; the change uses the job version and requires another approval when
+an approved plan is revised. Older manual jobs without a typed plan also show
+a blocker and can be completed from the preparation view. Upstream service and
+rental handoffs retain their source-specific requirements until their own
+typed mapping is defined.
+
 Returning from detail preserves desk date, filters and selected job. Linked
 coverage dispatches retain their phase context, including after mutations.
 On phones, selecting a job reveals its details with a Back to results action.

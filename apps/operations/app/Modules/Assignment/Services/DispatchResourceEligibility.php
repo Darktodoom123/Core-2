@@ -13,12 +13,16 @@ use App\Shared\Assets\Data\AssetUsageRequest;
 use App\Shared\Assets\Data\AssetUsageSource;
 use App\Shared\Assets\Enums\AssetUsageType;
 use App\Shared\Assets\Models\OperationalAsset;
+use App\Shared\Assets\Services\AssetInspectionReadiness;
 use App\Shared\Assets\Services\OperationalAssetAvailability;
 use Illuminate\Support\Collection;
 
 final class DispatchResourceEligibility
 {
-    public function __construct(private readonly OperationalAssetAvailability $availability) {}
+    public function __construct(
+        private readonly OperationalAssetAvailability $availability,
+        private readonly AssetInspectionReadiness $inspectionReadiness,
+    ) {}
 
     /**
      * @return array{
@@ -165,6 +169,11 @@ final class DispatchResourceEligibility
             } else {
                 $reasons[] = $conflict->message;
             }
+        }
+
+        $asset->loadMissing(['inspections', 'latestDvirInspection']);
+        if ($this->inspectionReadiness->lacksPassingClearance($asset->inspections, $asset->latestDvirInspection)) {
+            $reasons[] = 'A completed passing inspection or DVIR is required before dispatch; a later failure removes clearance.';
         }
 
         return [

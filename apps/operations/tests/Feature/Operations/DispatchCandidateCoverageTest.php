@@ -35,12 +35,21 @@ beforeEach(function (): void {
 
 function coverageAsset(string $code, string $kind, AssetStatus $status = AssetStatus::Available): OperationalAsset
 {
-    return OperationalAsset::query()->create([
+    $asset = OperationalAsset::query()->create([
         'code' => $code,
         'name' => $code.' resource',
         'kind' => $kind,
         'status' => $status,
     ]);
+    $asset->inspections()->create([
+        'technician_id' => User::query()->firstOrFail()->id,
+        'type' => 'daily_safety',
+        'result' => 'passed',
+        'checklist' => ['fixture_readiness' => true],
+        'completed_at' => now()->subDay(),
+    ]);
+
+    return $asset;
 }
 
 function coverageOperator(string $name, ?string $licenseStatus = null): User
@@ -97,6 +106,47 @@ test('new asset kinds still reject a mismatched or blocked resource', function (
     ])->assertSessionHasErrors('assets');
 
     expect($this->job->assetAssignments()->count())->toBe(0);
+});
+
+test('candidate and assignment checks agree after a failed inspection and its passing follow-up', function (): void {
+    $vehicle = OperationalAsset::query()->create([
+        'code' => 'VEH-INSPECT',
+        'name' => 'Inspection evidence vehicle',
+        'kind' => 'vehicle',
+        'status' => AssetStatus::Available,
+    ]);
+    $candidate = fn (): array => collect(app(AssetCandidateQuery::class)->page(
+        $this->job,
+        ListDispatchCandidatesRequest::create('/', 'GET', ['resource' => 'assets']),
+    )->data)->firstWhere('id', $vehicle->id);
+
+    expect($candidate()['eligible'])->toBeFalse()
+        ->and($candidate()['reasons'][0])->toContain('passing inspection or DVIR');
+
+    $vehicle->inspections()->create([
+        'technician_id' => $this->dispatcher->id,
+        'type' => 'daily_safety',
+        'result' => 'failed',
+        'checklist' => ['brakes' => 'repair required'],
+        'completed_at' => now()->subHour(),
+    ]);
+
+    expect($candidate()['eligible'])->toBeFalse();
+
+    $this->actingAs($this->dispatcher)->post("/operations/dispatch-jobs/{$this->job->id}/assignments", [
+        'assets' => [['operational_asset_id' => $vehicle->id, 'assignment_type' => 'vehicle']],
+        'version' => $this->job->version,
+    ])->assertSessionHasErrors('assets');
+
+    $vehicle->inspections()->create([
+        'technician_id' => $this->dispatcher->id,
+        'type' => 'daily_safety',
+        'result' => 'passed',
+        'checklist' => ['brakes' => 'ok'],
+        'completed_at' => now(),
+    ]);
+
+    expect($candidate()['eligible'])->toBeTrue();
 });
 
 test('new asset kinds can replace an existing assignment through the normal reassignment route', function (string $kind): void {

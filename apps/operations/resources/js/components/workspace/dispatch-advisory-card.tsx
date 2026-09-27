@@ -80,10 +80,15 @@ export function DispatchAdvisoryCard({
         rec ? `${rec.id}:${rec.context_hash}:${rec.status}` : null,
     );
     const [selectedPersonnelIds, setSelectedPersonnelIds] = useState<number[]>(
-        () => (rec?.proposed_personnel ?? []).map((p) => p.user_id),
+        () =>
+            (rec?.proposed_personnel ?? [])
+                .filter((person) => !person.optional)
+                .map((person) => person.user_id),
     );
     const [selectedAssetIds, setSelectedAssetIds] = useState<number[]>(() =>
-        (rec?.proposed_assets ?? []).map((a) => a.operational_asset_id),
+        (rec?.proposed_assets ?? [])
+            .filter((asset) => !asset.optional)
+            .map((asset) => asset.operational_asset_id),
     );
     const [clockNow, setClockNow] = useState(() => Date.now());
 
@@ -94,10 +99,14 @@ export function DispatchAdvisoryCard({
     if (currentRecKey !== prevRecKey) {
         setPrevRecKey(currentRecKey);
         setSelectedPersonnelIds(
-            (rec?.proposed_personnel ?? []).map((p) => p.user_id),
+            (rec?.proposed_personnel ?? [])
+                .filter((person) => !person.optional)
+                .map((person) => person.user_id),
         );
         setSelectedAssetIds(
-            (rec?.proposed_assets ?? []).map((a) => a.operational_asset_id),
+            (rec?.proposed_assets ?? [])
+                .filter((asset) => !asset.optional)
+                .map((asset) => asset.operational_asset_id),
         );
     }
 
@@ -452,7 +461,7 @@ export function DispatchAdvisoryCard({
                     <div
                         className={cn(
                             'space-y-3 divide-y divide-line/60 transition-all duration-200',
-                            (expired || stale) && 'opacity-75 grayscale-[20%]',
+                            (expired || stale) && 'border-line',
                         )}
                     >
                         <ResourceGroup
@@ -482,7 +491,7 @@ export function DispatchAdvisoryCard({
                                         className={cn(
                                             'group relative flex items-center gap-2.5 rounded-lg border p-2 transition-all duration-150',
                                             expired || stale
-                                                ? 'border-line/40 bg-surface/30 opacity-75 grayscale-[20%]'
+                                                ? 'border-line bg-surface-subtle'
                                                 : isSelected
                                                   ? 'border-line-strong bg-surface shadow-2xs'
                                                   : 'border-line bg-surface-subtle/30 hover:border-line-strong hover:bg-surface',
@@ -533,6 +542,11 @@ export function DispatchAdvisoryCard({
                                                 {hasName && (
                                                     <span className="inline-flex shrink-0 items-center rounded border border-line bg-surface px-1.5 py-0.5 font-mono text-[10px] font-medium text-ink-soft tabular-nums">
                                                         #{person.user_id}
+                                                    </span>
+                                                )}
+                                                {person.optional && (
+                                                    <span className="text-[10px] font-medium text-ink-soft">
+                                                        Optional support
                                                     </span>
                                                 )}
                                             </div>
@@ -614,7 +628,7 @@ export function DispatchAdvisoryCard({
                                             className={cn(
                                                 'group relative flex items-center gap-2.5 rounded-lg border p-2 transition-all duration-150',
                                                 expired || stale
-                                                    ? 'border-line/40 bg-surface/30 opacity-75 grayscale-[20%]'
+                                                    ? 'border-line bg-surface-subtle'
                                                     : isSelected
                                                       ? 'border-line-strong bg-surface shadow-2xs'
                                                       : 'border-line bg-surface-subtle/30 hover:border-line-strong hover:bg-surface',
@@ -680,6 +694,11 @@ export function DispatchAdvisoryCard({
                                                             {
                                                                 asset.operational_asset_id
                                                             }
+                                                        </span>
+                                                    )}
+                                                    {asset.optional && (
+                                                        <span className="text-[10px] font-medium text-ink-soft">
+                                                            Optional support
                                                         </span>
                                                     )}
                                                 </div>
@@ -823,6 +842,10 @@ export function DispatchAdvisoryCard({
                             Why this suggestion?
                         </summary>
                         <div className="space-y-3 pt-1 leading-relaxed break-words text-ink-soft">
+                            <p>
+                                AI-generated explanation. Verify site, lifting,
+                                and safety requirements before assigning.
+                            </p>
                             {rec.response_summary && (
                                 <p>{rec.response_summary}</p>
                             )}

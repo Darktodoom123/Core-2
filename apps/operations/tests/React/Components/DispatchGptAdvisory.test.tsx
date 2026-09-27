@@ -94,7 +94,7 @@ function recommendation(
         status: 'pending_review',
         prompt_summary: null,
         response_summary: null,
-        recommendation: {},
+        recommendation: { job_version: 1 },
         proposed_personnel: [
             {
                 user_id: 2,
@@ -130,6 +130,40 @@ beforeEach(() => {
 });
 
 describe('dispatch GPT advisory', () => {
+    it('requires a fresh suggestion when a legacy recommendation has no job version', () => {
+        render(
+            <DispatchGptAdvisory
+                job={job(10)}
+                capabilities={capabilities()}
+                recommendations={[recommendation({ recommendation: {} })]}
+            />,
+        );
+
+        expect(screen.getByText('Refresh before applying')).toBeInTheDocument();
+        expect(
+            screen.queryByRole('button', { name: 'Review details' }),
+        ).not.toBeInTheDocument();
+    });
+
+    it('blocks review of a suggestion from an older job version', () => {
+        render(
+            <DispatchGptAdvisory
+                job={{ ...job(10), version: 2 }}
+                capabilities={capabilities()}
+                recommendations={[
+                    recommendation({ recommendation: { job_version: 1 } }),
+                ]}
+            />,
+        );
+
+        expect(screen.getByText('Refresh before applying')).toBeInTheDocument();
+        expect(
+            screen.queryByRole('button', {
+                name: /Review details|Confirm & Apply/i,
+            }),
+        ).not.toBeInTheDocument();
+    });
+
     it('opens a vetted blocker option in the assignment workflow without a direct apply action', () => {
         render(
             <DispatchGptAdvisory
@@ -181,6 +215,31 @@ describe('dispatch GPT advisory', () => {
             'href',
             expect.stringContaining('advice_id=1&option_id=1'),
         );
+    });
+
+    it('identifies a single-option eligibility result as rule based', () => {
+        render(
+            <DispatchGptAdvisory
+                job={job(10)}
+                capabilities={capabilities({
+                    blocker_resolution_enabled: true,
+                })}
+                recommendations={[
+                    recommendation({
+                        model: 'rules',
+                        purpose: 'dispatch_blocker_resolution',
+                        recommendation: {
+                            summary: 'Review this eligible resource.',
+                        },
+                        blocker_options: [],
+                    }),
+                ]}
+            />,
+        );
+
+        expect(
+            screen.getByText(/no AI model was used for this result/i),
+        ).toBeInTheDocument();
     });
 
     it('sends project shifts to Fill coverage without requesting AI', () => {

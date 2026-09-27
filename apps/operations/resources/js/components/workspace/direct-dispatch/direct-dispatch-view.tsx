@@ -6,6 +6,10 @@ import type {
     ReactNode,
     TextareaHTMLAttributes,
 } from 'react';
+import {
+    ResourceRequirementFields,
+    resourceRequirementTotals,
+} from '@/components/dispatch-resource-requirements/requirement-fields';
 import { Button, DateTimePicker } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import {
@@ -63,6 +67,9 @@ export function DirectDispatchView({
     const summary = useMemo(
         () => projectDirectDispatchSummary(form.data),
         [form.data],
+    );
+    const resourceTotals = resourceRequirementTotals(
+        form.data.resource_requirements,
     );
 
     useEffect(() => {
@@ -244,6 +251,36 @@ export function DirectDispatchView({
                     </section>
 
                     <section
+                        id="direct-dispatch-resource-requirements"
+                        className="min-w-0 rounded-xl border border-line bg-surface p-4"
+                        aria-labelledby="direct-dispatch-resource-requirements-heading"
+                    >
+                        <SectionHeading
+                            id="direct-dispatch-resource-requirements-heading"
+                            title="Required crew and equipment"
+                            description="Enter the minimum roles and equipment types needed for this job. Activation checks these quantities against saved assignments. A draft can be saved while this plan is incomplete."
+                        />
+                        <div className="mt-4">
+                            <ResourceRequirementFields
+                                idPrefix="direct-dispatch"
+                                value={form.data.resource_requirements}
+                                onChange={(value) =>
+                                    form.setData('resource_requirements', value)
+                                }
+                            />
+                        </div>
+                        <p className="mt-3 text-xs text-ink-soft">
+                            Minimum plan: {resourceTotals.personnel} crew ·{' '}
+                            {resourceTotals.assets} equipment. Both categories
+                            need at least one before activation.
+                        </p>
+                        <FieldError
+                            id="direct-dispatch-resource-requirements-error"
+                            error={form.errors.resource_requirements}
+                        />
+                    </section>
+
+                    <section
                         className="min-w-0 rounded-xl border border-line bg-surface p-4"
                         aria-labelledby="direct-dispatch-details-heading"
                     >
@@ -336,7 +373,7 @@ export function DirectDispatchView({
                                 onChange={(value) =>
                                     form.setData('site', value)
                                 }
-                                placeholder="e.g. Jurong Island Berth 4"
+                                placeholder="e.g. Batangas Port Terminal"
                                 required
                             />
                             <DateTimePicker

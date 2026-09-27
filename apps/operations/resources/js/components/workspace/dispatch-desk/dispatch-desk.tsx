@@ -1698,6 +1698,19 @@ function DispatchReviewPanel({
                                 <p className="mt-1 text-sm text-ink-soft">
                                     {job.client}
                                 </p>
+                                {['completed', 'cancelled'].includes(
+                                    job.status.value,
+                                ) && (
+                                    <p className="mt-2 text-xs text-ink-soft">
+                                        {job.status.value === 'completed'
+                                            ? `Completed: ${formatDateTime(job.completed_at ?? null, 'finish time not recorded')}`
+                                            : `Cancelled: ${formatDateTime(job.cancelled_at ?? null, 'cancellation time not recorded')}`}
+                                        {job.status.value === 'cancelled' &&
+                                        job.cancellation_reason
+                                            ? ` · ${job.cancellation_reason}`
+                                            : ''}
+                                    </p>
+                                )}
                             </div>
                         </div>
                         {job.status.value === 'draft' && (
@@ -1732,26 +1745,32 @@ function DispatchReviewPanel({
                                           : 'Review outcome and dispatch history.'}
                                 </span>
                             </div>
-                            <button
-                                type="button"
-                                aria-controls="dispatch-ai-assistance"
-                                onClick={() => {
-                                    aiAssistanceRef.current?.scrollIntoView({
-                                        behavior: 'smooth',
-                                        block: 'start',
-                                    });
-                                    aiAssistanceRef.current?.focus({
-                                        preventScroll: true,
-                                    });
-                                }}
-                                className="inline-flex min-h-9 items-center gap-1.5 self-start rounded-md border border-line/60 bg-surface px-2.5 text-xs font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden sm:self-auto"
-                            >
-                                <Sparkles
-                                    className="h-3.5 w-3.5 text-brand-strong"
-                                    aria-hidden="true"
-                                />
-                                <span>AI assistance</span>
-                            </button>
+                            {!['completed', 'cancelled'].includes(
+                                job.status.value,
+                            ) && (
+                                <button
+                                    type="button"
+                                    aria-controls="dispatch-ai-assistance"
+                                    onClick={() => {
+                                        aiAssistanceRef.current?.scrollIntoView(
+                                            {
+                                                behavior: 'smooth',
+                                                block: 'start',
+                                            },
+                                        );
+                                        aiAssistanceRef.current?.focus({
+                                            preventScroll: true,
+                                        });
+                                    }}
+                                    className="inline-flex min-h-9 items-center gap-1.5 self-start rounded-md border border-line/60 bg-surface px-2.5 text-xs font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden sm:self-auto"
+                                >
+                                    <Sparkles
+                                        className="h-3.5 w-3.5 text-brand-strong"
+                                        aria-hidden="true"
+                                    />
+                                    <span>AI assistance</span>
+                                </button>
+                            )}
                         </div>
                     </div>
 
@@ -1932,19 +1951,21 @@ function DispatchReviewPanel({
                         </Link>
                     </div>
                 </Panel>
-                <div
-                    ref={aiAssistanceRef}
-                    id="dispatch-ai-assistance"
-                    tabIndex={-1}
-                    className="min-w-0 scroll-mt-4 outline-none"
-                >
-                    <DispatchGptAdvisory
-                        key={job.id}
-                        job={job}
-                        recommendations={recommendations}
-                        capabilities={capabilities}
-                    />
-                </div>
+                {!['completed', 'cancelled'].includes(job.status.value) && (
+                    <div
+                        ref={aiAssistanceRef}
+                        id="dispatch-ai-assistance"
+                        tabIndex={-1}
+                        className="min-w-0 scroll-mt-4 outline-none"
+                    >
+                        <DispatchGptAdvisory
+                            key={job.id}
+                            job={job}
+                            recommendations={recommendations}
+                            capabilities={capabilities}
+                        />
+                    </div>
+                )}
             </div>
         </section>
     );

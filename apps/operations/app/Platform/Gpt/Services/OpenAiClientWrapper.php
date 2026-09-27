@@ -627,11 +627,7 @@ final class OpenAiClientWrapper
             'summary' => 'Recommend assigning eligible personnel and equipment for scheduled job window.',
             'proposed_personnel' => $proposedPersonnel,
             'proposed_assets' => $proposedAssets,
-            'proposed_schedule' => [
-                ['07:00', 'Check equipment & depart yard'],
-                ['08:00', 'Arrive at site'],
-                ['16:00', 'Complete operations'],
-            ],
+            'proposed_schedule' => [],
             'reasons' => [
                 'Assigned candidates hold valid credentials and pass availability checks.',
                 'Assets meet readiness and safety inspection standards.',
@@ -674,7 +670,9 @@ STRICT CONSTRAINTS:
    - "capacity": rated capacity and unit if available (e.g. "50 t")
    - "assignment_type": operational assignment kind (e.g. "crane", "truck", "equipment")
 5. Provide clear, professional reasons and assumptions explaining why these specific crew members and equipment assets were chosen (e.g. matching certifications, crane rated capacity vs load, fleet availability). In reasons, cite candidate names and asset codes directly so dispatchers immediately understand the suggestion.
-6. Respond ONLY in valid JSON matching this exact structure:
+6. Use job.resource_requirements as the minimum coverage plan. Recommend the smallest eligible set that covers each recorded role and equipment type. If the job explicitly needs extra support, explain why each extra resource is needed. Never infer a rated lifting capacity from an asset name or code; when capacity or lift-plan facts are missing, state that they are unverified.
+7. Interpret scheduled_start and scheduled_end in the job's schedule_timezone. If you include clock times in the summary or proposed_schedule, use that local timezone and keep the work within the scheduled job window. Do not interpret the UTC equivalent as local time or invent an exact time when the job is unscheduled.
+8. Respond ONLY in valid JSON matching this exact structure:
 {
   "summary": "String concise summary of recommendation",
   "proposed_personnel": [

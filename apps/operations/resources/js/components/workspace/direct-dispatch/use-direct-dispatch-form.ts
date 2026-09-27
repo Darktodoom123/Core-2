@@ -1,6 +1,7 @@
 import { router, useForm } from '@inertiajs/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
+import { emptyResourceRequirements } from '@/components/dispatch-resource-requirements/requirement-fields';
 import {
     deriveDirectDispatchIntakeData,
     getRecommendedRequirements,
@@ -22,6 +23,7 @@ export const DIRECT_DISPATCH_FIELD_IDS: Record<string, string> = {
     priority: 'direct-dispatch-priority',
     work_stream: 'direct-dispatch-work-stream',
     requirements: 'direct-dispatch-requirements',
+    resource_requirements: 'direct-dispatch-resource-requirements',
     site_notes: 'direct-dispatch-site-notes',
 };
 
@@ -34,6 +36,7 @@ const DIRECT_DISPATCH_ERROR_ORDER = [
     'priority',
     'work_stream',
     'requirements',
+    'resource_requirements',
     'site_notes',
 ];
 
@@ -48,6 +51,7 @@ const DEFAULT_FORM_DATA: DirectDispatchFormData = {
     equipment_subtype: 'mobile_crane',
     site_notes: '',
     requirements: getRecommendedRequirements('service', 'mobile_crane'),
+    resource_requirements: emptyResourceRequirements(),
 };
 
 export const DIRECT_DISPATCH_DISCARD_MESSAGE =
@@ -77,6 +81,9 @@ export function useDirectDispatchForm({
         ...initialData,
         requirements:
             initialData?.requirements ?? DEFAULT_FORM_DATA.requirements,
+        resource_requirements:
+            initialData?.resource_requirements ??
+            DEFAULT_FORM_DATA.resource_requirements,
     });
     const [customRequirements, setCustomRequirements] = useState<string[]>(
         () => {

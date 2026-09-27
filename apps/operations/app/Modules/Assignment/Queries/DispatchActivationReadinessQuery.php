@@ -7,6 +7,7 @@ use App\Modules\Dispatch\Enums\ApprovalStatus;
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dispatch\Planning\Services\ProjectShiftReadiness;
+use App\Modules\Dispatch\Services\DispatchResourceRequirements;
 use App\Platform\Identity\Models\User;
 use App\Shared\Assets\Models\OperationalAsset;
 use Illuminate\Support\Facades\Gate;
@@ -16,6 +17,7 @@ final class DispatchActivationReadinessQuery
     public function __construct(
         private readonly DispatchResourceEligibility $eligibility,
         private readonly AssetCandidateQuery $assets,
+        private readonly DispatchResourceRequirements $resourceRequirements,
     ) {}
 
     /** @return array<string, mixed> */
@@ -24,6 +26,7 @@ final class DispatchActivationReadinessQuery
         $blockers = app(ProjectShiftReadiness::class)->blockers($job);
         $personnelAssignments = $job->personnelAssignments->whereNull('active_until');
         $assetAssignments = $job->assetAssignments->whereNull('active_until');
+        $blockers = [...$blockers, ...$this->resourceRequirements->blockers($job, $personnelAssignments, $assetAssignments)];
         $latestApproval = $job->approvals
             ->whereIn('kind', ['dispatch_activation', 'assignment_override', 'reassignment_override'])
             ->sortByDesc('id')

@@ -117,12 +117,13 @@ it('batches eligible-only evaluation across asset chunks', function (): void {
     $job = candidatePerformanceJob($dispatcher, 'CAND-1005');
 
     foreach (range(1, 201) as $index) {
-        OperationalAsset::query()->create([
+        $asset = OperationalAsset::query()->create([
             'code' => sprintf('EL-%03d', $index),
             'name' => 'Eligible pool asset',
             'kind' => 'equipment',
             'status' => AssetStatus::Available,
         ]);
+        clearDispatchAsset($asset);
     }
 
     $page = null;

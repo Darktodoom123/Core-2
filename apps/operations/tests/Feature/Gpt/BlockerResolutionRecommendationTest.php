@@ -57,6 +57,19 @@ function eligibleBlockerOperator(): User
     return $operator;
 }
 
+test('blocker advice uses the typed role deficit instead of a hard-coded crane operator', function (): void {
+    $this->job->update(['resource_requirements' => [
+        'personnel' => ['driver' => 1],
+        'assets' => ['truck' => 1],
+    ]]);
+
+    $context = app(BlockerResolutionContextBuilder::class)->buildForDispatchJob($this->job);
+
+    expect($context['context']['blocker']['code'])->toBe('missing_personnel')
+        ->and($context['context']['blocker']['assignment_type'])->toBe('driver')
+        ->and($context['context']['blocker']['evidence']['required_count'])->toBe(1);
+});
+
 test('no eligible option yields useful deterministic advice without a model call or quota use', function (): void {
     $rec = app(GenerateGptRecommendation::class)->handle($this->dispatcher, $this->job, 'dispatch_blocker_resolution');
 
@@ -84,16 +97,14 @@ test('unrecorded availability is explained in plain language', function (): void
 test('vetted option is reviewed and adopted only through the normal assignment route', function (): void {
     $operator = eligibleBlockerOperator();
     $rec = app(GenerateGptRecommendation::class)->handle($this->dispatcher, $this->job, 'dispatch_blocker_resolution');
-    expect($rec->status->value)->toBe('draft')
-        ->and($this->job->personnelAssignments()->count())->toBe(0);
-    Queue::assertPushed(GenerateGptRecommendationJob::class, 1);
-
-    $context = app(BlockerResolutionContextBuilder::class)->buildForDispatchJob($this->job);
-    app()->call([new GenerateGptRecommendationJob($rec->id, $context['context']), 'handle']);
-    $rec->refresh();
     expect($rec->status->value)->toBe('pending_review')
+        ->and($rec->model)->toBe('rules')
+        ->and($this->job->personnelAssignments()->count())->toBe(0)
         ->and($rec->recommendation['options'][0]['candidate_id'])->toBe($operator->id)
-        ->and($rec->recommendation['options'][0]['resource_kind'])->toBe('personnel');
+        ->and($rec->recommendation['options'][0]['resource_kind'])->toBe('personnel')
+        ->and(OpenAiClientWrapper::recordedRequests())->toBeEmpty()
+        ->and(Cache::get('gpt_rate_limit:system:'.now()->format('Y-m-d')))->toBeNull();
+    Queue::assertNothingPushed();
 
     $prefill = app(BlockerAdviceReview::class)->prefill($this->dispatcher, $this->job, $rec->id, 1);
     expect($prefill['candidate']['id'])->toBe($operator->id);
@@ -116,6 +127,7 @@ test('vetted option is reviewed and adopted only through the normal assignment r
 
 test('changed candidate eligibility stops queued advice before an OpenAI request', function (): void {
     $operator = eligibleBlockerOperator();
+    eligibleBlockerOperator();
     $rec = app(GenerateGptRecommendation::class)->handle($this->dispatcher, $this->job, 'dispatch_blocker_resolution');
     $context = app(BlockerResolutionContextBuilder::class)->buildForDispatchJob($this->job);
     $operator->personnelProfile()->update(['availability_status' => 'on_leave']);
@@ -129,6 +141,7 @@ test('changed candidate eligibility stops queued advice before an OpenAI request
 
 test('invalid model option IDs cannot become reviewable advice', function (): void {
     eligibleBlockerOperator();
+    eligibleBlockerOperator();
     OpenAiClientWrapper::fake(['summary' => 'Use an unknown resource', 'options' => [['id' => 99, 'explanation' => 'Unknown']]]);
     $rec = app(GenerateGptRecommendation::class)->handle($this->dispatcher, $this->job, 'dispatch_blocker_resolution');
     $context = app(BlockerResolutionContextBuilder::class)->buildForDispatchJob($this->job);
@@ -139,6 +152,7 @@ test('invalid model option IDs cannot become reviewable advice', function (): vo
 });
 
 test('unsupported model evidence is discarded before review', function (): void {
+    eligibleBlockerOperator();
     eligibleBlockerOperator();
     OpenAiClientWrapper::fake(['options' => [['id' => 1, 'focus' => 'lifting_capacity']]]);
     $rec = app(GenerateGptRecommendation::class)->handle($this->dispatcher, $this->job, 'dispatch_blocker_resolution');
@@ -165,6 +179,7 @@ test('automatic checks deduplicate the same blocker and refresh when options cha
 });
 
 test('failed automatic advice retries after the configured cooldown', function (): void {
+    eligibleBlockerOperator();
     eligibleBlockerOperator();
     OpenAiClientWrapper::fake(['options' => [['id' => 99, 'focus' => 'availability']]]);
     $first = app(GenerateGptRecommendation::class)->handle($this->dispatcher, $this->job, 'dispatch_blocker_resolution', automatic: true);

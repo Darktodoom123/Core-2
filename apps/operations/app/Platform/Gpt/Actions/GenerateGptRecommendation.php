@@ -6,6 +6,7 @@ use App\Modules\Dispatch\Models\DispatchJob;
 use App\Platform\Gpt\Enums\GptRecommendationStatus;
 use App\Platform\Gpt\Jobs\GenerateGptRecommendationJob;
 use App\Platform\Gpt\Models\GptRecommendation;
+use App\Platform\Gpt\Services\BlockerAdviceFormatter;
 use App\Platform\Gpt\Services\BlockerResolutionContextBuilder;
 use App\Platform\Gpt\Services\BoundedContextBuilder;
 use App\Platform\Gpt\Services\GptRecommendationTransition;
@@ -97,14 +98,24 @@ final class GenerateGptRecommendation
      */
     private function create(User $actor, DispatchJob $subject, string $purpose, ?int $retryOfId, array $contextData, bool $automatic): GptRecommendation
     {
-        $noOptions = $purpose === 'dispatch_blocker_resolution' && ($contextData['context']['options'] ?? []) === [];
-        if (! $noOptions) {
+        $options = $contextData['context']['options'] ?? [];
+        $ruleBased = $purpose === 'dispatch_blocker_resolution' && count($options) <= 1;
+        if (! $ruleBased) {
             $rateLimitCheck = $this->openAi->reserveRateLimit($actor);
             if (! $rateLimitCheck['allowed']) {
                 throw ValidationException::withMessages([
                     'gpt' => $rateLimitCheck['reason'] ?? 'Rate limit exceeded.',
                 ]);
             }
+        }
+
+        $ruleBasedPayload = null;
+        if ($ruleBased) {
+            $ranked = $options === [] ? [] : [[
+                'id' => $options[0]['id'],
+                'focus' => $options[0]['resource_kind'] === 'asset' ? 'readiness' : 'availability',
+            ]];
+            $ruleBasedPayload = app(BlockerAdviceFormatter::class)->build($contextData['context'], $ranked);
         }
 
         $recommendation = GptRecommendation::query()->create([
@@ -116,24 +127,18 @@ final class GenerateGptRecommendation
             'context_hash' => $contextData['context_hash'],
             'automation_hash' => $contextData['automation_hash'],
             'input_references' => $contextData['input_references'],
-            'recommendation' => $noOptions ? [
-                'version' => 1,
-                'job_version' => $contextData['context']['job']['version'],
-                'blocker' => $contextData['context']['blocker'],
-                'options' => [],
-                'summary' => 'No eligible replacement was found. Review resources in the assignment workspace.',
-            ] : [],
+            'recommendation' => $ruleBasedPayload ?? [],
             'conflicts' => [],
-            'model' => $noOptions ? 'rules' : config('services.openai.model', 'gpt-6-luna'),
-            'status' => $noOptions ? GptRecommendationStatus::PendingReview : GptRecommendationStatus::Draft,
+            'model' => $ruleBased ? 'rules' : config('services.openai.model', 'gpt-6-luna'),
+            'status' => $ruleBased ? GptRecommendationStatus::PendingReview : GptRecommendationStatus::Draft,
             'prompt_summary' => $automatic ? 'Automatically prepared. '.$contextData['prompt_summary'] : $contextData['prompt_summary'],
-            'generated_at' => $noOptions ? now() : null,
-            'expires_at' => $noOptions ? now()->addMinutes(15) : null,
+            'generated_at' => $ruleBased ? now() : null,
+            'expires_at' => $ruleBased ? now()->addMinutes(15) : null,
             'purge_at' => now()->addDays(90),
         ]);
 
-        if ($noOptions) {
-            app(RecordGptOperationalMetric::class)->handle($recommendation, 'no_eligible_option');
+        if ($ruleBased) {
+            app(RecordGptOperationalMetric::class)->handle($recommendation, $options === [] ? 'no_eligible_option' : 'single_eligible_option');
 
             return $recommendation;
         }

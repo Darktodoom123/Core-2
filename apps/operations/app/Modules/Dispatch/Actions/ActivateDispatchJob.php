@@ -7,6 +7,7 @@ use App\Modules\Dispatch\Enums\ApprovalStatus;
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dispatch\Planning\Services\ProjectShiftReadiness;
+use App\Modules\Dispatch\Services\DispatchResourceRequirements;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Models\User;
 use App\Platform\Safety\Models\CriticalLiftPlan;
@@ -24,6 +25,7 @@ final class ActivateDispatchJob
         private DispatchResourceEligibility $eligibility,
         private OperationalAssetAvailability $availability,
         private WorkStoppageGate $workStoppageGate,
+        private DispatchResourceRequirements $resourceRequirements,
     ) {}
 
     public function handle(User $actor, DispatchJob $job, int $version): DispatchJob
@@ -87,6 +89,11 @@ final class ActivateDispatchJob
                 ->pluck('operational_asset_id')
                 ->map(static fn (mixed $assetId): int => (int) $assetId)
                 ->all();
+
+            $requirementBlockers = $this->resourceRequirements->blockers($job, $personnelAssignments, $assetAssignments);
+            if ($requirementBlockers !== []) {
+                throw ValidationException::withMessages(['resource_requirements' => implode(' ', $requirementBlockers)]);
+            }
 
             if ($personnelAssignments->isEmpty()) {
                 throw ValidationException::withMessages(['personnel' => 'Assign at least one active field worker before activation.']);

@@ -133,6 +133,36 @@ describe('dispatch advisory', () => {
         expect(props.onRequest).not.toHaveBeenCalled();
     });
 
+    it('leaves extra support unselected until the manager chooses it', () => {
+        const props = show({
+            recommendation: {
+                ...proposal,
+                proposed_personnel: [
+                    ...proposal.proposed_personnel!,
+                    {
+                        user_id: 4,
+                        name: 'Additional Operator',
+                        assignment_type: 'crane_operator',
+                        optional: true,
+                    },
+                ],
+            },
+        });
+
+        expect(screen.getByText('Optional support')).toBeInTheDocument();
+        expect(
+            screen.getByRole('checkbox', {
+                name: 'Select Additional Operator',
+            }),
+        ).not.toBeChecked();
+        fireEvent.click(
+            screen.getByRole('button', {
+                name: 'Review & apply 1 crew & 1 asset',
+            }),
+        );
+        expect(props.onReview).toHaveBeenCalledWith([2], [3]);
+    });
+
     it('renders rich crew details including initials, role badges, and user ID tags', () => {
         show({
             recommendation: {

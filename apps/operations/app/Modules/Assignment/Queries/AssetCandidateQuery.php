@@ -6,16 +6,20 @@ use App\Modules\Assignment\Data\CandidatePage;
 use App\Modules\Assignment\Http\Requests\ListDispatchCandidatesRequest;
 use App\Modules\Assignment\Models\DispatchAssetAssignment;
 use App\Modules\Dispatch\Models\DispatchJob;
+use App\Modules\Dvir\Models\DvirInspection;
 use App\Modules\Rental\Enums\RentalReservationStatus;
 use App\Modules\Rental\Models\RentalReservationItem;
 use App\Shared\Assets\Models\Inspection;
 use App\Shared\Assets\Models\MaintenanceWorkOrder;
 use App\Shared\Assets\Models\OperationalAsset;
+use App\Shared\Assets\Services\AssetInspectionReadiness;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 final class AssetCandidateQuery
 {
+    public function __construct(private readonly AssetInspectionReadiness $inspectionReadiness) {}
+
     /** @return CandidatePage<array<string, mixed>> */
     public function page(DispatchJob $job, ListDispatchCandidatesRequest $filters): CandidatePage
     {
@@ -77,7 +81,7 @@ final class AssetCandidateQuery
      * Batch the same evidence used by canonical dispatch assignment checks.
      *
      * @param  list<int>  $assetIds
-     * @return array<int, array{maintenance: int, inspections: Collection<int, Inspection>, dispatch: Collection<int, DispatchAssetAssignment>, rentals: Collection<int, object>}>
+     * @return array<int, array{maintenance: int, inspections: Collection<int, Inspection>, dvir: DvirInspection|null, dispatch: Collection<int, DispatchAssetAssignment>, rentals: Collection<int, object>}>
      */
     public function evidence(array $assetIds, DispatchJob $job, bool $excludeCurrentJob = false): array
     {
@@ -94,6 +98,13 @@ final class AssetCandidateQuery
         $inspections = Inspection::query()
             ->whereIn('operational_asset_id', $assetIds)
             ->get(['id', 'operational_asset_id', 'result', 'completed_at'])
+            ->groupBy('operational_asset_id');
+        $dvirs = DvirInspection::query()
+            ->whereIn('operational_asset_id', $assetIds)
+            ->whereNotNull('completed_at')
+            ->orderByDesc('completed_at')
+            ->orderByDesc('id')
+            ->get(['id', 'operational_asset_id', 'has_defects', 'critical_defects_count', 'completed_at'])
             ->groupBy('operational_asset_id');
 
         $dispatch = DispatchAssetAssignment::query()
@@ -148,6 +159,7 @@ final class AssetCandidateQuery
         return collect($assetIds)->mapWithKeys(fn (int $assetId): array => [$assetId => [
             'maintenance' => $maintenance->get($assetId, collect())->count(),
             'inspections' => $inspections->get($assetId, collect()),
+            'dvir' => $dvirs->get($assetId, collect())->first(),
             'dispatch' => $dispatch->where('operational_asset_id', $assetId)->values(),
             'rentals' => $rentals->get($assetId, collect()),
         ]])->all();
@@ -178,7 +190,7 @@ final class AssetCandidateQuery
     }
 
     /**
-     * @param  array<int, array{maintenance: int, inspections: Collection<int, Inspection>, dispatch: Collection<int, DispatchAssetAssignment>, rentals: Collection<int, object>}>  $evidence
+     * @param  array<int, array{maintenance: int, inspections: Collection<int, Inspection>, dvir: DvirInspection|null, dispatch: Collection<int, DispatchAssetAssignment>, rentals: Collection<int, object>}>  $evidence
      * @return array{id: int, code: string, name: string, subtype: string|null, capacity: string|null, assignment_type: string, assignment_label: string, eligible: bool, reasons: list<string>, readiness: array{value: string, label: string}, blocking_maintenance_count: int, schedule_conflicts: list<array{id: int, reference: string, scheduled_start: string|null, scheduled_end: string|null}>, already_assigned: bool}
      */
     public function assess(OperationalAsset $asset, DispatchJob $job, array $evidence): array
@@ -186,6 +198,7 @@ final class AssetCandidateQuery
         $facts = $evidence[(int) $asset->id] ?? [
             'maintenance' => 0,
             'inspections' => collect(),
+            'dvir' => null,
             'dispatch' => collect(),
             'rentals' => collect(),
         ];
@@ -201,10 +214,8 @@ final class AssetCandidateQuery
                 : "{$facts['maintenance']} open maintenance items block dispatch.";
         }
 
-        $hasInspection = $facts['inspections']->isNotEmpty();
-        $hasPassingInspection = $facts['inspections']->contains(static fn (Inspection $inspection): bool => $inspection->result === 'passed' && $inspection->completed_at !== null);
-        if ($hasInspection && ! $hasPassingInspection) {
-            $reasons[] = 'A completed passing inspection is required before using the asset.';
+        if ($this->inspectionReadiness->lacksPassingClearance($facts['inspections'], $facts['dvir'])) {
+            $reasons[] = 'A completed passing inspection or DVIR is required before dispatch; a later failure removes clearance.';
         }
 
         foreach ($facts['dispatch'] as $assignment) {

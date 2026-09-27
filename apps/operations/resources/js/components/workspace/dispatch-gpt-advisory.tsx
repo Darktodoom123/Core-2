@@ -74,6 +74,30 @@ function LegacyDispatchGptAdvisory({
                 ),
         [job.id, recommendations],
     );
+    const recommendationVersion = recommendation?.recommendation.job_version;
+    const assignedPersonnelIds = new Set(
+        job.personnel_assignments.map((assignment) => assignment.user_id),
+    );
+    const assignedAssetIds = new Set(
+        job.asset_assignments.map(
+            (assignment) => assignment.operational_asset_id,
+        ),
+    );
+    const staleRecommendation =
+        recommendation !== undefined &&
+        recommendation.status === 'pending_review' &&
+        (typeof recommendationVersion !== 'number' ||
+            recommendationVersion !== job.version ||
+            (recommendation.proposed_personnel ?? []).some((person) =>
+                assignedPersonnelIds.has(person.user_id),
+            ) ||
+            (recommendation.proposed_assets ?? []).some((asset) =>
+                assignedAssetIds.has(asset.operational_asset_id),
+            ));
+    const visibleRecommendation =
+        recommendation && staleRecommendation
+            ? { ...recommendation, is_stale: true }
+            : recommendation;
 
     const isPending =
         requesting ||
@@ -144,7 +168,7 @@ function LegacyDispatchGptAdvisory({
         <>
             <DispatchAdvisoryCard
                 jobId={job.id}
-                recommendation={recommendation}
+                recommendation={visibleRecommendation}
                 automatic={Boolean(capabilities.proactive_gpt_assistance)}
                 busy={requesting}
                 pollingStopped={pollingStopped}
@@ -167,7 +191,7 @@ function LegacyDispatchGptAdvisory({
                 onRetry={() => requestRecommendation(true)}
                 onRefreshStatus={refreshPendingStatus}
                 onReview={(personnelIds, assetIds) => {
-                    if (!recommendation) {
+                    if (!recommendation || staleRecommendation) {
                         return;
                     }
 

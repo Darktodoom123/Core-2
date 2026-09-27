@@ -71,6 +71,7 @@ function assignExceptionalWorkflowResources(
         'kind' => 'truck',
         'status' => AssetStatus::ReadyForService,
     ]);
+    clearDispatchAsset($asset);
 
     $job->personnelAssignments()->create([
         'user_id' => $driver->id,
@@ -188,6 +189,7 @@ it('prevents activation without both active personnel and asset assignments', fu
         'kind' => 'truck',
         'status' => AssetStatus::Available,
     ]);
+    clearDispatchAsset($asset);
     $assetOnly->assetAssignments()->create([
         'operational_asset_id' => $asset->id,
         'assignment_type' => 'truck',

@@ -66,6 +66,7 @@ it('lets a dispatcher create and assign a routine dispatch while preserving assi
     $driver->personnelCredentials()->create(['kind' => 'driver_license', 'credential_number' => 'DL-1001', 'credential_type' => 'professional', 'issued_at' => now()->subYear(), 'expires_at' => now()->addYear(), 'status' => 'active']);
     $other = operationsUser(RoleName::CraneOperator);
     $asset = OperationalAsset::query()->create(['code' => 'TR-01', 'name' => 'Truck 01', 'kind' => 'truck', 'status' => AssetStatus::Available]);
+    clearDispatchAsset($asset);
     $this->actingAs($dispatcher)->post('/operations/dispatch-jobs', ['reference' => 'CON-1001', 'client' => 'Arcwell', 'title' => 'HVAC lift', 'site' => 'Quezon City', 'scheduled_start' => now()->addDay(), 'scheduled_end' => now()->addDay()->addHours(4), 'priority' => DispatchPriority::Routine->value, 'requirements' => []])->assertRedirect('/');
     $jobId = DispatchJob::query()->where('reference', 'CON-1001')->sole()->id;
     $this->actingAs($dispatcher)
@@ -93,6 +94,9 @@ it('assigns every supported personnel and asset type atomically and records the 
     $truck = OperationalAsset::query()->create(['code' => 'TR-1101', 'name' => 'Truck 1101', 'kind' => 'truck', 'status' => AssetStatus::Available]);
     $crane = OperationalAsset::query()->create(['code' => 'CR-1101', 'name' => 'Crane 1101', 'kind' => 'crane', 'status' => AssetStatus::ReadyForService]);
     $equipment = OperationalAsset::query()->create(['code' => 'EQ-1101', 'name' => 'Rigging Kit', 'kind' => 'equipment', 'status' => AssetStatus::Available]);
+    clearDispatchAsset($truck);
+    clearDispatchAsset($crane);
+    clearDispatchAsset($equipment);
 
     $this->actingAs($dispatcher)
         ->post("/operations/dispatch-jobs/{$job->id}/assignments", [
@@ -396,6 +400,7 @@ it('requires independent manager approval before a priority dispatch activates',
     addWorkflowCredential($driver, 'driver_license');
     $job = DispatchJob::query()->create(['reference' => 'CON-2001', 'client' => 'Northline', 'title' => 'Priority lift', 'site' => 'Marikina', 'scheduled_start' => now()->addDay(), 'scheduled_end' => now()->addDay()->addHours(2), 'priority' => DispatchPriority::Priority, 'status' => DispatchStatus::Draft, 'created_by' => $dispatcher->id]);
     $asset = OperationalAsset::query()->create(['code' => 'TR-2001', 'name' => 'Truck 2001', 'kind' => 'truck', 'status' => AssetStatus::Available]);
+    clearDispatchAsset($asset);
     $job->personnelAssignments()->create(['user_id' => $driver->id, 'assignment_type' => 'driver', 'assigned_by' => $dispatcher->id, 'active_from' => $job->scheduled_start]);
     $job->assetAssignments()->create(['operational_asset_id' => $asset->id, 'assignment_type' => 'truck', 'assigned_by' => $dispatcher->id, 'active_from' => $job->scheduled_start]);
     $approval = ApprovalRequest::query()->create(['subject_type' => (new DispatchJob)->getMorphClass(), 'subject_id' => $job->id, 'kind' => 'dispatch_activation', 'status' => ApprovalStatus::Pending, 'requested_by' => $dispatcher->id]);

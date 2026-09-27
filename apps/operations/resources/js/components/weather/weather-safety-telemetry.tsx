@@ -1,213 +1,84 @@
-import {
-    AlertTriangle,
-    CheckCircle2,
-    Cloud,
-    CloudLightning,
-    CloudRain,
-    Compass,
-    Droplets,
-    Gauge,
-    MapPin,
-    ShieldAlert,
-    Sun,
-    Wind,
-    Zap,
-} from 'lucide-react';
-import React, { useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, Cloud, MapPin, RefreshCw, Wind } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Panel } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import type { LocationUpdateViewModel } from '@/types/workspace';
 
-export type CraneLiftWeatherSafetyStatus = 'safe' | 'caution' | 'danger';
-
-export interface WeatherData {
+interface WeatherObservation {
     temperatureC: number;
-    condition: 'clear' | 'partly_cloudy' | 'cloudy' | 'rain' | 'storm';
-    conditionLabel: string;
+    humidityPercent: number;
     windSpeedKmh: number;
     windGustKmh: number;
-    windDirection: string;
-    humidityPercent: number;
-    lightningRiskDistanceKm: number | null;
-    groundSaturationRisk: 'dry' | 'damp' | 'saturated';
-    safetyStatus: CraneLiftWeatherSafetyStatus;
-    safetyHeadline: string;
-    safetyAdvice: string;
-    isLiveFeed: boolean;
-    lastUpdatedTime?: string;
+    windDirection: number;
+    conditionCode: number;
+    observedAt: string;
 }
 
-// Convert wind degrees (0-360) to Cardinal Direction
-function degreesToCardinal(deg: number): string {
-    const directions = [
-        'N',
-        'NNE',
-        'NE',
-        'ENE',
-        'E',
-        'ESE',
-        'SE',
-        'SSE',
-        'S',
-        'SSW',
-        'SW',
-        'WSW',
-        'W',
-        'WNW',
-        'NW',
-        'NNW',
-    ];
-    const index = Math.round((deg % 360) / 22.5) % 16;
-
-    return directions[index] ?? 'NE';
+function numberField(value: unknown): number | null {
+    return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
-// Parse WMO Weather Code to Condition Label and Type
-function parseWmoWeatherCode(code: number): {
-    condition: WeatherData['condition'];
-    label: string;
-    isStorm: boolean;
-    isRain: boolean;
-} {
-    if (code === 0) {
-        return {
-            condition: 'clear',
-            label: 'Clear Sky',
-            isStorm: false,
-            isRain: false,
-        };
+function parseObservation(value: unknown): WeatherObservation | null {
+    if (typeof value !== 'object' || value === null || !('current' in value)) {
+        return null;
     }
 
-    if (code >= 1 && code <= 3) {
-        return {
-            condition: 'partly_cloudy',
-            label: 'Partly Cloudy',
-            isStorm: false,
-            isRain: false,
-        };
+    const current = value.current;
+
+    if (typeof current !== 'object' || current === null) {
+        return null;
     }
 
-    if (code === 45 || code === 48) {
-        return {
-            condition: 'cloudy',
-            label: 'Overcast & Fog',
-            isStorm: false,
-            isRain: false,
-        };
+    const fields = current as Record<string, unknown>;
+    const temperatureC = numberField(fields.temperature_2m);
+    const humidityPercent = numberField(fields.relative_humidity_2m);
+    const windSpeedKmh = numberField(fields.wind_speed_10m);
+    const windGustKmh = numberField(fields.wind_gusts_10m);
+    const windDirection = numberField(fields.wind_direction_10m);
+    const conditionCode = numberField(fields.weather_code);
+    const observedAt = fields.time;
+
+    if (
+        temperatureC === null ||
+        humidityPercent === null ||
+        windSpeedKmh === null ||
+        windGustKmh === null ||
+        windDirection === null ||
+        conditionCode === null ||
+        typeof observedAt !== 'string'
+    ) {
+        return null;
     }
 
-    if (code >= 51 && code <= 67) {
-        return {
-            condition: 'rain',
-            label: 'Scattered Rain',
-            isStorm: false,
-            isRain: true,
-        };
-    }
+    return {
+        temperatureC,
+        humidityPercent,
+        windSpeedKmh,
+        windGustKmh,
+        windDirection,
+        conditionCode,
+        observedAt,
+    };
+}
 
-    if (code >= 80 && code <= 82) {
-        return {
-            condition: 'rain',
-            label: 'Rain Showers',
-            isStorm: false,
-            isRain: true,
-        };
-    }
-
+function weatherCondition(code: number): string {
     if (code >= 95) {
-        return {
-            condition: 'storm',
-            label: 'Thunderstorm Warning',
-            isStorm: true,
-            isRain: true,
-        };
+        return 'Thunderstorm forecast';
     }
 
-    return {
-        condition: 'partly_cloudy',
-        label: 'Partly Cloudy',
-        isStorm: false,
-        isRain: false,
-    };
-}
-
-// Industry crane thresholds (ASME B30.5 / OSHA 1926.1412)
-// Wind < 30 km/h: Safe
-// Wind 30-45 km/h: Caution (Check manufacturer load chart & boom length)
-// Wind > 45 km/h: Danger (Mandatory Stop Lift & Lower Boom)
-export function deriveWeatherFromCoords(
-    lat?: number | null,
-    lon?: number | null,
-): WeatherData {
-    const seed =
-        (lat !== null && lat !== undefined ? Math.abs(lat) * 100 : 14.59) +
-        (lon !== null && lon !== undefined ? Math.abs(lon) * 10 : 120.98);
-
-    const baseWind = 14 + Math.round((seed % 18) * 10) / 10;
-    const gust = Math.round((baseWind + 6 + (seed % 8)) * 10) / 10;
-    const temp = 28 + Math.round((seed % 6) * 10) / 10;
-    const humidity = 65 + Math.round(seed % 25);
-
-    let safetyStatus: CraneLiftWeatherSafetyStatus = 'safe';
-    let safetyHeadline = 'Normal Lift Window';
-    let safetyAdvice =
-        'Wind speed is well within safe operating limits (< 30 km/h) for all crane classes.';
-
-    if (gust > 45 || baseWind > 35) {
-        safetyStatus = 'danger';
-        safetyHeadline = 'CRITICAL: High Wind Hold';
-        safetyAdvice =
-            'Wind gusts exceed 45 km/h. Mandatory stop lift & boom lowering protocol required.';
-    } else if (gust > 30 || baseWind > 25) {
-        safetyStatus = 'caution';
-        safetyHeadline = 'Elevated Wind Gusts';
-        safetyAdvice =
-            'Monitor outrigger and anemometer sensors continuously. Verify load sail area.';
+    if (code >= 51) {
+        return 'Precipitation forecast';
     }
 
-    const isRain = seed % 7 < 1.5;
-    const isStorm = seed % 19 < 1;
-
-    let condition: WeatherData['condition'] = 'clear';
-    let conditionLabel = 'Sunny & Clear';
-
-    if (isStorm) {
-        condition = 'storm';
-        conditionLabel = 'Thunderstorm Advisory';
-        safetyStatus = 'danger';
-        safetyHeadline = 'Lightning Hazard';
-        safetyAdvice =
-            'Active storm cells detected. Mandatory boom-down and site lightning shelter.';
-    } else if (isRain) {
-        condition = 'rain';
-        conditionLabel = 'Scattered Showers';
-    } else if (seed % 3 < 1.5) {
-        condition = 'partly_cloudy';
-        conditionLabel = 'Partly Cloudy';
+    if (code >= 45) {
+        return 'Fog forecast';
     }
 
-    const groundSaturationRisk: WeatherData['groundSaturationRisk'] = isStorm
-        ? 'saturated'
-        : isRain
-          ? 'damp'
-          : 'dry';
+    if (code >= 1) {
+        return 'Cloud cover';
+    }
 
-    return {
-        temperatureC: Math.round(temp),
-        condition,
-        conditionLabel,
-        windSpeedKmh: Math.round(baseWind),
-        windGustKmh: Math.round(gust),
-        windDirection:
-            ['NE', 'ENE', 'E', 'SE', 'SSE', 'NW'][Math.floor(seed) % 6] ?? 'NE',
-        humidityPercent: humidity,
-        lightningRiskDistanceKm: isStorm ? 8 : null,
-        groundSaturationRisk,
-        safetyStatus,
-        safetyHeadline,
-        safetyAdvice,
-        isLiveFeed: false,
-    };
+    return 'Clear forecast';
 }
 
 export function WeatherSafetyTelemetry({
@@ -229,694 +100,237 @@ export function WeatherSafetyTelemetry({
     selectedLocationId?: number | null;
     onSelectLocationId?: (id: number | null) => void;
 }) {
-    // Default to Base Yard coordinates (Metro Manila: 14.5995, 120.9842) if none provided
-    const targetLat = latitude ?? 14.5995;
-    const targetLon = longitude ?? 120.9842;
-
-    const [liveData, setLiveData] = useState<WeatherData | null>(null);
+    const isSite = variant === 'site';
+    const hasSiteCoordinates = latitude != null && longitude != null;
+    // The regional fleet view explicitly uses the base yard when no asset is selected.
+    const targetLat = isSite ? latitude : (latitude ?? 14.5995);
+    const targetLon = isSite ? longitude : (longitude ?? 120.9842);
+    const key = `${targetLat ?? 'none'}:${targetLon ?? 'none'}`;
+    const [result, setResult] = useState<{
+        key: string;
+        observation: WeatherObservation | null;
+    } | null>(null);
+    const observation = result?.key === key ? result.observation : null;
+    const state =
+        result?.key === key
+            ? observation
+                ? 'ready'
+                : 'unavailable'
+            : 'loading';
 
     useEffect(() => {
-        let isMounted = true;
-        const controller = new AbortController();
-
-        async function fetchLiveWeather() {
-            try {
-                const url = `https://api.open-meteo.com/v1/forecast?latitude=${targetLat}&longitude=${targetLon}&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=kmh`;
-                const response = await fetch(url, {
-                    signal: controller.signal,
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-
-                const json = await response.json();
-                const current = json.current;
-
-                if (!current) {
-                    return;
-                }
-
-                const windSpeed = Number(current.wind_speed_10m) || 0;
-                const windGust = Number(current.wind_gusts_10m) || windSpeed;
-                const windDirDeg = Number(current.wind_direction_10m) || 0;
-                const temp = Number(current.temperature_2m) || 28;
-                const humidity = Number(current.relative_humidity_2m) || 70;
-                const weatherCode = Number(current.weather_code) || 0;
-                const precip = Number(current.precipitation) || 0;
-
-                const parsed = parseWmoWeatherCode(weatherCode);
-
-                let safetyStatus: CraneLiftWeatherSafetyStatus = 'safe';
-                let safetyHeadline = 'Normal Lift Window';
-                let safetyAdvice =
-                    'Real-time wind speed is within safe lifting limits (< 30 km/h).';
-
-                if (windGust > 45 || windSpeed > 35 || parsed.isStorm) {
-                    safetyStatus = 'danger';
-                    safetyHeadline = 'CRITICAL: High Wind / Storm Hold';
-                    safetyAdvice = `Real-time gusts reaching ${Math.round(windGust)} km/h. Mandatory stop-lift & boom-down protocol active.`;
-                } else if (windGust > 30 || windSpeed > 25) {
-                    safetyStatus = 'caution';
-                    safetyHeadline = 'Elevated Wind Gusts';
-                    safetyAdvice = `Real-time gusts at ${Math.round(windGust)} km/h. Continuously monitor load anemometers and ground pads.`;
-                }
-
-                const groundSaturationRisk: WeatherData['groundSaturationRisk'] =
-                    parsed.isStorm || precip > 5
-                        ? 'saturated'
-                        : precip > 0.5
-                          ? 'damp'
-                          : 'dry';
-
-                if (isMounted) {
-                    setLiveData({
-                        temperatureC: Math.round(temp),
-                        condition: parsed.condition,
-                        conditionLabel: parsed.label,
-                        windSpeedKmh: Math.round(windSpeed),
-                        windGustKmh: Math.round(windGust),
-                        windDirection: degreesToCardinal(windDirDeg),
-                        humidityPercent: Math.round(humidity),
-                        lightningRiskDistanceKm: parsed.isStorm ? 6 : null,
-                        groundSaturationRisk,
-                        safetyStatus,
-                        safetyHeadline,
-                        safetyAdvice,
-                        isLiveFeed: true,
-                        lastUpdatedTime: new Date().toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                        }),
-                    });
-                }
-            } catch (err: unknown) {
-                // Fall back gracefully to deterministic engine on network failure or abort
-                if (
-                    isMounted &&
-                    err instanceof Error &&
-                    err.name !== 'AbortError'
-                ) {
-                    setLiveData(deriveWeatherFromCoords(targetLat, targetLon));
-                }
-            }
+        if (targetLat == null || targetLon == null) {
+            return;
         }
 
-        fetchLiveWeather();
+        const controller = new AbortController();
+        let active = true;
+        const fetchWeather = async () => {
+            try {
+                const params = new URLSearchParams({
+                    latitude: String(targetLat),
+                    longitude: String(targetLon),
+                    current:
+                        'temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m',
+                    wind_speed_unit: 'kmh',
+                    timezone: 'Asia/Manila',
+                });
+                const response = await fetch(
+                    `https://api.open-meteo.com/v1/forecast?${params}`,
+                    {
+                        signal: controller.signal,
+                    },
+                );
 
-        // Refresh live satellite data every 10 minutes
-        const interval = setInterval(fetchLiveWeather, 10 * 60 * 1000);
+                if (!response.ok) {
+                    throw new Error('Weather provider unavailable');
+                }
+
+                const parsed = parseObservation(await response.json());
+
+                if (!parsed) {
+                    throw new Error('Weather observation incomplete');
+                }
+
+                if (active) {
+                    setResult({ key, observation: parsed });
+                }
+            } catch (error) {
+                if (
+                    active &&
+                    !(
+                        error instanceof DOMException &&
+                        error.name === 'AbortError'
+                    )
+                ) {
+                    setResult({ key, observation: null });
+                }
+            }
+        };
+        void fetchWeather();
+        const interval = window.setInterval(
+            () => void fetchWeather(),
+            10 * 60 * 1000,
+        );
 
         return () => {
-            isMounted = false;
+            active = false;
             controller.abort();
-            clearInterval(interval);
+            window.clearInterval(interval);
         };
-    }, [targetLat, targetLon]);
+    }, [key, targetLat, targetLon]);
 
-    const weather = useMemo(
-        () => liveData ?? deriveWeatherFromCoords(targetLat, targetLon),
-        [liveData, targetLat, targetLon],
-    );
-
-    const isSite = variant === 'site';
-    const isTracking = variant === 'tracking';
-
-    const WeatherIcon =
-        weather.condition === 'storm'
-            ? CloudLightning
-            : weather.condition === 'rain'
-              ? CloudRain
-              : weather.condition === 'partly_cloudy'
-                ? Cloud
-                : Sun;
-
-    const statusBg =
-        weather.safetyStatus === 'danger'
-            ? 'bg-danger-soft border-danger/40 text-danger-strong'
-            : weather.safetyStatus === 'caution'
-              ? 'bg-warning-soft border-warning/40 text-warning-strong'
-              : 'bg-success-soft border-success/40 text-success-strong';
-
-    const statusBadge =
-        weather.safetyStatus === 'danger' ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-danger px-2.5 py-0.5 text-xs font-bold text-canvas">
-                <ShieldAlert className="h-3.5 w-3.5" />
-                NO-GO: WIND / STORM HOLD
-            </span>
-        ) : weather.safetyStatus === 'caution' ? (
-            <span className="inline-flex items-center gap-1 rounded-full border border-warning/30 bg-warning-soft px-2.5 py-0.5 text-xs font-bold text-warning-strong">
-                <AlertTriangle className="h-3.5 w-3.5" />
-                CAUTION: MONITOR ANEMOMETER
-            </span>
-        ) : (
-            <span className="inline-flex items-center gap-1 rounded-full bg-success-strong px-2.5 py-0.5 text-xs font-bold text-canvas">
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                GO: SAFE LIFT WINDOW
-            </span>
-        );
-
-    if (isTracking) {
-        const directiveBadge =
-            weather.safetyStatus === 'danger' ? (
-                <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-danger px-2.5 py-1 text-[11px] font-bold tracking-wide text-white uppercase shadow-xs">
-                    <ShieldAlert className="h-3.5 w-3.5" aria-hidden="true" />
-                    Critical Hold
-                </span>
-            ) : weather.safetyStatus === 'caution' ? (
-                <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-warning px-2.5 py-1 text-[11px] font-bold tracking-wide text-white uppercase shadow-xs">
-                    <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
-                    Caution Monitor
-                </span>
-            ) : (
-                <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-success-strong px-2.5 py-1 text-[11px] font-bold tracking-wide text-white uppercase shadow-xs">
-                    <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-                    Safe Window
-                </span>
-            );
-
-        const bannerBg =
-            weather.safetyStatus === 'danger'
-                ? 'bg-danger-soft/70 border-b border-danger/25'
-                : weather.safetyStatus === 'caution'
-                  ? 'bg-warning-soft/70 border-b border-warning/25'
-                  : 'bg-success-soft/40 border-b border-success/20';
-
-        return (
-            <div
-                className={cn('bg-surface', className)}
-                role="group"
-                aria-label="Weather and lift safety"
-            >
-                {/* Mission Control Directive Bar */}
-                <div
-                    className={cn(
-                        'flex flex-col gap-2.5 px-4 py-3 sm:flex-row sm:items-center sm:gap-3.5 sm:px-5',
-                        bannerBg,
-                    )}
-                    role={
-                        weather.safetyStatus === 'danger' ? 'alert' : 'status'
+    const location = isSite
+        ? locationLabel || 'Job site'
+        : locationLabel || 'Base Yard (Metro Manila)';
+    const locationControl =
+        variant === 'tracking' && availableLocations?.length ? (
+            <label className="flex items-center gap-2 text-xs text-ink-soft">
+                Target
+                <select
+                    aria-label="Target asset or site for weather monitoring"
+                    value={selectedLocationId ?? ''}
+                    onChange={(event) =>
+                        onSelectLocationId?.(
+                            event.target.value
+                                ? Number(event.target.value)
+                                : null,
+                        )
                     }
-                    aria-live={
-                        weather.safetyStatus === 'danger'
-                            ? 'assertive'
-                            : 'polite'
-                    }
+                    className="min-h-9 rounded-md border border-line bg-surface px-2 text-ink focus-visible:ring-2 focus-visible:ring-brand-strong"
                 >
-                    <div className="flex flex-wrap items-center gap-2">
-                        {directiveBadge}
+                    <option value="">Base Yard (Metro Manila)</option>
+                    {availableLocations.map((item) => (
+                        <option key={item.id} value={item.id}>
+                            {item.asset?.name ??
+                                item.asset?.code ??
+                                item.user.name}
+                            {item.job?.site ? ` (${item.job.site})` : ''}
+                        </option>
+                    ))}
+                </select>
+            </label>
+        ) : null;
 
-                        {availableLocations && availableLocations.length > 0 ? (
-                            <div className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface/90 px-2.5 py-1 text-xs text-ink shadow-2xs">
-                                <MapPin
-                                    className="h-3.5 w-3.5 shrink-0 text-brand-strong"
-                                    aria-hidden="true"
-                                />
-                                <span className="text-[10px] font-bold text-ink-soft uppercase">
-                                    Target:
-                                </span>
-                                <select
-                                    aria-label="Target asset or site for weather monitoring"
-                                    value={selectedLocationId ?? ''}
-                                    onChange={(e) => {
-                                        const val = e.target.value;
-                                        onSelectLocationId?.(
-                                            val ? Number(val) : null,
-                                        );
-                                    }}
-                                    className="cursor-pointer bg-transparent text-xs font-semibold text-ink hover:text-brand-strong focus:outline-none"
-                                >
-                                    <option value="">
-                                        Base Yard (HQ · Metro Manila)
-                                    </option>
-                                    {availableLocations.map((loc) => {
-                                        const name =
-                                            loc.asset?.name ??
-                                            loc.asset?.code ??
-                                            loc.user.name;
-                                        const site = loc.job?.site
-                                            ? ` (${loc.job.site})`
-                                            : '';
-
-                                        return (
-                                            <option key={loc.id} value={loc.id}>
-                                                {name}
-                                                {site}
-                                            </option>
-                                        );
-                                    })}
-                                </select>
-                            </div>
-                        ) : (
-                            <span className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface/90 px-2.5 py-1 text-xs font-semibold text-ink shadow-2xs">
-                                <MapPin
-                                    className="h-3.5 w-3.5 shrink-0 text-brand-strong"
-                                    aria-hidden="true"
-                                />
-                                <span>
-                                    {locationLabel ||
-                                        'Base Yard (HQ · Metro Manila)'}
-                                </span>
-                            </span>
-                        )}
-                    </div>
-
-                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
-                        <strong className="font-bold text-ink">
-                            {weather.safetyHeadline}:
-                        </strong>
-                        <span className="text-ink-soft">
-                            {weather.safetyAdvice}
-                        </span>
+    const content = (
+        <div
+            className="space-y-3"
+            role="group"
+            aria-label="Weather observation"
+        >
+            <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex items-start gap-2">
+                    <Cloud
+                        className="mt-0.5 size-5 text-brand-strong"
+                        aria-hidden="true"
+                    />
+                    <div>
+                        <h3 className="font-semibold text-ink">
+                            {isSite ? 'Site weather' : 'Weather and wind'}
+                        </h3>
+                        <p className="flex items-center gap-1 text-xs text-ink-soft">
+                            <MapPin className="size-3" aria-hidden="true" />
+                            {location}
+                            {targetLat != null && targetLon != null
+                                ? ` · ${targetLat.toFixed(4)}, ${targetLon.toFixed(4)}`
+                                : ' · coordinates not recorded'}
+                        </p>
                     </div>
                 </div>
-
-                {/* 3-Column Modern Telemetry Modules */}
-                <div className="p-3.5 sm:p-4">
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                        {/* Card 1: Atmospheric & Weather */}
-                        <div className="flex flex-col justify-between rounded-xl border border-line bg-surface-subtle/40 p-3.5 transition-all hover:bg-surface-subtle/70">
-                            <div className="flex items-center justify-between gap-2 border-b border-line/60 pb-2">
-                                <span
-                                    className="max-w-[180px] truncate text-[11px] font-semibold tracking-wider text-ink-soft uppercase"
-                                    title={locationLabel || 'Base Yard'}
-                                >
-                                    Atmosphere ·{' '}
-                                    {locationLabel
-                                        ? locationLabel.split('(')[0].trim()
-                                        : 'Base Yard'}
-                                </span>
-                                {weather.isLiveFeed ? (
-                                    <span className="inline-flex items-center gap-1 rounded-md border border-success/30 bg-success-soft px-1.5 py-0.5 text-[10px] font-bold text-success-strong">
-                                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success-strong motion-reduce:animate-none" />
-                                        Live Satellite
-                                    </span>
-                                ) : (
-                                    <span className="rounded-md border border-line bg-surface px-1.5 py-0.5 text-[10px] font-medium text-ink-soft">
-                                        Estimated
-                                    </span>
-                                )}
-                            </div>
-
-                            <div className="mt-2.5 flex items-center gap-3">
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-line bg-surface text-brand-strong shadow-2xs">
-                                    <WeatherIcon
-                                        className="h-5 w-5"
-                                        aria-hidden="true"
-                                    />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                    <div className="flex items-baseline gap-2">
-                                        <span className="text-lg font-bold tracking-tight text-ink tabular-nums">
-                                            {weather.temperatureC}°C
-                                        </span>
-                                        <span className="truncate text-xs font-semibold text-ink">
-                                            {weather.conditionLabel}
-                                        </span>
-                                    </div>
-                                    <p className="mt-0.5 text-[11px] text-ink-soft">
-                                        {weather.humidityPercent}% humidity
-                                        {weather.lastUpdatedTime && (
-                                            <span>
-                                                {' '}
-                                                · {weather.lastUpdatedTime}
-                                            </span>
-                                        )}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Card 2: Wind Vectors & Hazards */}
-                        <div className="flex flex-col justify-between rounded-xl border border-line bg-surface-subtle/40 p-3.5 transition-all hover:bg-surface-subtle/70">
-                            <div className="flex items-center justify-between gap-2 border-b border-line/60 pb-2">
-                                <span className="text-[11px] font-semibold tracking-wider text-ink-soft uppercase">
-                                    Wind &amp; Gusts
-                                </span>
-                                <span className="rounded-md border border-line bg-surface px-1.5 py-0.5 text-[10px] font-bold text-ink uppercase">
-                                    {weather.windDirection} Vector
-                                </span>
-                            </div>
-
-                            <div className="mt-2.5 flex items-center gap-3">
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-line bg-surface text-ink-soft shadow-2xs">
-                                    <Wind
-                                        className="h-5 w-5"
-                                        aria-hidden="true"
-                                    />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                    <div className="flex flex-wrap items-baseline gap-2">
-                                        <span className="text-lg font-bold tracking-tight text-ink tabular-nums">
-                                            {weather.windSpeedKmh}{' '}
-                                            <span className="text-xs font-normal text-ink-soft">
-                                                km/h
-                                            </span>
-                                        </span>
-                                        <span
-                                            className={cn(
-                                                'inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-bold tabular-nums',
-                                                weather.windGustKmh > 40
-                                                    ? 'border border-danger/30 bg-danger-soft text-danger-strong'
-                                                    : weather.windGustKmh > 28
-                                                      ? 'border border-warning/30 bg-warning-soft text-warning-strong'
-                                                      : 'border border-line bg-surface text-ink',
-                                            )}
-                                        >
-                                            Gust {weather.windGustKmh} km/h
-                                        </span>
-                                    </div>
-                                    <p className="mt-0.5 text-[11px] text-ink-soft">
-                                        {weather.windGustKmh > 40
-                                            ? 'Exceeds safe lifting threshold'
-                                            : weather.windGustKmh > 28
-                                              ? 'Monitor boom anemometers'
-                                              : 'Within safe operating limits'}
-                                        {locationLabel && (
-                                            <span className="text-ink-soft/70">
-                                                {' '}
-                                                ·{' '}
-                                                {locationLabel
-                                                    .split('(')[0]
-                                                    .trim()}
-                                            </span>
-                                        )}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Card 3: Soil & Ground Bearing */}
-                        <div className="flex flex-col justify-between rounded-xl border border-line bg-surface-subtle/40 p-3.5 transition-all hover:bg-surface-subtle/70">
-                            <div className="flex items-center justify-between gap-2 border-b border-line/60 pb-2">
-                                <span className="text-[11px] font-semibold tracking-wider text-ink-soft uppercase">
-                                    Ground Bearing
-                                </span>
-                                <span
-                                    className={cn(
-                                        'rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase',
-                                        weather.groundSaturationRisk ===
-                                            'saturated'
-                                            ? 'border border-danger/30 bg-danger-soft text-danger-strong'
-                                            : weather.groundSaturationRisk ===
-                                                'damp'
-                                              ? 'border border-warning/30 bg-warning-soft text-warning-strong'
-                                              : 'border border-success/30 bg-success-soft text-success-strong',
-                                    )}
-                                >
-                                    {weather.groundSaturationRisk}
-                                </span>
-                            </div>
-
-                            <div className="mt-2.5 flex items-center gap-3">
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-line bg-surface text-ink-soft shadow-2xs">
-                                    <Droplets
-                                        className="h-5 w-5"
-                                        aria-hidden="true"
-                                    />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                    <p className="text-xs leading-snug font-semibold text-ink">
-                                        {weather.groundSaturationRisk ===
-                                        'saturated'
-                                            ? 'Severe outrigger sinking risk'
-                                            : weather.groundSaturationRisk ===
-                                                'damp'
-                                              ? 'Verify pad bearing before lift'
-                                              : 'Bearing conditions stable'}
-                                    </p>
-                                    <p className="mt-0.5 text-[11px] text-ink-soft">
-                                        {weather.groundSaturationRisk ===
-                                        'saturated'
-                                            ? 'Ground matting strictly required'
-                                            : weather.groundSaturationRisk ===
-                                                'damp'
-                                              ? 'Check pad compaction & soil'
-                                              : 'Outrigger pads nominal'}
-                                        {locationLabel && (
-                                            <span className="text-ink-soft/70">
-                                                {' '}
-                                                ·{' '}
-                                                {locationLabel
-                                                    .split('(')[0]
-                                                    .trim()}
-                                            </span>
-                                        )}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                {locationControl}
             </div>
-        );
-    }
 
-    if (isSite) {
-        return (
-            <div
-                className={cn(
-                    'rounded-xl border border-line bg-surface p-4 shadow-xs',
-                    className,
-                )}
-            >
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-3">
-                    <div className="flex items-center gap-2">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-subtle text-ink">
-                            <WeatherIcon className="h-4 w-4" />
+            {isSite && !hasSiteCoordinates ? (
+                <p
+                    className="flex items-center gap-2 rounded-lg border border-warning/30 bg-warning-soft p-3 text-sm text-warning-strong"
+                    role="status"
+                >
+                    <AlertTriangle
+                        className="size-4 shrink-0"
+                        aria-hidden="true"
+                    />
+                    Site weather unavailable. Pin the job site coordinates to
+                    request a forecast.
+                </p>
+            ) : state === 'loading' ? (
+                <p
+                    className="flex items-center gap-2 text-sm text-ink-soft"
+                    role="status"
+                >
+                    <RefreshCw
+                        className="size-4 animate-spin motion-reduce:animate-none"
+                        aria-hidden="true"
+                    />
+                    Loading Open-Meteo weather for these coordinates…
+                </p>
+            ) : state === 'unavailable' || !observation ? (
+                <p
+                    className="rounded-lg border border-warning/30 bg-warning-soft p-3 text-sm text-warning-strong"
+                    role="status"
+                >
+                    Open-Meteo weather is unavailable. Check site conditions
+                    through an approved source before work.
+                </p>
+            ) : (
+                <>
+                    <p className="text-xs text-ink-soft">
+                        Open-Meteo current model conditions · observation{' '}
+                        {observation.observedAt} PHT
+                    </p>
+                    <div className="grid gap-2 sm:grid-cols-3">
+                        <div className="rounded-lg border border-line bg-surface-subtle p-3">
+                            <p className="text-xs text-ink-soft">Conditions</p>
+                            <p className="font-semibold text-ink">
+                                {weatherCondition(observation.conditionCode)} ·{' '}
+                                {Math.round(observation.temperatureC)}°C
+                            </p>
+                            <p className="text-xs text-ink-soft">
+                                {Math.round(observation.humidityPercent)}%
+                                humidity
+                            </p>
                         </div>
-                        <div>
-                            <div className="flex items-center gap-1.5">
-                                <h3 className="text-xs font-bold tracking-wider text-ink uppercase">
-                                    Site Environmental &amp; Wind Safety
-                                </h3>
-                                {weather.isLiveFeed ? (
-                                    <span className="py-0.2 inline-flex items-center gap-1 rounded border border-success/30 bg-success-soft px-1.5 text-[9px] font-bold text-success-strong">
-                                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success-strong" />
-                                        Live Satellite
-                                    </span>
-                                ) : (
-                                    <span className="py-0.2 rounded border border-line bg-surface-subtle px-1.5 text-[9px] font-medium text-ink-soft">
-                                        Estimated
-                                    </span>
-                                )}
-                            </div>
-                            <p className="text-[11px] text-ink-soft">
-                                {locationLabel ?? 'Job Site Telemetry'} ·{' '}
-                                {weather.conditionLabel} ({weather.temperatureC}
-                                °C)
-                                {weather.lastUpdatedTime &&
-                                    ` · Updated ${weather.lastUpdatedTime}`}
+                        <div className="rounded-lg border border-line bg-surface-subtle p-3">
+                            <p className="flex items-center gap-1 text-xs text-ink-soft">
+                                <Wind className="size-3" aria-hidden="true" />{' '}
+                                Wind
+                            </p>
+                            <p className="font-semibold text-ink">
+                                {Math.round(observation.windSpeedKmh)} km/h
+                            </p>
+                            <p className="text-xs text-ink-soft">
+                                Direction{' '}
+                                {Math.round(observation.windDirection)}°
+                            </p>
+                        </div>
+                        <div className="rounded-lg border border-line bg-surface-subtle p-3">
+                            <p className="text-xs text-ink-soft">Gusts</p>
+                            <p className="font-semibold text-ink">
+                                {Math.round(observation.windGustKmh)} km/h
                             </p>
                         </div>
                     </div>
-                    <div>{statusBadge}</div>
-                </div>
+                </>
+            )}
+            <p className="text-xs text-ink-soft">
+                Weather data does not establish ground bearing, lightning
+                distance, or lift clearance. Check the approved lift plan and
+                on-site measurements.
+            </p>
+        </div>
+    );
 
-                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    <div className="rounded-lg border border-line bg-surface-subtle p-2.5">
-                        <div className="flex items-center justify-between text-ink-soft">
-                            <span className="text-[11px] font-medium">
-                                Wind Speed
-                            </span>
-                            <Wind className="h-3.5 w-3.5" />
-                        </div>
-                        <p className="mt-1 text-base font-bold text-ink">
-                            {weather.windSpeedKmh}{' '}
-                            <span className="text-xs font-normal text-ink-soft">
-                                km/h
-                            </span>
-                        </p>
-                        <p className="text-[10px] text-ink-soft">
-                            Heading: {weather.windDirection}
-                        </p>
-                    </div>
-
-                    <div className="rounded-lg border border-line bg-surface-subtle p-2.5">
-                        <div className="flex items-center justify-between text-ink-soft">
-                            <span className="text-[11px] font-medium">
-                                Peak Gusts
-                            </span>
-                            <Gauge className="h-3.5 w-3.5" />
-                        </div>
-                        <p
-                            className={cn(
-                                'mt-1 text-base font-bold',
-                                weather.windGustKmh > 40
-                                    ? 'text-danger'
-                                    : weather.windGustKmh > 28
-                                      ? 'text-warning-strong'
-                                      : 'text-ink',
-                            )}
-                        >
-                            {weather.windGustKmh}{' '}
-                            <span className="text-xs font-normal text-ink-soft">
-                                km/h
-                            </span>
-                        </p>
-                        <p className="text-[10px] text-ink-soft">
-                            Limit: 45 km/h
-                        </p>
-                    </div>
-
-                    <div className="rounded-lg border border-line bg-surface-subtle p-2.5">
-                        <div className="flex items-center justify-between text-ink-soft">
-                            <span className="text-[11px] font-medium">
-                                Soil Saturation
-                            </span>
-                            <Droplets className="h-3.5 w-3.5" />
-                        </div>
-                        <p className="mt-1 text-base font-bold text-ink capitalize">
-                            {weather.groundSaturationRisk}
-                        </p>
-                        <p className="text-[10px] text-ink-soft">
-                            {weather.groundSaturationRisk === 'saturated'
-                                ? 'Ground matting required'
-                                : 'Bearing stable'}
-                        </p>
-                    </div>
-
-                    <div className="rounded-lg border border-line bg-surface-subtle p-2.5">
-                        <div className="flex items-center justify-between text-ink-soft">
-                            <span className="text-[11px] font-medium">
-                                Lightning Risk
-                            </span>
-                            <Zap className="h-3.5 w-3.5" />
-                        </div>
-                        <p className="mt-1 text-base font-bold text-ink">
-                            {weather.lightningRiskDistanceKm
-                                ? `${weather.lightningRiskDistanceKm} km`
-                                : 'Clear'}
-                        </p>
-                        <p className="text-[10px] text-ink-soft">
-                            {weather.lightningRiskDistanceKm
-                                ? 'Danger < 16 km'
-                                : 'No strikes detected'}
-                        </p>
-                    </div>
-                </div>
-
-                <div
-                    className={cn(
-                        'mt-3 flex items-start gap-2 rounded-lg border p-2.5 text-xs',
-                        statusBg,
-                    )}
-                >
-                    <Wind className="mt-0.5 h-4 w-4 shrink-0" />
-                    <div>
-                        <span className="font-bold">
-                            {weather.safetyHeadline}:
-                        </span>{' '}
-                        <span>{weather.safetyAdvice}</span>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    // Default: Cockpit Regional Banner
-    return (
-        <Panel
+    return variant === 'cockpit' ? (
+        <Panel className={cn('border border-line bg-surface p-4', className)}>
+            {content}
+        </Panel>
+    ) : (
+        <div
             className={cn(
-                'overflow-hidden border border-line bg-surface p-4 shadow-xs md:p-5',
+                'rounded-xl border border-line bg-surface p-4',
                 className,
             )}
         >
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-line bg-surface-subtle text-ink shadow-xs">
-                        <WeatherIcon className="h-5 w-5 text-brand-strong" />
-                    </div>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-bold tracking-tight text-ink">
-                                Fleet Operations Weather &amp; Wind Safety
-                            </h3>
-                            {weather.isLiveFeed && (
-                                <span className="py-0.2 inline-flex items-center gap-1 rounded border border-success/30 bg-success-soft px-1.5 text-[9px] font-bold text-success-strong">
-                                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success-strong" />
-                                    Live Satellite
-                                </span>
-                            )}
-                            {statusBadge}
-                        </div>
-                        <p className="mt-0.5 text-xs text-ink-soft">
-                            Regional Metro &amp; Site Weather Telemetry ·{' '}
-                            {weather.conditionLabel} · {weather.temperatureC}°C
-                            · {weather.humidityPercent}% Humidity
-                            {weather.lastUpdatedTime &&
-                                ` · As of ${weather.lastUpdatedTime}`}
-                        </p>
-                    </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-4 rounded-xl border border-line bg-surface-subtle px-3.5 py-2">
-                    <div className="flex items-center gap-2">
-                        <Wind className="h-4 w-4 text-ink-soft" />
-                        <div>
-                            <span className="block text-[10px] font-semibold text-ink-soft uppercase">
-                                Wind
-                            </span>
-                            <span className="text-xs font-bold text-ink">
-                                {weather.windSpeedKmh} km/h{' '}
-                                <span className="font-normal text-ink-soft">
-                                    {weather.windDirection}
-                                </span>
-                            </span>
-                        </div>
-                    </div>
-
-                    <div className="h-6 w-px bg-line" />
-
-                    <div className="flex items-center gap-2">
-                        <Gauge className="h-4 w-4 text-ink-soft" />
-                        <div>
-                            <span className="block text-[10px] font-semibold text-ink-soft uppercase">
-                                Peak Gust
-                            </span>
-                            <span
-                                className={cn(
-                                    'text-xs font-bold',
-                                    weather.windGustKmh > 40
-                                        ? 'text-danger'
-                                        : weather.windGustKmh > 28
-                                          ? 'text-warning-strong'
-                                          : 'text-ink',
-                                )}
-                            >
-                                {weather.windGustKmh} km/h
-                            </span>
-                        </div>
-                    </div>
-
-                    <div className="h-6 w-px bg-line" />
-
-                    <div className="flex items-center gap-2">
-                        <Droplets className="h-4 w-4 text-ink-soft" />
-                        <div>
-                            <span className="block text-[10px] font-semibold text-ink-soft uppercase">
-                                Ground Stability
-                            </span>
-                            <span className="text-xs font-bold text-ink capitalize">
-                                {weather.groundSaturationRisk}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div
-                className={cn(
-                    'mt-3.5 flex items-center gap-2 rounded-lg border px-3 py-2 text-xs',
-                    statusBg,
-                )}
-            >
-                <Compass className="h-4 w-4 shrink-0" />
-                <span>
-                    <strong className="font-semibold">Lift Advisory:</strong>{' '}
-                    {weather.safetyAdvice}
-                </span>
-            </div>
-        </Panel>
+            {content}
+        </div>
     );
 }

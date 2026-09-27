@@ -159,6 +159,12 @@ export function DispatchBlockerAdvisory({
                                 <p className="mt-1 text-ink-soft">
                                     {String(rec?.recommendation.summary ?? '')}
                                 </p>
+                                {rec?.model === 'rules' && (
+                                    <p className="mt-1 text-xs text-ink-soft">
+                                        Based on recorded eligibility checks; no
+                                        AI model was used for this result.
+                                    </p>
+                                )}
                             </div>
                             {(rec?.blocker_options ?? []).length ? (
                                 <ul className="space-y-2">

@@ -6,8 +6,10 @@ use App\Modules\Dispatch\Models\DispatchJob;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Gpt\Enums\GptRecommendationStatus;
 use App\Platform\Gpt\Models\GptRecommendation;
+use App\Platform\Gpt\Services\BlockerAdviceFormatter;
 use App\Platform\Gpt\Services\BlockerResolutionContextBuilder;
 use App\Platform\Gpt\Services\BoundedContextBuilder;
+use App\Platform\Gpt\Services\DispatchAdviceQualityGate;
 use App\Platform\Gpt\Services\DispatchAdvisoryNeed;
 use App\Platform\Gpt\Services\GptRecommendationTransition;
 use App\Platform\Gpt\Services\OpenAiClientWrapper;
@@ -90,7 +92,10 @@ final class GenerateGptRecommendationJob implements ShouldQueue
             return;
         }
 
-        if ($result['success'] && $recommendation->purpose !== 'dispatch_blocker_resolution' && ! $this->proposedCandidatesAreEligible($result['recommendation'] ?? [])) {
+        if ($result['success'] && $recommendation->purpose !== 'dispatch_blocker_resolution' && (
+            ! $this->proposedCandidatesAreEligible($result['recommendation'] ?? [])
+            || ! app(DispatchAdviceQualityGate::class)->hasSupportedClockTimes($result['recommendation'] ?? [], $this->boundedContext)
+        )) {
             $result['success'] = false;
             $result['recommendation'] = null;
             $result['response_summary'] = null;
@@ -99,8 +104,14 @@ final class GenerateGptRecommendationJob implements ShouldQueue
         if ($result['success']) {
             $recPayload = $result['recommendation'] ?? [];
             $recPayload = $recommendation->purpose === 'dispatch_blocker_resolution'
-                ? $this->blockerPayload($recPayload)
+                ? app(BlockerAdviceFormatter::class)->build($this->boundedContext, $recPayload['options'] ?? [])
                 : $this->hydrateRecommendationDetails($recPayload, $this->boundedContext);
+            if ($recommendation->purpose !== 'dispatch_blocker_resolution') {
+                $recPayload = $this->markOptionalResources($recPayload);
+            }
+            if (isset($this->boundedContext['job']['version'])) {
+                $recPayload['job_version'] = $this->boundedContext['job']['version'];
+            }
             $updated = $transitions->compareAndSet(
                 $recommendation->id,
                 GptRecommendationStatus::Processing,
@@ -203,39 +214,6 @@ final class GenerateGptRecommendationJob implements ShouldQueue
             && $recommendation->context_hash === $context['context_hash'];
     }
 
-    /** @param array<string, mixed> $modelPayload
-     * @return array<string, mixed>
-     */
-    private function blockerPayload(array $modelPayload): array
-    {
-        $approved = array_column($this->boundedContext['options'] ?? [], null, 'id');
-        $options = [];
-        foreach ($modelPayload['options'] ?? [] as $ranked) {
-            $option = $approved[$ranked['id']];
-            $focus = $ranked['focus'];
-            $explanation = match ($focus) {
-                'availability' => $option['evidence']['availability'] === 'not_recorded'
-                    ? 'Availability is not recorded. Confirm it before assigning.'
-                    : 'Recorded availability is '.str_replace('_', ' ', (string) $option['evidence']['availability']).'.',
-                'credential' => $option['evidence']['credential'] === 'valid'
-                    ? 'The required credential is valid at the scheduled start.'
-                    : 'No role-specific credential is required for this assignment.',
-                'readiness' => 'Recorded asset readiness is '.str_replace('_', ' ', (string) $option['evidence']['readiness']).'.',
-                'schedule_conflicts' => 'No overlapping commitment was found for the scheduled window.',
-                default => throw new \UnexpectedValueException('Unsupported blocker evidence key.'),
-            };
-            $options[] = [...$option, 'explanation' => $explanation];
-        }
-
-        return [
-            'version' => 1,
-            'job_version' => $this->boundedContext['job']['version'],
-            'blocker' => $this->boundedContext['blocker'],
-            'summary' => 'Review these eligible resources for the identified blocker. Other readiness checks still apply.',
-            'options' => $options,
-        ];
-    }
-
     /** @param array<string, mixed> $values */
     private function recordMetric(RecordGptOperationalMetric $metrics, GptRecommendation $recommendation, string $event, array $values): void
     {
@@ -304,6 +282,42 @@ final class GenerateGptRecommendationJob implements ShouldQueue
         $seen[$id] = true;
 
         return true;
+    }
+
+    /** @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private function markOptionalResources(array $payload): array
+    {
+        $requirements = $this->boundedContext['job']['resource_requirements'] ?? null;
+        if (! is_array($requirements)) {
+            return $payload;
+        }
+
+        foreach (['proposed_personnel' => ['personnel', 'assigned_personnel'], 'proposed_assets' => ['assets', 'assigned_assets']] as $key => [$group, $assignedKey]) {
+            $alreadyAssigned = [];
+            foreach ($this->boundedContext['job'][$assignedKey] ?? [] as $assignment) {
+                if (is_array($assignment) && is_string($assignment['assignment_type'] ?? null)) {
+                    $type = $assignment['assignment_type'];
+                    $alreadyAssigned[$type] = ($alreadyAssigned[$type] ?? 0) + 1;
+                }
+            }
+            $covered = [];
+            $resources = $payload[$key] ?? [];
+            foreach ($resources as &$resource) {
+                $type = $resource['assignment_type'] ?? null;
+                if (! is_string($type)) {
+                    continue;
+                }
+                $required = (int) ($requirements[$group][$type] ?? 0);
+                $covered[$type] = ($covered[$type] ?? 0) + 1;
+                $resource['optional'] = $covered[$type] > max(0, $required - ($alreadyAssigned[$type] ?? 0));
+            }
+            unset($resource);
+            $payload[$key] = $resources;
+        }
+
+        return $payload;
     }
 
     public function failed(Throwable $exception): void

@@ -4,6 +4,8 @@ ini_set('memory_limit', '1024M');
 
 require_once __DIR__.'/../bootstrap/autoload.php';
 
+use App\Platform\Identity\Models\User;
+use App\Shared\Assets\Models\OperationalAsset;
 use Tests\TestCase;
 
 /*
@@ -48,4 +50,15 @@ expect()->extend('toBeOne', function () {
 function something()
 {
     // ..
+}
+
+function clearDispatchAsset(OperationalAsset $asset): void
+{
+    $asset->inspections()->create([
+        'technician_id' => User::query()->firstOrFail()->id,
+        'type' => 'daily_safety',
+        'result' => 'passed',
+        'checklist' => ['fixture_readiness' => true],
+        'completed_at' => now()->subDay(),
+    ]);
 }

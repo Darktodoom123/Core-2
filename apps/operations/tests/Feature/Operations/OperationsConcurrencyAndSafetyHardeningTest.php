@@ -323,6 +323,7 @@ it('validates version and increments DispatchJob version on assignment', functio
         'kind' => 'truck',
         'status' => AssetStatus::Available,
     ]);
+    clearDispatchAsset($asset);
 
     /** @var DispatchJob $job */
     $job = DispatchJob::query()->create([
@@ -534,6 +535,7 @@ it('allows assignment when version is omitted and increments version', function 
         'kind' => 'truck',
         'status' => AssetStatus::Available,
     ]);
+    clearDispatchAsset($asset);
 
     /** @var DispatchJob $job */
     $job = DispatchJob::query()->create([

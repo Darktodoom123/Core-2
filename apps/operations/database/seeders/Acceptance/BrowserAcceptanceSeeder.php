@@ -580,6 +580,7 @@ final class BrowserAcceptanceSeeder extends Seeder
 
         // A separate history fixture exercises the desk beyond its initial snapshot.
         for ($index = 0; $index < 102; $index++) {
+            $historicalStart = now()->subYear()->startOfDay();
             DispatchJob::query()->create([
                 'reference' => $index === 0 ? 'DESK-HISTORY-OLDEST' : sprintf('DESK-HISTORY-%03d', $index),
                 'client' => 'History acceptance client',
@@ -587,8 +588,9 @@ final class BrowserAcceptanceSeeder extends Seeder
                 'site' => 'Manila history yard',
                 'status' => 'completed',
                 'priority' => 'routine',
-                'scheduled_start' => now()->subYear()->startOfDay(),
-                'scheduled_end' => now()->subYear()->startOfDay()->addHours(4),
+                'scheduled_start' => $historicalStart,
+                'scheduled_end' => $historicalStart->copy()->addHours(4),
+                'completed_at' => $historicalStart->copy()->addHours(5),
                 'created_by' => $manager->id,
                 'updated_at' => now()->subDays(200 - $index),
             ]);

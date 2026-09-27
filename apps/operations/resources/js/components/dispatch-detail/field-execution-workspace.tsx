@@ -191,6 +191,37 @@ export function FieldExecutionWorkspace({
                                 label="Job record updated"
                                 value={formatDateTime(execution.updated_at)}
                             />
+                            {['completed', 'cancelled'].includes(
+                                job.status.value,
+                            ) && (
+                                <DataPair
+                                    label={
+                                        job.status.value === 'completed'
+                                            ? 'Completed at'
+                                            : 'Cancelled at'
+                                    }
+                                    value={
+                                        job.status.value === 'completed'
+                                            ? formatDateTime(
+                                                  job.completed_at ?? null,
+                                                  'Finish time not recorded',
+                                              )
+                                            : formatDateTime(
+                                                  job.cancelled_at ?? null,
+                                                  'Cancellation time not recorded',
+                                              )
+                                    }
+                                />
+                            )}
+                            {job.status.value === 'cancelled' && (
+                                <DataPair
+                                    label="Cancellation reason"
+                                    value={
+                                        job.cancellation_reason ||
+                                        'Reason not recorded'
+                                    }
+                                />
+                            )}
                         </dl>
                     </Panel>
 

@@ -32,8 +32,8 @@ import {
     isAssignmentSuccessFlash,
     useDispatchAssignment,
 } from '@/components/dispatch-detail';
-import { Button, Panel } from '@/components/ui';
-import { EmptyState } from '@/components/ui';
+import { ResourceRequirementEditor } from '@/components/dispatch-resource-requirements/requirement-editor';
+import { Button, EmptyState, Panel } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import type {
     CandidatePageViewModel,
@@ -391,6 +391,22 @@ export default function DispatchDetail({
                                             </div>
 
                                             <DispatchContext job={job} />
+                                            {!project_context &&
+                                                (job.source === null ||
+                                                    [
+                                                        'manual',
+                                                        'direct',
+                                                    ].includes(
+                                                        job.source.type,
+                                                    )) && (
+                                                    <ResourceRequirementEditor
+                                                        key={`${job.id}:${job.version}`}
+                                                        job={job}
+                                                        canEdit={Boolean(
+                                                            capabilities.update_requirements,
+                                                        )}
+                                                    />
+                                                )}
 
                                             <div className="flex items-center justify-between rounded-xl border border-line bg-surface p-4 shadow-2xs">
                                                 <Link

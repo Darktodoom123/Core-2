@@ -2,6 +2,7 @@ import type {
     ClientViewModel,
     DispatchPriorityValue,
     WorkspaceCapabilities,
+    DispatchResourceRequirements,
 } from '@/types/workspace';
 
 export type DirectDispatchWorkStream = 'service' | 'rental' | 'general';
@@ -20,6 +21,7 @@ export interface DirectDispatchFormData {
     equipment_subtype: DirectDispatchEquipmentSubtype | null;
     site_notes: string;
     requirements: string[];
+    resource_requirements: DispatchResourceRequirements;
 }
 
 export type DirectDispatchFormErrors = Record<string, string | undefined>;
@@ -50,6 +52,7 @@ export interface DirectDispatchSummaryProjection {
     schedule: string;
     priority: string;
     requirementCount: number;
+    resourcePlan: string;
     missingRequiredFields: string[];
     provenance: string;
     draftNotice: string;

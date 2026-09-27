@@ -74,6 +74,7 @@ final class DispatchJobResource extends JsonResource
                 'reference' => $this->canonicalHandoff->source_reference,
             ] : null),
             'requirements' => $this->requirements,
+            'resource_requirements' => $this->resource_requirements,
             'my_assignment' => $myAssignment !== null ? [
                 'id' => $myAssignment->id,
                 'response_status' => $myAssignment->response_status->value,

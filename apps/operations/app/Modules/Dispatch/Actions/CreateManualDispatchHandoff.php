@@ -65,6 +65,7 @@ final class CreateManualDispatchHandoff
                                 'scheduled_end' => $job->scheduled_end?->toIso8601String(),
                                 'priority' => $job->priority->value,
                                 'requirements' => $job->requirements ?? [],
+                                'resource_requirements' => $job->resource_requirements,
                             ],
                         ],
                         'plan_snapshot' => [
@@ -76,6 +77,7 @@ final class CreateManualDispatchHandoff
                             'scheduled_start' => $job->scheduled_start?->toIso8601String(),
                             'scheduled_end' => $job->scheduled_end?->toIso8601String(),
                             'requirements' => $job->requirements ?? [],
+                            'resource_requirements' => $job->resource_requirements,
                         ],
                     ],
                 ),

@@ -51,6 +51,13 @@ function createReadyDispatchJob(string $site = 'Makati Sky Tower 2'): array
         'kind' => 'crane',
         'status' => AssetStatus::Available,
     ]);
+    $asset->inspections()->create([
+        'technician_id' => $manager->id,
+        'type' => 'daily_safety',
+        'result' => 'passed',
+        'checklist' => ['fixture_readiness' => true],
+        'completed_at' => now()->subHour(),
+    ]);
 
     $job = DispatchJob::query()->create([
         'reference' => 'DSP-SAFE-001',

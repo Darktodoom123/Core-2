@@ -29,6 +29,7 @@ beforeEach(function () {
     $this->approver = User::factory()->create();
     $this->approver->assignRole(RoleName::OperationsManager->value);
     $this->asset = OperationalAsset::query()->create(['code' => 'PLAN-CR-1', 'name' => 'Site crane', 'kind' => 'crane', 'status' => AssetStatus::Available]);
+    clearDispatchAsset($this->asset);
     $this->start = now()->addDays(7)->startOfDay();
 });
 
@@ -267,6 +268,10 @@ it('checks maintenance against ordinary dispatch commitments at approval', funct
 it('cancels and reopens a staffed project shift using the reviewed legacy version', function () {
     $shift = planningPreparedShift($this);
     $job = $shift->job;
+    $this->patch("/operations/dispatch-jobs/{$job->id}/resource-requirements", [
+        'version' => $job->version,
+        'resource_requirements' => ['personnel' => ['driver' => 1], 'assets' => ['truck' => 1]],
+    ])->assertSessionHasErrors('resource_requirements');
     $oldVersion = $job->version;
     $workerId = $job->personnelAssignments()->whereNull('active_until')->sole()->user_id;
     expect($job->attempts()->sole()->version)->not->toBe($oldVersion);

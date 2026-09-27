@@ -53,12 +53,15 @@ function r4Approve(DispatchJob $job, User $dispatcher): void
 
 function r4Asset(string $code, string $kind = 'equipment'): OperationalAsset
 {
-    return OperationalAsset::query()->create([
+    $asset = OperationalAsset::query()->create([
         'code' => $code,
         'name' => 'R4 asset',
         'kind' => $kind,
         'status' => AssetStatus::Available,
     ]);
+    clearDispatchAsset($asset);
+
+    return $asset;
 }
 
 function r4DispatchJob(User $dispatcher, string $reference = 'R4-DISPATCH'): DispatchJob

@@ -77,6 +77,7 @@ it('executes full happy path: dispatcher intake -> staffing -> manager approval 
         'kind' => 'truck',
         'status' => AssetStatus::Available,
     ]);
+    clearDispatchAsset($truck);
 
     $crane = OperationalAsset::query()->create([
         'code' => 'CRN-P2-01',
@@ -84,6 +85,7 @@ it('executes full happy path: dispatcher intake -> staffing -> manager approval 
         'kind' => 'crane',
         'status' => AssetStatus::ReadyForService,
     ]);
+    clearDispatchAsset($crane);
 
     // 1. Client & Service Request Creation
     $client = Client::query()->create([

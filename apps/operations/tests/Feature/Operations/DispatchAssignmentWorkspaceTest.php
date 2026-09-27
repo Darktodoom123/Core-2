@@ -67,6 +67,13 @@ it('shows server-authoritative personnel eligibility, credentials, asset readine
     $job = assignmentWorkspaceJob($dispatcher, 'CON-5101');
     $conflictingJob = assignmentWorkspaceJob($dispatcher, 'CON-5100');
     $readyTruck = OperationalAsset::query()->create(['code' => 'TR-5101', 'name' => 'Ready Truck', 'kind' => 'truck', 'subtype' => 'low bed', 'rated_capacity' => 25, 'capacity_unit' => 't', 'status' => AssetStatus::ReadyForService]);
+    $readyTruck->inspections()->create([
+        'technician_id' => $dispatcher->id,
+        'type' => 'daily_safety',
+        'result' => 'passed',
+        'checklist' => ['fixture_readiness' => true],
+        'completed_at' => now()->subHour(),
+    ]);
     $blockedCrane = OperationalAsset::query()->create(['code' => 'CR-5101', 'name' => 'Blocked Crane', 'kind' => 'crane', 'status' => AssetStatus::Available]);
     $blockedCrane->maintenanceWorkOrders()->create([
         'technician_id' => $unavailableDriver->id,

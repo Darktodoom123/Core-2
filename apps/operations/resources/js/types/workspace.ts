@@ -191,7 +191,11 @@ export interface DispatchJobViewModel {
     status: StatusViewModel<DispatchStatusValue>;
     scheduled_start: string | null;
     scheduled_end: string | null;
+    completed_at?: string | null;
+    cancelled_at?: string | null;
+    cancellation_reason?: string | null;
     requirements: string[];
+    resource_requirements?: DispatchResourceRequirements | null;
     version: number;
     project_coverage_url?: string | null;
     site_latitude?: number | null;
@@ -201,6 +205,21 @@ export interface DispatchJobViewModel {
     personnel_assignments: DispatchAssignmentViewModel[];
     asset_assignments: DispatchAssetAssignmentViewModel[];
     latest_delay?: DispatchExecutionDelayViewModel | null;
+}
+
+export interface DispatchResourceRequirements {
+    personnel: Partial<Record<'driver' | 'crane_operator' | 'rigger', number>>;
+    assets: Partial<
+        Record<
+            | 'truck'
+            | 'vehicle'
+            | 'crane'
+            | 'mobile_crane'
+            | 'tower_crane'
+            | 'equipment',
+            number
+        >
+    >;
 }
 
 export interface ClientViewModel {
@@ -1133,6 +1152,7 @@ export interface GptRecommendationViewModel {
         name?: string;
         role?: string;
         assignment_type: string;
+        optional?: boolean;
     }>;
     proposed_assets?: Array<{
         operational_asset_id: number;
@@ -1141,6 +1161,7 @@ export interface GptRecommendationViewModel {
         assignment_type: string;
         capacity?: string | null;
         kind?: string | null;
+        optional?: boolean;
     }>;
     conflicts: Array<Record<string, unknown>>;
     model: string;
@@ -1558,6 +1579,7 @@ export interface DispatchDetailPageProps {
         reassign_resources: boolean;
         view_assignment_candidates: boolean;
         activate: boolean;
+        update_requirements?: boolean;
         update_own_status: boolean;
         respond_assignment: boolean;
         cancel: boolean;

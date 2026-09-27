@@ -12,8 +12,10 @@ use App\Modules\Assignment\Queries\DispatchActivationReadinessQuery;
 use App\Modules\Assignment\Queries\PersonnelCandidateQuery;
 use App\Modules\Dispatch\Actions\ConvertServiceRequestToDispatch;
 use App\Modules\Dispatch\Actions\CreateManualDispatchHandoff;
+use App\Modules\Dispatch\Actions\UpdateDispatchResourceRequirements;
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Http\Requests\StoreDispatchJobRequest;
+use App\Modules\Dispatch\Http\Requests\UpdateDispatchResourceRequirementsRequest;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dispatch\Planning\Models\ProjectShift;
 use App\Modules\Dispatch\Planning\Services\PlanningAccess;
@@ -198,6 +200,7 @@ final class DispatchJobController extends Controller
                 'reassign_resources' => $projectShift === null && Gate::forUser($user)->allows('reassignResources', $job),
                 'view_assignment_candidates' => $canViewCandidates,
                 'activate' => Gate::forUser($user)->allows('activate', $job),
+                'update_requirements' => $projectShift === null && $job->source_type === null && Gate::forUser($user)->allows('update', $job),
                 'update_own_status' => $canUpdateOwnStatus,
                 'respond_assignment' => $canRespondAssignment,
                 'cancel' => Gate::forUser($user)->allows('cancel', $job),
@@ -250,6 +253,25 @@ final class DispatchJobController extends Controller
         ]);
 
         return back()->with('success', 'Project site coordinates updated successfully.');
+    }
+
+    public function updateResourceRequirements(
+        UpdateDispatchResourceRequirementsRequest $request,
+        DispatchJob $dispatchJob,
+        UpdateDispatchResourceRequirements $update,
+    ): RedirectResponse {
+        $validated = $request->validated();
+        $update->handle(
+            $request->user(),
+            $dispatchJob,
+            (int) $validated['version'],
+            $validated['resource_requirements'],
+        );
+
+        return back()->with('flash', [
+            'tone' => 'success',
+            'message' => 'Required crew and equipment were updated.',
+        ]);
     }
 
     public function updatePlannedCraneSlots(Request $request, DispatchJob $dispatchJob): RedirectResponse

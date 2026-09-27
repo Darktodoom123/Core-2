@@ -162,6 +162,7 @@ test('reassignment succeeds when replacing with eligible driver and asset', func
         'kind' => 'truck',
         'status' => AssetStatus::ReadyForService,
     ]);
+    clearDispatchAsset($newAsset);
 
     $response = $this->actingAs($dispatcher)->post("/operations/dispatch-jobs/{$job->id}/reassign", [
         'end_personnel_assignment_ids' => [$oldAssignment->id],

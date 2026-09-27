@@ -203,16 +203,27 @@ export function DispatchResources({
                                 {selectedJob.reference} · {selectedJob.title}
                             </p>
                             <p className="text-xs text-ink-soft">
-                                Active dispatch context
+                                {['completed', 'cancelled'].includes(
+                                    selectedJob.status.value,
+                                )
+                                    ? 'Historical dispatch context'
+                                    : 'Active dispatch context'}
                             </p>
                         </div>
-                        <Link
-                            href={`/operations/dispatch-jobs/${selectedJob.id}?${new URLSearchParams({ return_to: returnTo })}#assignment-summary`}
-                            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-brand-contrast shadow-xs transition-colors hover:bg-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
-                        >
-                            <Users className="h-3.5 w-3.5" aria-hidden="true" />
-                            Assign resources to this job →
-                        </Link>
+                        {!['completed', 'cancelled'].includes(
+                            selectedJob.status.value,
+                        ) && (
+                            <Link
+                                href={`/operations/dispatch-jobs/${selectedJob.id}?${new URLSearchParams({ return_to: returnTo })}#assignment-summary`}
+                                className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-brand-contrast shadow-xs transition-colors hover:bg-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
+                            >
+                                <Users
+                                    className="h-3.5 w-3.5"
+                                    aria-hidden="true"
+                                />
+                                Assign resources to this job →
+                            </Link>
+                        )}
                     </div>
                 </div>
             ) : jobs.filter((j) => j.status.value === 'draft').length > 0 &&

@@ -69,6 +69,7 @@ it('keeps imported Core 3 assets assignable through the normal dispatch workflow
         'kind' => 'truck',
         'status' => AssetStatus::Available,
     ]);
+    clearDispatchAsset($asset);
     $job = DispatchJob::query()->create([
         'reference' => 'CORE3-DSP-202',
         'client' => 'Core 3 Handoff Client',

@@ -44,7 +44,7 @@ final class BoundedContextBuilder
             ->get();
 
         $candidateAssets = OperationalAsset::query()
-            ->with(['maintenanceWorkOrders', 'inspections'])
+            ->with(['maintenanceWorkOrders', 'inspections', 'latestDvirInspection'])
             ->orderBy('id')
             ->get();
 
@@ -97,9 +97,11 @@ final class BoundedContextBuilder
                 'client' => $this->sanitizeText($job->client !== '' ? $job->client : ($job->serviceRequest->client->company_name ?? '')),
                 'priority' => $job->priority->value,
                 'version' => $job->version,
-                'scheduled_start' => $job->scheduled_start?->toIso8601String(),
-                'scheduled_end' => $job->scheduled_end?->toIso8601String(),
+                'schedule_timezone' => 'Asia/Manila',
+                'scheduled_start' => $job->scheduled_start?->copy()->setTimezone('Asia/Manila')->toIso8601String(),
+                'scheduled_end' => $job->scheduled_end?->copy()->setTimezone('Asia/Manila')->toIso8601String(),
                 'requirements' => $this->sanitizeValue($job->requirements ?? []),
+                'resource_requirements' => $job->resource_requirements,
                 'site_name' => $this->sanitizeText($job->site),
                 'assigned_personnel' => $job->personnelAssignments()->open()->orderBy('id')->get(['user_id', 'assignment_type', 'response_status'])->toArray(),
                 'assigned_assets' => $job->assetAssignments()->open()->orderBy('id')->get(['operational_asset_id', 'assignment_type'])->toArray(),

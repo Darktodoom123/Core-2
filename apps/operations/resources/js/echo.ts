@@ -36,6 +36,14 @@ export function getEcho(): Echo<'reverb'> | null {
         return null;
     }
 
+    if (
+        document.querySelector<HTMLMetaElement>(
+            'meta[name="broadcasting-enabled"]',
+        )?.content === 'false'
+    ) {
+        return null;
+    }
+
     if (!window.Echo) {
         window.Echo = new Echo<'reverb'>({
             broadcaster: 'reverb',

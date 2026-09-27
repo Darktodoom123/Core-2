@@ -7,6 +7,7 @@ use App\Modules\Assignment\Services\DispatchResourceEligibility;
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dispatch\Planning\Models\ProjectShift;
+use App\Modules\Dispatch\Services\DispatchResourceRequirements;
 use App\Platform\Identity\Models\User;
 use App\Shared\Assets\Models\OperationalAsset;
 
@@ -87,7 +88,35 @@ final class BlockerResolutionContextBuilder
             }
         }
 
-        if ($blocker === null && $personnel->isEmpty()) {
+        $resourceRequirements = $job->resource_requirements;
+        if ($blocker === null && $resourceRequirements !== null) {
+            foreach (['personnel' => $personnel, 'assets' => $assets] as $group => $assignments) {
+                $quantities = $resourceRequirements[$group] ?? [];
+                $allowedTypes = $group === 'personnel'
+                    ? DispatchResourceRequirements::PERSONNEL_TYPES
+                    : DispatchResourceRequirements::ASSET_TYPES;
+                foreach ($allowedTypes as $type) {
+                    $required = $quantities[$type] ?? 0;
+                    if ($required <= $assignments->where('assignment_type', $type)->count()) {
+                        continue;
+                    }
+                    $blocker = [
+                        'code' => $group === 'personnel' ? 'missing_personnel' : 'missing_asset',
+                        'resource_kind' => $group === 'personnel' ? 'personnel' : 'asset',
+                        'action' => 'assign',
+                        'assignment_type' => $type,
+                        'replace_assignment_id' => null,
+                        'reasons' => ['Required '.str_replace('_', ' ', $type).' coverage is incomplete.'],
+                        'evidence' => [
+                            'required_count' => $required,
+                            'current_count' => $assignments->where('assignment_type', $type)->count(),
+                        ],
+                    ];
+                    break 2;
+                }
+            }
+        }
+        if ($blocker === null && $resourceRequirements === null && $personnel->isEmpty()) {
             $blocker = [
                 'code' => 'missing_personnel', 'resource_kind' => 'personnel', 'action' => 'assign',
                 'assignment_type' => 'crane_operator', 'replace_assignment_id' => null,
@@ -95,7 +124,7 @@ final class BlockerResolutionContextBuilder
                 'evidence' => ['current_count' => 0],
             ];
         }
-        if ($blocker === null && $assets->isEmpty()) {
+        if ($blocker === null && $resourceRequirements === null && $assets->isEmpty()) {
             $blocker = [
                 'code' => 'missing_asset', 'resource_kind' => 'asset', 'action' => 'assign',
                 'assignment_type' => 'crane', 'replace_assignment_id' => null,

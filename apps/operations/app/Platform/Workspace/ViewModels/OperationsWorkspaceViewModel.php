@@ -35,6 +35,7 @@ use App\Platform\Tracking\Data\LatestLocationDto;
 use App\Platform\Tracking\Models\LocationUpdate;
 use App\Shared\Assets\Enums\AssetCategory;
 use App\Shared\Assets\Models\OperationalAsset;
+use App\Shared\Assets\Services\AssetInspectionReadiness;
 use BackedEnum;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
@@ -135,7 +136,11 @@ final class OperationsWorkspaceViewModel
             ],
             'scheduled_start' => $job->scheduled_start?->toIso8601String(),
             'scheduled_end' => $job->scheduled_end?->toIso8601String(),
+            'completed_at' => $job->completed_at?->toIso8601String(),
+            'cancelled_at' => $job->cancelled_at?->toIso8601String(),
+            'cancellation_reason' => $job->cancellation_reason,
             'requirements' => $job->requirements ?? [],
+            'resource_requirements' => $job->resource_requirements,
             'version' => $job->version,
             'project_coverage_url' => $projectShift === null ? null : '/?view=dispatch&dispatch_tab=project-plans&project='.$projectShift->phase->project_plan_id.'&phase='.$projectShift->project_phase_id.'&crew_week='.$job->scheduled_start?->toDateString(),
             'updated_at' => $job->updated_at?->toIso8601String(),
@@ -358,30 +363,8 @@ final class OperationsWorkspaceViewModel
             $inspections = $asset->relationLoaded('inspections') ? $asset->inspections : collect();
             $maintenanceOrders = $asset->relationLoaded('maintenanceWorkOrders') ? $asset->maintenanceWorkOrders : collect();
             $latestDvir = $asset->relationLoaded('latestDvirInspection') ? $asset->latestDvirInspection : null;
-            $completedInspections = $inspections
-                ->filter(static fn ($inspection): bool => $inspection->completed_at !== null)
-                ->sortByDesc('completed_at')
-                ->values();
-            $latestLegacyInspection = $completedInspections->first();
-            $hasLegacyPassingInspection = $completedInspections->contains(
-                static fn ($inspection): bool => $inspection->result === 'passed',
-            );
-            $hasDvirPassingInspection = $latestDvir !== null
-                && ! $latestDvir->has_defects
-                && $latestDvir->critical_defects_count === 0;
-            $latestInspectionFailed = false;
-            if ($latestLegacyInspection !== null && $latestDvir !== null) {
-                $latestInspectionFailed = $latestLegacyInspection->completed_at->greaterThanOrEqualTo($latestDvir->completed_at)
-                    ? $latestLegacyInspection->result !== 'passed'
-                    : ! $hasDvirPassingInspection;
-            } elseif ($latestLegacyInspection !== null) {
-                $latestInspectionFailed = $latestLegacyInspection->result !== 'passed';
-            } elseif ($latestDvir !== null) {
-                $latestInspectionFailed = ! $hasDvirPassingInspection;
-            }
-            $hasPassingInspection = ($hasLegacyPassingInspection || $hasDvirPassingInspection)
-                && ! $latestInspectionFailed;
-            $isDispatchable = $asset->status->dispatchable() && $blockingCount === 0 && $hasPassingInspection;
+            $inspectionBlocked = app(AssetInspectionReadiness::class)->lacksPassingClearance($inspections, $latestDvir);
+            $isDispatchable = $asset->status->dispatchable() && $blockingCount === 0 && ! $inspectionBlocked;
             $dispatchabilityBlockers = [];
             if (! $asset->status->dispatchable()) {
                 $dispatchabilityBlockers[] = [
@@ -397,11 +380,11 @@ final class OperationsWorkspaceViewModel
                     'detail' => "{$blockingCount} open maintenance order(s) block dispatch.",
                 ];
             }
-            if (! $hasPassingInspection) {
+            if ($inspectionBlocked) {
                 $dispatchabilityBlockers[] = [
                     'code' => 'inspection',
                     'label' => 'Passing inspection required',
-                    'detail' => 'A completed passing inspection is required before dispatch.',
+                    'detail' => 'A completed passing inspection or DVIR is required before dispatch; a later failure removes clearance.',
                 ];
             }
 
@@ -1332,6 +1315,7 @@ final class OperationsWorkspaceViewModel
                     'name' => $name,
                     'role' => $role,
                     'assignment_type' => $assignmentType,
+                    'optional' => is_array($person) && ($person['optional'] ?? false) === true,
                 ];
             }, $rawPersonnel)));
 
@@ -1386,6 +1370,7 @@ final class OperationsWorkspaceViewModel
                     'assignment_type' => $assignmentType,
                     'kind' => $kind,
                     'capacity' => $capacity,
+                    'optional' => is_array($asset) && ($asset['optional'] ?? false) === true,
                 ];
             }, $rawAssets)));
 

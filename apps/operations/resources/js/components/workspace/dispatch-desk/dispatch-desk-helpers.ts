@@ -237,10 +237,10 @@ export function nextActionForJob(
     }
 
     const execution: Record<string, string> = {
-        dispatched: 'Confirm field acceptance',
+        dispatched: 'Monitor field acceptance',
         accepted: 'Monitor en route progress',
         en_route: 'Monitor arrival',
-        arrived: 'Confirm work start',
+        arrived: 'Monitor work start',
         working: 'Monitor field execution',
     };
 

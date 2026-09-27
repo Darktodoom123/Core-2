@@ -4,7 +4,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { signIn } from './browser-fixtures';
 
-test('office users inspect people and assets and review AI before applying', async ({
+test('office users inspect people and assets and cannot review stale AI advice', async ({
     page,
 }) => {
     const directory = resolve('.impeccable/review');
@@ -116,20 +116,13 @@ test('office users inspect people and assets and review AI before applying', asy
         exact: true,
     });
     await expect(advisory).toBeVisible();
+    await expect(advisory.getByText('Refresh before applying')).toBeVisible();
     await expect(
         advisory.getByRole('button', { name: 'Review details' }),
-    ).toBeVisible();
-    await advisory.getByRole('button', { name: 'Review details' }).click();
+    ).toHaveCount(0);
     await expect(
-        page.getByRole('dialog', { name: 'Review crew & equipment' }),
+        advisory.getByRole('button', { name: 'Refresh suggestions' }),
     ).toBeVisible();
-    await expect(
-        page.getByRole('button', { name: /Confirm & Apply/ }),
-    ).toBeVisible();
-    await page
-        .getByRole('dialog')
-        .getByRole('button', { name: 'Cancel' })
-        .click();
     await page.screenshot({
         path: resolve(directory, 'dispatch-ai-desktop.png'),
         fullPage: true,

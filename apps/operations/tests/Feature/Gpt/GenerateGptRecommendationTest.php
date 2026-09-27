@@ -76,6 +76,77 @@ test('authorized dispatcher can initiate async gpt recommendation request', func
     Queue::assertPushed(GenerateGptRecommendationJob::class);
 });
 
+test('bounded AI context presents the scheduled window in Philippine local time', function (): void {
+    $manager = gptUser(RoleName::OperationsManager);
+    $job = gptDispatchJob($manager);
+    $job->update([
+        'scheduled_start' => '2026-09-30 08:00:00',
+        'scheduled_end' => '2026-09-30 12:00:00',
+    ]);
+
+    $context = app(BoundedContextBuilder::class)->buildForDispatchJob($job)['context']['job'];
+
+    expect($context['schedule_timezone'])->toBe('Asia/Manila')
+        ->and($context['scheduled_start'])->toBe('2026-09-30T16:00:00+08:00')
+        ->and($context['scheduled_end'])->toBe('2026-09-30T20:00:00+08:00');
+});
+
+test('extra AI crew is marked optional and unverified clock advice is rejected', function (): void {
+    $manager = gptUser(RoleName::OperationsManager);
+    $job = gptDispatchJob($manager);
+    $context = [
+        'job' => [
+            'id' => $job->id,
+            'version' => $job->version,
+            'schedule_timezone' => 'Asia/Manila',
+            'scheduled_start' => '2026-09-30T16:00:00+08:00',
+            'scheduled_end' => '2026-09-30T20:00:00+08:00',
+            'resource_requirements' => ['personnel' => ['crane_operator' => 1], 'assets' => ['crane' => 1]],
+            'assigned_personnel' => [],
+            'assigned_assets' => [],
+        ],
+        'personnel_candidates' => [
+            ['user_id' => 101, 'name' => 'Operator One', 'role' => 'crane_operator', 'assignment_type' => 'crane_operator', 'eligible' => true],
+            ['user_id' => 102, 'name' => 'Operator Two', 'role' => 'crane_operator', 'assignment_type' => 'crane_operator', 'eligible' => true],
+        ],
+        'asset_candidates' => [
+            ['asset_id' => 201, 'code' => 'CR-201', 'name' => 'Test crane', 'kind' => 'crane', 'eligible' => true],
+        ],
+    ];
+    $payload = [
+        'summary' => 'Use the selected resources during the planned window.',
+        'proposed_personnel' => [['user_id' => 101], ['user_id' => 102]],
+        'proposed_assets' => [['operational_asset_id' => 201]],
+        'reasons' => ['Candidates are available.'],
+        'assumptions' => ['Confirm site readiness.'],
+    ];
+
+    $makeRecommendation = static fn () => GptRecommendation::query()->create([
+        'subject_type' => $job->getMorphClass(),
+        'subject_id' => $job->id,
+        'requested_by' => $manager->id,
+        'purpose' => 'dispatch_assignment',
+        'context_hash' => 'quality-test',
+        'input_references' => ['user_ids' => [101, 102], 'asset_ids' => [201]],
+        'recommendation' => [],
+        'model' => 'gpt-6-luna',
+        'status' => 'draft',
+    ]);
+
+    OpenAiClientWrapper::fake(['recommendation' => $payload]);
+    $valid = $makeRecommendation();
+    (new GenerateGptRecommendationJob($valid->id, $context))->handle(app(OpenAiClientWrapper::class), app(RecordAuditEvent::class));
+    expect($valid->fresh()->status->value)->toBe('pending_review')
+        ->and($valid->fresh()->recommendation['proposed_personnel'][0]['optional'])->toBeFalse()
+        ->and($valid->fresh()->recommendation['proposed_personnel'][1]['optional'])->toBeTrue()
+        ->and($valid->fresh()->recommendation['proposed_assets'][0]['optional'])->toBeFalse();
+
+    OpenAiClientWrapper::fake(['recommendation' => [...$payload, 'summary' => 'Start at 08:00.']]);
+    $invalid = $makeRecommendation();
+    (new GenerateGptRecommendationJob($invalid->id, $context))->handle(app(OpenAiClientWrapper::class), app(RecordAuditEvent::class));
+    expect($invalid->fresh()->status->value)->toBe('failed');
+});
+
 test('unauthorized user cannot request gpt recommendation', function (): void {
     $driver = gptUser(RoleName::CraneOperator);
     $job = gptDispatchJob($driver);

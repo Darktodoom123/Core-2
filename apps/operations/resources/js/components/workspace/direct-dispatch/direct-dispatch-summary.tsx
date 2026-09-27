@@ -1,5 +1,6 @@
 import { ClipboardList, Info } from 'lucide-react';
 import type { HTMLAttributes } from 'react';
+import { resourceRequirementTotals } from '@/components/dispatch-resource-requirements/requirement-fields';
 import { cn } from '@/lib/utils';
 import {
     DIRECT_DISPATCH_PROVENANCE,
@@ -42,6 +43,10 @@ function formatScheduleValue(value: string): string {
 export function projectDirectDispatchSummary(
     formData: DirectDispatchFormData,
 ): DirectDispatchSummaryProjection {
+    const resourceTotals = resourceRequirementTotals(
+        formData.resource_requirements,
+    );
+
     return {
         client: formData.client.trim() || 'Not selected',
         workStream: getWorkStreamLabel(formData.work_stream),
@@ -53,6 +58,7 @@ export function projectDirectDispatchSummary(
                 : 'Not scheduled',
         priority: PRIORITY_LABELS[formData.priority],
         requirementCount: formData.requirements.length,
+        resourcePlan: `${resourceTotals.personnel} crew · ${resourceTotals.assets} equipment`,
         missingRequiredFields: REQUIRED_FIELDS.filter(
             ({ key }) => !formData[key].trim(),
         ).map(({ label }) => label),
@@ -108,6 +114,10 @@ export function DirectDispatchSummary({
                 <SummaryItem
                     label="Requirements"
                     value={`${summary.requirementCount} included`}
+                />
+                <SummaryItem
+                    label="Minimum resources"
+                    value={summary.resourcePlan}
                 />
                 <SummaryItem label="Provenance" value={summary.provenance} />
             </dl>

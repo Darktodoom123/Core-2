@@ -294,6 +294,7 @@ it('dispatches push notification when AssignDispatchResources assigns personnel'
         'kind' => 'crane',
         'status' => AssetStatus::Available,
     ]);
+    clearDispatchAsset($asset);
 
     $job = createPushDispatchJob($dispatcher, DispatchStatus::Draft);
 

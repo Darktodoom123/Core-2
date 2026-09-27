@@ -30,6 +30,7 @@ use Illuminate\Support\Carbon;
  * @property DispatchPriority $priority
  * @property DispatchStatus $status
  * @property int $version
+ * @property array<string, array<string, int>>|null $resource_requirements
  * @property string|null $source_type
  * @property int|null $source_id
  * @property string|null $site
@@ -47,7 +48,7 @@ class DispatchJob extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['service_request_id', 'source_type', 'source_id', 'source_reference', 'reference', 'client', 'title', 'site', 'site_notes', 'site_latitude', 'site_longitude', 'planned_crane_slots', 'scheduled_start', 'scheduled_end', 'priority', 'status', 'requirements', 'created_by', 'activated_by', 'cancelled_by', 'cancellation_reason', 'version'];
+    protected $fillable = ['service_request_id', 'source_type', 'source_id', 'source_reference', 'reference', 'client', 'title', 'site', 'site_notes', 'site_latitude', 'site_longitude', 'planned_crane_slots', 'scheduled_start', 'scheduled_end', 'priority', 'status', 'requirements', 'resource_requirements', 'created_by', 'activated_by', 'cancelled_by', 'cancellation_reason', 'version'];
 
     /**
      * Every status write goes through the model, so the finish time is set in
@@ -84,6 +85,7 @@ class DispatchJob extends Model
             'priority' => DispatchPriority::class,
             'status' => DispatchStatus::class,
             'requirements' => 'array',
+            'resource_requirements' => 'array',
         ];
     }
 
