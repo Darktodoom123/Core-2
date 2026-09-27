@@ -107,7 +107,7 @@ const DUTY_OPTIONS: DutyOption[] = [
 
 const STANDBY_REASONS: Array<{ reason: StandbyReason; label: string }> = [
     {
-        reason: 'client_delay',
+        reason: 'waiting_on_client',
         label: 'Client Site Delay (Billable Demurrage)',
     },
     {
@@ -123,11 +123,11 @@ const STANDBY_REASONS: Array<{ reason: StandbyReason; label: string }> = [
         label: 'Site Access / Road Ingress Blocked',
     },
     {
-        reason: 'rigging_adjustment',
+        reason: 'rigging_recheck',
         label: 'Rigging & Outrigger Ground Re-checking',
     },
     {
-        reason: 'mechanical_inspection',
+        reason: 'inspection_hold',
         label: 'Mechanical Safety Walkaround Inspection',
     },
     {
@@ -153,7 +153,7 @@ export const DutyStatusSelectorModal: React.FC<
         localStatus: DutyStatus;
     } | null>(null);
     const [standbyReason, setStandbyReason] =
-        useState<StandbyReason>('client_delay');
+        useState<StandbyReason>('waiting_on_client');
     const [remarks, setRemarks] = useState('');
 
     const selectedStatus: DutyStatus =

@@ -130,7 +130,7 @@ export const HosScreen: React.FC<HosScreenProps> = ({
         });
     };
     const [standbyReason, setStandbyReason] =
-        useState<StandbyReason>('client_delay');
+        useState<StandbyReason>('waiting_on_client');
     const [remarks, setRemarks] = useState('');
     const [isCertified, setIsCertified] = useState(true);
     const [isSaved, setIsSaved] = useState(false);

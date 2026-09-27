@@ -624,12 +624,12 @@ export type DutyStatus =
     'driving' | 'operating' | 'standby' | 'on_break' | 'off_duty';
 
 export type StandbyReason =
-    | 'client_delay'
+    | 'waiting_on_client'
     | 'weather_hold'
     | 'site_access_blocked'
     | 'waiting_on_concrete'
-    | 'rigging_adjustment'
-    | 'mechanical_inspection'
+    | 'rigging_recheck'
+    | 'inspection_hold'
     | 'other';
 
 export interface DutyStatusInfo {

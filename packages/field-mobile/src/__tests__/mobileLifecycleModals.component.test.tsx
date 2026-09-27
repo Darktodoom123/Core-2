@@ -504,7 +504,7 @@ describe('Mobile Lifecycle Modals & Operational Safeguards', () => {
             await fireEvent.press(view.getByTestId('fallback-standby-btn'));
             expect(onChangeDutyStatus).toHaveBeenCalledWith(
                 'standby',
-                'mechanical_inspection',
+                'inspection_hold',
                 'Pre-trip DVIR defect lockout',
             );
             // Duty status bar immediately reflects standby

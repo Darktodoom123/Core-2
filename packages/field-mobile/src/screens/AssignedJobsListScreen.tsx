@@ -959,7 +959,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                     });
                                     onChangeDutyStatus?.(
                                         'standby',
-                                        'mechanical_inspection',
+                                        'inspection_hold',
                                         'Pre-trip DVIR defect lockout',
                                     );
                                 }}
@@ -1565,7 +1565,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                     });
                     onChangeDutyStatus?.(
                         'standby',
-                        'mechanical_inspection',
+                        'inspection_hold',
                         'Pre-trip DVIR defect lockout',
                     );
                 }}

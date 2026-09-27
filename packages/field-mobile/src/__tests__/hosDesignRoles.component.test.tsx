@@ -62,10 +62,10 @@ describe.each(MODES)('HoS design roles (%s)', (mode, theme: ThemeColors) => {
             <HosStandbyReasonSelector
                 setIsSaved={jest.fn()}
                 setStandbyReason={jest.fn()}
-                standbyReason="client_delay"
+                standbyReason="waiting_on_client"
             />,
         );
-        const chip = flat(view, 'standby-reason-client_delay');
+        const chip = flat(view, 'standby-reason-waiting_on_client');
 
         expect(chip.backgroundColor).toBe(theme.brandAmberLight);
         expect(chip.borderColor).toBe(theme.brandAmber);

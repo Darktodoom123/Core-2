@@ -208,13 +208,13 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
 
             // Select Standby
             await fireEvent.press(view.getByTestId('duty-option-standby'));
-            await fireEvent.press(view.getByTestId('reason-client_delay'));
+            await fireEvent.press(view.getByTestId('reason-waiting_on_client'));
 
             // Confirm
             await fireEvent.press(view.getByTestId('confirm-duty-status-btn'));
             expect(onChangeDutyStatus).toHaveBeenCalledWith(
                 'standby',
-                'client_delay',
+                'waiting_on_client',
                 undefined,
             );
 

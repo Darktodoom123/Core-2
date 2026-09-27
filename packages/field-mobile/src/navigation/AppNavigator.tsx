@@ -49,6 +49,11 @@ import { DocumentsWalletScreen } from '../screens/DocumentsWalletScreen';
 import { DvirScreen } from '../screens/DvirScreen';
 import { FieldSafetyScreen } from '../screens/FieldSafetyScreen';
 import { FuelScreen } from '../screens/FuelScreen';
+import {
+    planDutyCommand,
+    queuedHosCommands,
+    serverClockOffsetMs,
+} from '../screens/hos/hos-duty-command';
 import { HosScreen } from '../screens/HosScreen';
 import type {
     ShiftLogEvent,
@@ -574,6 +579,8 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     const [fuelFocusRequestId, setFuelFocusRequestId] = useState<number | null>(
         null,
     );
+    // Server time minus phone time; keeps duty events on the server's clock.
+    const serverClockOffsetRef = useRef(0);
     const [shiftInfo, setShiftInfo] = useState<ShiftInfo>({
         status: 'off_shift',
         dutyStatus: 'off_duty',
@@ -1227,6 +1234,11 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                 // is temporarily unavailable.
             }
 
+            serverClockOffsetRef.current = serverClockOffsetMs(
+                currentShift?.clocks?.server_time,
+                Date.now(),
+            );
+
             if (currentShift?.clocks && currentShift.clocks.shift_active) {
                 const clock = currentShift.clocks;
                 const statusMap: Record<string, DutyStatus> = {
@@ -1618,41 +1630,22 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                         ? targetJob.asset_assignments[0].operational_asset_id
                         : null);
                 const dispatchJobId = targetJob?.id ?? null;
-                const pendingHosCommands = outboxCommands
-                    .filter(
-                        (command) =>
-                            (command.type === 'start_hos_shift' ||
-                                command.type === 'change_hos_duty_status' ||
-                                command.type === 'certify_hos_shift') &&
-                            (command.state === 'queued' ||
-                                command.state === 'syncing'),
-                    )
-                    .sort(
-                        (left, right) =>
-                            left.createdAt.localeCompare(right.createdAt) ||
-                            left.id.localeCompare(right.id),
-                    );
-                const latestPending =
-                    pendingHosCommands[pendingHosCommands.length - 1];
-                const latestPendingEventAt = pendingHosCommands.reduce(
-                    (latest, command) => {
-                        const raw = command.payload.occurred_at;
-                        const timestamp =
-                            typeof raw === 'string'
-                                ? Date.parse(raw)
-                                : Number.NaN;
-
-                        return Number.isFinite(timestamp)
-                            ? Math.max(latest, timestamp)
-                            : latest;
+                const plan = planDutyCommand({
+                    dutyStatus,
+                    shift: {
+                        status: shiftInfo.status,
+                        dutyStatus: shiftInfo.dutyStatus,
                     },
-                    0,
-                );
-                const occurredAtMs = Math.max(
-                    Date.now(),
-                    latestPendingEventAt + 1,
-                );
-                const occurredAt = new Date(occurredAtMs).toISOString();
+                    pending: queuedHosCommands(outboxCommands),
+                    phoneNowMs: Date.now(),
+                    clockOffsetMs: serverClockOffsetRef.current,
+                });
+
+                if (plan.kind === null) {
+                    return true;
+                }
+
+                const occurredAt = plan.occurredAt;
                 const location = await captureDutyLocation();
                 const locationPayload = {
                     latitude: location.latitude,
@@ -1662,23 +1655,8 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                     location_source: location.source,
                     location_name: location.locationName,
                 };
-                const hasPendingShiftStart = pendingHosCommands.some(
-                    (command) => command.type === 'start_hos_shift',
-                );
-                const localDutyStatus = latestPending
-                    ? latestPending.type === 'certify_hos_shift'
-                        ? 'off_duty'
-                        : ((latestPending.payload.duty_status as
-                              DutyStatus | undefined) ?? 'operating')
-                    : (shiftInfo.dutyStatus ?? 'off_duty');
-                const shouldStartShift =
-                    dutyStatus !== 'off_duty' &&
-                    !hasPendingShiftStart &&
-                    (shiftInfo.status === 'off_shift' ||
-                        shiftInfo.dutyStatus === 'off_duty' ||
-                        localDutyStatus === 'off_duty');
 
-                if (dutyStatus === 'off_duty') {
+                if (plan.kind === 'certify') {
                     await commandOutbox.enqueueCertifyHosShift({
                         operational_asset_id: operationalAssetId,
                         dispatch_job_id: dispatchJobId,
@@ -1688,7 +1666,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                         ...locationPayload,
                         remarks,
                     });
-                } else if (shouldStartShift) {
+                } else if (plan.kind === 'start') {
                     await commandOutbox.enqueueStartHosShift({
                         operational_asset_id: operationalAssetId,
                         dispatch_job_id: dispatchJobId,
@@ -2693,7 +2671,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
 
                                     handleChangeDutyStatus(
                                         'standby',
-                                        'mechanical_inspection',
+                                        'inspection_hold',
                                         'Pre-trip DVIR defect lockout',
                                     );
                                     setDvirStatus('defect');
@@ -2708,7 +2686,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 onSwitchToStandby={() => {
                                     handleChangeDutyStatus(
                                         'standby',
-                                        'mechanical_inspection',
+                                        'inspection_hold',
                                         'Pre-trip DVIR defect lockout',
                                     );
                                     setActiveAppView('main');
