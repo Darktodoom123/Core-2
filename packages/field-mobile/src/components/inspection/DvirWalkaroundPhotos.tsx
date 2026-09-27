@@ -23,7 +23,14 @@ const generatePhotoName = (angle: string, source: 'camera' | 'gallery') => {
 };
 
 export type WalkaroundAngle =
-    'driver_side' | 'front' | 'passenger_side' | 'back';
+    | 'driver_side'
+    | 'front'
+    | 'passenger_side'
+    | 'back'
+    | 'cab'
+    | 'defect_1'
+    | 'defect_2'
+    | 'defect_3';
 
 export interface WalkaroundAngleConfig {
     key: WalkaroundAngle;
@@ -42,6 +49,18 @@ export const WALKAROUND_ANGLES: WalkaroundAngleConfig[] = [
     { key: 'back', label: 'Back', testID: 'slot-back' },
 ];
 
+/** Optional: dashboard, hour meter and warning lights, seen from the seat. */
+export const CAB_ANGLES: WalkaroundAngleConfig[] = [
+    { key: 'cab', label: 'Cab / Dashboard', testID: 'slot-cab' },
+];
+
+/** Close-ups of what is wrong; sent to the server as the `defect` angle. */
+export const DEFECT_ANGLES: WalkaroundAngleConfig[] = [
+    { key: 'defect_1', label: 'Defect 1', testID: 'slot-defect-1' },
+    { key: 'defect_2', label: 'Defect 2', testID: 'slot-defect-2' },
+    { key: 'defect_3', label: 'Defect 3', testID: 'slot-defect-3' },
+];
+
 export type WalkaroundPhotosMap = Partial<
     Record<WalkaroundAngle, PhotoAttachment>
 >;
@@ -51,6 +70,8 @@ export interface DvirWalkaroundPhotosProps {
     onCapturePhoto: (angle: WalkaroundAngle, photo: PhotoAttachment) => void;
     onRemovePhoto: (angle: WalkaroundAngle) => void;
     title?: string;
+    /** The slots to show; defaults to the four walkaround angles. */
+    angles?: WalkaroundAngleConfig[];
     testID?: string;
 }
 
@@ -59,6 +80,7 @@ export const DvirWalkaroundPhotos: React.FC<DvirWalkaroundPhotosProps> = ({
     onCapturePhoto,
     onRemovePhoto,
     title = 'Take walkaround photos',
+    angles = WALKAROUND_ANGLES,
     testID = 'dvir-walkaround-photos',
 }) => {
     const { isDarkHud } = useTheme();
@@ -185,7 +207,7 @@ export const DvirWalkaroundPhotos: React.FC<DvirWalkaroundPhotosProps> = ({
             </Text>
 
             <View style={styles.gridRow}>
-                {WALKAROUND_ANGLES.map((angleConfig) => {
+                {angles.map((angleConfig) => {
                     const photo = photos[angleConfig.key];
                     const isLoading = loadingAngle === angleConfig.key;
 

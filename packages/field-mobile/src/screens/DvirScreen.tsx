@@ -7,6 +7,8 @@ import {
     PreTripDefectFallbackModal,
 } from '../components/index';
 import {
+    CAB_ANGLES,
+    DEFECT_ANGLES,
     DVIR_DEFECT_CATEGORIES,
     DvirDefectsModal,
     DvirWalkaroundPhotos,
@@ -257,6 +259,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
 
     const hasCriticalDefects = selectedDefects.some((d) => d.critical);
     const isUnsafe = safetyStatus === 'unsafe' || hasCriticalDefects;
+    const needsDefectPhotos = isUnsafe || selectedDefects.length > 0;
 
     const handleCapturePhoto = (
         angle: WalkaroundAngle,
@@ -308,7 +311,16 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
             selectedDefects,
         });
 
-        const photosPayload = buildWalkaroundPhotosPayload(walkaroundPhotos);
+        // Defect close-ups only go with an inspection that reports a defect.
+        const photosPayload = buildWalkaroundPhotosPayload(
+            needsDefectPhotos
+                ? walkaroundPhotos
+                : Object.fromEntries(
+                      Object.entries(walkaroundPhotos).filter(
+                          ([angle]) => !angle.startsWith('defect_'),
+                      ),
+                  ),
+        );
         const record = buildDvirRecord({
             checksList,
             attested,
@@ -560,6 +572,14 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                             photos={walkaroundPhotos}
                             title="Take walkaround photos"
                         />
+                        <DvirWalkaroundPhotos
+                            angles={CAB_ANGLES}
+                            onCapturePhoto={handleCapturePhoto}
+                            onRemovePhoto={handleRemovePhoto}
+                            photos={walkaroundPhotos}
+                            testID="dvir-cab-photo"
+                            title="Cab / dashboard photo · optional"
+                        />
 
                         {/* Section 3: Add new defects tailored to designated equipment */}
                         <DvirDefectsSection
@@ -569,6 +589,16 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                             selectedDefects={selectedDefects}
                             setIsDefectsModalOpen={setIsDefectsModalOpen}
                         />
+                        {needsDefectPhotos ? (
+                            <DvirWalkaroundPhotos
+                                angles={DEFECT_ANGLES}
+                                onCapturePhoto={handleCapturePhoto}
+                                onRemovePhoto={handleRemovePhoto}
+                                photos={walkaroundPhotos}
+                                testID="dvir-defect-photos"
+                                title="Defect close-ups · up to 3"
+                            />
+                        ) : null}
                         {/* Section 4: Choose safety status (Required) */}
                         <DvirSafetyStatusSection
                             presentation={presentation}

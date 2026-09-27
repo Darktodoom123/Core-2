@@ -118,7 +118,8 @@ export function buildWalkaroundPhotosPayload(
     return Object.entries(walkaroundPhotos)
         .filter(([, photo]) => Boolean(photo))
         .map(([angle, photo]) => ({
-            angle,
+            // Numbered defect slots are all the server's `defect` angle.
+            angle: angle.startsWith('defect_') ? 'defect' : angle,
             file_name: photo!.fileName,
             file_size: photo!.fileSize,
             base64: photo!.base64,
