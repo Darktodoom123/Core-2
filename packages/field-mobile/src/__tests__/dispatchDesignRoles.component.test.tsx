@@ -118,9 +118,7 @@ describe.each(MODES)(
             expect(selected.borderColor).toBe(theme.brandAmber);
             expect(textColor(view, 'Active (0)')).toBe(theme.textPrimary);
             expect(idle.backgroundColor).not.toBe(theme.actionCobalt);
-            expect(textColor(view, 'Needs Response (0)')).toBe(
-                theme.textSecondary,
-            );
+            expect(textColor(view, 'Respond (0)')).toBe(theme.textSecondary);
             expect(selected.minHeight).toBeGreaterThanOrEqual(48);
             expect(selected.elevation).toBeUndefined();
         });
@@ -134,7 +132,7 @@ describe.each(MODES)(
 
             expect(panel.backgroundColor).toBe(theme.surface);
             expect(panel.borderColor).toBe(theme.border);
-            expect(textColor(view, 'No Dispatch Orders Found')).toBe(
+            expect(textColor(view, 'No Work Under Way')).toBe(
                 theme.textPrimary,
             );
         });

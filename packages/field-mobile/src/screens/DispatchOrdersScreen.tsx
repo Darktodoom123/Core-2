@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AssignmentResponseCard } from '../components/cards/AssignmentResponseCard';
-import { activeJobs } from '../components/cards/job-card/job-lifecycle';
 import { JobListItemCard } from '../components/cards/JobListItemCard';
 import { Icon } from '../components/common/Icon';
 import { TileScreenHeader } from '../components/layout/tile-screen-header';
@@ -15,12 +14,12 @@ import type {
     OutboxCommand,
     ReportDelayPayload,
 } from '../types/index';
+import { defaultIntakeTab, splitIntakeJobs } from './dispatch/intake-tabs';
+import type { DispatchTab } from './dispatch/intake-tabs';
 import { JobHistoryDetailSheet } from './dispatch/job-history-detail-sheet';
 import { JobHistoryList } from './dispatch/job-history-list';
 import { useJobHistory } from './dispatch/use-job-history';
 import { useJobHistoryDetail } from './dispatch/use-job-history-detail';
-
-type DispatchTab = 'pending' | 'active' | 'history';
 
 export interface DispatchOrdersScreenProps {
     jobs: DispatchJob[];
@@ -81,32 +80,45 @@ export const DispatchOrdersScreen: React.FC<DispatchOrdersScreenProps> = ({
     const { theme } = useTheme();
     const styles = useThemedStyles(createStyles);
 
-    // Finished jobs never sit among live work; History loads them separately.
-    const jobs = activeJobs(allJobs);
-    const pendingJobs = jobs.filter(
-        (job) => job.my_assignment?.response_status === 'pending',
-    );
+    // Each live job sits in one tab; History loads finished jobs separately.
+    const intake = splitIntakeJobs(allJobs);
+    const {
+        pending: pendingJobs,
+        scheduled: scheduledJobs,
+        active: activeJobs,
+    } = intake;
+    const liveJobCount =
+        pendingJobs.length + scheduledJobs.length + activeJobs.length;
     const [userTab, setUserTab] = useState<DispatchTab | null>(null);
     const [delayModalJob, setDelayModalJob] = useState<DispatchJob | null>(
         null,
     );
 
     const hasPending = pendingJobs.length > 0;
-    const selectedTab: DispatchTab =
-        userTab ?? (pendingJobs.length > 0 ? 'pending' : 'active');
-    const displayedJobs = selectedTab === 'pending' ? pendingJobs : jobs;
+    const selectedTab: DispatchTab = userTab ?? defaultIntakeTab(intake);
+    const displayedJobs =
+        selectedTab === 'pending'
+            ? pendingJobs
+            : selectedTab === 'scheduled'
+              ? scheduledJobs
+              : activeJobs;
     const history = useJobHistory(apiClient);
     const historyDetail = useJobHistoryDetail(apiClient);
     const tabs: Array<{ id: DispatchTab; label: string; a11y: string }> = [
         {
             id: 'pending',
-            label: `Needs Response (${pendingJobs.length})`,
+            label: `Respond (${pendingJobs.length})`,
             a11y: `Needs response tab, ${pendingJobs.length} orders`,
         },
         {
+            id: 'scheduled',
+            label: `Scheduled (${scheduledJobs.length})`,
+            a11y: `Scheduled orders tab, ${scheduledJobs.length} not started yet`,
+        },
+        {
             id: 'active',
-            label: `Active (${jobs.length})`,
-            a11y: `Active orders tab, ${jobs.length} orders`,
+            label: `Active (${activeJobs.length})`,
+            a11y: `Active orders tab, ${activeJobs.length} under way`,
         },
         { id: 'history', label: 'History', a11y: 'Finished jobs history tab' },
     ];
@@ -155,7 +167,7 @@ export const DispatchOrdersScreen: React.FC<DispatchOrdersScreenProps> = ({
                         </Text>
                     </View>
                 }
-                subtitle={`${pendingJobs.length} needs response · ${jobs.length} active`}
+                subtitle={`${pendingJobs.length} needs response · ${scheduledJobs.length} scheduled · ${activeJobs.length} active`}
                 title="Dispatch Intake & Orders"
             />
 
@@ -225,12 +237,16 @@ export const DispatchOrdersScreen: React.FC<DispatchOrdersScreenProps> = ({
                         <Text style={styles.emptyTitle}>
                             {selectedTab === 'pending'
                                 ? 'No Orders Pending Response'
-                                : 'No Dispatch Orders Found'}
+                                : selectedTab === 'scheduled'
+                                  ? 'Nothing Scheduled'
+                                  : 'No Work Under Way'}
                         </Text>
                         <Text style={styles.emptySubtext}>
                             {selectedTab === 'pending'
                                 ? 'All dispatched job orders have been reviewed. New incoming orders from central dispatch will appear here immediately.'
-                                : 'There are currently no active or scheduled equipment dispatch assignments.'}
+                                : selectedTab === 'scheduled'
+                                  ? 'Accepted jobs that have not started yet will appear here, soonest first.'
+                                  : 'Jobs you are en route to, on site at, or working appear here.'}
                         </Text>
                     </View>
                 ) : (
@@ -246,7 +262,7 @@ export const DispatchOrdersScreen: React.FC<DispatchOrdersScreenProps> = ({
                                         ?.dispatch_job_id === job.id ||
                                     (command.payload as any)?.jobId ===
                                         job.id ||
-                                    (!command.jobId && jobs.length === 1),
+                                    (!command.jobId && liveJobCount === 1),
                             );
 
                         const queuedDelayCommand = outboxCommands?.find(

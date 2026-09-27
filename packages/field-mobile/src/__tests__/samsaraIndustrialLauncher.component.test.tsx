@@ -297,7 +297,7 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
 
             // Sheet opens on the pending assignment
             expect(view.getByTestId('dispatch-intake-sheet')).toBeTruthy();
-            expect(view.getByText('Needs Response (1)')).toBeTruthy();
+            expect(view.getByText('Respond (1)')).toBeTruthy();
             expect(view.getByTestId('dispatch-intake-job-202')).toBeTruthy();
 
             // Accept assignment

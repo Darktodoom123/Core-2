@@ -125,22 +125,23 @@ const openHistory = (view: View) =>
     fireEvent.press(view.getByTestId('intake-tab-history'));
 
 describe.each(MODES)('Dispatch history (%s)', (mode, theme: ThemeColors) => {
-    it('splits work into Needs Response, Active and History', async () => {
+    it('splits work into Needs Response, Scheduled, Active and History', async () => {
         const view = await renderScreen(mode, [
             pending,
             jobWith(2, 'accepted'),
             jobWith(3, 'en_route'),
         ]);
 
-        expect(view.getByText('Needs Response (1)')).toBeTruthy();
-        expect(view.getByText('Active (3)')).toBeTruthy();
+        expect(view.getByText('Respond (1)')).toBeTruthy();
+        expect(view.getByText('Scheduled (1)')).toBeTruthy();
+        expect(view.getByText('Active (1)')).toBeTruthy();
         expect(view.getByText('History')).toBeTruthy();
         expect(view.queryByText(/All Orders/)).toBeNull();
     });
 
     it('never lists a finished job under Active', async () => {
         const view = await renderScreen(mode, [
-            jobWith(2, 'accepted'),
+            jobWith(2, 'working'),
             completed,
         ]);
 
