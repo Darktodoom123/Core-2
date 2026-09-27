@@ -54,3 +54,30 @@ test('surfaces a server failure instead of an empty history', async () => {
 
     await assert.rejects(() => client.fetchJobHistory(1));
 });
+
+test('loads one finished job record from its history endpoint', async () => {
+    const { client, urls } = clientReturning({
+        data: {
+            job: { id: 21, reference: 'JOB-21' },
+            timeline: [
+                {
+                    status: 'completed',
+                    label: 'Completed',
+                    at: '2026-09-26T12:00:00+00:00',
+                },
+            ],
+            delays: [],
+            report: null,
+        },
+    });
+
+    const detail = await client.fetchJobHistoryDetail(21);
+
+    assert.equal(
+        urls[0],
+        'http://localhost:8000/api/v1/dispatch-jobs/21/history',
+    );
+    assert.equal(detail.job.id, 21);
+    assert.equal(detail.timeline[0].status, 'completed');
+    assert.equal(detail.report, null);
+});

@@ -165,6 +165,40 @@ export interface DispatchJob {
     cancelled_at?: string | null;
 }
 
+/** A status step the server recorded on a finished job. */
+export interface JobHistoryStep {
+    status: DispatchStatus;
+    label: string;
+    at: string;
+}
+
+export interface JobHistoryDelay {
+    id: number;
+    context_label: string;
+    reason_label: string;
+    estimated_minutes: number | null;
+    notes: string | null;
+    reported_at: string;
+}
+
+export interface JobHistoryReport {
+    id: number;
+    status: 'draft' | 'submitted' | 'approved' | 'rejected';
+    status_label: string;
+    work_summary: string;
+    remarks: string | null;
+    rejection_reason: string | null;
+    submitted_at: string | null;
+}
+
+/** GET /api/v1/dispatch-jobs/{id}/history: one finished job, read-only. */
+export interface JobHistoryDetail {
+    job: DispatchJob;
+    timeline: JobHistoryStep[];
+    delays: JobHistoryDelay[];
+    report: JobHistoryReport | null;
+}
+
 /** One page of the operator's finished jobs, newest first. */
 export interface JobHistoryPage {
     items: DispatchJob[];

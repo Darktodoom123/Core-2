@@ -14,6 +14,7 @@ import { darkHudThemeColors, lightThemeColors } from '../theme/tokens';
 import type {
     DispatchJob,
     DispatchStatus,
+    JobHistoryDetail,
     JobHistoryPage,
 } from '../types/index';
 
@@ -64,7 +65,10 @@ const pending = jobWith(1, 'dispatched', {
     },
 });
 
-const fakeApi = (pages: Array<JobHistoryPage | Error>) => {
+const fakeApi = (
+    pages: Array<JobHistoryPage | Error>,
+    details: Array<JobHistoryDetail | Error> = [],
+) => {
     const fetchJobHistory = jest.fn<Promise<JobHistoryPage>, [number]>(
         async () => {
             const next = pages.shift() ?? { items: [], nextPage: null };
@@ -77,9 +81,25 @@ const fakeApi = (pages: Array<JobHistoryPage | Error>) => {
         },
     );
 
+    const fetchJobHistoryDetail = jest.fn<Promise<JobHistoryDetail>, [number]>(
+        async () => {
+            const next = details.shift();
+
+            if (!next || next instanceof Error) {
+                throw next ?? new Error('no detail');
+            }
+
+            return next;
+        },
+    );
+
     return {
-        api: { fetchJobHistory } as unknown as FieldApiClient,
+        api: {
+            fetchJobHistory,
+            fetchJobHistoryDetail,
+        } as unknown as FieldApiClient,
         fetchJobHistory,
+        fetchJobHistoryDetail,
     };
 };
 
@@ -234,5 +254,130 @@ describe.each(MODES)('Dispatch history (%s)', (mode, theme: ThemeColors) => {
                 view.getByText('No finished jobs in the last 30 days'),
             ).toBeTruthy(),
         );
+    });
+
+    it('opens a finished job to show what happened on it', async () => {
+        const { api, fetchJobHistoryDetail } = fakeApi(
+            [{ items: [completed], nextPage: null }],
+            [
+                {
+                    job: completed,
+                    timeline: [
+                        {
+                            status: 'accepted',
+                            label: 'Accepted',
+                            at: '2026-09-26T08:00:00Z',
+                        },
+                        {
+                            status: 'completed',
+                            label: 'Completed',
+                            at: '2026-09-26T12:00:00Z',
+                        },
+                    ],
+                    delays: [
+                        {
+                            id: 5,
+                            context_label: 'In transit',
+                            reason_label: 'Escort vehicle late',
+                            estimated_minutes: 20,
+                            notes: 'Waited at gate',
+                            reported_at: '2026-09-26T09:00:00Z',
+                        },
+                    ],
+                    report: {
+                        id: 9,
+                        status: 'rejected',
+                        status_label: 'Rejected',
+                        work_summary: 'Set four girders.',
+                        remarks: null,
+                        rejection_reason: 'Missing meter reading',
+                        submitted_at: '2026-09-26T12:10:00Z',
+                    },
+                },
+            ],
+        );
+        const view = await renderScreen(mode, [], api);
+
+        await openHistory(view);
+        await fireEvent.press(await view.findByTestId('job-history-card-21'));
+
+        const sheet = await view.findByTestId('job-history-detail');
+        await within(sheet).findByText('Escort vehicle late');
+        expect(fetchJobHistoryDetail).toHaveBeenCalledWith(21);
+        expect(within(sheet).getByText('Accepted')).toBeTruthy();
+        expect(within(sheet).getAllByText(/^Sep 26/).length).toBeGreaterThan(0);
+        expect(within(sheet).getByText(/About 20 min/)).toBeTruthy();
+        expect(within(sheet).getByText('Set four girders.')).toBeTruthy();
+        expect(within(sheet).getByText(/Missing meter reading/)).toBeTruthy();
+
+        for (const id of ['job-directions-btn-21', 'report-delay-btn-21']) {
+            expect(within(sheet).queryByTestId(id)).toBeNull();
+        }
+
+        await fireEvent.press(
+            within(sheet).getByTestId('job-history-detail-close'),
+        );
+        await waitFor(() =>
+            expect(view.queryByTestId('job-history-detail')).toBeNull(),
+        );
+    });
+
+    it('says plainly when there were no delays and no report from the operator', async () => {
+        const { api } = fakeApi(
+            [{ items: [completed], nextPage: null }],
+            [
+                {
+                    job: completed,
+                    timeline: [],
+                    delays: [],
+                    report: null,
+                },
+            ],
+        );
+        const view = await renderScreen(mode, [], api);
+
+        await openHistory(view);
+        await fireEvent.press(await view.findByTestId('job-history-card-21'));
+
+        const sheet = await view.findByTestId('job-history-detail');
+        expect(
+            await within(sheet).findByText('No delays reported'),
+        ).toBeTruthy();
+        expect(
+            within(sheet).getByText(
+                'You did not submit a job report for this job',
+            ),
+        ).toBeTruthy();
+        expect(
+            within(sheet).getByText('No status steps recorded'),
+        ).toBeTruthy();
+    });
+
+    it('reports a failed detail load with a retry, never an empty record', async () => {
+        const { api, fetchJobHistoryDetail } = fakeApi(
+            [{ items: [completed], nextPage: null }],
+            [
+                new Error('offline'),
+                { job: completed, timeline: [], delays: [], report: null },
+            ],
+        );
+        const view = await renderScreen(mode, [], api);
+
+        await openHistory(view);
+        await fireEvent.press(await view.findByTestId('job-history-card-21'));
+
+        const sheet = await view.findByTestId('job-history-detail');
+        expect(
+            await within(sheet).findByText("Job details didn't load"),
+        ).toBeTruthy();
+        expect(within(sheet).queryByText('No delays reported')).toBeNull();
+
+        await fireEvent.press(
+            within(sheet).getByTestId('job-history-detail-retry'),
+        );
+        expect(
+            await within(sheet).findByText('No delays reported'),
+        ).toBeTruthy();
+        expect(fetchJobHistoryDetail).toHaveBeenCalledTimes(2);
     });
 });

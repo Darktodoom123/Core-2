@@ -14,6 +14,7 @@ import type {
     DispatchJob,
     EquipmentHandoverClaimResponse,
     EquipmentHandoverInitiateResponse,
+    JobHistoryDetail,
     JobHistoryPage,
     HosClocks,
     JobReportCommandPayload,
@@ -642,6 +643,18 @@ export class FieldApiClient {
                     ? body.meta.current_page + 1
                     : null,
         };
+    }
+
+    /** What happened on one of the operator's finished jobs. */
+    public async fetchJobHistoryDetail(
+        jobId: number,
+    ): Promise<JobHistoryDetail> {
+        const response = await this.fetchFn(
+            `${this.baseUrl}/api/v1/dispatch-jobs/${jobId}/history`,
+            { method: 'GET', headers: this.getHeaders() },
+        );
+
+        return this.handleResponse<JobHistoryDetail>(response);
     }
 
     public async fetchLocationWeather(

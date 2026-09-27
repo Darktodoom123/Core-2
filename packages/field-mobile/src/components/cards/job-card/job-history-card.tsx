@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTheme, useThemedStyles } from '../../../theme';
 import type { ThemeColors } from '../../../theme';
 import type { DispatchJob } from '../../../types/index';
@@ -37,16 +37,25 @@ export function jobHistoryTimeLabel(job: DispatchJob): string | null {
         : null;
 }
 
-/** A finished job: read-only, with no actions. */
-export const JobHistoryCard: React.FC<{ job: DispatchJob }> = ({ job }) => {
+export interface JobHistoryCardProps {
+    job: DispatchJob;
+    /** Opens the job's record; the card itself never changes the job. */
+    onPress?: () => void;
+}
+
+/** A finished job: read-only, with no job actions. */
+export const JobHistoryCard: React.FC<JobHistoryCardProps> = ({
+    job,
+    onPress,
+}) => {
     const { theme } = useTheme();
     const styles = useThemedStyles(createStyles);
     const isCompleted = job.status?.value === 'completed';
     const timeLabel = jobHistoryTimeLabel(job);
     const place = [job.client, job.site].filter(Boolean).join(' · ');
 
-    return (
-        <View style={styles.card} testID={`job-history-card-${job.id}`}>
+    const content = (
+        <>
             <View style={styles.topRow}>
                 <Text selectable style={styles.reference}>
                     {job.reference || `Job #${job.id}`}
@@ -95,7 +104,27 @@ export const JobHistoryCard: React.FC<{ job: DispatchJob }> = ({ job }) => {
                     <Text style={styles.meta}>{timeLabel}</Text>
                 </View>
             ) : null}
-        </View>
+        </>
+    );
+
+    if (!onPress) {
+        return (
+            <View style={styles.card} testID={`job-history-card-${job.id}`}>
+                {content}
+            </View>
+        );
+    }
+
+    return (
+        <Pressable
+            accessibilityHint="Opens what happened on this job"
+            accessibilityRole="button"
+            onPress={onPress}
+            style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+            testID={`job-history-card-${job.id}`}
+        >
+            {content}
+        </Pressable>
     );
 };
 
@@ -155,6 +184,9 @@ const createStyles = (theme: ThemeColors) =>
             color: theme.textSecondary,
             fontSize: 13,
             lineHeight: 18,
+        },
+        pressed: {
+            transform: [{ scale: 0.985 }],
         },
         timeRow: {
             alignItems: 'center',

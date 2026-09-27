@@ -10,11 +10,18 @@ import { JobHistoryCard } from '../../components/cards/job-card/job-history-card
 import { Icon } from '../../components/common/Icon';
 import { useTheme, useThemedStyles } from '../../theme';
 import type { ThemeColors } from '../../theme';
+import type { DispatchJob } from '../../types/index';
 import type { JobHistoryState } from './use-job-history';
 
 /** Dispatch → History: the operator's finished jobs, read-only. */
-export const JobHistoryList: React.FC<{ history: JobHistoryState }> = ({
+export interface JobHistoryListProps {
+    history: JobHistoryState;
+    onOpenJob: (job: DispatchJob) => void;
+}
+
+export const JobHistoryList: React.FC<JobHistoryListProps> = ({
     history,
+    onOpenJob,
 }) => {
     const { theme } = useTheme();
     const styles = useThemedStyles(createStyles);
@@ -80,7 +87,11 @@ export const JobHistoryList: React.FC<{ history: JobHistoryState }> = ({
         <View style={styles.list} testID="job-history-list">
             <Text style={styles.windowNote}>Last 30 days</Text>
             {items.map((job) => (
-                <JobHistoryCard job={job} key={job.id} />
+                <JobHistoryCard
+                    job={job}
+                    key={job.id}
+                    onPress={() => onOpenJob(job)}
+                />
             ))}
             {history.loadMoreFailed ? (
                 <Text accessibilityRole="alert" style={styles.inlineError}>

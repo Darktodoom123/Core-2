@@ -15,8 +15,10 @@ import type {
     OutboxCommand,
     ReportDelayPayload,
 } from '../types/index';
+import { JobHistoryDetailSheet } from './dispatch/job-history-detail-sheet';
 import { JobHistoryList } from './dispatch/job-history-list';
 import { useJobHistory } from './dispatch/use-job-history';
+import { useJobHistoryDetail } from './dispatch/use-job-history-detail';
 
 type DispatchTab = 'pending' | 'active' | 'history';
 
@@ -94,6 +96,7 @@ export const DispatchOrdersScreen: React.FC<DispatchOrdersScreenProps> = ({
         userTab ?? (pendingJobs.length > 0 ? 'pending' : 'active');
     const displayedJobs = selectedTab === 'pending' ? pendingJobs : jobs;
     const history = useJobHistory(apiClient);
+    const historyDetail = useJobHistoryDetail(apiClient);
     const tabs: Array<{ id: DispatchTab; label: string; a11y: string }> = [
         {
             id: 'pending',
@@ -203,7 +206,10 @@ export const DispatchOrdersScreen: React.FC<DispatchOrdersScreenProps> = ({
                 testID="dispatch-orders-list"
             >
                 {selectedTab === 'history' ? (
-                    <JobHistoryList history={history} />
+                    <JobHistoryList
+                        history={history}
+                        onOpenJob={historyDetail.open}
+                    />
                 ) : displayedJobs.length === 0 ? (
                     <View
                         style={styles.emptyCard}
@@ -299,6 +305,8 @@ export const DispatchOrdersScreen: React.FC<DispatchOrdersScreenProps> = ({
                     })
                 )}
             </ScrollView>
+
+            <JobHistoryDetailSheet state={historyDetail} />
 
             {delayModalJob && onSubmitDelay ? (
                 <ReportDelayModal
