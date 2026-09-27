@@ -14,6 +14,12 @@ const MIGRATED = [
     ...fs
         .readdirSync(path.join(SRC, 'components', 'cards', 'job-card'))
         .map((file) => `components/cards/job-card/${file}`),
+    ...fs
+        .readdirSync(path.join(SRC, 'components', 'fuel'))
+        .map((file) => `components/fuel/${file}`),
+    ...fs
+        .readdirSync(path.join(SRC, 'components', 'home'))
+        .map((file) => `components/home/${file}`),
     'components/layout/field-header.tsx',
     'components/layout/profile-summary.tsx',
     'components/layout/sync-status-pill.tsx',
@@ -24,6 +30,7 @@ const MIGRATED = [
         .map((file) => `components/sheets/report-delay/${file}`),
     'screens/DispatchOrdersScreen.tsx',
     'screens/DocumentsWalletScreen.tsx',
+    'screens/FuelScreen.tsx',
     ...fs
         .readdirSync(path.join(SRC, 'screens', 'documents'))
         .map((file) => `screens/documents/${file}`),

@@ -133,7 +133,32 @@ Rules for new and touched code:
   `AssignmentResponseCard.tsx`, `JobListItemCard.tsx` with
   `components/cards/job-card/`, and `ReportDelayModal.tsx` with
   `components/sheets/report-delay/`), and Documents
-  (`DocumentsWalletScreen.tsx` with `src/screens/documents/`).
+  (`DocumentsWalletScreen.tsx` with `src/screens/documents/`), and Fuel
+  (`FuelScreen.tsx` with `src/components/fuel/`).
+- Fuel request status: waiting on the office is neutral, approved is cobalt,
+  ready to refuel and recorded are green, rejected is red. Urgent is orange
+  and critical is red. A queued request that failed reads "Not accepted"
+  (red); a conflict, unresolved or expired command reads "Needs attention"
+  (orange). Offline is orange, as in the home header.
+- Home, no unit: when the shift has no job and no unit, one neutral
+  `NoUnitCard` (`components/home/`) replaces the vehicle card. It carries no
+  inspection badge and no duty wording ("Standby" is a duty status and the
+  duty bar already shows it). The relief claim (`ReliefClaimButton`) is an
+  outlined secondary action inside that card, or under the gold "I'm On Site"
+  action when a job exists. A unit that is not yet linked shows "Pre-Trip
+  Due", never "DVIR Cleared".
+- Home says "no work" once. The `AssignmentSummaryCard` shows only while
+  loading or when there is work (active job, responses needed); with no work
+  it renders nothing and the `NoUnitCard` carries the pull-to-refresh hint.
+  The full list and its empty state belong to Dispatch.
+- Home header has one status control. The `SyncStatusPill` carries both
+  connection and sync ("Synced", "Offline", "Syncing", "N need attention",
+  failed); there is no separate online pill. The light/dark setting lives in
+  the Profile sheet's Display & Lighting section, not the header. The bell
+  counts only items for the operator from other people (assignments awaiting
+  a response); sync problems are counted once, in the pill. The bell's sheet
+  opens with `includeSyncItems={false}`, so it never lists sync failures or
+  claims the outbox is clear.
 - Job lifecycle status (`job-card/job-status-tone.ts`): awaiting response is
   warning orange, scheduled/dispatched/accepted are neutral, en route/arrived/
   working are cobalt (info), completed is green, cancelled is red. Each has an
