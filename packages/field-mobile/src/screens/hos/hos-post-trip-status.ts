@@ -11,6 +11,8 @@ export interface PostTripCheck {
     assetCode: string | null | undefined;
     /** ISO time the server says this shift started. */
     shiftStartedAt: string | null | undefined;
+    /** ISO time the unit was last linked; a re-link needs a new post-trip. */
+    linkedAt?: string | null;
     serverInspections: readonly ServerDvirRecord[];
     outboxCommands: readonly OutboxCommand[];
 }
@@ -34,13 +36,15 @@ function atOrAfter(value: unknown, start: number): boolean {
 }
 
 /**
- * True when this unit's post-trip was done during the current shift: the
- * server already has it, or it's saved on this phone waiting to be sent.
- * Survives an app restart (outbox) and a phone switch (server history).
+ * True when this unit's post-trip was done this shift, after the unit was
+ * last linked: the server already has it, or it's saved on this phone
+ * waiting to be sent. Survives an app restart (outbox) and a phone switch
+ * (server history); a release and re-link asks for a new one.
  */
 export function postTripDoneThisShift({
     assetCode,
     shiftStartedAt,
+    linkedAt,
     serverInspections,
     outboxCommands,
 }: PostTripCheck): boolean {
@@ -48,11 +52,16 @@ export function postTripDoneThisShift({
         return false;
     }
 
-    const start = Date.parse(shiftStartedAt);
+    const shiftStart = Date.parse(shiftStartedAt);
 
-    if (!Number.isFinite(start)) {
+    if (!Number.isFinite(shiftStart)) {
         return false;
     }
+
+    const linkStart = linkedAt ? Date.parse(linkedAt) : Number.NaN;
+    const start = Number.isFinite(linkStart)
+        ? Math.max(shiftStart, linkStart)
+        : shiftStart;
 
     const onServer = serverInspections.some(
         (record) =>

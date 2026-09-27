@@ -101,6 +101,54 @@ test('a post-trip the server rejected or that expired does not count', () => {
     );
 });
 
+test('after a release and re-link, a post-trip from before the re-link does not count', () => {
+    const earlier = {
+        type: 'post_trip',
+        asset_code: 'CRN-101',
+        completed_at: '2026-09-27T12:00:00+08:00',
+    };
+    const relinkedAt = '2026-09-27T13:00:00+08:00';
+
+    assert.equal(
+        postTripDoneThisShift({
+            ...base,
+            linkedAt: relinkedAt,
+            serverInspections: [earlier],
+            outboxCommands: [
+                dvirCommand({ createdAt: '2026-09-27T12:00:00+08:00' }),
+            ],
+        }),
+        false,
+    );
+    assert.equal(
+        postTripDoneThisShift({
+            ...base,
+            linkedAt: relinkedAt,
+            serverInspections: [
+                { ...earlier, completed_at: '2026-09-27T17:00:00+08:00' },
+            ],
+        }),
+        true,
+    );
+});
+
+test('a link made before the shift started does not widen the window', () => {
+    assert.equal(
+        postTripDoneThisShift({
+            ...base,
+            linkedAt: '2026-09-26T07:00:00+08:00',
+            serverInspections: [
+                {
+                    type: 'post_trip',
+                    asset_code: 'CRN-101',
+                    completed_at: '2026-09-26T17:00:00+08:00',
+                },
+            ],
+        }),
+        false,
+    );
+});
+
 test('without a known unit or shift start it is never assumed done', () => {
     const outboxCommands = [dvirCommand()];
     assert.equal(

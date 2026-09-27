@@ -11,6 +11,8 @@ export interface ServerPostTripInput {
     assetId: number | null | undefined;
     assetCode: string | null | undefined;
     shiftStartedAt: string | null | undefined;
+    /** When the unit was last linked; earlier post-trips don't count. */
+    linkedAt?: string | null;
     outboxCommands: readonly OutboxCommand[];
 }
 
@@ -28,6 +30,7 @@ export function useServerPostTrip({
     assetId,
     assetCode,
     shiftStartedAt,
+    linkedAt,
     outboxCommands,
 }: ServerPostTripInput): boolean {
     const [serverInspections, setServerInspections] = useState<
@@ -60,6 +63,7 @@ export function useServerPostTrip({
     return postTripDoneThisShift({
         assetCode,
         shiftStartedAt,
+        linkedAt,
         serverInspections,
         outboxCommands,
     });

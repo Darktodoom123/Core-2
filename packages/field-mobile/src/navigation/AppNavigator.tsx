@@ -39,6 +39,7 @@ import {
 } from '../connectivity/networkMonitor';
 import type { NetworkMonitor } from '../connectivity/networkMonitor';
 import { useServerPostTrip } from '../hooks/useServerPostTrip';
+import { useUnitLink } from '../hooks/useUnitLink';
 import {
     startBackgroundLocationUpdates,
     stopBackgroundLocationUpdates,
@@ -93,6 +94,7 @@ import type {
     OutboxRepository,
     PayloadHasher,
 } from '../storage/outboxRepository';
+import type { UnitLinkStore } from '../storage/unitLinkStore';
 import { useTheme } from '../theme';
 import type {
     DispatchJob,
@@ -524,12 +526,14 @@ export interface AppNavigatorProps {
     networkMonitor?: NetworkMonitor;
     outboxHasher?: PayloadHasher;
     outboxRepository?: OutboxRepository;
+    unitLinkStore?: UnitLinkStore;
 }
 
 export const AppNavigator: React.FC<AppNavigatorProps> = ({
     networkMonitor,
     outboxHasher,
     outboxRepository,
+    unitLinkStore,
 }) => {
     const {
         user,
@@ -598,7 +602,13 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     const [timelineHistory, setTimelineHistory] = useState<
         TimelineDayHistory[]
     >([]);
-    const [isUnitLinked, setIsUnitLinked] = useState<boolean>(false);
+    // Saved on the phone so a restart keeps the link; release removes it.
+    const {
+        unitLink,
+        link: linkUnit,
+        unlink: unlinkUnit,
+    } = useUnitLink(user?.id, unitLinkStore);
+    const isUnitLinked = unitLink !== null;
     // Unit code of the last post-trip DVIR saved this shift; cleared on release.
     const [postTripDoneFor, setPostTripDoneFor] = useState<string | null>(null);
     // ISO start of the server's active shift; bounds which post-trips count.
@@ -2328,21 +2338,47 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
 
     const walletAssetCode = resolvedAssetCode;
 
+    // The unit actually linked, which may not be the job home shows first.
+    const linkedJob = unitLink
+        ? (jobs.find((job) =>
+              job.asset_assignments?.some(
+                  (a) => a.asset_code === unitLink.assetCode,
+              ),
+          ) ?? null)
+        : null;
+    const linkedAsset =
+        linkedJob?.asset_assignments?.find(
+            (a) => a.asset_code === unitLink?.assetCode,
+        ) ?? null;
     const serverPostTripDone = useServerPostTrip({
         canFetch:
             activeAppView === 'hos' &&
             status === 'authenticated' &&
             isOnline === true,
         apiClient,
-        assetId: isUnitLinked ? currentAsset?.operational_asset_id : null,
-        assetCode: currentAsset?.asset_code,
+        assetId: linkedAsset?.operational_asset_id,
+        assetCode: unitLink?.assetCode,
         shiftStartedAt: shiftStartedAtIso,
+        linkedAt: unitLink?.linkedAt,
         outboxCommands,
     });
     const postTripDone =
-        isUnitLinked &&
-        Boolean(currentAsset?.asset_code) &&
-        (postTripDoneFor === currentAsset?.asset_code || serverPostTripDone);
+        unitLink !== null &&
+        (postTripDoneFor === unitLink.assetCode || serverPostTripDone);
+
+    // One release for home and Hours of Service: unlink and stop tracking.
+    const releaseUnit = () => {
+        unlinkUnit();
+        setPostTripDoneFor(null);
+        setLocationSharingActive(false);
+        setLocationTrackingError(null);
+        locationService.stopAutoTracking();
+        void stopBackgroundLocationUpdates().catch(() => undefined);
+
+        if (user && activeTrackingJob) {
+            void locationService.pauseSharing(user, activeTrackingJob);
+        }
+    };
 
     const availableAssets = useMemo(() => {
         const map = new Map<string, string>();
@@ -2646,20 +2682,15 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 activeJobId={currentJob?.id}
                                 apiClient={apiClient}
                                 // Only a machine the operator has linked to.
-                                linkedAssetCode={
-                                    isUnitLinked
-                                        ? currentAsset?.asset_code || null
-                                        : null
-                                }
+                                linkedAssetCode={unitLink?.assetCode ?? null}
                                 linkedAssetType={
-                                    isUnitLinked && currentAsset
+                                    unitLink
                                         ? resolveDesignatedEquipmentType({
-                                              assetCode:
-                                                  currentAsset.asset_code,
+                                              assetCode: unitLink.assetCode,
                                               assetKind:
-                                                  currentAsset.asset_kind,
+                                                  linkedAsset?.asset_kind,
                                               assetName:
-                                                  currentAsset.asset_name,
+                                                  linkedAsset?.asset_name,
                                           })
                                         : null
                                 }
@@ -2668,12 +2699,17 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                     handleToggleShift();
                                     setLocationSharingActive(false);
                                 }}
-                                onReleaseUnit={() => {
-                                    setLocationSharingActive(false);
-                                    setIsUnitLinked(false);
-                                    setPostTripDoneFor(null);
-                                }}
+                                onReleaseUnit={releaseUnit}
                                 onStartPostTrip={() => {
+                                    // Inspect the linked unit, not whichever
+                                    // job home happens to show.
+                                    if (linkedJob && linkedAsset) {
+                                        setSelectedJobId(linkedJob.id);
+                                        setSelectedAssetId(
+                                            linkedAsset.operational_asset_id,
+                                        );
+                                    }
+
                                     setDvirInitialMode('post_trip');
                                     setDvirReturnView('hos');
                                     setActiveAppView('dvir');
@@ -2736,7 +2772,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                         'Pre-trip DVIR defect lockout',
                                     );
                                     setDvirStatus('defect');
-                                    setIsUnitLinked(false);
+                                    unlinkUnit();
                                 }}
                                 onPreTripPassed={() => {
                                     setDvirStatus('cleared');
@@ -2982,10 +3018,14 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                     isLoading={isLoadingJobs}
                                     isOnline={isOnline}
                                     jobs={jobs}
-                                    isUnitLinked={isUnitLinked}
-                                    onLinkUnit={() => {
-                                        setIsUnitLinked(true);
-                                    }}
+                                    isUnitLinked={
+                                        unitLink?.assetCode ===
+                                            resolvedAssetCode &&
+                                        resolvedAssetCode !== ''
+                                    }
+                                    onLinkUnit={(assetCode) =>
+                                        linkUnit(assetCode || resolvedAssetCode)
+                                    }
                                     dvirStatus={dvirStatus}
                                     preTripDefectLockout={
                                         dvirStatus === 'defect'
@@ -3049,22 +3089,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                     onToggleLocationSharing={
                                         handleToggleLocationSharing
                                     }
-                                    onReleaseUnit={() => {
-                                        setIsUnitLinked(false);
-                                        setLocationSharingActive(false);
-                                        setLocationTrackingError(null);
-                                        locationService.stopAutoTracking();
-                                        void stopBackgroundLocationUpdates().catch(
-                                            () => undefined,
-                                        );
-
-                                        if (user && activeTrackingJob) {
-                                            void locationService.pauseSharing(
-                                                user,
-                                                activeTrackingJob,
-                                            );
-                                        }
-                                    }}
+                                    onReleaseUnit={releaseUnit}
                                     outboxCommands={outboxCommands}
                                     isAuthenticated={status === 'authenticated'}
                                     lastSuccessfulSyncAt={commandOutbox.getLastSuccessfulSyncAt()}
