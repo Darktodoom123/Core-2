@@ -1,79 +1,79 @@
 # Graph Report - Core-2  (2026-09-27)
 
 ## Corpus Check
-- 1519 files · ~2,520,159 words
+- 1520 files · ~2,520,448 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 50 file(s) not represented in the graph (top: (none) 30, .xml 4, .excalidraw 3)
 
 ## Summary
-- 9449 nodes · 28875 edges · 370 communities (239 shown, 131 thin omitted)
+- 9455 nodes · 28885 edges · 405 communities (232 shown, 173 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 851 edges (avg confidence: 0.91)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `829d1942`
+- Built from commit: `10424be1`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - OutboxCommand
-- ref_react
+- ref_react_native
 - lucide-react
-- humanize
-- live-workspace-shell.tsx
-- DispatchJob
-- src/types/index.ts
+- LatestLocation
+- workspace.ts
+- IconName
+- User
 - cn
-- AppNavigator.tsx
+- AppNavigator
 - project-planning-workspace.tsx
-- PersonnelCredential
+- OperatorShift
 - Illuminate\Database\Eloquent\Relations\BelongsTo
-- ReportExportType
+- Source and Ownership
 - Illuminate\Support\Collection
-- 1. Authoritative repository verification & documentation discrepancy
-- AuditEvent
-- HosScreen.tsx
+- AppNavigator.tsx
+- app.component.test.tsx
+- useThemedStyles
 - FieldApiClient
 - Illuminate\Http\Request
 - User
-- RentalReservation
+- Illuminate\Validation\ValidationException
 - Symfony\Component\HttpFoundation\Response
 - DispatchV2Mutation
-- DispatchJob
-- DispatchOrdersScreen.tsx
+- Illuminate\Database\Eloquent\Relations\HasMany
+- AssignedJobsListScreen.tsx
 - .submitted
 - apps_operations_bootstrap_ssr_assets_auth_shell_cu5_fe_s_t
 - Illuminate\Database\Eloquent\Builder
-- index.tsx
+- ref_react
 - IdempotentCommandService
 - outboxRepository.test.ts
-- Illuminate\Http\Resources\Json\JsonResource
+- DispatchV2CommandException
 - live-tracking-preview.tsx
 - durableAttachmentStorage.ts
 - useTheme
 - commandOutbox.ts
 - direct-dispatch-view.tsx
 - ui.tsx
-- HttpTrackingClient.php
+- live-workspace-shell.tsx
 - useFuelManagement.ts
 - scripts
 - apps_operations_bootstrap_ssr_assets_dev_user_switcher_cinfgebk_t
 - account.tsx
-- LatestLocation
+- PersonnelCredential
 - package.json
-- Illuminate\Notifications\Notification
+- PushPayload
 - browser-fixtures.ts
 - WorkspaceUpdated
 - web-mobile-roundtrip.e2e.test.js
 - detox-android.cjs
 - 1. Dispatch Job and Scheduling (Real-Time Activation) (`apps/operations/app/Modules/Dispatch/`)
-- ProfileScreen.tsx
-- DispatchHandoff
+- MachineProfileScreen.tsx
+- DispatchV2Reconciliation
 - GptRecommendation
-- DispatchV2TransactionEnvelope
-- TrackingClientInterface
-- operations/package.json
+- apiClient.ts
 - Carbon\CarbonImmutable
+- operations/package.json
+- AssignRentalOperatorRequest
 - manager-dashboard-model.ts
 - Illuminate\Support\Facades\Schema
 - targets
@@ -83,7 +83,7 @@
 - tracking/composer.json
 - ADR: Dispatch Backend V2 Domain Contract
 - AssetUsageAssessment
-- DispatchPlanApprovalV2Controller.php
+- DecideEmergencyOverrideV2Request
 - 3. End-to-End Operational Lifecycle
 - gauntlet-audit.cjs
 - DispatchReadinessBlockerCode
@@ -94,17 +94,17 @@
 - ReportExport
 - Core Transaction 2 — Roadmap
 - field-mobile/package.json
-- Illuminate\Foundation\Http\FormRequest
+- FuelRequest
 - ListDispatchCandidatesRequest
 - Docs/README.md
-- useThemedStyles
+- DvirScreen.tsx
 - test-integration-services.ts
-- LocationUpdate
+- Illuminate\Console\Command
 - devDependencies
-- OperationalAsset
+- DispatchJob
 - run-lighthouse.cjs
 - ProjectPlan
-- Phase7DistributedResilienceTest.php
+- Illuminate\Bus\Queueable
 - DispatchDeskIncomingRequest
 - apps_operations_bootstrap_ssr_assets_canonical_status_badge_d9jpjjoh_t
 - Decisions
@@ -112,7 +112,7 @@
 - live-dispatch-workspace.tsx
 - build-capstone-erd.py
 - dependencies
-- workspace.ts
+- AssetViewModel
 - apps_operations_resources_js_components_approvals_index_approvalssurface
 - DispatchEmergencyOverride
 - manager-schedule-panel.tsx
@@ -121,9 +121,9 @@
 - Core HR and Workforce Management Involvement in Core Transaction 2
 - Microservice restructuring progress
 - Fleet, fuel requests, and job reports: implementation brief
-- AssignmentOfferV2Controller.php
+- ProposeAssignmentOfferV2Request
 - dependencies
-- A. The 5 Main Operational Business Modules
+- ValidateServiceSignature
 - manager-metric-strip.tsx
 - manager-action-queue.tsx
 - LiveTrackingMapLargeFleet.test.tsx
@@ -134,22 +134,22 @@
 - expo
 - Real-Time Workspace Architecture (Laravel Reverb & Echo)
 - OpenAiClientWrapper
-- Files changed
-- OutboxStatusSheet.tsx
+- OperatorDutyLog
+- src/types/index.ts
 - DESIGN AND IMPLEMENTATION OF A GPT MINI POWERED DISPATCH AND RESOURCE MANAGEMENT PLATFORM WITH MOBILE APPLICATION FOR REAL TIME TRACKING FOR FIELD SERVICE MONITORING
 - build-service-erd.py
 - compilerOptions
-- UserFactory
+- SecureTokenStorage
 - HttpTrackingClient
-- auth.test.ts
-- OperatorDutyLog
+- Illuminate\Database\Eloquent\Relations\HasOne
+- field-header.tsx
 - Field Tracking & Asset Telemetry Architecture
 - ReassignDispatchResources
-- TestCase
-- .url
+- operations/bootstrap/app.php
+- Deployment & Hosting Architecture
 - Core Transaction 2 — Product Design
 - with-detox-android.cjs
-- Controllers/JobReportController.php
+- ReviewJobReportRequest
 - session1-native-external.ps1
 - workspace.tsx
 - Illuminate\Support\Facades\Route
@@ -157,25 +157,25 @@
 - safety-foreman.ts
 - FakeTrackingClient
 - compilerOptions
-- PushDelivery
+- DelayContext
 - scripts
 - wayfinder/index.ts
 - dispatch-intake.spec.ts
 - Core Transaction 2 — Requirements
 - Q: btw what is the flow of my ai in the system
-- HosShiftConcurrencyTest.php
+- DvirInspection
 - scripts
 - StorageFallbackService
 - Q: is this proper or the best way ?
 - 🧭 Navigation Index
-- SosIncidentRecipient
-- lib/formatters.ts
-- OperatorShift
+- SosEmergencyContact
+- humanize
+- DispatchFieldProgressionViewModel
 - ref_node_path
 - Module 2: Employee and asset picker
-- .cancel
+- Illuminate\Foundation\Http\FormRequest
 - Alibaton website reference
-- devDependencies
+- StoreFuelRequest
 - Fuel Management UI/UX Plan
 - Illuminate\Support\ServiceProvider
 - operations/composer.json
@@ -184,10 +184,10 @@
 - devDependencies
 - command
 - fleet-specifications.ts
-- DispatchExecutionAttempt
+- DispatchPlanVersion
 - microservice/README.md
 - ResilientOutboxRepository
-- LocationWeatherService
+- DispatchDeskIncomingQuery
 - eslint.config.js
 - nx.json
 - Operations Manager web user flow
@@ -198,7 +198,7 @@
 - Dispatch workspace design record
 - Dispatch resource picker refinement
 - Username
-- RecordGptOperationalMetric
+- CandidatePage
 - benchmark-tracking-load.php
 - RedisStreamTrackingClient
 - 2026_08_12_100001_harden_rental_sales_server_only_tables.php
@@ -206,38 +206,38 @@
 - 2026_08_27_180000_harden_sos_and_sequence_server_only_tables.php
 - 2026_09_14_120000_harden_identity_and_device_trust_server_only_tables.php
 - operations/project.json
-- LocalDevelopmentSeeder
+- Target architecture and shared invariants (Plan A: 2-Service Model)
 - ManagerDashboardModel.test.ts
-- manager-dashboard.tsx
+- use-today-dispatches.ts
 - metro.config.js
 - application
-- SosEmergencyContact
+- DispatchScheduleWindow
 - Core Transaction 2 - Module and Flow Architecture Map
 - Core Transaction 2 — Product Requirements Document
 - .users
 - Core Transaction 2 — Visual References
-- StorageFallbackServiceInterface
+- Carbon\CarbonInterface
 - config
 - 2026_08_14_100000_create_rental_operator_assignments_table.php
 - 2026_09_17_100000_create_rental_and_sales_evidence_tables.php
 - Field Emergency SOS runbook
 - entrypoint.sh
-- DispatchLeadCommandService
-- DispatchV2Authorization
+- DispatchV2TransactionEnvelope
+- DispatchExecutionAttempt
 - Drawing
 - Field execution view implementation plan
 - Alibaton Business Context and CT2 Scope
 - overrides
-- AssetDocument
-- operations/bootstrap/app.php
-- FieldDispatchJobController.php
+- .carbon
+- ServiceRequest
+- VersionConflictException
 - psr-4
 - logging.php
 - AlibatonCraneFleetSeeder
 - scripts
-- .carbon
-- DispatchDeskIncomingQuery
-- TelemetryIngestService
+- AssignDispatchResources
+- OperationalAsset.php
+- AssignmentController
 - targets
 - build
 - php-types
@@ -249,14 +249,14 @@
 - dependencies
 - optionalDependencies
 - autoload-dev
-- test-image-size-hardening.cjs
+- FuelRequestStatusNotification
 - SosIncident
 - Operations endpoints
 - Core Transaction 2 — Data Flow Diagram (DFD)
 - Core Transaction 2 — Business Process Architecture (BPA)
-- TrackingClient.php
+- TrackingClient
 - 4. Detailed Tier Descriptions
-- EmailOtpMail
+- EmailOtpMail.php
 - ConsumeTelemetryStreamCommand
 - Q: what about here?
 - Q: o yeah there something concerning which when you click the sign without inputting user and passwords what should be the proper error handling for it .
@@ -265,16 +265,17 @@
 - notification-center.spec.ts
 - 2026_09_25_130000_remove_sales_module.php
 - GenerateGptRecommendationJob
-- Files changed and created
-- V1/FuelRequestController.php
+- job-card-delay-banner.tsx
+- StoreServiceRequest.php
+- job-directions-button.tsx
 - AppServiceProvider
-- DispatchV2CommandException
-- AssetDocumentCategory
-- Operational resource coverage
-- Batch 3 integration contract and concurrency source checkpoint — 2026-09-11
+- ArchiveDispatchJobV2Request
+- DispatchDeskJobsRequest
+- CreateDvirInspectionRequest
+- AcceptGptRecommendationRequest
 - Whole-web sidebar and user flows
-- 2026_09_27_120000_add_finish_timestamps_to_dispatch_jobs.php
-- ProjectPlanningDemoSeeder
+- Illuminate\Database\Schema\Blueprint
+- A. The 5 Main Operational Business Modules
 - apps_operations_bootstrap_ssr_assets_ui_cuoqgbio_a
 - apps_operations_bootstrap_ssr_assets_ui_cuoqgbio_c
 - apps_operations_bootstrap_ssr_assets_ui_cuoqgbio_i
@@ -285,41 +286,66 @@
 - apps_operations_bootstrap_ssr_assets_ui_cuoqgbio_s
 - apps_operations_bootstrap_ssr_assets_ui_cuoqgbio_t
 - apps_operations_bootstrap_ssr_assets_ui_cuoqgbio_u
+- ClaimHandoverRequest
 - Mobile Lifecycle Agent Orchestration & E2E Verification Guide
 - RentalAssetUsageProcess
 - packages_field_mobile_src_components_inspection_index_fuelreceipttab
+- RestoreDispatchJobRequest
 - Core Transaction 2 — Operations Modular Monolith Architecture
 - sanctum.php
 - apps_operations_resources_js_components_workspace_reports_index_jobreportcrossreferences
 - vite-env.d.ts
-- Illuminate\Database\Schema\Blueprint
 - apps_operations_resources_js_components_workspace_reports_index_jobreportdelaylogstable
 - apps_operations_resources_js_components_workspace_reports_index_jobreportsignaturecard
 - FakeElement
 - Entity
+- StoreMobileFuelLog
 - e2e/README.md
 - assets.d.ts
 - run-workers.sh
 - c_users_user_desktop_core_2_third_party_image_size
 - c_users_user_desktop_core_2_third_party_image_size_imagesize
 - ref_react_leaflet
-- Carbon\Carbon
-- RecordAuditEvent
-- SosIncidentStatus
+- RegisterDeviceTokenRequest
+- Office dispatch workspace
+- TriggerSosIncidentRequest
+- Office dispatch decision flow
+- Batch 3 integration contract and concurrency source checkpoint — 2026-09-11
+- FuelVarianceResult
+- WithdrawAssignmentOfferV2Request
+- operations/bootstrap/providers.php
+- DispatchV2ActionRequest
+- ProgressDispatchJobV2Request
+- ProposeEmergencyOverrideV2Request
+- Illuminate\Support\Facades\DB
 - apps_operations_resources_js_components_ui_datetimepicker
 - apps_operations_resources_js_components_workspace_fleet_index_fleetsurface
 - apps_operations_resources_js_components_workspace_fuel_index_fuelsurface
-- Office dispatch decision flow
-- expo
-- nx
+- SubmitPlanV2Request
+- CancelDispatchJobRequest
+- StoreClientRequest
+- CertifyShiftRequest
+- AuthorizeRentalOperationRequest
+- RentalConditionRequest
 - packages_field_mobile_app
+- StoreReportExportRequest
+- AcknowledgeSosIncidentRequest
+- CancelSosIncidentRequest
+- ClassifySosIncidentRequest
+- ResolveSosIncidentRequest
+- UpdateSosIncidentLocationRequest
 - apps_operations_resources_js_components_workspace_direct_dispatch_index_direct_dispatch_discard_event
+- DispatchServiceProvider
+- StoreDispatchJobRequest
+- StoreRentalReservationRequest
 - apps_operations_resources_js_components_workspace_dispatch_desk_index_dispatchdesk
 - c_users_user_desktop_core_2_packages_field_mobile_e2e_dev_client_createdevclientlaunchoptions
 - packages_field_mobile_src_components_layout_field_header_synctone
 - packages_field_mobile_src_screens_hosscreen_shiftlogevent
 - packages_field_mobile_src_screens_hosscreen_timelinedayhistory
 - packages_field_mobile_src_screens_hosscreen_timelinesegment
+- packages_field_mobile_src_components_fuel_fuel_controls_fuelsegmented
+- packages_field_mobile_src_components_fuel_fuel_controls_fuelstyles
 
 ## God Nodes (most connected - your core abstractions)
 1. `User` - 958 edges
@@ -342,169 +368,161 @@
   Docs/plans/dispatch-resource-coverage.md → apps/operations/app/Modules/Assignment/Services/DispatchResourceEligibility.php
 - `Session 8 implementation evidence` --references--> `DispatchJobPolicy`  [INFERRED]
   Docs/plans/Roadmap.md → apps/operations/app/Modules/Dispatch/Policies/DispatchJobPolicy.php
-- `Fuel requests` --references--> `StoreFuelRequest`  [INFERRED]
-  Docs/plans/fleet-fuel-reports-ux-plan.md → apps/operations/app/Modules/Fuel/Http/Requests/StoreFuelRequest.php
+- `Tier 1: Dual-Custody Administrator Recovery (Web UI)` --references--> `RecordAuditEvent`  [INFERRED]
+  Docs/architecture/authentication-and-recovery.md → apps/operations/app/Platform/Audit/Actions/RecordAuditEvent.php
 
 ## Import Cycles
 - None detected.
 
-## Communities (370 total, 131 thin omitted)
+## Communities (405 total, 173 thin omitted)
 
 ### Community 0 - "OutboxCommand"
-Cohesion: 0.09
-Nodes (12): FailedCommandsListProps, CommandConflictBannerProps, SyncStatusPanelProps, OutboxStatusSheetProps, ProfileSheetProps, SettingsSyncTabProps, CommandOutboxManager, commandScope() (+4 more)
+Cohesion: 0.10
+Nodes (10): FailedCommandsListProps, CommandConflictBannerProps, SyncStatusPanelProps, OutboxStatusSheetProps, ProfileSheetProps, SettingsSyncTabProps, CommandOutboxManager, emptyResult() (+2 more)
 
-### Community 1 - "ref_react"
-Cohesion: 0.03
-Nodes (130): mockExpoNotifications, mockFileSystem, PhotoAttachment, PhotoAttachmentPicker(), PhotoAttachmentPickerProps, styles, AssetVehicleCard(), DvirReadinessStatus (+122 more)
+### Community 1 - "ref_react_native"
+Cohesion: 0.04
+Nodes (95): FailedCommandsList(), styles, FriendlyErrorInfo, LocationWeatherCard(), LocationWeatherCardProps, resolveFriendlyError(), styles, Icon() (+87 more)
 
 ### Community 2 - "lucide-react"
-Cohesion: 0.02
-Nodes (139): ActivationPanel(), errorMessage(), firstErrorMessage(), ActivationPrerequisiteChecklist(), ApprovalDecisionBanner(), AssetCandidate(), AssetCandidates(), AssignmentNextAction() (+131 more)
-
-### Community 3 - "humanize"
-Cohesion: 0.05
-Nodes (63): ApprovalCard(), ApprovalCardProps, ApprovalKindBadge(), getApprovalExecutiveSummary(), ApprovalGovernancePanel(), ApprovalGovernancePanelProps, ApprovalFilterType, ApprovalMetricsBar() (+55 more)
-
-### Community 4 - "live-workspace-shell.tsx"
-Cohesion: 0.07
-Nodes (34): ErrorBoundary, ErrorBoundaryProps, ErrorBoundaryState, DateTimePicker(), DateTimePickerProps, DAYS_OF_WEEK, formatDisplayValue(), MONTH_NAMES (+26 more)
-
-### Community 5 - "DispatchJob"
 Cohesion: 0.03
-Nodes (80): AssetVehicleCardProps, createStyles(), HoldToConfirmTransitButton(), HoldToConfirmTransitButtonProps, createStyles(), HEADING_TO_SITE, HoldStep, holdStepFor() (+72 more)
+Nodes (109): ActivationPanel(), errorMessage(), firstErrorMessage(), ActivationPrerequisiteChecklist(), ApprovalDecisionBanner(), AssetCandidate(), AssetCandidates(), AssignmentNextAction() (+101 more)
 
-### Community 6 - "src/types/index.ts"
-Cohesion: 0.04
-Nodes (70): FieldSafetySheet(), FieldSafetySheetProps, styles, CapturedLocation, categoryOptions, FieldSafetyScreen(), FieldSafetyScreenProps, HazardSeverity (+62 more)
+### Community 3 - "LatestLocation"
+Cohesion: 0.07
+Nodes (11): PruneLocationUpdatesCommand, LocationController, ReadinessController, IngestLocationRequest, LatestLocation, LocationSample, TrackingCommandReceipt, TelemetryIngestService (+3 more)
+
+### Community 4 - "workspace.ts"
+Cohesion: 0.02
+Nodes (125): ArchiveSurface(), BadgeSize, BadgeVariant, CanonicalStatusBadge(), CanonicalStatusBadgeProps, liveStatuses, sizeClasses, statusIcons (+117 more)
+
+### Community 5 - "IconName"
+Cohesion: 0.08
+Nodes (38): createStyles(), HoldToConfirmTransitButton(), HoldToConfirmTransitButtonProps, createStyles(), HEADING_TO_SITE, HoldStep, holdStepFor(), JobCardProgressActions() (+30 more)
+
+### Community 6 - "User"
+Cohesion: 0.10
+Nodes (16): LocationPermissionState, nativeLocationAdapter, LoginSuccessResult, DutyLocationSnapshot, LocationCoordinates, LocationSharingService, backgroundPermissions, currentPosition (+8 more)
 
 ### Community 7 - "cn"
-Cohesion: 0.04
-Nodes (67): ApplicationLogo(), ApplicationLogoProps, ApplicationMark(), DataFreshness(), KpiCard(), ReadinessRow(), AssignmentRequirementRow(), Card (+59 more)
+Cohesion: 0.05
+Nodes (50): ApplicationLogo(), ApplicationLogoProps, ApplicationMark(), FleetBreakdownPanel(), DataFreshness(), ManagerDashboardHeader(), LegendSwatch(), SegmentBar() (+42 more)
 
-### Community 8 - "AppNavigator.tsx"
-Cohesion: 0.03
-Nodes (92): Business-logic observations not changed for polish, Completion verdict, Evidence and gaps, Focused closure review outcome, Integration verification questions, Milestone 7 — Field Mobile UI/UX Polish & Web Consistency, Phase checkpoints, Prioritized implementation checklist (+84 more)
+### Community 8 - "AppNavigator"
+Cohesion: 0.09
+Nodes (32): Business-logic observations not changed for polish, Completion verdict, Evidence and gaps, Focused closure review outcome, Integration verification questions, Milestone 7 — Field Mobile UI/UX Polish & Web Consistency, Phase checkpoints, Prioritized implementation checklist (+24 more)
 
 ### Community 9 - "project-planning-workspace.tsx"
 Cohesion: 0.10
-Nodes (45): Input, Textarea, apps_operations_resources_js_components_ui_input, apps_operations_resources_js_components_ui_textarea, DispatchWorkspaceEntryProps, ApprovalDecision(), Candidate, CandidatePage (+37 more)
+Nodes (46): Input, Textarea, apps_operations_resources_js_components_ui_input, apps_operations_resources_js_components_ui_textarea, DispatchWorkspaceEntry(), DispatchWorkspaceEntryProps, ApprovalDecision(), Candidate (+38 more)
 
-### Community 10 - "PersonnelCredential"
-Cohesion: 0.12
-Nodes (13): PersonnelCredential, PersonnelProfile, PersonnelCredentialPolicy, AlibatonPersonnelSeeder, setupEligibleDriver(), eligibleBlockerOperator(), proactiveAllocation(), Business Architecture Boundary (+5 more)
+### Community 10 - "OperatorShift"
+Cohesion: 0.08
+Nodes (12): CertifyAndCompleteShiftAction, RecordDutyStatusTransitionAction, StartOperatorShiftAction, DutyStatus, ShiftStatus, StandbyReason, OperatorShift, DutyLocationSnapshotService (+4 more)
 
 ### Community 11 - "Illuminate\Database\Eloquent\Relations\BelongsTo"
-Cohesion: 0.01
-Nodes (31): RecordTowerCraneShiftLog, DispatchAuditLineage, DispatchJobDelay, DispatchPlanRequirementSlot, ServiceRequest, TowerCraneShiftLog, ProjectAllocation, DvirInspectionCheck (+23 more)
+Cohesion: 0.02
+Nodes (19): DispatchAuditLineage, DispatchIdempotencyKey, DispatchJobDelay, DispatchPlanRequirementSlot, TowerCraneShiftLog, ProjectAllocation, DvirInspectionCheck, RentalCheckout (+11 more)
 
-### Community 12 - "ReportExportType"
-Cohesion: 0.04
-Nodes (25): CreateReportExportAction, ReportExportType, AbstractReportExportDataset, CshpSafeManHoursExportDataset, DailyAccomplishmentExportDataset, DispatchesExportDataset, DoleWairExportDataset, FuelLogsExportDataset (+17 more)
+### Community 12 - "Source and Ownership"
+Cohesion: 0.06
+Nodes (17): AbstractReportExportDataset, CshpSafeManHoursExportDataset, DailyAccomplishmentExportDataset, DispatchesExportDataset, DoleWairExportDataset, FuelLogsExportDataset, JobReportsExportDataset, LocationAuditExportDataset (+9 more)
 
 ### Community 13 - "Illuminate\Support\Collection"
+Cohesion: 0.06
+Nodes (8): OperationsWorkspaceController, OperationsWorkspaceViewModel, AssetCategory, self, Development & Prototype Fixtures (DEV ONLY), Module 5: Fuel management and shared platform records, Shared platform and Tracking database, Illuminate\Support\Collection
+
+### Community 14 - "AppNavigator.tsx"
+Cohesion: 0.04
+Nodes (50): packages_field_mobile_assets_login_hero, useAuth(), LoginScreen(), LoginScreenProps, styles, PhotoAttachment, PhotoAttachmentPicker(), PhotoAttachmentPickerProps (+42 more)
+
+### Community 15 - "app.component.test.tsx"
+Cohesion: 0.04
+Nodes (34): App(), AppProps, AuthContext, AuthContextType, AuthProvider(), AuthProviderProps, AuthState, AuthStatus (+26 more)
+
+### Community 16 - "useThemedStyles"
 Cohesion: 0.05
-Nodes (13): FuelUrgency, FuelWorkspaceViewModel, RentalHandoffViewModel, Notification, NotificationPolicy, SosRecipientResolver, OperationsWorkspaceController, AssetCategory (+5 more)
-
-### Community 14 - "1. Authoritative repository verification & documentation discrepancy"
-Cohesion: 0.25
-Nodes (6): CertifyAndCompleteShiftAction, RecordDutyStatusTransitionAction, StartOperatorShiftAction, DutyLocationSnapshotService, 1. Authoritative repository verification & documentation discrepancy, 6. Smallest ordered implementation tasks (Proposed Changes)
-
-### Community 15 - "AuditEvent"
-Cohesion: 0.06
-Nodes (9): DispatchExecutionViewModel, AuditEvent, DispatchCompletionNotification, JobReport, WorkspaceAssetsQuery, WorkspaceJobReportsQuery, createStatusAuditedAsset(), createExportReport() (+1 more)
-
-### Community 16 - "HosScreen.tsx"
-Cohesion: 0.06
-Nodes (67): DutyStatusSelectorModalProps, calculateContinuousOperatingMinutes(), DoleContinuousBreakPrompt, HosComplianceResult, TimelineDayHistory, TimelineEvent, useHosCompliance(), UseHosComplianceOptions (+59 more)
+Nodes (87): DutyStatusSelectorModalProps, createStyles(), DvirDefectNotice(), DvirDefectNoticeProps, calculateContinuousOperatingMinutes(), DoleContinuousBreakPrompt, HosComplianceResult, TimelineDayHistory (+79 more)
 
 ### Community 17 - "FieldApiClient"
 Cohesion: 0.06
-Nodes (9): AuthProvider(), EmailChangeModalProps, OtpSecurityModalProps, FieldApiClient, clientWith(), OtpChallengeResponse, MobileFuelRequest, HosClocks (+1 more)
+Nodes (8): ActivityTabProps, EmailChangeModalProps, OtpSecurityModalProps, FieldApiClient, OtpChallengeResponse, SecurityActivityResponse, HosClocks, SosIncident
 
 ### Community 18 - "Illuminate\Http\Request"
-Cohesion: 0.03
-Nodes (42): Controller, ClientController, AssetDvirHistoryController, UploadAttachmentAction, GptRecommendationController, AccountSecurityController, AccountSettingsController, AccountApiController (+34 more)
+Cohesion: 0.02
+Nodes (70): Controller, RespondToDispatchAssignment, ClientController, DispatchJobController, ServiceRequestController, AssetDvirHistoryController, FuelRequestController, AttachmentController (+62 more)
 
 ### Community 19 - "User"
 Cohesion: 0.02
-Nodes (43): DispatchPersonnelAssignmentPolicy, ApprovalRequestPolicy, FuelLog, FuelRequest, FuelLogPolicy, FuelRequestPolicy, Attachment, AttachmentPolicy (+35 more)
+Nodes (65): DispatchPersonnelAssignmentPolicy, RecordTowerCraneShiftLog, DispatchOutboxRecorder, ApprovalRequestPolicy, DispatchJobPolicy, DispatchOutboxIntentRecorder, DispatchExecutionViewModel, ReviewFuelReceiptException (+57 more)
 
-### Community 20 - "RentalReservation"
-Cohesion: 0.04
-Nodes (52): Client, self, RentalOperatorType, RentalReservationStatus, RentalReservation, RentalReservationItem, r6ConcurrentAsset(), r6ConcurrentClient() (+44 more)
+### Community 20 - "Illuminate\Validation\ValidationException"
+Cohesion: 0.03
+Nodes (47): CreateDispatchFromSource, ProjectAssetConflictChecker, ApproveRentalReservation, AssignRentalOperator, AuthorizeRentalOperation, CheckoutRental, CreateRentalDispatchHandoff, CreateRentalReservation (+39 more)
 
 ### Community 21 - "Symfony\Component\HttpFoundation\Response"
-Cohesion: 0.06
-Nodes (17): RentalHandoverApiController, SubmitRentalHandoverRequest, EnsurePersonalAccessToken, Response, EnsureUserIsActive, Response, AssignRequestId, EnforceSecurityHeaders (+9 more)
+Cohesion: 0.04
+Nodes (27): CreateDvirInspectionAction, DvirCheckStatus, DvirInspectionPhoto, RecordRentalHandoverEvidence, RentalHandoverApiController, SubmitRentalHandoverRequest, EnsurePersonalAccessToken, Response (+19 more)
 
 ### Community 22 - "DispatchV2Mutation"
-Cohesion: 0.08
-Nodes (9): DispatchAssignmentOfferCommands, DispatchAssignmentOfferPolicy, DispatchAssignmentOfferCommandService, DispatchV2Commands, DispatchV2Mutation, self, DispatchAssignmentOfferStatus, DispatchAssignmentOffer (+1 more)
+Cohesion: 0.06
+Nodes (14): DispatchAssignmentOfferCommands, DispatchAssignmentOfferPolicy, DispatchAssignmentOfferCommandService, DispatchV2Commands, DispatchV2Mutation, self, DispatchAssignmentOfferStatus, DispatchJobV2Controller (+6 more)
 
-### Community 23 - "DispatchJob"
-Cohesion: 0.02
-Nodes (33): ReassignmentResult, DispatchResourceEligibility, DispatchAssignmentWorkspaceViewModel, ApprovalStatus, ApprovalRequest, DispatchJob, DispatchJobPolicy, DispatchActivationWorkspaceViewModel (+25 more)
-
-### Community 24 - "DispatchOrdersScreen.tsx"
+### Community 24 - "AssignedJobsListScreen.tsx"
 Cohesion: 0.05
-Nodes (54): AssignmentResponseCard(), AssignmentResponseCardProps, createStyles(), createStyles(), dateOnly(), dateTime(), JobHistoryCard(), jobHistoryTimeLabel() (+46 more)
+Nodes (61): AssetVehicleCard(), AssetVehicleCardProps, DvirReadinessStatus, styles, AssignmentResponseCard(), AssignmentResponseCardProps, createStyles(), JobCardProgressActionsProps (+53 more)
 
 ### Community 25 - ".submitted"
-Cohesion: 0.06
-Nodes (32): HandleInertiaRequests, Module 5: Fuel Management and shared tracking, Modules 1–2: Dispatch, approval, and assignment, Modules 1–2: Dispatch and Assignment tables, Private Reverb Channels (`routes/channels.php`), Concurrency and integrity, Core Transaction 2 — Business Rules, Dispatch Project Planning & Multi-Crane Allocations (+24 more)
+Cohesion: 0.07
+Nodes (30): HandleInertiaRequests, Module 5: Fuel Management and shared tracking, Modules 1–2: Dispatch, approval, and assignment, Modules 1–2: Dispatch and Assignment tables, Concurrency and integrity, Core Transaction 2 — Business Rules, Dispatch Project Planning & Multi-Crane Allocations, Driver/Operator Assignment Sub-system: Hours of Service (HoS) & Fatigue Management (+22 more)
 
-### Community 27 - "Illuminate\Database\Eloquent\Builder"
-Cohesion: 0.05
-Nodes (6): DvirInspection, AuditSubjectMorphOne, TrustedDevice, DispatchDeskJobsQuery, Illuminate\Database\Eloquent\Builder, Illuminate\Database\Eloquent\Relations\MorphOne
-
-### Community 28 - "index.tsx"
+### Community 28 - "ref_react"
 Cohesion: 0.02
-Nodes (97): Sources, AssignmentSummaryCard(), AssignmentSummaryCardProps, createStyles(), summaryLine(), createStyles(), NoUnitCard(), NoUnitCardProps (+89 more)
+Nodes (105): mockExpoNotifications, mockFileSystem, FieldBottomNav(), FieldBottomNavProps, FieldNavItem, FieldScreen, styles, FieldHeader() (+97 more)
 
 ### Community 29 - "IdempotentCommandService"
-Cohesion: 0.11
-Nodes (9): IdempotentCommandService, CreateCriticalLiftPlan, LogSiteHazardTicket, SubmitToolboxMeeting, SafetyGovernanceApiController, BroadcastTrackingWorkspaceUpdate, LocationController, LocationUpdateController (+1 more)
+Cohesion: 0.04
+Nodes (17): ActivateDispatchJob, TransitionDispatchJob, IdempotentCommandService, AuthorizeCriticalLiftPlan, CoSignToolboxMeeting, CreateCriticalLiftPlan, IssueWorkStoppageNotice, LiftWorkStoppageNotice (+9 more)
 
 ### Community 30 - "outboxRepository.test.ts"
 Cohesion: 0.11
 Nodes (5): OutboxDatabase, SqliteOutboxRepository, NodeSqliteDatabase, NodeSqliteDatabase, SqlValue
 
-### Community 31 - "Illuminate\Http\Resources\Json\JsonResource"
-Cohesion: 0.05
-Nodes (15): DispatchAssetAssignmentResource, DispatchPersonnelAssignmentResource, DispatchAttemptResource, DispatchPlanVersionResource, DispatchReadinessResource, CreateDvirInspectionAction, DvirCheckStatus, DvirInspectionController (+7 more)
+### Community 31 - "DispatchV2CommandException"
+Cohesion: 0.06
+Nodes (18): AssignmentOfferV2Controller, RespondAssignmentOfferV2Request, DispatchAssignmentOfferResource, DispatchV2CommandCode, DispatchV2CommandException, DispatchPlanApprovalV2Controller, DecidePlanApprovalV2Request, TransitionDispatchJobRequest (+10 more)
 
 ### Community 32 - "live-tracking-preview.tsx"
-Cohesion: 0.07
-Nodes (42): ASSET_TYPE_FILTERS, AssetStatusFilter, AssetTypeMultiSelect(), AssetTypeMultiSelectProps, FilterCheck(), matchesStatus(), matchesType(), EMPTY_SOS_INCIDENTS (+34 more)
+Cohesion: 0.06
+Nodes (46): ASSET_TYPE_FILTERS, AssetStatusFilter, AssetTypeMultiSelect(), AssetTypeMultiSelectProps, FilterCheck(), matchesStatus(), matchesType(), EMPTY_SOS_INCIDENTS (+38 more)
 
 ### Community 33 - "durableAttachmentStorage.ts"
 Cohesion: 0.17
 Nodes (11): AttachmentStorageError, durableAttachmentStorage, FileSystemLike, isReactNativeRuntime(), loadModule(), modernFileSystem(), resolveFileSystem(), setFileSystemForTesting() (+3 more)
 
 ### Community 34 - "useTheme"
-Cohesion: 0.06
-Nodes (66): Mobile fuel alignment update (2026-09-24), BANNER_ICONS, BannerTone, FuelBanner(), FuelButton(), FuelConnectionPill(), FuelField(), createStyles() (+58 more)
+Cohesion: 0.08
+Nodes (50): BANNER_ICONS, BannerTone, FuelBanner(), FuelButton(), FuelConnectionPill(), FuelField(), createStyles(), FuelEmptyState() (+42 more)
 
 ### Community 35 - "commandOutbox.ts"
 Cohesion: 0.05
-Nodes (31): CommandOutboxOptions, defaultSosRetryWindowMs, isUncertainTransportError(), isVerifiedServerRejection(), OutboxListener, OutboxProcessResult, canonicalJson(), cloneCommand() (+23 more)
+Nodes (32): AppNavigatorProps, ApiClientError, CommandOutboxOptions, commandScope(), defaultSosRetryWindowMs, isUncertainTransportError(), isVerifiedServerRejection(), OutboxListener (+24 more)
 
 ### Community 36 - "direct-dispatch-view.tsx"
 Cohesion: 0.09
-Nodes (41): DirectDispatchSummary(), formatScheduleValue(), PRIORITY_LABELS, projectDirectDispatchSummary(), REQUIRED_FIELDS, InputField(), RequirementCheckbox(), SelectField() (+33 more)
+Nodes (43): DirectDispatchSummary(), formatScheduleValue(), PRIORITY_LABELS, projectDirectDispatchSummary(), REQUIRED_FIELDS, DirectDispatchView(), InputField(), RequirementCheckbox() (+35 more)
 
 ### Community 37 - "ui.tsx"
-Cohesion: 0.03
-Nodes (150): AppShell(), coreModuleNavigation, getNavigationForRole(), IconType, navigationByRole, NavItem, NavSubItem, ActiveSosBanner() (+142 more)
+Cohesion: 0.02
+Nodes (173): AppShell(), coreModuleNavigation, getNavigationForRole(), IconType, navigationByRole, NavItem, NavSubItem, ErrorBoundaryProps (+165 more)
 
-### Community 38 - "HttpTrackingClient.php"
-Cohesion: 0.12
-Nodes (14): Throwable, TrackingConflictException, TrackingServiceUnavailableException, Architecture & Telemetry Ingestion Flow, Concurrency & Idempotency Guarantees, Coordinate Privacy & 30-Day Retention, Deterministic Driver Selection, Outage Resilience & Zero Split-Brain Ingestion (+6 more)
+### Community 38 - "live-workspace-shell.tsx"
+Cohesion: 0.08
+Nodes (32): ErrorBoundary, DateTimePicker(), DateTimePickerProps, DAYS_OF_WEEK, formatDisplayValue(), MONTH_NAMES, parseTimeString(), toLocalISOString() (+24 more)
 
 ### Community 39 - "useFuelManagement.ts"
-Cohesion: 0.08
-Nodes (21): FUEL_COMMAND_TYPES, FuelCommandQueue, fuelErrorMessage(), FuelSubmitResult, hasDraftContent(), isActionableOutboxState(), pendingIdsFor(), queuedFromCommands() (+13 more)
+Cohesion: 0.06
+Nodes (42): FINISHED_FUEL_STATUSES, FuelSection, defaultFuelContext(), FUEL_COMMAND_TYPES, FuelCommandQueue, fuelErrorMessage(), FuelFieldErrors, FuelSubmitResult (+34 more)
 
 ### Community 40 - "scripts"
 Cohesion: 0.05
@@ -512,27 +530,27 @@ Nodes (44): scripts, audit:gauntlet, audit:lighthouse, audit:lighthouse:all, aud
 
 ### Community 42 - "account.tsx"
 Cohesion: 0.07
-Nodes (29): apps_operations_resources_js_components_ui_label, THEME_OPTIONS, UserAccountMenu(), UserAccountMenuProps, applyTheme(), getSystemTheme(), ResolvedTheme, Theme (+21 more)
+Nodes (28): apps_operations_resources_js_components_ui_label, THEME_OPTIONS, UserAccountMenu(), UserAccountMenuProps, applyTheme(), getSystemTheme(), ResolvedTheme, Theme (+20 more)
 
-### Community 43 - "LatestLocation"
-Cohesion: 0.12
-Nodes (5): PruneLocationUpdatesCommand, LatestLocation, LocationSample, TrackingCommandReceipt, Illuminate\Support\Facades\Redis
+### Community 43 - "PersonnelCredential"
+Cohesion: 0.09
+Nodes (16): PersonnelCredential, PersonnelProfile, PersonnelCredentialPolicy, Notification, NotificationPolicy, AlibatonPersonnelSeeder, setupEligibleDriver(), eligibleBlockerOperator() (+8 more)
 
 ### Community 44 - "package.json"
 Cohesion: 0.06
 Nodes (31): @axe-core/playwright, babel-plugin-react-compiler, expo, fontaine, image-size, jsdom, @laravel/vite-plugin-wayfinder, @playwright/test (+23 more)
 
-### Community 45 - "Illuminate\Notifications\Notification"
+### Community 45 - "PushPayload"
 Cohesion: 0.05
-Nodes (10): FuelRequestStatusNotification, FuelRequestSubmittedNotification, PushPayload, DispatchAssignmentNotification, DispatchCancellationNotification, DispatchDelayNotification, DispatchReassignmentNotification, DispatchScheduleChangeNotification (+2 more)
+Nodes (9): PushPayload, DispatchAssignmentNotification, DispatchCancellationNotification, DispatchReassignmentNotification, DispatchScheduleChangeNotification, SendPushNotificationJob, PushDelivery, PushNotificationService (+1 more)
 
 ### Community 46 - "browser-fixtures.ts"
 Cohesion: 0.08
 Nodes (29): ActiveOtpDetails, browserFetch(), browserFixtures, clearOtpCooldown(), countTrustedDevices(), getLatestOtp(), resetTestUser(), resolveBrowserFixturePath() (+21 more)
 
 ### Community 47 - "WorkspaceUpdated"
-Cohesion: 0.07
-Nodes (12): CriticalLiftPlanChanged, SosIncidentChanged, ToolboxMeetingChanged, WorkStoppageChanged, WorkStoppageNotice, WorkspaceUpdated, Illuminate\Broadcasting\Channel, Illuminate\Broadcasting\InteractsWithSockets (+4 more)
+Cohesion: 0.12
+Nodes (10): CriticalLiftPlanChanged, ToolboxMeetingChanged, WorkStoppageChanged, WorkspaceUpdated, Illuminate\Broadcasting\Channel, Illuminate\Broadcasting\InteractsWithSockets, Illuminate\Broadcasting\PrivateChannel, Illuminate\Contracts\Broadcasting\ShouldBroadcastNow (+2 more)
 
 ### Community 48 - "web-mobile-roundtrip.e2e.test.js"
 Cohesion: 0.11
@@ -543,40 +561,36 @@ Cohesion: 0.07
 Nodes (28): configureAndroidSdk(), fs, os, path, androidSdk, avdIniPath, avdPath, { configureAndroidSdk } (+20 more)
 
 ### Community 50 - "1. Dispatch Job and Scheduling (Real-Time Activation) (`apps/operations/app/Modules/Dispatch/`)"
-Cohesion: 0.09
-Nodes (14): ArchiveDispatchJob, DispatchV2RolloutStatusCommand, ReconcileDispatchV2Command, DispatchOutboxDeliveryHandler, DispatchOutboxRecorder, DispatchExecutionTransitioned, DispatchOutboxMessageDelivered, DispatchOutboxMessage (+6 more)
+Cohesion: 0.14
+Nodes (7): ArchiveDispatchJob, DispatchOutboxDeliveryHandler, DispatchOutboxMessageDelivered, DispatchOutboxMessage, DispatchOutboxDeliveryService, NullDispatchOutboxDeliveryHandler, 1. Dispatch Job and Scheduling (Real-Time Activation) (`apps/operations/app/Modules/Dispatch/`)
 
-### Community 51 - "ProfileScreen.tsx"
-Cohesion: 0.08
-Nodes (32): ActivityTab(), ActivityTabProps, getSessionIcon(), styles, ConfirmPasswordModal(), ConfirmPasswordModalProps, styles, EmailChangeModal() (+24 more)
+### Community 51 - "MachineProfileScreen.tsx"
+Cohesion: 0.12
+Nodes (24): createStyles(), DvirAssetSelector(), DvirAssetSelectorProps, createStyles(), DvirLockoutWarning(), DvirLockoutWarningProps, DvirScreenProps, createStyles() (+16 more)
 
-### Community 52 - "DispatchHandoff"
+### Community 52 - "DispatchV2Reconciliation"
 Cohesion: 0.10
-Nodes (9): DispatchReconciliationFindingSeverity, DispatchReconciliationRunStatus, DispatchSourceType, DispatchHandoff, DispatchIdempotencyKey, DispatchReconciliationFinding, DispatchReconciliationRun, DispatchV2Reconciliation (+1 more)
+Nodes (6): DispatchReconciliationFindingSeverity, DispatchReconciliationRunStatus, DispatchSourceType, DispatchReconciliationFinding, DispatchReconciliationRun, DispatchV2Reconciliation
 
 ### Community 53 - "GptRecommendation"
-Cohesion: 0.05
-Nodes (9): GptRecommendationStatus, self, GptRecommendation, GptRecommendationMetric, GptRecommendationPolicy, BrowserAcceptanceSeeder, concurrentDispatcher(), concurrentJob() (+1 more)
+Cohesion: 0.03
+Nodes (27): DispatchActivationReadinessQuery, DispatchResourceEligibility, DispatchAssignmentWorkspaceViewModel, DispatchActivationWorkspaceViewModel, AcceptGptRecommendation, RejectGptRecommendation, RetryGptRecommendation, GptRecommendationStatus (+19 more)
 
-### Community 54 - "DispatchV2TransactionEnvelope"
-Cohesion: 0.20
-Nodes (3): DispatchPlanMateriality, DispatchV2TransactionEnvelope, AuditEventRecorder
-
-### Community 55 - "TrackingClientInterface"
+### Community 54 - "apiClient.ts"
 Cohesion: 0.08
-Nodes (7): TrackingClientInterface, LatestLocationDto, self, LocationSampleDto, self, Implementation Status: Complete, PHPUnit\Framework\Assert
+Nodes (24): FieldSafetySheetProps, FieldSafetyScreenProps, ProfileScreenProps, ApiClientConfig, LoginResponse, MockFormData, clientWith(), SAMPLE_IDS (+16 more)
+
+### Community 55 - "Carbon\CarbonImmutable"
+Cohesion: 0.06
+Nodes (24): BroadcastTrackingWorkspaceUpdate, TrackingClientInterface, LatestLocationDto, self, LocationSampleDto, self, LocationController, LocationUpdateController (+16 more)
 
 ### Community 56 - "operations/package.json"
-Cohesion: 0.07
-Nodes (29): @axe-core/playwright, babel-plugin-react-compiler, fontaine, image-size, jsdom, @laravel/vite-plugin-wayfinder, @playwright/test, react (+21 more)
-
-### Community 57 - "Carbon\CarbonImmutable"
-Cohesion: 0.03
-Nodes (38): DispatchAssetUsageConflictChecker, CreateDispatchFromSource, DispatchScheduleReader, DispatchScheduleWindow, ProjectAssetConflictChecker, DispatchDeliveryAttemptGuard, EloquentDispatchScheduleReader, ApproveRentalReservation (+30 more)
+Cohesion: 0.06
+Nodes (32): @axe-core/playwright, babel-plugin-react-compiler, fontaine, image-size, jsdom, @laravel/vite-plugin-wayfinder, @playwright/test, react (+24 more)
 
 ### Community 58 - "manager-dashboard-model.ts"
 Cohesion: 0.10
-Nodes (33): approvalItem(), approvalTitle(), blockedAssetItem(), blockingOrderFor(), buildManagerQueue(), CATEGORY_LABELS, CATEGORY_ORDER, criticalDefectCount() (+25 more)
+Nodes (36): approvalItem(), approvalTitle(), blockedAssetItem(), blockingOrderFor(), buildManagerQueue(), CATEGORY_LABELS, CATEGORY_ORDER, compareNullableTimestamps() (+28 more)
 
 ### Community 60 - "targets"
 Cohesion: 0.08
@@ -598,10 +612,6 @@ Nodes (31): pestphp/pest-plugin, autoload, autoload-dev, psr-4, psr-4, config, a
 Cohesion: 0.12
 Nodes (15): 1. Dispatch execution lifecycle, 2. Assignment offer lifecycle, 3. Dispatch plan and approval lifecycle, Actor and capability matrix, ADR: Dispatch Backend V2 Domain Contract, Cancellation, reopen, and archive policy, Context, Current implementation boundary (+7 more)
 
-### Community 67 - "DispatchPlanApprovalV2Controller.php"
-Cohesion: 0.12
-Nodes (7): DispatchPlanApprovalV2Controller, DecideEmergencyOverrideV2Request, DecidePlanApprovalV2Request, ProposeEmergencyOverrideV2Request, SubmitPlanV2Request, DispatchEmergencyOverrideResource, DispatchPlanApprovalResource
-
 ### Community 68 - "3. End-to-End Operational Lifecycle"
 Cohesion: 0.09
 Nodes (22): 1. Executive Summary & Objective, 2. Master System State Machine, 3. End-to-End Operational Lifecycle, 4.1. Shift & Order Lifecycle, 4.2. Linking & Equipment Operations, 4.3. Telemetry, App & Device Failures, 4.4. Handover & Shift Closure, 4. Edge Cases & System Guardrails (+14 more)
@@ -611,8 +621,8 @@ Cohesion: 0.10
 Nodes (21): ref_child_process, ref_fs, ref_path, auditResults, databaseAudit, deadCodeCandidates, duplicates, fs (+13 more)
 
 ### Community 70 - "DispatchReadinessBlockerCode"
-Cohesion: 0.09
-Nodes (8): DispatchReadinessBlocker, DispatchReadinessProjection, DispatchEmergencyOverrideStatus, DispatchReadinessBlockerCode, DispatchReadinessSeverity, DispatchReadinessEvaluator, DispatchReadinessResourceEvaluator, DispatchAdvisoryNeed
+Cohesion: 0.10
+Nodes (7): DispatchReadinessBlocker, DispatchReadinessProjection, DispatchReadinessBlockerCode, DispatchReadinessSeverity, DispatchReadinessEvaluator, DispatchReadinessResourceEvaluator, DispatchAdvisoryNeed
 
 ### Community 71 - "Core Transaction 2 — Field Mobile Design (Native Android)"
 Cohesion: 0.11
@@ -631,48 +641,44 @@ Cohesion: 0.09
 Nodes (28): cache, executor, options, implicitDependencies, name, command, cwd, projectType (+20 more)
 
 ### Community 75 - "ReportExport"
-Cohesion: 0.06
-Nodes (18): RetryReportExportAction, ReportExportStatus, GenerateReportExportJob, ReportExport, ReportExportPolicy, FailingReportExportJob, createQueuedExport(), FailingChecksumReportExportJob (+10 more)
+Cohesion: 0.08
+Nodes (10): GenerateReportExportJob, ReportExport, ReportExportPolicy, FailingReportExportJob, FailingChecksumReportExportJob, FailingCsvReportExportJob, FailingPdfRendererJob, FailingPromotionReportExportJob (+2 more)
 
 ### Community 76 - "Core Transaction 2 — Roadmap"
 Cohesion: 0.05
-Nodes (39): 2 Inbound Business Flows (from Core 1), 5 Core Operational Modules, Accepted Module & Flow Structure, Core Transaction 2 — Roadmap, Current implementation evidence, Current implementation evidence, Current implementation evidence, Deferred unless justified (+31 more)
+Nodes (40): 2 Inbound Business Flows (from Core 1), 5 Core Operational Modules, Accepted Module & Flow Structure, Core Transaction 2 — Roadmap, Current implementation evidence, Current implementation evidence, Current implementation evidence, Deferred unless justified (+32 more)
 
 ### Community 77 - "field-mobile/package.json"
-Cohesion: 0.08
-Nodes (23): expo, react, react-native, @types/node, @types/react, typescript, main, name (+15 more)
+Cohesion: 0.05
+Nodes (41): devDependencies, detox, expo-doctor, jest, jest-expo, react-test-renderer, @testing-library/react-native, tsx (+33 more)
 
-### Community 78 - "Illuminate\Foundation\Http\FormRequest"
+### Community 78 - "FuelRequest"
 Cohesion: 0.02
-Nodes (32): EquipmentHandoverController, AssignmentController, ClaimHandoverRequest, InitiateHandoverRequest, AssignDispatchResourcesRequest, ReassignDispatchResourcesRequest, RespondToDispatchAssignmentRequest, ServiceRequestStatus (+24 more)
-
-### Community 79 - "ListDispatchCandidatesRequest"
-Cohesion: 0.09
-Nodes (7): CandidatePage, self, ListDispatchCandidatesRequest, AssetCandidateQuery, PersonnelCandidateQuery, Inspection, Illuminate\Contracts\Pagination\LengthAwarePaginator
+Nodes (51): RescheduleDispatchJob, CalculateFuelVarianceAndBurnRate, FuelNotifier, MobileFuelContexts, ReviewFuelRequest, SubmitMobileFuelRequest, TransitionFuelRequest, WithdrawFuelRequest (+43 more)
 
 ### Community 80 - "Docs/README.md"
 Cohesion: 0.14
 Nodes (3): Branch semantics, Dispatch intake source graph, Gate contract
 
-### Community 81 - "useThemedStyles"
+### Community 81 - "DvirScreen.tsx"
 Cohesion: 0.04
-Nodes (104): JobListItemCardProps, CraneEquipmentFilter, DefectItem, DVIR_DEFECT_CATEGORIES, DvirDefectsModal(), packages_field_mobile_src_components_inspection_index_craneequipmentfilter, packages_field_mobile_src_components_inspection_index_dvir_defect_categories, packages_field_mobile_src_components_inspection_index_dvirdefectsmodal (+96 more)
+Nodes (90): CraneEquipmentFilter, DefectCategoryGroup, DefectItem, DVIR_DEFECT_CATEGORIES, DvirDefectsModal(), DvirDefectsModalProps, styles, DvirWalkaroundPhotos() (+82 more)
 
 ### Community 82 - "test-integration-services.ts"
 Cohesion: 0.13
 Nodes (28): ref_node_util, CommandResult, compose(), composeFile, docker(), envFile, execFileAsync, exerciseMobileBoundary() (+20 more)
 
-### Community 83 - "LocationUpdate"
-Cohesion: 0.11
-Nodes (4): PruneLocationUpdatesCommand, LocationUpdate, DatabaseTrackingClient, TrackingServiceProvider
+### Community 83 - "Illuminate\Console\Command"
+Cohesion: 0.23
+Nodes (5): DispatchV2RolloutStatusCommand, ReconcileDispatchV2Command, DispatchV2MetricsService, PruneLocationUpdatesCommand, Illuminate\Console\Command
 
 ### Community 84 - "devDependencies"
 Cohesion: 0.08
 Nodes (26): devDependencies, @axe-core/playwright, babel-plugin-react-compiler, eslint, eslint-config-prettier, eslint-import-resolver-typescript, @eslint/js, eslint-plugin-import (+18 more)
 
-### Community 85 - "OperationalAsset"
+### Community 85 - "DispatchJob"
 Cohesion: 0.02
-Nodes (117): AssignmentResponse, DispatchAssetAssignment, DispatchPersonnelAssignment, DispatchPriority, DispatchStatus, self, DvirInspectionType, DvirInspectionPhoto (+109 more)
+Nodes (141): ReassignmentResult, AssignmentResponse, EquipmentHandoverController, DispatchAssetAssignment, DispatchPersonnelAssignment, ApprovalStatus, DispatchPriority, DispatchStatus (+133 more)
 
 ### Community 86 - "run-lighthouse.cjs"
 Cohesion: 0.10
@@ -680,15 +686,11 @@ Nodes (26): ref_node_http, args, customUrl, ensureProductionBuild(), ensureServe
 
 ### Community 87 - "ProjectPlan"
 Cohesion: 0.07
-Nodes (15): CancelDispatchJob, ReopenDispatchJob, PlanningRequest, ProjectPlanningController, ProjectPhase, ProjectPlan, ProjectShift, ProjectPlanningQuery (+7 more)
+Nodes (14): CancelDispatchJob, ReopenDispatchJob, PlanningRequest, ProjectPlanningController, ProjectPlan, ProjectShift, ProjectPlanningQuery, PlanningAccess (+6 more)
 
-### Community 88 - "Phase7DistributedResilienceTest.php"
-Cohesion: 0.11
-Nodes (24): DeliverDispatchOutboxMessage, PruneExpiredAttachmentsJob, ProcessPushReceiptsJob, SendPushNotificationJob, SendQueuedNotificationJob, PruneExpiredExportsJob, EscalateUnacknowledgedSosIncident, DeliverSosEscalationJob (+16 more)
-
-### Community 89 - "DispatchDeskIncomingRequest"
-Cohesion: 0.20
-Nodes (3): DispatchDeskIncomingController, SystemHealthController, DispatchDeskIncomingRequest
+### Community 88 - "Illuminate\Bus\Queueable"
+Cohesion: 0.07
+Nodes (27): DeliverDispatchOutboxMessage, FuelRequestSubmittedNotification, PruneExpiredAttachmentsJob, DispatchDelayNotification, ProcessPushReceiptsJob, SendQueuedNotificationJob, ReportExportStatus, PruneExpiredExportsJob (+19 more)
 
 ### Community 91 - "Decisions"
 Cohesion: 0.08
@@ -696,11 +698,11 @@ Nodes (25): Assignment, Adopt Plan A (2-Service Model: Operations Monolith & BFF
 
 ### Community 92 - "live-tracking-map.tsx"
 Cohesion: 0.03
-Nodes (118): SiteEvidenceMarker(), SiteEvidenceViewport(), averagePosition(), averageSosPosition(), CompactMapToolbar(), DEFAULT_CENTER, EMPTY_SOS_INCIDENTS, findSosIncidentForLocation() (+110 more)
+Nodes (109): SiteEvidenceMarker(), SiteEvidenceViewport(), averagePosition(), averageSosPosition(), CompactMapToolbar(), DEFAULT_CENTER, EMPTY_SOS_INCIDENTS, findSosIncidentForLocation() (+101 more)
 
 ### Community 93 - "live-dispatch-workspace.tsx"
 Cohesion: 0.03
-Nodes (142): DIRECT_DISPATCH_DISCARD_EVENT, DeskJobList(), detailHash(), DispatchDesk(), dispatchDetailUrl(), DispatchReviewPanel(), displayStatusFilter(), formatDateLabel() (+134 more)
+Nodes (151): DeskJobList(), detailHash(), DispatchDesk(), dispatchDetailUrl(), DispatchReviewPanel(), displayStatusFilter(), formatDateLabel(), formatSchedule() (+143 more)
 
 ### Community 94 - "build-capstone-erd.py"
 Cohesion: 0.11
@@ -710,17 +712,21 @@ Nodes (16): dataclasses, build_drawing(), er_lines(), field_label(), glyph(), ma
 Cohesion: 0.08
 Nodes (24): dependencies, class-variance-authority, clsx, concurrently, globals, image-size, @inertiajs/react, @inertiajs/vite (+16 more)
 
-### Community 96 - "workspace.ts"
-Cohesion: 0.02
-Nodes (174): LiveTrackingPreviewProps, ManagerQueueInput, OperationsManagerDashboardProps, FIELD_ROLES, FieldWorkerDashboardView(), formatSchedule(), formatTimeOnly(), isFreshLocation() (+166 more)
+### Community 96 - "AssetViewModel"
+Cohesion: 0.03
+Nodes (125): Mobile action → backend record → authorized web destination, LiveTrackingPreviewProps, EMPTY_INCIDENTS, ManagerQueueInput, OperationsManagerDashboardProps, FIELD_ROLES, FieldWorkerDashboardView(), formatSchedule() (+117 more)
+
+### Community 98 - "DispatchEmergencyOverride"
+Cohesion: 0.15
+Nodes (3): DispatchEmergencyOverrideStatus, DispatchEmergencyOverride, DispatchEmergencyOverrideCommandService
 
 ### Community 99 - "manager-schedule-panel.tsx"
 Cohesion: 0.11
-Nodes (30): countBySource(), isExecutionJob(), jobInterval, localDayBounds(), matchesScheduleSource(), nowMarkerPercent(), partitionTodayJobs(), ScheduleSourceFilter (+22 more)
+Nodes (32): countBySource(), dispatchDetailHref(), formatClockTime(), isExecutionJob(), jobInterval, localDayBounds(), matchesScheduleSource(), nowMarkerPercent() (+24 more)
 
 ### Community 100 - "DocumentsWalletScreen.tsx"
-Cohesion: 0.07
-Nodes (50): createStyles(), DocumentCard(), DocumentCardProps, AssignedAsset, CATEGORIES, CategoryFilter, categoryLabel(), DOCUMENT_CATEGORY_LABELS (+42 more)
+Cohesion: 0.06
+Nodes (55): createStyles(), DocumentCard(), DocumentCardProps, AssignedAsset, CATEGORIES, CategoryFilter, categoryLabel(), DOCUMENT_CATEGORY_LABELS (+47 more)
 
 ### Community 101 - "Authentication, Device Trust & Disaster Recovery Architecture"
 Cohesion: 0.10
@@ -731,32 +737,28 @@ Cohesion: 0.17
 Nodes (12): 1. Core HR Module Group, 2. Workforce Management Module Group, Boundary Rules, Core HR and Workforce Management Involvement in Core Transaction 2, Core HR / WFM vs. Core 2 Responsibility Matrix, Modules (as defined in Core HR):, Modules (as defined in Workforce Management):, Project Scope Clarification (+4 more)
 
 ### Community 103 - "Microservice restructuring progress"
-Cohesion: 0.08
-Nodes (25): 4. Dependencies that must change before extracting Tracking (Verified Facts), 5. Prioritized gap list, 7. Next concrete implementation task, 8. Unresolved Questions & Operational Risks (Unresolved Questions), Batch 1 and Batch 2 service boundary checkpoint (2026-09-10), Commands and actual results, Commands and actual results, Completed evidence (+17 more)
+Cohesion: 0.09
+Nodes (21): Batch 1 and Batch 2 service boundary checkpoint (2026-09-10), Commands and actual results, Commands and actual results, Commands and actual results, Completed evidence, Files changed, Final Verification Sign-Off, Full Quality Gate & Final Release Verification (2026-09-09) (+13 more)
 
 ### Community 104 - "Fleet, fuel requests, and job reports: implementation brief"
-Cohesion: 0.10
-Nodes (20): Acceptance scenarios, AI quality gate: design-stage answers, Confirmed findings to fix first, Copy into Gemini after invoking your teamwork workflow, Delivery sequence and teamwork ownership, Execution checkpoints and subsequent work, Five-module and capstone boundaries, Fleet, fuel requests, and job reports: implementation brief (+12 more)
-
-### Community 105 - "AssignmentOfferV2Controller.php"
-Cohesion: 0.14
-Nodes (7): AssignmentOfferV2Controller, DesignateLeadV2Request, ProposeAssignmentOfferV2Request, RespondAssignmentOfferV2Request, WithdrawAssignmentOfferV2Request, DispatchAssignmentOfferResource, DispatchJobV2Resource
+Cohesion: 0.11
+Nodes (18): Acceptance scenarios, AI quality gate: design-stage answers, Confirmed findings to fix first, Copy into Gemini after invoking your teamwork workflow, Delivery sequence and teamwork ownership, Execution checkpoints and subsequent work, Five-module and capstone boundaries, Fleet, fuel requests, and job reports: implementation brief (+10 more)
 
 ### Community 106 - "dependencies"
 Cohesion: 0.10
 Nodes (20): dependencies, expo, expo-constants, expo-crypto, expo-dev-client, expo-file-system, expo-image-picker, expo-location (+12 more)
 
-### Community 107 - "A. The 5 Main Operational Business Modules"
-Cohesion: 0.12
-Nodes (17): 1. Operations Monolith Backend Architecture (`apps/operations/app/`), 2. Tracking Microservice Backend Architecture (`apps/tracking/app/`), 3. Web Frontend Architecture (`apps/operations/resources/js/`), 4. Crane and Equipment Management (`apps/operations/app/Modules/CraneEquipment/`), 4. Native Field Mobile Application (`packages/field-mobile/`), 5. Fuel Management (`apps/operations/app/Modules/Fuel/`), A. Navigation & Shell (`src/navigation/`, `src/components/layout/`), A. Pages (`apps/operations/resources/js/pages/`) (+9 more)
+### Community 107 - "ValidateServiceSignature"
+Cohesion: 0.11
+Nodes (19): ValidateServiceSignature, Tracking Microservice Internal REST API (`apps/tracking`), 2. Tracking Microservice Backend Architecture (`apps/tracking/app/`), 3. Web Frontend Architecture (`apps/operations/resources/js/`), 4. Native Field Mobile Application (`packages/field-mobile/`), A. Navigation & Shell (`src/navigation/`, `src/components/layout/`), A. Pages (`apps/operations/resources/js/pages/`), B. Core Screens & Workspaces (`packages/field-mobile/src/screens/`) (+11 more)
 
 ### Community 108 - "manager-metric-strip.tsx"
-Cohesion: 0.09
-Nodes (26): FleetBreakdownPanel(), AuthorizationSummary, FLEET_BUCKET_LABELS, FLEET_BUCKET_ORDER, FleetSummary, SafetySummary, SCHEDULE_STATE_LABELS, SCHEDULE_STATE_ORDER (+18 more)
+Cohesion: 0.11
+Nodes (16): AuthorizationSummary, FLEET_BUCKET_LABELS, FLEET_BUCKET_ORDER, FleetSummary, QueueCategory, SafetySummary, SCHEDULE_STATE_LABELS, SCHEDULE_STATE_ORDER (+8 more)
 
 ### Community 109 - "manager-action-queue.tsx"
-Cohesion: 0.14
-Nodes (23): LiveCountdown(), LiveElapsed(), LiveProgress(), ManagerActionQueue(), ManagerActionQueueProps, QueueRow(), QueueRowActions(), SosEscalation() (+15 more)
+Cohesion: 0.10
+Nodes (29): LiveCountdown(), LiveElapsed(), LiveProgress(), ManagerActionQueue(), ManagerActionQueueProps, QueueRow(), QueueRowActions(), SosEscalation() (+21 more)
 
 ### Community 110 - "LiveTrackingMapLargeFleet.test.tsx"
 Cohesion: 0.11
@@ -776,27 +778,23 @@ Nodes (19): Buttons and fields, Colors, Components, Coverage editor, Design Syst
 
 ### Community 114 - "Core Transaction 2 — User Flows"
 Cohesion: 0.12
-Nodes (17): 10. Fleet & Equipment Sub-system: Driver Vehicle Inspection Reports (DVIR), 11. Driver/Operator Assignment Sub-system: Hours of Service (HoS) & Fatigue Management, 12. Statutory Safety Governance (DOLE OSHS Rule 1410 & DO 198-18), 13. SOS Emergency Response System, 14. Dispatch Project Planning & Multi-Crane Allocations, 1. Internal access, 3. Module 1: Priority or emergency dispatch, 4. Module 2: Assigned field worker (Operator) (+9 more)
+Nodes (16): 10. Fleet & Equipment Sub-system: Driver Vehicle Inspection Reports (DVIR), 11. Driver/Operator Assignment Sub-system: Hours of Service (HoS) & Fatigue Management, 12. Statutory Safety Governance (DOLE OSHS Rule 1410 & DO 198-18), 14. Dispatch Project Planning & Multi-Crane Allocations, 1. Internal access, 3. Module 1: Priority or emergency dispatch, 4. Module 2: Assigned field worker (Operator), 5. Inbound Flow: Rental received from Core 1 (+8 more)
 
 ### Community 115 - "expo"
 Cohesion: 0.11
 Nodes (18): backgroundColor, foregroundImage, adaptiveIcon, package, permissions, projectId, expo, android (+10 more)
 
 ### Community 116 - "Real-Time Workspace Architecture (Laravel Reverb & Echo)"
-Cohesion: 0.17
-Nodes (11): 1. Backend Architecture, 2. Frontend Integration, 3. Development & Operations Setup, 4. Fallback & Graceful Degradation, Component Architecture, `composer.json` / `composer dev` Command, Event Broadcasting Strategy, Laravel Echo Setup (`resources/js/echo.ts`) (+3 more)
+Cohesion: 0.15
+Nodes (12): 1. Backend Architecture, 2. Frontend Integration, 3. Development & Operations Setup, 4. Fallback & Graceful Degradation, Component Architecture, `composer.json` / `composer dev` Command, Event Broadcasting Strategy, Laravel Echo Setup (`resources/js/echo.ts`) (+4 more)
 
-### Community 117 - "OpenAiClientWrapper"
-Cohesion: 0.12
-Nodes (8): OpenAiClientWrapper, self, Completion criteria, Decision and evidence, Direct OpenAI GPT-6 Luna migration plan, Findings and improvement priorities, Implementation status, Migration work and follow-up
+### Community 118 - "OperatorDutyLog"
+Cohesion: 0.10
+Nodes (15): HosShiftController, ChangeDutyStatusRequest, StartShiftRequest, DutyLogResource, HosShiftResource, OperatorDutyLog, 2. Assign Driver/Operator and Equipment (`apps/operations/app/Modules/Assignment/`), 1. Authoritative repository verification & documentation discrepancy (+7 more)
 
-### Community 118 - "Files changed"
-Cohesion: 0.12
-Nodes (10): HosShiftController, CertifyShiftRequest, ChangeDutyStatusRequest, StartShiftRequest, DutyLogResource, HosShiftResource, 3. Transaction boundaries and concurrency gap inspection (Verified Facts), Commands and actual results (+2 more)
-
-### Community 119 - "OutboxStatusSheet.tsx"
-Cohesion: 0.09
-Nodes (35): createStyles(), OutboxDiscardDialog(), OutboxDiscardDialogProps, createStyles(), Notice(), OutboxItemCard(), OutboxItemCardProps, createStyles() (+27 more)
+### Community 119 - "src/types/index.ts"
+Cohesion: 0.04
+Nodes (74): CommandConflictBanner(), createStyles(), OutboxDiscardDialog(), OutboxDiscardDialogProps, createStyles(), Notice(), NoticeProps, OutboxItemCard() (+66 more)
 
 ### Community 120 - "DESIGN AND IMPLEMENTATION OF A GPT MINI POWERED DISPATCH AND RESOURCE MANAGEMENT PLATFORM WITH MOBILE APPLICATION FOR REAL TIME TRACKING FOR FIELD SERVICE MONITORING"
 Cohesion: 0.11
@@ -811,32 +809,32 @@ Cohesion: 0.11
 Nodes (17): compilerOptions, allowJs, baseUrl, esModuleInterop, forceConsistentCasingInFileNames, isolatedModules, jsx, module (+9 more)
 
 ### Community 124 - "HttpTrackingClient"
-Cohesion: 0.24
-Nodes (4): HttpTrackingClient, 1. Service Ownership & Boundaries, Client Applications Topology, Internal Worker Isolation Rationale (No 4-Service Overhead)
+Cohesion: 0.08
+Nodes (23): Throwable, TrackingConflictException, TrackingServiceUnavailableException, HttpTrackingClient, 1. Service Ownership & Boundaries, Client Applications Topology, Internal Worker Isolation Rationale (No 4-Service Overhead), 1. Asynchronous Telemetry Ingestion (Redis Streams) (+15 more)
 
-### Community 125 - "auth.test.ts"
-Cohesion: 0.05
-Nodes (8): AuthProviderProps, resolveApiBaseUrl(), OfflineSessionData, SecureStoreProvider, SecureTokenStorage, TokenStorageProvider, TestTokenStorage, MemoryTokenStorage
+### Community 125 - "Illuminate\Database\Eloquent\Relations\HasOne"
+Cohesion: 0.10
+Nodes (8): Illuminate\Database\Eloquent\Relations\HasOne, Architecture, Asset ViewModel Contract (`AssetViewModel`), Code Layout, Feature Inventory, Interface Contracts, Job Report ViewModel Contract (`JobReportViewModel`), Project: Web Dispatch & Operations Workspace Parity
 
-### Community 126 - "OperatorDutyLog"
-Cohesion: 0.21
-Nodes (3): DutyStatus, OperatorDutyLog, CalculateHosClocksQuery
+### Community 126 - "field-header.tsx"
+Cohesion: 0.10
+Nodes (22): Sources, createStyles(), NoUnitCard(), NoUnitCardProps, createStyles(), ReliefClaimButton(), ReliefClaimButtonProps, FieldHeaderProps (+14 more)
 
 ### Community 127 - "Field Tracking & Asset Telemetry Architecture"
 Cohesion: 0.25
 Nodes (6): Core Domain Principles: Separation of Three Concepts, Field Tracking & Asset Telemetry Architecture, Interrupted Location Updates & Freshness Degradation, Overview, UI Counts and Map Deduplication, Unassigned Asset Telemetry Rules
 
 ### Community 128 - "ReassignDispatchResources"
-Cohesion: 0.13
-Nodes (3): AssignDispatchResources, ReassignDispatchResources, Illuminate\Database\Eloquent\Collection
+Cohesion: 0.17
+Nodes (3): ReassignDispatchResources, DecideApprovalRequest, Illuminate\Database\Eloquent\Collection
 
-### Community 129 - "TestCase"
-Cohesion: 0.10
-Nodes (7): TestCase, TestCase, Illuminate\Foundation\Application, Illuminate\Foundation\Testing\TestCase, Illuminate\Support\Env, Illuminate\Support\Facades\Config, Illuminate\Support\Facades\Process
+### Community 129 - "operations/bootstrap/app.php"
+Cohesion: 0.06
+Nodes (20): CollectWorkspacePerformance, WorkspacePerformanceCollector, TestCase, static, TestCase, Illuminate\Auth\AuthenticationException, Illuminate\Foundation\Application, Illuminate\Foundation\Configuration\Exceptions (+12 more)
 
-### Community 130 - ".url"
-Cohesion: 0.11
-Nodes (18): 1. Overview & Domain Topology, 2. Platform & Hosting Architecture (HostForge), 3. Production Environment Configuration, 4. Mobile Field App Configuration (`packages/field-mobile`), 5.1. Android Client App Configuration vs. FCM V1 Server Credentials, 5.2. Expo Access Token & Rate Limits (Official Documentation Clarification), 5.3. Provider Delivery Receipts vs. Physical Device Display, 5.4. Authoritative Documentation Citations (+10 more)
+### Community 130 - "Deployment & Hosting Architecture"
+Cohesion: 0.12
+Nodes (17): 1. Overview & Domain Topology, 2. Platform & Hosting Architecture (HostForge), 3. Production Environment Configuration, 4. Mobile Field App Configuration (`packages/field-mobile`), 5.1. Android Client App Configuration vs. FCM V1 Server Credentials, 5.2. Expo Access Token & Rate Limits (Official Documentation Clarification), 5.3. Provider Delivery Receipts vs. Physical Device Display, 5.4. Authoritative Documentation Citations (+9 more)
 
 ### Community 131 - "Core Transaction 2 — Product Design"
 Cohesion: 0.12
@@ -851,21 +849,17 @@ Nodes (8): {
     withProjectBuildGradle,
 }, fs, path, BUILD_PROPERTIES, { withGradleProperties }, { withGradleProperties }, detox, ref_expo
 
-### Community 133 - "Controllers/JobReportController.php"
-Cohesion: 0.15
-Nodes (7): ResubmitJobReport, ReviewJobReport, SaveJobReportDraft, SubmitJobReport, JobReportController, JobReportController, ReviewJobReportRequest
-
 ### Community 134 - "session1-native-external.ps1"
 Cohesion: 0.17
 Nodes (9): Assert-LocalPortAvailable(), Invoke-Checked(), Measure-SecretPatternsInStream(), Prepare-AndroidDevice(), Set-NativeStage(), Test-LocalPort(), Test-SecretLeaks(), Wait-AndroidShutdown() (+1 more)
 
 ### Community 135 - "workspace.tsx"
-Cohesion: 0.06
-Nodes (49): DispatchWorkspaceEntry(), API_PATHS, CriticalLiftPlan, csrfToken(), formatWhen(), PendingHazardPhotoUpload, requestJson(), SafetyData (+41 more)
+Cohesion: 0.07
+Nodes (44): API_PATHS, CriticalLiftPlan, csrfToken(), formatWhen(), PendingHazardPhotoUpload, requestJson(), SafetyData, SafetyGovernanceSection() (+36 more)
 
 ### Community 136 - "Illuminate\Support\Facades\Route"
 Cohesion: 0.05
-Nodes (12): ReadinessController, AssetCatalogController, AssetCatalogController, FuelRequestController, LocationWeatherController, LocationWeatherController, AssetCatalogController, LocationController (+4 more)
+Nodes (10): ReadinessController, AssetCatalogController, AssetCatalogController, LocationWeatherController, LocationWeatherService, LocationWeatherController, LocationWeatherService, AssetCatalogController (+2 more)
 
 ### Community 137 - "build-simple-erd.py"
 Cohesion: 0.15
@@ -875,17 +869,13 @@ Nodes (7): Core Operations page and entry point for the simplified two-service E
 Cohesion: 0.13
 Nodes (14): CertificationStatus, CrewMemberReadiness, CrewRole, CriticalLiftPlan, HazardCategory, HazardSeverity, LiftPermitStatus, LiftRiskLevel (+6 more)
 
-### Community 139 - "FakeTrackingClient"
-Cohesion: 0.18
-Nodes (5): FakeTrackingClient, Commands and actual results, Files changed, Next step, Task 2: Decouple Tracking Queries, Weather, and Test Doubles in Operations (2026-09-09)
-
 ### Community 140 - "compilerOptions"
 Cohesion: 0.13
 Nodes (14): compilerOptions, declaration, esModuleInterop, forceConsistentCasingInFileNames, jsx, module, moduleResolution, skipLibCheck (+6 more)
 
-### Community 141 - "PushDelivery"
-Cohesion: 0.14
-Nodes (3): PushDelivery, PushNotificationService, Illuminate\Http\Client\Response
+### Community 141 - "DelayContext"
+Cohesion: 0.15
+Nodes (4): DelayContext, DelayReason, self, ReportDispatchJobDelayRequest
 
 ### Community 142 - "scripts"
 Cohesion: 0.14
@@ -901,18 +891,22 @@ Nodes (7): browserFixturePath, directDispatchView(), discardDialog(), goToDispat
 
 ### Community 145 - "Core Transaction 2 — Requirements"
 Cohesion: 0.08
-Nodes (25): Acceptance evidence, Accessibility and responsive use, Core Transaction 2 — Requirements, Cross-Cutting: Dispatch Project Planning & Multi-Crane Allocations, Cross-Cutting: SOS Emergency Response System, Cross-Cutting: Statutory Safety Governance (DOLE OSHS Rule 1410 & DO 198-18), Driver/Operator Assignment Sub-system: Hours of Service (HoS) & Fatigue Management, External Core 1 handoff boundary (+17 more)
+Nodes (24): Acceptance evidence, Accessibility and responsive use, Core Transaction 2 — Requirements, Cross-Cutting: Dispatch Project Planning & Multi-Crane Allocations, Cross-Cutting: Statutory Safety Governance (DOLE OSHS Rule 1410 & DO 198-18), Driver/Operator Assignment Sub-system: Hours of Service (HoS) & Fatigue Management, External Core 1 handoff boundary, Fleet & Equipment Sub-system: Driver Vehicle Inspection Reports (DVIR) (+16 more)
 
 ### Community 146 - "Q: btw what is the flow of my ai in the system"
 Cohesion: 0.40
 Nodes (4): Answer, Outcome, Q: btw what is the flow of my ai in the system, Source Nodes
+
+### Community 147 - "DvirInspection"
+Cohesion: 0.15
+Nodes (3): DvirInspectionController, DvirInspectionResource, DvirInspection
 
 ### Community 148 - "scripts"
 Cohesion: 0.15
 Nodes (13): scripts, build, build:ssr, dev, format, format:check, lint, lint:check (+5 more)
 
 ### Community 149 - "StorageFallbackService"
-Cohesion: 0.20
+Cohesion: 0.22
 Nodes (7): StorageFallbackService, Illuminate\Contracts\Config\Repository, Illuminate\Contracts\Filesystem\Factory, Illuminate\Filesystem\FilesystemAdapter, Illuminate\Filesystem\FilesystemManager, League\Flysystem\Local\LocalFilesystemAdapter, Psr\Log\LoggerInterface
 
 ### Community 150 - "Q: is this proper or the best way ?"
@@ -923,41 +917,45 @@ Nodes (4): Answer, Outcome, Q: is this proper or the best way ?, Source Nodes
 Cohesion: 0.15
 Nodes (13): 1. Architecture & Technical Specifications (`Docs/architecture/`), 2. Product Requirements & Business Rules (`Docs/product/`), 3. Native Field Mobile Client (`Docs/prds/`), 4. UI/UX Design & System Tokens (`Docs/design/`), 5. Microservice Architecture & Implementation (`Docs/microservice/`), 6. Operational Runbooks (`Docs/runbooks/`), 7. External References (`Docs/references/`), 8. Plans & Roadmaps (`Docs/plans/`) (+5 more)
 
-### Community 152 - "SosIncidentRecipient"
-Cohesion: 0.10
-Nodes (10): SosResponderDelivery, SosDeliveryAttemptStatus, SosDeliveryAttempt, SosIncidentRecipient, DatabaseSosResponderDelivery, SosDeliveryAttemptFactory, SosEmergencyContactFactory, SosIncidentRecipientFactory (+2 more)
+### Community 152 - "SosEmergencyContact"
+Cohesion: 0.07
+Nodes (14): SosResponderDelivery, SosDeliveryAttemptStatus, SosDeliveryAttempt, SosEmergencyContact, SosIncidentRecipient, SafetyServiceProvider, DatabaseSosResponderDelivery, NullSosEscalationDelivery (+6 more)
 
-### Community 153 - "lib/formatters.ts"
+### Community 153 - "humanize"
 Cohesion: 0.04
-Nodes (52): Mobile action → backend record → authorized web destination, FieldProgressionPanel(), Dialog, Modal(), ModalProps, sizeClasses, DispatchAdvisoryCard(), DispatchAdvisoryCardProps (+44 more)
+Nodes (60): ApprovalCard(), ApprovalCardProps, ApprovalKindBadge(), getApprovalExecutiveSummary(), ApprovalGovernancePanel(), ApprovalGovernancePanelProps, ApprovalFilterType, ApprovalMetricsBar() (+52 more)
+
+### Community 154 - "DispatchFieldProgressionViewModel"
+Cohesion: 0.15
+Nodes (3): DispatchAssetAssignmentResource, DispatchPersonnelAssignmentResource, DispatchFieldProgressionViewModel
 
 ### Community 155 - "ref_node_path"
-Cohesion: 0.11
-Nodes (16): MIGRATED, SRC, operationsRoot, workspaceRoot, ref_node_path, ref_node_url, @vitejs/plugin-react, buildRoot (+8 more)
+Cohesion: 0.08
+Nodes (23): MIGRATED, SRC, operationsRoot, workspaceRoot, ref_node_path, ref_node_url, @vitejs/plugin-react, assert (+15 more)
 
 ### Community 156 - "Module 2: Employee and asset picker"
 Cohesion: 0.17
 Nodes (11): Acceptance and verification, Assigned summary on execution screen, Candidate rows and filters, Desktop design, Goal and scope, Implementation map, Initial assignment, Module 2: Employee and asset picker (+3 more)
 
-### Community 157 - ".cancel"
-Cohesion: 0.12
-Nodes (5): DispatchWorkflowController, ActivateDispatchJobRequest, ArchiveDispatchJobRequest, CancelDispatchJobRequest, ReopenDispatchJobRequest
+### Community 157 - "Illuminate\Foundation\Http\FormRequest"
+Cohesion: 0.08
+Nodes (8): InitiateHandoverRequest, DesignateLeadV2Request, ActivateDispatchJobRequest, CancelDispatchJobV2Request, ReopenDispatchJobV2Request, ArchiveDispatchJobRequest, ReopenDispatchJobRequest, Illuminate\Foundation\Http\FormRequest
 
 ### Community 158 - "Alibaton website reference"
 Cohesion: 0.17
 Nodes (11): Alibaton website reference, Categories and brands, Equipment reference, Image and asset reference register, Published tower-crane models, Purpose and scope, Selected project examples, Services and operational context (+3 more)
 
-### Community 159 - "devDependencies"
-Cohesion: 0.17
-Nodes (12): devDependencies, detox, expo-doctor, jest, jest-expo, react-test-renderer, @testing-library/react-native, tsx (+4 more)
+### Community 159 - "StoreFuelRequest"
+Cohesion: 0.14
+Nodes (6): FuelRequestContextRules, StoreFuelRequest, StoreMobileFuelRequest, Fuel requests, Information contract by screen, Job reports
 
 ### Community 160 - "Fuel Management UI/UX Plan"
 Cohesion: 0.15
 Nodes (13): 1. Native mobile: Request fuel, 2. Native mobile: Record refueling and receipt, 3. Web: Fuel Management workspace, Acceptance criteria, Copy-ready visual prompts, Delivery and verification plan, End-to-end journey, Fuel Management UI/UX Plan (+5 more)
 
 ### Community 161 - "Illuminate\Support\ServiceProvider"
-Cohesion: 0.09
-Nodes (12): AssignmentServiceProvider, CraneEquipmentServiceProvider, DispatchServiceProvider, DvirServiceProvider, FleetServiceProvider, FuelServiceProvider, HoursOfServiceServiceProvider, RentalServiceProvider (+4 more)
+Cohesion: 0.19
+Nodes (5): CraneEquipmentServiceProvider, DvirServiceProvider, HoursOfServiceServiceProvider, RentalServiceProvider, Illuminate\Support\ServiceProvider
 
 ### Community 162 - "operations/composer.json"
 Cohesion: 0.18
@@ -983,9 +981,9 @@ Nodes (11): options, cache, executor, options, command, cwd, cache, executor (+3
 Cohesion: 0.16
 Nodes (18): FleetReferenceSource, FleetSpecificationGroup, FleetSpecificationItem, FleetSpecificationPresentation, formatFleetSpecificationValue(), formatNumber(), formatReviewedOn(), groupForKey() (+10 more)
 
-### Community 168 - "DispatchExecutionAttempt"
-Cohesion: 0.10
-Nodes (16): DispatchAttemptStatus, DispatchPlanApprovalStatus, DispatchPlanVersionStatus, DispatchExecutionAttempt, DispatchPlanApproval, DispatchPlanVersion, DispatchV2ReadinessQuery, DispatchV2CommandService (+8 more)
+### Community 168 - "DispatchPlanVersion"
+Cohesion: 0.07
+Nodes (17): DispatchAttemptStatus, DispatchPlanApprovalStatus, DispatchPlanVersionStatus, DispatchHandoff, DispatchPlanApproval, DispatchPlanVersion, DispatchV2ReadinessQuery, DispatchDeliveryAttemptGuard (+9 more)
 
 ### Community 169 - "microservice/README.md"
 Cohesion: 0.05
@@ -1004,8 +1002,8 @@ Cohesion: 0.15
 Nodes (13): A manager's day, end to end, Cross-cutting branches and recovery, Decision, loading and error-state coverage, Operations Manager web user flow, Permission boundary, Primary dispatch path, Release verification to perform after fixing A1–A4, Screen-level paths and return routes (+5 more)
 
 ### Community 175 - "backgroundLocationTask.ts"
-Cohesion: 0.10
-Nodes (30): startBackgroundLocationUpdates(), stopBackgroundLocationUpdates(), BackgroundLocationContext, clearBackgroundLocationContext(), isValidContext(), loadBackgroundLocationContext(), saveBackgroundLocationContext(), BackgroundLocationTaskData (+22 more)
+Cohesion: 0.12
+Nodes (25): startBackgroundLocationUpdates(), stopBackgroundLocationUpdates(), BackgroundLocationContext, clearBackgroundLocationContext(), isValidContext(), loadBackgroundLocationContext(), saveBackgroundLocationContext(), BackgroundLocationTaskData (+17 more)
 
 ### Community 176 - "env"
 Cohesion: 0.22
@@ -1028,12 +1026,12 @@ Cohesion: 0.22
 Nodes (8): Behavior and accessibility, Desktop composition, Dispatch resource picker refinement, Implementation and review gate, Initial assignment, Problems demonstrated in supplied screenshot, Purpose and visual direction, Small screens and short viewports
 
 ### Community 181 - "Username"
-Cohesion: 0.10
-Nodes (4): LoginRequest, Username, UsernameBackfill, up()
+Cohesion: 0.05
+Nodes (16): LoginRequest, Username, UsernameBackfill, static, UserFactory, up(), DatabaseSeeder, LocalAccountOverrides (+8 more)
 
-### Community 182 - "RecordGptOperationalMetric"
-Cohesion: 0.12
-Nodes (9): DispatchActivationReadinessQuery, BusinessLine, DispatchJobController, ServiceRequestController, StoreServiceRequest, BlockerAdviceAttribution, BlockerAdviceReview, RecordGptOperationalMetric (+1 more)
+### Community 182 - "CandidatePage"
+Cohesion: 0.23
+Nodes (3): CandidatePage, self, AssetCandidateQuery
 
 ### Community 183 - "benchmark-tracking-load.php"
 Cohesion: 0.42
@@ -1059,25 +1057,25 @@ Nodes (7): currentUser(), down(), identifier(), qualifiedIdentifier(), roleExist
 Cohesion: 0.25
 Nodes (7): implicitDependencies, name, namedInputs, default, projectType, $schema, sourceRoot
 
-### Community 190 - "LocalDevelopmentSeeder"
-Cohesion: 0.18
-Nodes (5): DatabaseSeeder, LocalAccountOverrides, self, LocalDevelopmentSeeder, Illuminate\Database\Console\Seeds\WithoutModelEvents
+### Community 190 - "Target architecture and shared invariants (Plan A: 2-Service Model)"
+Cohesion: 0.22
+Nodes (9): 2. Repository Layout & Isolated Storage, 4. Security, Authorization & Privacy, 5. Failure Boundaries & Resiliency, 6. Reference Guidance, Authentication & Authorization Authority, Coordinate Privacy & Retention Rules, Database Isolation & Schemas, Monorepo Repository Layout (+1 more)
 
 ### Community 191 - "ManagerDashboardModel.test.ts"
-Cohesion: 0.16
-Nodes (14): ALL_FUEL_CAPABILITIES, approval(), asset(), at(), fuel(), job(), minutesAgo(), NOW (+6 more)
+Cohesion: 0.15
+Nodes (15): ALL_FUEL_CAPABILITIES, approval(), asset(), at(), fuel(), job(), minutesAgo(), NOW (+7 more)
 
-### Community 192 - "manager-dashboard.tsx"
-Cohesion: 0.17
-Nodes (17): EMPTY_INCIDENTS, ManagerDashboardHeader(), compareNullableTimestamps(), isUnresolvedSos(), QueueCategory, summarizeAuthorizations(), summarizeSafety(), OperationsManagerDashboard() (+9 more)
+### Community 192 - "use-today-dispatches.ts"
+Cohesion: 0.29
+Nodes (9): DispatchDeskPage, fetchTodaySchedule(), isDispatchDeskPage(), ScheduleAccessDenied, TODAY_SCHEDULE_MAX_PAGES, TodayDispatchesState, TodayDispatchesStatus, todayScheduleUrl() (+1 more)
 
 ### Community 193 - "metro.config.js"
 Cohesion: 0.40
 Nodes (4): config, { getDefaultConfig }, ignoredPaths, ref_expo_metro_config
 
-### Community 195 - "SosEmergencyContact"
-Cohesion: 0.23
-Nodes (4): UpsertSosEmergencyContact, SosConfigurationController, StoreSosEmergencyContactRequest, SosEmergencyContact
+### Community 195 - "DispatchScheduleWindow"
+Cohesion: 0.21
+Nodes (4): DispatchAssetUsageConflictChecker, DispatchScheduleReader, DispatchScheduleWindow, EloquentDispatchScheduleReader
 
 ### Community 196 - "Core Transaction 2 - Module and Flow Architecture Map"
 Cohesion: 0.25
@@ -1088,16 +1086,12 @@ Cohesion: 0.15
 Nodes (13): 10. Related documents, 1. System Administrator (`system_administrator`), 2. Operations Manager (`operations_manager`), 2. Problem, 3. Operator (`operator` / `crane_operator`), 3. Product goals, 4. Non-goals for the current release, 5. Primary System Users (3 Users) (+5 more)
 
 ### Community 198 - ".users"
-Cohesion: 0.11
-Nodes (20): 1. Executive Summary & Integration Context, 1. Integration Health & Error Dead-Letter Queue (DLQ), 2. Job Title to Role Mapping Configuration, 2. Upstream Module Breakdown & System Boundaries, 3.1 Employee Provisioning Lifecycle, 3.2 Automated Offboarding & Emergency Kill-Switch, 3.3 Leave & Availability Synchronization, 3. Data Synchronization & Lifecycles (+12 more)
+Cohesion: 0.07
+Nodes (29): Modules 3–4: Fleet and crane/equipment management, 1. Executive Summary & Integration Context, 1. Integration Health & Error Dead-Letter Queue (DLQ), 2. Job Title to Role Mapping Configuration, 2. Upstream Module Breakdown & System Boundaries, 3.1 Employee Provisioning Lifecycle, 3.2 Automated Offboarding & Emergency Kill-Switch, 3.3 Leave & Availability Synchronization (+21 more)
 
 ### Community 199 - "Core Transaction 2 — Visual References"
 Cohesion: 0.25
 Nodes (8): Authority order, Business Process Architecture (BPA), Core Transaction 2 — Visual References, Data Flow Diagram (DFD), Module and UI/UX map, Operational & Chat Visual Diagrams, Operations ERD & Schema Diagrams, System overview
-
-### Community 200 - "StorageFallbackServiceInterface"
-Cohesion: 0.18
-Nodes (3): RecordRentalHandoverEvidence, StorageFallbackServiceInterface, __construct()
 
 ### Community 201 - "config"
 Cohesion: 0.29
@@ -1112,12 +1106,16 @@ Cohesion: 0.52
 Nodes (5): currentUser(), identifier(), qualifiedIdentifier(), roleExists(), up()
 
 ### Community 204 - "Field Emergency SOS runbook"
-Cohesion: 0.16
-Nodes (11): Current limits, Daily workflow, Office dispatch workspace, Preparation and safeguards, Verification, Current release state, Enablement checklist, Field Emergency SOS runbook (+3 more)
+Cohesion: 0.33
+Nodes (6): Current release state, Enablement checklist, Field Emergency SOS runbook, Incident response checks, Operational behavior, Responder workflow
 
 ### Community 205 - "entrypoint.sh"
 Cohesion: 0.67
 Nodes (6): fail(), require_env(), require_positive_integer(), run_as_app(), entrypoint.sh script, wait_for_database()
+
+### Community 207 - "DispatchExecutionAttempt"
+Cohesion: 0.11
+Nodes (5): DispatchExecutionAttempt, DispatchExecutionAttemptPolicy, DispatchLeadCommandService, DispatchV2Authorization, phase4Aggregate()
 
 ### Community 209 - "Field execution view implementation plan"
 Cohesion: 0.33
@@ -1131,13 +1129,17 @@ Nodes (6): Active capstone boundary, Alibaton Business Context and CT2 Scope, Bu
 Cohesion: 0.33
 Nodes (6): image-size, overrides, metro, nanoid, xcode@3.0.1, uuid
 
-### Community 213 - "operations/bootstrap/app.php"
-Cohesion: 0.22
-Nodes (9): Illuminate\Auth\AuthenticationException, Illuminate\Console\Scheduling\Schedule, Illuminate\Foundation\Configuration\Exceptions, Illuminate\Foundation\Configuration\Middleware, Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets, Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException, Symfony\Component\HttpKernel\Exception\HttpExceptionInterface, Symfony\Component\HttpKernel\Exception\NotFoundHttpException (+1 more)
+### Community 212 - ".carbon"
+Cohesion: 0.13
+Nodes (3): AssetDocumentCategory, AssetDocument, AssetDocumentPolicy
 
-### Community 214 - "FieldDispatchJobController.php"
-Cohesion: 0.09
-Nodes (11): RespondToDispatchAssignment, AssignmentResponseController, DelayContext, DelayReason, self, FieldDispatchJobController, ReportDispatchJobDelayRequest, DispatchJobResource (+3 more)
+### Community 213 - "ServiceRequest"
+Cohesion: 0.21
+Nodes (4): ConvertServiceRequestToDispatch, ServiceRequestStatus, ServiceRequest, Illuminate\Database\Eloquent\SoftDeletes
+
+### Community 214 - "VersionConflictException"
+Cohesion: 0.15
+Nodes (6): AssignmentResponseController, RespondToDispatchAssignmentRequest, FieldDispatchJobController, DispatchJobResource, Throwable, VersionConflictException
 
 ### Community 215 - "psr-4"
 Cohesion: 0.40
@@ -1151,9 +1153,9 @@ Nodes (4): Monolog\Handler\NullHandler, Monolog\Handler\StreamHandler, Monolog\H
 Cohesion: 0.13
 Nodes (15): scripts, android, build:android:debug, doctor, e2e:build:android, e2e:create-avd:android, e2e:test:android, export:android (+7 more)
 
-### Community 221 - "TelemetryIngestService"
-Cohesion: 0.25
-Nodes (5): TelemetryIngestService, 1. Asynchronous Telemetry Ingestion (Redis Streams), 2. Database Read Replicas for Fleet Dispatch, 3. Asset-Tracking States & Interrupted Location Updates, Phase 2 Modernization: Asynchronous Redis Streams & Read Replicas
+### Community 221 - "AssignmentController"
+Cohesion: 0.20
+Nodes (3): AssignmentController, AssignDispatchResourcesRequest, ReassignDispatchResourcesRequest
 
 ### Community 222 - "targets"
 Cohesion: 0.50
@@ -1199,17 +1201,13 @@ Nodes (4): optionalDependencies, lightningcss-linux-x64-gnu, @rollup/rollup-linu
 Cohesion: 0.67
 Nodes (3): autoload-dev, psr-4, Tests\\
 
-### Community 234 - "test-image-size-hardening.cjs"
-Cohesion: 0.25
-Nodes (7): assert, assertReturns(), main(), malformedFixtures, packageRoot, path, { spawn }
-
 ### Community 235 - "SosIncident"
-Cohesion: 0.04
-Nodes (22): AcknowledgeSosIncident, CancelSosIncident, ClassifySosIncident, ResolveSosIncident, TriggerSosIncident, UpdateSosIncidentLocation, SosEscalationDelivery, SosTriggerResult (+14 more)
+Cohesion: 0.06
+Nodes (8): EscalateUnacknowledgedSosIncident, SosEscalationDelivery, SosTriggerResult, SosIncidentChanged, DeliverSosEscalationJob, SosIncident, SosIncidentNotification, SosIncidentPolicy
 
 ### Community 236 - "Operations endpoints"
 Cohesion: 0.05
-Nodes (49): 5 Core Operational Modules, Admin Overrides and System Health, Authentication and workspace, Authentication & Profiles, Canonical values, Conventions, Core 1 integration boundary, Core Transaction 2 — HTTP API (+41 more)
+Nodes (43): 5 Core Operational Modules, Admin Overrides and System Health, Authentication and workspace, Authentication & Profiles, Canonical values, Conventions, Core 1 integration boundary, Core Transaction 2 — HTTP API (+35 more)
 
 ### Community 237 - "Core Transaction 2 — Data Flow Diagram (DFD)"
 Cohesion: 0.25
@@ -1219,17 +1217,17 @@ Nodes (8): 1. Level 0 DFD — Context Diagram, 2. Level 1 DFD — Decomposed Mod
 Cohesion: 0.25
 Nodes (8): 1. End-to-End Enterprise Value Stream (Level 0 BPA), 2. Business Process Hierarchy (Level 1 BPA), 3. Detailed Process Swimlane Workflows (Level 2 BPA), 4. Organizational Governance & RACI Matrix, 5. Key Business Invariants & Policy Controls, BPA-1: End-to-End Dispatch Intake to Field Activation, BPA-2: Operational Asset Inspection, Maintenance & Safe Release Protocol, Core Transaction 2 — Business Process Architecture (BPA)
 
-### Community 239 - "TrackingClient.php"
-Cohesion: 0.32
+### Community 239 - "TrackingClient"
+Cohesion: 0.33
 Nodes (3): StorageFallback, TrackingClient, Illuminate\Support\Facades\Facade
 
 ### Community 240 - "4. Detailed Tier Descriptions"
 Cohesion: 0.17
 Nodes (11): 1. Test Philosophy, 2. Feature Inventory Coverage Matrix (Tiers 1–4), 3.1 Primary Test Suite, 3.2 Execution Commands, 3. Test Architecture & Execution Commands, 4. Detailed Tier Descriptions, Test Infrastructure: Web Dispatch & Operations Workspace Parity, Tier 1: Feature Coverage (Happy Path) (+3 more)
 
-### Community 241 - "EmailOtpMail"
-Cohesion: 0.27
-Nodes (4): EmailOtpMail, Illuminate\Mail\Mailable, Illuminate\Mail\Mailables\Content, Illuminate\Mail\Mailables\Envelope
+### Community 241 - "EmailOtpMail.php"
+Cohesion: 0.33
+Nodes (3): Illuminate\Mail\Mailable, Illuminate\Mail\Mailables\Content, Illuminate\Mail\Mailables\Envelope
 
 ### Community 243 - "Q: what about here?"
 Cohesion: 0.40
@@ -1248,36 +1246,36 @@ Cohesion: 0.25
 Nodes (4): fixtureScript, SeededHistory, SeededNotification, ref_node_crypto
 
 ### Community 248 - "2026_09_25_130000_remove_sales_module.php"
-Cohesion: 0.36
-Nodes (8): convertSaleSourcedDispatches(), normalizeSalesBusinessLine(), removeSalesMorphRows(), removeSalesPermissions(), up(), whereSalesType(), Illuminate\Database\Query\Builder, Spatie\Permission\PermissionRegistrar
+Cohesion: 0.42
+Nodes (7): convertSaleSourcedDispatches(), normalizeSalesBusinessLine(), removeSalesMorphRows(), removeSalesPermissions(), up(), whereSalesType(), Illuminate\Database\Query\Builder
 
 ### Community 249 - "GenerateGptRecommendationJob"
-Cohesion: 0.07
-Nodes (32): GenerateGptRecommendation, GenerateGptRecommendationJob, PruneGptRecommendationsJob, SweepProactiveGptRecommendationsJob, sweepProactiveRecommendations(), Recorded decisions (2026-09-26), 2. Repository Layout & Isolated Storage, 3. Communication & Integration (+24 more)
+Cohesion: 0.05
+Nodes (30): GenerateGptRecommendation, GenerateGptRecommendationJob, PruneGptRecommendationsJob, SweepProactiveGptRecommendationsJob, CreateReportExportAction, ReportExportCatalog, ReportExportDataset, sweepProactiveRecommendations() (+22 more)
 
-### Community 250 - "Files changed and created"
+### Community 250 - "job-card-delay-banner.tsx"
+Cohesion: 0.36
+Nodes (8): asMinutes(), asText(), createStyles(), DelaySummary, JobCardDelayBanner(), JobCardDelayBannerProps, minutesSuffix(), summarize()
+
+### Community 251 - "StoreServiceRequest.php"
 Cohesion: 0.29
-Nodes (7): ValidateServiceSignature, static, Tracking Microservice Internal REST API (`apps/tracking`), Commands and actual results, Files changed and created, Task 4: Wire Operations BFF to Tracking Service (2026-09-09), 🛠️ Tech Stack & Monorepo Architecture
+Nodes (3): BusinessLine, StoreServiceRequest, Illuminate\Contracts\Validation\Validator
 
-### Community 252 - "V1/FuelRequestController.php"
-Cohesion: 0.08
-Nodes (11): CalculateFuelVarianceAndBurnRate, FuelNotifier, FuelVarianceResult, MobileFuelContexts, ReviewFuelRequest, SubmitMobileFuelRequest, TransitionFuelRequest, FuelNoReceiptReason (+3 more)
-
-### Community 254 - "DispatchV2CommandException"
-Cohesion: 0.06
-Nodes (12): RestoreDispatchJob, DispatchV2CommandCode, DispatchV2CommandException, DispatchJobV2Controller, ArchiveDispatchJobV2Request, CancelDispatchJobV2Request, DispatchV2ActionRequest, ProgressDispatchJobV2Request (+4 more)
-
-### Community 256 - "Operational resource coverage"
-Cohesion: 0.33
-Nodes (6): Approval and readiness, Coordinator workflow, Installation and acceptance data, Operational resource coverage, Ownership and current integration, Verification
-
-### Community 257 - "Batch 3 integration contract and concurrency source checkpoint — 2026-09-11"
-Cohesion: 0.40
-Nodes (5): Batch 3 integration contract and concurrency source checkpoint — 2026-09-11, Final source review checkpoint (2026-09-11), Full Operations Suite & Regression Remediation Checkpoint (2026-09-11), Integration Services & Browser Runtime Acceptance Checkpoint (2026-09-11), Live runtime retry checkpoint — 2026-09-11
+### Community 252 - "job-directions-button.tsx"
+Cohesion: 0.43
+Nodes (5): createStyles(), JobDirectionsButton(), directionsUrl(), inRange(), JobPlace
 
 ### Community 258 - "Whole-web sidebar and user flows"
 Cohesion: 0.20
 Nodes (10): Entry and navigation model, Evidence checked, Operations Manager, Operator, Rigger / Signalperson, Role journeys across the sidebar, Screen paths for every destination, System Administrator (+2 more)
+
+### Community 259 - "Illuminate\Database\Schema\Blueprint"
+Cohesion: 0.05
+Nodes (3): backfillFromAuditTrail(), up(), Illuminate\Database\Schema\Blueprint
+
+### Community 260 - "A. The 5 Main Operational Business Modules"
+Cohesion: 0.33
+Nodes (5): FleetServiceProvider, 1. Operations Monolith Backend Architecture (`apps/operations/app/`), 3. Fleet Management (`apps/operations/app/Modules/Fleet/`), 4. Crane and Equipment Management (`apps/operations/app/Modules/CraneEquipment/`), A. The 5 Main Operational Business Modules
 
 ### Community 273 - "Mobile Lifecycle Agent Orchestration & E2E Verification Guide"
 Cohesion: 0.25
@@ -1291,52 +1289,52 @@ Nodes (8): 5 Main Operational Business Modules, Code boundary (`apps/operations/
 Cohesion: 0.50
 Nodes (3): Illuminate\Cookie\Middleware\EncryptCookies, Laravel\Sanctum\Http\Middleware\AuthenticateSession, Laravel\Sanctum\Sanctum
 
-### Community 328 - "Carbon\Carbon"
-Cohesion: 0.20
-Nodes (3): StandbyReason, Carbon\Carbon, Illuminate\Validation\Rules\Enum
+### Community 326 - "Office dispatch workspace"
+Cohesion: 0.40
+Nodes (5): Current limits, Daily workflow, Office dispatch workspace, Preparation and safeguards, Verification
 
-### Community 331 - "RecordAuditEvent"
-Cohesion: 0.04
-Nodes (36): ActivateDispatchJob, ConvertServiceRequestToDispatch, CreateManualDispatchHandoff, DecideApprovalRequest, RescheduleDispatchJob, TransitionDispatchJob, ApprovalRequestController, ManualDispatchReferenceGenerator (+28 more)
-
-### Community 339 - "SosIncidentStatus"
-Cohesion: 0.21
-Nodes (3): SosIncidentCategory, SosIncidentStatus, SosIncidentFactory
-
-### Community 347 - "Office dispatch decision flow"
+### Community 328 - "Office dispatch decision flow"
 Cohesion: 0.40
 Nodes (5): Data confidence rule, Delivery order, Journey, Office dispatch decision flow, Screen decisions and states
 
-### Community 352 - "expo"
-Cohesion: 0.67
-Nodes (3): expo, install, exclude
+### Community 329 - "Batch 3 integration contract and concurrency source checkpoint — 2026-09-11"
+Cohesion: 0.40
+Nodes (5): Batch 3 integration contract and concurrency source checkpoint — 2026-09-11, Final source review checkpoint (2026-09-11), Full Operations Suite & Regression Remediation Checkpoint (2026-09-11), Integration Services & Browser Runtime Acceptance Checkpoint (2026-09-11), Live runtime retry checkpoint — 2026-09-11
+
+### Community 333 - "operations/bootstrap/providers.php"
+Cohesion: 0.14
+Nodes (5): AssignmentServiceProvider, FuelServiceProvider, PlatformServiceProvider, TrackingServiceProvider, AssetsServiceProvider
+
+### Community 339 - "Illuminate\Support\Facades\DB"
+Cohesion: 0.04
+Nodes (27): CreateManualDispatchHandoff, RestoreDispatchJob, ManualDispatchReferenceGenerator, EmailOtpMail, ClassifySosIncident, TriggerSosIncident, SosIncidentCategory, SosIncidentStatus (+19 more)
 
 ## Knowledge Gaps
-- **1823 isolated node(s):** `$schema`, `project`, `version`, `generated_at`, `aesthetic` (+1818 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 3050 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **131 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **1824 isolated node(s):** `$schema`, `project`, `version`, `generated_at`, `aesthetic` (+1819 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 3053 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **173 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Work-memory lessons
 
 **Preferred sources** — corroborated by past sessions; start here.
-- `AcceptGptRecommendation` (2× useful, score=1.836102945)
-- `GenerateGptRecommendationJob` (2× useful, score=1.836102945)
-- `OpenAiClientWrapper` (2× useful, score=1.836102945)
+- `AcceptGptRecommendation` (2× useful, score=1.835952347)
+- `GenerateGptRecommendationJob` (2× useful, score=1.835952347)
+- `OpenAiClientWrapper` (2× useful, score=1.835952347)
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Architecture` connect `DispatchJob` to `humanize`, `ui.tsx`, `Illuminate\Database\Eloquent\Relations\BelongsTo`, `Illuminate\Support\Collection`, `AuditEvent`, `OperationalAsset`, `Illuminate\Database\Eloquent\Builder`, `OperatorDutyLog`, `Illuminate\Http\Resources\Json\JsonResource`?**
-  _High betweenness centrality (0.132) - this node is a cross-community bridge._
-- **Why does `FieldApiClient` connect `FieldApiClient` to `OutboxCommand`, `Batch 3 integration contract and concurrency source checkpoint — 2026-09-11`, `ref_react`, `commandOutbox.ts`, `DocumentsWalletScreen.tsx`, `DispatchJob`, `src/types/index.ts`, `Microservice restructuring progress`, `AppNavigator.tsx`, `HosScreen.tsx`, `useThemedStyles`, `test-integration-services.ts`, `ProfileScreen.tsx`, `DispatchOrdersScreen.tsx`, `index.tsx`, `auth.test.ts`?**
-  _High betweenness centrality (0.120) - this node is a cross-community bridge._
-- **Why does `User` connect `User` to `ReassignDispatchResources`, `ProjectPlanningDemoSeeder`, `Illuminate\Support\Facades\Route`, `PersonnelCredential`, `Illuminate\Database\Eloquent\Relations\BelongsTo`, `ReportExportType`, `Illuminate\Support\Collection`, `1. Authoritative repository verification & documentation discrepancy`, `AuditEvent`, `PushDelivery`, `FakeTrackingClient`, `Illuminate\Http\Request`, `HosShiftConcurrencyTest.php`, `RentalReservation`, `Symfony\Component\HttpFoundation\Response`, `DispatchV2Mutation`, `DispatchJob`, `SosIncidentRecipient`, `.submitted`, `OperatorShift`, `Illuminate\Database\Eloquent\Builder`, `Illuminate\Http\Resources\Json\JsonResource`, `HttpTrackingClient.php`, `DispatchExecutionAttempt`, `Illuminate\Notifications\Notification`, `WorkspaceUpdated`, `1. Dispatch Job and Scheduling (Real-Time Activation) (`apps/operations/app/Modules/Dispatch/`)`, `DispatchHandoff`, `GptRecommendation`, `DispatchV2TransactionEnvelope`, `Username`, `TrackingClientInterface`, `Carbon\CarbonImmutable`, `RedisStreamTrackingClient`, `LocalDevelopmentSeeder`, `DispatchPlanApprovalV2Controller.php`, `SosEmergencyContact`, `DispatchReadinessBlockerCode`, `Carbon\Carbon`, `StorageFallbackServiceInterface`, `RecordAuditEvent`, `ReportExport`, `Illuminate\Foundation\Http\FormRequest`, `ListDispatchCandidatesRequest`, `DispatchV2Authorization`, `DispatchLeadCommandService`, `SosIncidentStatus`, `AssetDocument`, `OperationalAsset`, `FieldDispatchJobController.php`, `ProjectPlan`, `Phase7DistributedResilienceTest.php`, `LocationUpdate`, `.carbon`, `DispatchDeskIncomingQuery`, `DispatchEmergencyOverride`, `Authentication, Device Trust & Disaster Recovery Architecture`, `AssignmentOfferV2Controller.php`, `SosIncident`, `Operations endpoints`, `TrackingClient.php`, `EmailOtpMail`, `OpenAiClientWrapper`, `Files changed`, `GenerateGptRecommendationJob`, `OperatorDutyLog`, `UserFactory`, `HttpTrackingClient`, `DispatchV2CommandException`?**
-  _High betweenness centrality (0.099) - this node is a cross-community bridge._
+- **Why does `Architecture` connect `Illuminate\Database\Eloquent\Relations\HasOne` to `workspace.ts`, `ui.tsx`, `Illuminate\Support\Collection`, `User`, `DvirInspection`, `Symfony\Component\HttpFoundation\Response`, `OperatorDutyLog`, `DispatchJob`?**
+  _High betweenness centrality (0.131) - this node is a cross-community bridge._
+- **Why does `FieldApiClient` connect `FieldApiClient` to `OutboxCommand`, `ref_react_native`, `commandOutbox.ts`, `DocumentsWalletScreen.tsx`, `Microservice restructuring progress`, `AppNavigator`, `Batch 3 integration contract and concurrency source checkpoint — 2026-09-11`, `app.component.test.tsx`, `useThemedStyles`, `DvirScreen.tsx`, `test-integration-services.ts`, `MachineProfileScreen.tsx`, `apiClient.ts`, `AssignedJobsListScreen.tsx`, `ref_react`?**
+  _High betweenness centrality (0.118) - this node is a cross-community bridge._
+- **Why does `User` connect `User` to `ReassignDispatchResources`, `operations/bootstrap/app.php`, `Illuminate\Support\Facades\Route`, `OperatorShift`, `Illuminate\Database\Eloquent\Relations\BelongsTo`, `Source and Ownership`, `DelayContext`, `FakeTrackingClient`, `Illuminate\Support\Collection`, `Illuminate\Http\Request`, `Illuminate\Validation\ValidationException`, `Symfony\Component\HttpFoundation\Response`, `DispatchV2Mutation`, `Illuminate\Database\Eloquent\Relations\HasMany`, `SosEmergencyContact`, `.submitted`, `Illuminate\Database\Eloquent\Builder`, `IdempotentCommandService`, `DispatchV2CommandException`, `StoreFuelRequest`, `DispatchPlanVersion`, `PersonnelCredential`, `DispatchDeskIncomingQuery`, `PushPayload`, `1. Dispatch Job and Scheduling (Real-Time Activation) (`apps/operations/app/Modules/Dispatch/`)`, `DispatchV2Reconciliation`, `GptRecommendation`, `Username`, `Carbon\CarbonImmutable`, `RedisStreamTrackingClient`, `DispatchReadinessBlockerCode`, `Carbon\CarbonInterface`, `ReportExport`, `FuelRequest`, `ListDispatchCandidatesRequest`, `DispatchExecutionAttempt`, `DispatchV2TransactionEnvelope`, `Illuminate\Support\Facades\DB`, `.carbon`, `DispatchJob`, `VersionConflictException`, `ProjectPlan`, `ServiceRequest`, `Illuminate\Bus\Queueable`, `AssignDispatchResources`, `OperationalAsset.php`, `DispatchEmergencyOverride`, `Authentication, Device Trust & Disaster Recovery Architecture`, `SosIncident`, `Operations endpoints`, `OpenAiClientWrapper`, `GenerateGptRecommendationJob`, `HttpTrackingClient`, `Illuminate\Database\Eloquent\Relations\HasOne`?**
+  _High betweenness centrality (0.098) - this node is a cross-community bridge._
 - **What connects `$schema`, `project`, `version` to the rest of the system?**
-  _1823 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1824 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `OutboxCommand` be split into smaller, more focused modules?**
-  _Cohesion score 0.09409701928696669 - nodes in this community are weakly interconnected._
-- **Should `ref_react` be split into smaller, more focused modules?**
-  _Cohesion score 0.030429871769317652 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.09899749373433583 - nodes in this community are weakly interconnected._
+- **Should `ref_react_native` be split into smaller, more focused modules?**
+  _Cohesion score 0.0353015873015873 - nodes in this community are weakly interconnected._
 - **Should `lucide-react` be split into smaller, more focused modules?**
-  _Cohesion score 0.02343283582089552 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.027122641509433963 - nodes in this community are weakly interconnected._
