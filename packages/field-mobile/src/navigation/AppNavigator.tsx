@@ -38,6 +38,7 @@ import {
     isFetchError,
 } from '../connectivity/networkMonitor';
 import type { NetworkMonitor } from '../connectivity/networkMonitor';
+import { useResumeTracking } from '../hooks/useResumeTracking';
 import { useServerPostTrip } from '../hooks/useServerPostTrip';
 import { useUnitLink } from '../hooks/useUnitLink';
 import {
@@ -1739,14 +1740,58 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
 
     const activeJob = liveJobs.find((job) => job.id === selectedJobId) || null;
     const currentJob = currentJobFor(jobs, selectedJobId);
-    const activeTrackingJob = currentJob;
+    // The unit actually linked, which may not be the job home shows first.
+    const linkedAssetCode = unitLink?.assetCode ?? null;
+    const { linkedJob, linkedAsset } = useMemo(() => {
+        if (!linkedAssetCode) {
+            return { linkedJob: null, linkedAsset: null };
+        }
+
+        const job =
+            jobs.find((candidate) =>
+                candidate.asset_assignments?.some(
+                    (a) => a.asset_code === linkedAssetCode,
+                ),
+            ) ?? null;
+
+        return {
+            linkedJob: job,
+            linkedAsset:
+                job?.asset_assignments?.find(
+                    (a) => a.asset_code === linkedAssetCode,
+                ) ?? null,
+        };
+    }, [jobs, linkedAssetCode]);
+    // Tracking reports the linked unit's job, not whichever job home shows.
+    const activeTrackingJob = linkedJob ?? currentJob;
     const activeTrackingAssetId =
+        linkedAsset?.operational_asset_id ??
         activeTrackingJob?.asset_assignments?.find(
             (assignment) => assignment.operational_asset_id === selectedAssetId,
         )?.operational_asset_id ??
         (activeTrackingJob?.asset_assignments?.length === 1
             ? activeTrackingJob.asset_assignments[0].operational_asset_id
             : null);
+
+    const resumeTracking = useCallback(() => {
+        setLocationTrackingError(null);
+        setLocationSharingActive(true);
+    }, []);
+
+    // After a restart the saved link comes back; so does tracking.
+    useResumeTracking(
+        {
+            isLinked: isUnitLinked,
+            isSharing: locationSharingActive,
+            // Same rule as LocationSharingService.canShareLocation for a job.
+            canShare: Boolean(
+                user?.is_active &&
+                activeTrackingJob?.capabilities?.can_share_location,
+            ),
+            shiftInfo,
+        },
+        resumeTracking,
+    );
 
     const handleLocationCaptureIssue = useCallback(
         (error: unknown | null) => {
@@ -2348,18 +2393,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
 
     const walletAssetCode = resolvedAssetCode;
 
-    // The unit actually linked, which may not be the job home shows first.
-    const linkedJob = unitLink
-        ? (jobs.find((job) =>
-              job.asset_assignments?.some(
-                  (a) => a.asset_code === unitLink.assetCode,
-              ),
-          ) ?? null)
-        : null;
-    const linkedAsset =
-        linkedJob?.asset_assignments?.find(
-            (a) => a.asset_code === unitLink?.assetCode,
-        ) ?? null;
     const serverPostTripDone = useServerPostTrip({
         canFetch:
             activeAppView === 'hos' &&
