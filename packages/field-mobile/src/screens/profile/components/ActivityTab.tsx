@@ -10,7 +10,8 @@ import {
 import { Icon } from '../../../components/common/Icon';
 import type { IconName } from '../../../components/common/Icon';
 import type { FieldApiClient } from '../../../services/apiClient';
-import { useTheme } from '../../../theme';
+import { useTheme, useThemedStyles } from '../../../theme';
+import type { ThemeColors } from '../../../theme';
 import type {
     ActiveSessionItem,
     SecurityActivityItem,
@@ -65,7 +66,8 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
     onRevokeOthersClick,
     onSessionsUpdated,
 }) => {
-    const { isDarkHud } = useTheme();
+    const { isDarkHud, theme } = useTheme();
+    const styles = useThemedStyles(createStyles);
     const [revokingSessionId, setRevokingSessionId] = useState<string | null>(
         null,
     );
@@ -178,23 +180,13 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
             ) : null}
 
             {/* Active Sessions Card */}
-            <View style={[styles.card, isDarkHud && styles.darkCard]}>
+            <View style={[styles.card]}>
                 <View style={styles.sessionsHeaderRow}>
                     <View>
-                        <Text
-                            style={[
-                                styles.cardTitle,
-                                isDarkHud && styles.darkCardTitle,
-                            ]}
-                        >
+                        <Text style={[styles.cardTitle]}>
                             Active Sessions ({sessions.length})
                         </Text>
-                        <Text
-                            style={[
-                                styles.cardSubtitle,
-                                isDarkHud && styles.darkCardSubtitle,
-                            ]}
-                        >
+                        <Text style={[styles.cardSubtitle]}>
                             Devices currently authenticated to your account
                         </Text>
                     </View>
@@ -236,9 +228,7 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
                                     ]}
                                 >
                                     <Icon
-                                        color={
-                                            isDarkHud ? '#34D399' : '#059669'
-                                        }
+                                        color={theme.successEmerald}
                                         name={getSessionIcon(
                                             currentSession.platform,
                                             currentSession.device_type,
@@ -248,13 +238,7 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
                                 </View>
                                 <View style={styles.sessionMeta}>
                                     <View style={styles.labelCurrentRow}>
-                                        <Text
-                                            style={[
-                                                styles.sessionLabel,
-                                                isDarkHud &&
-                                                    styles.darkSessionLabel,
-                                            ]}
-                                        >
+                                        <Text style={[styles.sessionLabel]}>
                                             {currentSession.device_label ||
                                                 'Current Device'}
                                         </Text>
@@ -271,24 +255,12 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
                                             </Text>
                                         </View>
                                     </View>
-                                    <Text
-                                        style={[
-                                            styles.sessionDetails,
-                                            isDarkHud &&
-                                                styles.darkSessionDetails,
-                                        ]}
-                                    >
+                                    <Text style={[styles.sessionDetails]}>
                                         {currentSession.browser} ·{' '}
                                         {currentSession.platform} ·{' '}
                                         {currentSession.ip_address}
                                     </Text>
-                                    <Text
-                                        style={[
-                                            styles.sessionLocation,
-                                            isDarkHud &&
-                                                styles.darkSessionLocation,
-                                        ]}
-                                    >
+                                    <Text style={[styles.sessionLocation]}>
                                         {currentSession.location} · Active now
                                     </Text>
                                 </View>
@@ -300,12 +272,7 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
                 {/* Other Active Sessions */}
                 {otherSessions.length > 0 ? (
                     <View style={styles.otherSessionsList}>
-                        <Text
-                            style={[
-                                styles.otherSessionsHeader,
-                                isDarkHud && styles.darkOtherSessionsHeader,
-                            ]}
-                        >
+                        <Text style={[styles.otherSessionsHeader]}>
                             Other Authenticated Sessions ({otherSessions.length}
                             )
                         </Text>
@@ -340,11 +307,7 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
                                                 ]}
                                             >
                                                 <Icon
-                                                    color={
-                                                        isDarkHud
-                                                            ? '#94A3B8'
-                                                            : '#2563EB'
-                                                    }
+                                                    color={theme.actionCobalt}
                                                     name={getSessionIcon(
                                                         session.platform,
                                                         session.device_type,
@@ -356,8 +319,6 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
                                                 <Text
                                                     style={[
                                                         styles.sessionLabel,
-                                                        isDarkHud &&
-                                                            styles.darkSessionLabel,
                                                     ]}
                                                 >
                                                     {session.device_label ||
@@ -366,8 +327,6 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
                                                 <Text
                                                     style={[
                                                         styles.sessionDetails,
-                                                        isDarkHud &&
-                                                            styles.darkSessionDetails,
                                                     ]}
                                                 >
                                                     {session.browser} ·{' '}
@@ -377,8 +336,6 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
                                                 <Text
                                                     style={[
                                                         styles.sessionLocation,
-                                                        isDarkHud &&
-                                                            styles.darkSessionLocation,
                                                     ]}
                                                 >
                                                     {session.location} ·{' '}
@@ -406,7 +363,7 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
                                             >
                                                 {isRevoking ? (
                                                     <ActivityIndicator
-                                                        color="#EF4444"
+                                                        color={theme.hazardRed}
                                                         size="small"
                                                     />
                                                 ) : (
@@ -422,11 +379,7 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
                                         </View>
                                         {!isLast ? (
                                             <View
-                                                style={[
-                                                    styles.hairlineDivider,
-                                                    isDarkHud &&
-                                                        styles.darkHairlineDivider,
-                                                ]}
+                                                style={[styles.hairlineDivider]}
                                             />
                                         ) : null}
                                     </View>
@@ -438,33 +391,16 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
             </View>
 
             {/* Security Activity Audit Log */}
-            <View style={[styles.card, isDarkHud && styles.darkCard]}>
-                <Text
-                    style={[
-                        styles.cardTitle,
-                        isDarkHud && styles.darkCardTitle,
-                    ]}
-                >
-                    Security Activity Log
-                </Text>
-                <Text
-                    style={[
-                        styles.cardSubtitle,
-                        isDarkHud && styles.darkCardSubtitle,
-                    ]}
-                >
+            <View style={[styles.card]}>
+                <Text style={[styles.cardTitle]}>Security Activity Log</Text>
+                <Text style={[styles.cardSubtitle]}>
                     Immutable audit events recorded for authentication and
                     safety
                 </Text>
 
                 <View style={styles.activityTimeline}>
                     {activityList.length === 0 ? (
-                        <Text
-                            style={[
-                                styles.emptyText,
-                                isDarkHud && styles.darkEmptyText,
-                            ]}
-                        >
+                        <Text style={[styles.emptyText]}>
                             No security activity events recorded yet.
                         </Text>
                     ) : (
@@ -503,11 +439,7 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
                                         </View>
                                         {!isLast ? (
                                             <View
-                                                style={[
-                                                    styles.timelineLine,
-                                                    isDarkHud &&
-                                                        styles.darkTimelineLine,
-                                                ]}
+                                                style={[styles.timelineLine]}
                                             />
                                         ) : null}
                                     </View>
@@ -525,8 +457,6 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
                                                 <Text
                                                     style={[
                                                         styles.activityLabel,
-                                                        isDarkHud &&
-                                                            styles.darkActivityLabel,
                                                     ]}
                                                 >
                                                     {item.event_label ||
@@ -535,8 +465,6 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
                                                 <Text
                                                     style={[
                                                         styles.activityMeta,
-                                                        isDarkHud &&
-                                                            styles.darkActivityMeta,
                                                     ]}
                                                 >
                                                     {item.device_label} ·{' '}
@@ -567,20 +495,12 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
                                         </View>
 
                                         <View style={styles.activityBottomRow}>
-                                            <Text
-                                                style={[
-                                                    styles.activityTime,
-                                                    isDarkHud &&
-                                                        styles.darkActivityTime,
-                                                ]}
-                                            >
+                                            <Text style={[styles.activityTime]}>
                                                 {item.occurred_at_human}
                                             </Text>
                                             <Text
                                                 style={[
                                                     styles.activityLocation,
-                                                    isDarkHud &&
-                                                        styles.darkActivityLocation,
                                                 ]}
                                             >
                                                 {item.location}
@@ -608,16 +528,11 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
                     >
                         {isLoadingMoreActivity ? (
                             <ActivityIndicator
-                                color={isDarkHud ? '#FFBF00' : '#806000'}
+                                color={theme.brandAmberText}
                                 size="small"
                             />
                         ) : (
-                            <Text
-                                style={[
-                                    styles.loadMoreText,
-                                    isDarkHud && styles.darkLoadMoreText,
-                                ]}
-                            >
+                            <Text style={[styles.loadMoreText]}>
                                 Load More Activity
                             </Text>
                         )}
@@ -628,404 +543,359 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
-    container: {
-        gap: 16,
-    },
-    card: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 16,
-        padding: 16,
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
-        elevation: 1,
-        overflow: 'hidden',
-    },
-    darkCard: {
-        backgroundColor: '#1E293B',
-        borderColor: '#334155',
-    },
-    cardTitle: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: '#0F172A',
-    },
-    darkCardTitle: {
-        color: '#F8FAFC',
-    },
-    cardSubtitle: {
-        fontSize: 12,
-        color: '#64748B',
-        marginTop: 2,
-    },
-    darkCardSubtitle: {
-        color: '#94A3B8',
-    },
-    feedbackBanner: {
-        borderRadius: 10,
-        padding: 12,
-    },
-    feedbackSuccess: {
-        backgroundColor: '#ECFDF5',
-        borderWidth: 1,
-        borderColor: '#A7F3D0',
-    },
-    feedbackError: {
-        backgroundColor: '#FEF2F2',
-        borderWidth: 1,
-        borderColor: '#FECACA',
-    },
-    feedbackText: {
-        fontSize: 13,
-        fontWeight: '600',
-    },
-    feedbackSuccessText: {
-        color: '#047857',
-    },
-    feedbackErrorText: {
-        color: '#B91C1C',
-    },
-    sessionsHeaderRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    revokeOthersBtn: {
-        minHeight: 48,
-        justifyContent: 'center',
-        paddingHorizontal: 8,
-    },
-    revokeOthersBtnText: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: '#DC2626',
-    },
-    currentSessionCard: {
-        marginTop: 14,
-        padding: 14,
-        borderRadius: 14,
-        backgroundColor: '#F0FDF4',
-        borderWidth: 1.5,
-        borderColor: '#86EFAC',
-    },
-    darkCurrentSessionCard: {
-        backgroundColor: '#064E3B20',
-        borderColor: '#059669',
-    },
-    sessionTopRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    currentSessionLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        flex: 1,
-    },
-    deviceIconSquircle: {
-        width: 38,
-        height: 38,
-        borderRadius: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    lightCurrentDeviceIconSquircle: {
-        backgroundColor: '#DCFCE7',
-    },
-    darkCurrentDeviceIconSquircle: {
-        backgroundColor: '#064E3B',
-    },
-    lightDeviceIconSquircle: {
-        backgroundColor: '#EFF6FF',
-    },
-    darkDeviceIconSquircle: {
-        backgroundColor: '#1E293B',
-        borderWidth: 1,
-        borderColor: '#334155',
-    },
-    beaconRing: {
-        backgroundColor: 'rgba(16, 185, 129, 0.2)',
-        padding: 2.5,
-        borderRadius: 999,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    onlineDot: {
-        width: 7,
-        height: 7,
-        borderRadius: 3.5,
-        backgroundColor: '#10B981',
-    },
-    labelCurrentRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    sessionLabel: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: '#0F172A',
-    },
-    darkSessionLabel: {
-        color: '#F8FAFC',
-    },
-    currentBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 5,
-        backgroundColor: '#DCFCE7',
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: 6,
-    },
-    currentBadgeText: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: '#15803D',
-    },
-    sessionDetails: {
-        fontSize: 12,
-        color: '#64748B',
-        marginTop: 2,
-    },
-    darkSessionDetails: {
-        color: '#94A3B8',
-    },
-    sessionLocation: {
-        fontSize: 12,
-        color: '#94A3B8',
-        marginTop: 2,
-    },
-    darkSessionLocation: {
-        color: '#64748B',
-    },
-    otherSessionsList: {
-        marginTop: 16,
-        gap: 10,
-    },
-    otherSessionsHeader: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: '#475569',
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-    },
-    darkOtherSessionsHeader: {
-        color: '#94A3B8',
-    },
-    groupedInsetContainer: {
-        borderRadius: 14,
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
-        backgroundColor: '#F8FAFC',
-        overflow: 'hidden',
-    },
-    darkGroupedInsetContainer: {
-        backgroundColor: '#0F172A',
-        borderColor: '#334155',
-    },
-    hairlineDivider: {
-        height: StyleSheet.hairlineWidth,
-        marginLeft: 62,
-        backgroundColor: '#E2E8F0',
-    },
-    darkHairlineDivider: {
-        backgroundColor: '#334155',
-    },
-    sessionItem: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 12,
-        gap: 12,
-    },
-    darkSessionItem: {},
-    sessionMeta: {
-        flex: 1,
-        gap: 2,
-    },
-    revokeSingleBtn: {
-        minHeight: 48,
-        paddingHorizontal: 12,
-        borderRadius: 8,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#FEE2E2',
-    },
-    darkRevokeSingleBtn: {
-        backgroundColor: '#7F1D1D40',
-        borderWidth: 1,
-        borderColor: '#DC2626',
-    },
-    revokeSingleBtnText: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: '#DC2626',
-    },
-    activityTimeline: {
-        marginTop: 16,
-        gap: 12,
-    },
-    timelineRow: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-    },
-    timelineTrackContainer: {
-        width: 20,
-        alignItems: 'center',
-        marginRight: 10,
-        alignSelf: 'stretch',
-    },
-    timelineNode: {
-        width: 18,
-        height: 18,
-        borderRadius: 9,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginTop: 12,
-        zIndex: 1,
-    },
-    timelineNodeSuccessLight: {
-        backgroundColor: '#DCFCE7',
-    },
-    timelineNodeSuccessDark: {
-        backgroundColor: '#064E3B',
-    },
-    timelineNodeFailedLight: {
-        backgroundColor: '#FEE2E2',
-    },
-    timelineNodeFailedDark: {
-        backgroundColor: '#7F1D1D',
-    },
-    timelineDot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-    },
-    timelineDotSuccess: {
-        backgroundColor: '#10B981',
-    },
-    timelineDotFailed: {
-        backgroundColor: '#EF4444',
-    },
-    timelineLine: {
-        position: 'absolute',
-        top: 26,
-        bottom: -12,
-        width: 2,
-        backgroundColor: '#E2E8F0',
-    },
-    darkTimelineLine: {
-        backgroundColor: '#334155',
-    },
-    activityCard: {
-        flex: 1,
-        padding: 12,
-        borderRadius: 12,
-        backgroundColor: '#F8FAFC',
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
-        gap: 6,
-    },
-    darkActivityCard: {
-        backgroundColor: '#0F172A',
-        borderColor: '#334155',
-    },
-    emptyText: {
-        fontSize: 13,
-        color: '#94A3B8',
-        fontStyle: 'italic',
-        paddingVertical: 8,
-    },
-    darkEmptyText: {
-        color: '#64748B',
-    },
-    activityTopRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-    },
-    actionBlock: {
-        flex: 1,
-        gap: 2,
-    },
-    activityLabel: {
-        fontSize: 13,
-        fontWeight: '700',
-        color: '#0F172A',
-    },
-    darkActivityLabel: {
-        color: '#F8FAFC',
-    },
-    activityMeta: {
-        fontSize: 12,
-        color: '#64748B',
-    },
-    darkActivityMeta: {
-        color: '#94A3B8',
-    },
-    outcomeBadge: {
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: 4,
-    },
-    outcomeSuccess: {
-        backgroundColor: '#DCFCE7',
-    },
-    outcomeFailed: {
-        backgroundColor: '#FEE2E2',
-    },
-    outcomeBadgeText: {
-        fontSize: 12,
-        fontWeight: '700',
-        textTransform: 'uppercase',
-    },
-    outcomeSuccessText: {
-        color: '#15803D',
-    },
-    outcomeFailedText: {
-        color: '#DC2626',
-    },
-    activityBottomRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    activityTime: {
-        fontSize: 12,
-        color: '#94A3B8',
-    },
-    darkActivityTime: {
-        color: '#64748B',
-    },
-    activityLocation: {
-        fontSize: 12,
-        color: '#64748B',
-    },
-    darkActivityLocation: {
-        color: '#94A3B8',
-    },
-    loadMoreBtn: {
-        minHeight: 48,
-        borderRadius: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#F1F5F9',
-        marginTop: 12,
-    },
-    darkLoadMoreBtn: {
-        backgroundColor: '#334155',
-    },
-    loadMoreText: {
-        fontSize: 13,
-        fontWeight: '700',
-        color: '#334155',
-    },
-    darkLoadMoreText: {
-        color: '#F8FAFC',
-    },
-    pressed: {
-        opacity: 0.75,
-    },
-});
+const createStyles = (theme: ThemeColors) =>
+    StyleSheet.create({
+        container: {
+            gap: 16,
+        },
+        card: {
+            backgroundColor: theme.surface,
+            borderRadius: 16,
+            padding: 16,
+            borderWidth: 1,
+            borderColor: theme.border,
+            elevation: 1,
+            overflow: 'hidden',
+        },
+        cardTitle: {
+            fontSize: 16,
+            fontWeight: '700',
+            color: theme.textPrimary,
+        },
+        cardSubtitle: {
+            fontSize: 12,
+            color: theme.textSecondary,
+            marginTop: 2,
+        },
+        feedbackBanner: {
+            borderRadius: 10,
+            padding: 12,
+        },
+        feedbackSuccess: {
+            backgroundColor: theme.successEmeraldLight,
+            borderWidth: 1,
+            borderColor: theme.successEmerald,
+        },
+        feedbackError: {
+            backgroundColor: theme.hazardRedLight,
+            borderWidth: 1,
+            borderColor: theme.hazardRed,
+        },
+        feedbackText: {
+            fontSize: 13,
+            fontWeight: '600',
+        },
+        feedbackSuccessText: {
+            color: theme.successEmeraldText,
+        },
+        feedbackErrorText: {
+            color: theme.hazardRedText,
+        },
+        sessionsHeaderRow: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+        },
+        revokeOthersBtn: {
+            minHeight: 48,
+            justifyContent: 'center',
+            paddingHorizontal: 8,
+        },
+        revokeOthersBtnText: {
+            fontSize: 12,
+            fontWeight: '700',
+            color: theme.hazardRed,
+        },
+        currentSessionCard: {
+            marginTop: 14,
+            padding: 14,
+            borderRadius: 14,
+            backgroundColor: theme.successEmeraldLight,
+            borderWidth: 1.5,
+            borderColor: theme.successEmerald,
+        },
+        darkCurrentSessionCard: {
+            backgroundColor: `${theme.successEmeraldLight}20`,
+            borderColor: theme.successEmerald,
+        },
+        sessionTopRow: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+        },
+        currentSessionLeft: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+            flex: 1,
+        },
+        deviceIconSquircle: {
+            width: 38,
+            height: 38,
+            borderRadius: 10,
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        lightCurrentDeviceIconSquircle: {
+            backgroundColor: theme.successEmeraldLight,
+        },
+        darkCurrentDeviceIconSquircle: {
+            backgroundColor: theme.successEmeraldLight,
+        },
+        lightDeviceIconSquircle: {
+            backgroundColor: theme.actionCobaltLight,
+        },
+        darkDeviceIconSquircle: {
+            backgroundColor: theme.surface,
+            borderWidth: 1,
+            borderColor: theme.border,
+        },
+        beaconRing: {
+            backgroundColor: `${theme.hudGlowEmerald}33`,
+            padding: 2.5,
+            borderRadius: 999,
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        onlineDot: {
+            width: 7,
+            height: 7,
+            borderRadius: 3.5,
+            backgroundColor: theme.hudGlowEmerald,
+        },
+        labelCurrentRow: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+        },
+        sessionLabel: {
+            fontSize: 14,
+            fontWeight: '700',
+            color: theme.textPrimary,
+        },
+        currentBadge: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 5,
+            backgroundColor: theme.successEmeraldLight,
+            paddingHorizontal: 8,
+            paddingVertical: 3,
+            borderRadius: 6,
+        },
+        currentBadgeText: {
+            fontSize: 12,
+            fontWeight: '700',
+            color: theme.successEmeraldText,
+        },
+        sessionDetails: {
+            fontSize: 12,
+            color: theme.textSecondary,
+            marginTop: 2,
+        },
+        sessionLocation: {
+            fontSize: 12,
+            color: theme.textMuted,
+            marginTop: 2,
+        },
+        otherSessionsList: {
+            marginTop: 16,
+            gap: 10,
+        },
+        otherSessionsHeader: {
+            fontSize: 12,
+            fontWeight: '700',
+            color: theme.textSecondary,
+            textTransform: 'uppercase',
+            letterSpacing: 0.5,
+        },
+        groupedInsetContainer: {
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: theme.border,
+            backgroundColor: theme.surfaceHighlight,
+            overflow: 'hidden',
+        },
+        darkGroupedInsetContainer: {
+            backgroundColor: theme.textInverse,
+            borderColor: theme.border,
+        },
+        hairlineDivider: {
+            height: StyleSheet.hairlineWidth,
+            marginLeft: 62,
+            backgroundColor: theme.border,
+        },
+        sessionItem: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: 12,
+            gap: 12,
+        },
+        darkSessionItem: {},
+        sessionMeta: {
+            flex: 1,
+            gap: 2,
+        },
+        revokeSingleBtn: {
+            minHeight: 48,
+            paddingHorizontal: 12,
+            borderRadius: 8,
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: theme.hazardRedLight,
+        },
+        darkRevokeSingleBtn: {
+            backgroundColor: `${theme.hazardRedLight}40`,
+            borderWidth: 1,
+            borderColor: theme.hazardRed,
+        },
+        revokeSingleBtnText: {
+            fontSize: 12,
+            fontWeight: '600',
+            color: theme.hazardRed,
+        },
+        activityTimeline: {
+            marginTop: 16,
+            gap: 12,
+        },
+        timelineRow: {
+            flexDirection: 'row',
+            alignItems: 'flex-start',
+        },
+        timelineTrackContainer: {
+            width: 20,
+            alignItems: 'center',
+            marginRight: 10,
+            alignSelf: 'stretch',
+        },
+        timelineNode: {
+            width: 18,
+            height: 18,
+            borderRadius: 9,
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginTop: 12,
+            zIndex: 1,
+        },
+        timelineNodeSuccessLight: {
+            backgroundColor: theme.successEmeraldLight,
+        },
+        timelineNodeSuccessDark: {
+            backgroundColor: theme.successEmeraldLight,
+        },
+        timelineNodeFailedLight: {
+            backgroundColor: theme.hazardRedLight,
+        },
+        timelineNodeFailedDark: {
+            backgroundColor: theme.hazardRedLight,
+        },
+        timelineDot: {
+            width: 8,
+            height: 8,
+            borderRadius: 4,
+        },
+        timelineDotSuccess: {
+            backgroundColor: theme.hudGlowEmerald,
+        },
+        timelineDotFailed: {
+            backgroundColor: theme.hazardRed,
+        },
+        timelineLine: {
+            position: 'absolute',
+            top: 26,
+            bottom: -12,
+            width: 2,
+            backgroundColor: theme.border,
+        },
+        activityCard: {
+            flex: 1,
+            padding: 12,
+            borderRadius: 12,
+            backgroundColor: theme.surfaceHighlight,
+            borderWidth: 1,
+            borderColor: theme.border,
+            gap: 6,
+        },
+        darkActivityCard: {
+            backgroundColor: theme.textInverse,
+            borderColor: theme.border,
+        },
+        emptyText: {
+            fontSize: 13,
+            color: theme.textMuted,
+            fontStyle: 'italic',
+            paddingVertical: 8,
+        },
+        activityTopRow: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+        },
+        actionBlock: {
+            flex: 1,
+            gap: 2,
+        },
+        activityLabel: {
+            fontSize: 13,
+            fontWeight: '700',
+            color: theme.textPrimary,
+        },
+        activityMeta: {
+            fontSize: 12,
+            color: theme.textSecondary,
+        },
+        outcomeBadge: {
+            paddingHorizontal: 6,
+            paddingVertical: 2,
+            borderRadius: 4,
+        },
+        outcomeSuccess: {
+            backgroundColor: theme.successEmeraldLight,
+        },
+        outcomeFailed: {
+            backgroundColor: theme.hazardRedLight,
+        },
+        outcomeBadgeText: {
+            fontSize: 12,
+            fontWeight: '700',
+            textTransform: 'uppercase',
+        },
+        outcomeSuccessText: {
+            color: theme.successEmeraldText,
+        },
+        outcomeFailedText: {
+            color: theme.hazardRed,
+        },
+        activityBottomRow: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+        },
+        activityTime: {
+            fontSize: 12,
+            color: theme.textMuted,
+        },
+        activityLocation: {
+            fontSize: 12,
+            color: theme.textSecondary,
+        },
+        loadMoreBtn: {
+            minHeight: 48,
+            borderRadius: 10,
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: theme.canvas,
+            marginTop: 12,
+        },
+        darkLoadMoreBtn: {
+            backgroundColor: theme.border,
+        },
+        loadMoreText: {
+            fontSize: 13,
+            fontWeight: '700',
+            color: theme.textPrimary,
+        },
+        pressed: {
+            opacity: 0.75,
+        },
+    });

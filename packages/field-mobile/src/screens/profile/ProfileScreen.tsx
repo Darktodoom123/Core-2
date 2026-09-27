@@ -12,7 +12,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from '../../components/common/Icon';
 import type { FieldApiClient } from '../../services/apiClient';
-import { useTheme } from '../../theme';
+import { useTheme, useThemedStyles } from '../../theme';
+import type { ThemeColors } from '../../theme';
 import type { AccountDetailsResponse } from '../../types/account';
 import type { OutboxCommand } from '../../types/index';
 import { AccountUnavailable } from './components/AccountUnavailable';
@@ -69,7 +70,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     initialTab = 'profile',
     userName,
 }) => {
-    const { isDarkHud } = useTheme();
+    const { isDarkHud, theme } = useTheme();
+    const styles = useThemedStyles(createStyles);
     const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab);
     const [accountData, setAccountData] =
         useState<AccountDetailsResponse | null>(initialAccountData);
@@ -189,14 +191,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         }
     };
 
+    // Bottom inset only: the navigator already pads for the status bar.
     return (
         <SafeAreaView
-            edges={['top', 'bottom']}
+            edges={['bottom']}
             style={[styles.safeArea, isDarkHud && styles.darkSafeArea]}
             testID="profile-screen"
         >
             {/* Top Bar */}
-            <View style={[styles.topBar, isDarkHud && styles.darkTopBar]}>
+            <View style={[styles.topBar]}>
                 <Pressable
                     accessibilityLabel="Back"
                     accessibilityRole="button"
@@ -208,29 +211,17 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     ]}
                     testID="profile-screen-back"
                 >
-                    <Icon
-                        color={isDarkHud ? '#F8FAFC' : '#0F172A'}
-                        name="back"
-                        size={22}
-                    />
+                    <Icon color={theme.textPrimary} name="back" size={22} />
                 </Pressable>
 
                 <View style={styles.topBarCenter}>
                     <Text
                         accessibilityRole="header"
-                        style={[
-                            styles.screenTitle,
-                            isDarkHud && styles.darkScreenTitle,
-                        ]}
+                        style={[styles.screenTitle]}
                     >
                         Account & Security
                     </Text>
-                    <Text
-                        style={[
-                            styles.screenSubtitle,
-                            isDarkHud && styles.darkScreenSubtitle,
-                        ]}
-                    >
+                    <Text style={[styles.screenSubtitle]}>
                         {signedInAs
                             ? `Signed in as ${signedInAs}`
                             : 'Your account'}
@@ -260,12 +251,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                             ]}
                         />
                     </View>
-                    <Text
-                        style={[
-                            styles.statusText,
-                            isDarkHud && styles.darkStatusText,
-                        ]}
-                    >
+                    <Text style={[styles.statusText]}>
                         {isOnline === false ? 'Offline' : 'Online'}
                     </Text>
                 </View>
@@ -299,12 +285,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         <Icon
                             color={
                                 activeTab === 'profile'
-                                    ? isDarkHud
-                                        ? '#FFBF00'
-                                        : '#806000'
-                                    : isDarkHud
-                                      ? '#94A3B8'
-                                      : '#64748B'
+                                    ? theme.brandAmberText
+                                    : theme.textSecondary
                             }
                             name="profile"
                             size={16}
@@ -312,12 +294,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         <Text
                             style={[
                                 styles.tabBtnText,
-                                isDarkHud && styles.darkTabBtnText,
                                 activeTab === 'profile' &&
                                     styles.tabBtnTextActive,
-                                activeTab === 'profile' &&
-                                    isDarkHud &&
-                                    styles.darkTabBtnTextActive,
                             ]}
                         >
                             Profile
@@ -344,12 +322,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         <Icon
                             color={
                                 activeTab === 'security'
-                                    ? isDarkHud
-                                        ? '#FFBF00'
-                                        : '#806000'
-                                    : isDarkHud
-                                      ? '#94A3B8'
-                                      : '#64748B'
+                                    ? theme.brandAmberText
+                                    : theme.textSecondary
                             }
                             name="shield"
                             size={16}
@@ -357,12 +331,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         <Text
                             style={[
                                 styles.tabBtnText,
-                                isDarkHud && styles.darkTabBtnText,
                                 activeTab === 'security' &&
                                     styles.tabBtnTextActive,
-                                activeTab === 'security' &&
-                                    isDarkHud &&
-                                    styles.darkTabBtnTextActive,
                             ]}
                         >
                             Security
@@ -389,12 +359,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         <Icon
                             color={
                                 activeTab === 'activity'
-                                    ? isDarkHud
-                                        ? '#FFBF00'
-                                        : '#806000'
-                                    : isDarkHud
-                                      ? '#94A3B8'
-                                      : '#64748B'
+                                    ? theme.brandAmberText
+                                    : theme.textSecondary
                             }
                             name="clock"
                             size={16}
@@ -402,12 +368,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         <Text
                             style={[
                                 styles.tabBtnText,
-                                isDarkHud && styles.darkTabBtnText,
                                 activeTab === 'activity' &&
                                     styles.tabBtnTextActive,
-                                activeTab === 'activity' &&
-                                    isDarkHud &&
-                                    styles.darkTabBtnTextActive,
                             ]}
                         >
                             Activity
@@ -434,12 +396,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         <Icon
                             color={
                                 activeTab === 'settings'
-                                    ? isDarkHud
-                                        ? '#FFBF00'
-                                        : '#806000'
-                                    : isDarkHud
-                                      ? '#94A3B8'
-                                      : '#64748B'
+                                    ? theme.brandAmberText
+                                    : theme.textSecondary
                             }
                             name="settings"
                             size={16}
@@ -447,12 +405,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         <Text
                             style={[
                                 styles.tabBtnText,
-                                isDarkHud && styles.darkTabBtnText,
                                 activeTab === 'settings' &&
                                     styles.tabBtnTextActive,
-                                activeTab === 'settings' &&
-                                    isDarkHud &&
-                                    styles.darkTabBtnTextActive,
                             ]}
                         >
                             Settings
@@ -487,15 +441,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             {needsAccount && isLoading && !refreshing && !accountData ? (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator
-                        color={isDarkHud ? '#FFBF00' : '#806000'}
+                        color={theme.brandAmberText}
                         size="large"
                     />
-                    <Text
-                        style={[
-                            styles.loadingText,
-                            isDarkHud && styles.darkLoadingText,
-                        ]}
-                    >
+                    <Text style={[styles.loadingText]}>
                         Loading account state...
                     </Text>
                 </View>
@@ -504,10 +453,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     contentContainerStyle={styles.scrollContent}
                     refreshControl={
                         <RefreshControl
-                            colors={['#FFBF00']}
+                            colors={[theme.brandAmber]}
                             onRefresh={handleRefresh}
                             refreshing={refreshing}
-                            tintColor={isDarkHud ? '#FFBF00' : '#806000'}
+                            tintColor={theme.brandAmberText}
                         />
                     }
                     showsVerticalScrollIndicator={false}
@@ -653,237 +602,215 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
-    safeArea: {
-        flex: 1,
-        backgroundColor: '#F8FAFC',
-    },
-    darkSafeArea: {
-        backgroundColor: '#090D16',
-    },
-    topBar: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        backgroundColor: '#FFFFFF',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E2E8F0',
-    },
-    darkTopBar: {
-        backgroundColor: '#1E293B',
-        borderBottomColor: '#334155',
-    },
-    backBtn: {
-        width: 48,
-        height: 48,
-        borderRadius: 12,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#F1F5F9',
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
-    },
-    darkBackBtn: {
-        backgroundColor: '#27354A',
-        borderColor: '#334155',
-    },
-    topBarCenter: {
-        flex: 1,
-        marginHorizontal: 12,
-    },
-    screenTitle: {
-        fontSize: 17,
-        fontWeight: '800',
-        color: '#0F172A',
-        letterSpacing: -0.3,
-    },
-    darkScreenTitle: {
-        color: '#F8FAFC',
-    },
-    screenSubtitle: {
-        fontSize: 12,
-        fontWeight: '500',
-        color: '#64748B',
-    },
-    darkScreenSubtitle: {
-        color: '#94A3B8',
-    },
-    statusPill: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 20,
-        backgroundColor: '#F1F5F9',
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
-    },
-    darkStatusPill: {
-        backgroundColor: '#27354A',
-        borderColor: '#334155',
-    },
-    beaconRing: {
-        width: 14,
-        height: 14,
-        borderRadius: 7,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    beaconRingOnline: {
-        backgroundColor: 'rgba(16, 185, 129, 0.25)',
-    },
-    beaconRingOffline: {
-        backgroundColor: 'rgba(239, 68, 68, 0.25)',
-    },
-    statusDot: {
-        width: 7,
-        height: 7,
-        borderRadius: 3.5,
-    },
-    statusDotOnline: {
-        backgroundColor: '#10B981',
-    },
-    statusDotOffline: {
-        backgroundColor: '#EF4444',
-    },
-    statusText: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: '#334155',
-    },
-    darkStatusText: {
-        color: '#E2E8F0',
-    },
-    segmentedTrackWrapper: {
-        paddingHorizontal: 16,
-        paddingTop: 12,
-        paddingBottom: 4,
-    },
-    segmentedTrack: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        height: 48,
-        borderRadius: 14,
-        padding: 4,
-        backgroundColor: '#F1F5F9',
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
-    },
-    darkSegmentedTrack: {
-        backgroundColor: '#1E293B',
-        borderColor: '#334155',
-    },
-    tabPill: {
-        flex: 1,
-        height: '100%',
-        borderRadius: 10,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 6,
-        backgroundColor: 'transparent',
-    },
-    tabPillActive: {
-        backgroundColor: '#FFFFFF',
-        shadowColor: '#000000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 4,
-        elevation: 2,
-    },
-    darkTabPillActive: {
-        backgroundColor: '#27354A',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 191, 0, 0.35)',
-        shadowColor: '#FFBF00',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.15,
-        shadowRadius: 3,
-        elevation: 2,
-    },
-    tabPillPressed: {
-        transform: [{ scale: 0.98 }],
-    },
-    tabBtnText: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: '#64748B',
-    },
-    darkTabBtnText: {
-        color: '#94A3B8',
-    },
-    tabBtnTextActive: {
-        color: '#806000',
-        fontWeight: '700',
-    },
-    darkTabBtnTextActive: {
-        color: '#FFBF00',
-        fontWeight: '700',
-    },
-    toastBanner: {
-        backgroundColor: '#10B981',
-        paddingVertical: 10,
-        paddingHorizontal: 16,
-        marginHorizontal: 16,
-        marginTop: 10,
-        borderRadius: 8,
-    },
-    toastText: {
-        color: '#FFFFFF',
-        fontSize: 13,
-        fontWeight: '600',
-        textAlign: 'center',
-    },
-    errorBanner: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        backgroundColor: '#FEE2E2',
-        paddingHorizontal: 14,
-        paddingVertical: 10,
-        marginHorizontal: 16,
-        marginTop: 10,
-        borderRadius: 8,
-    },
-    errorBannerText: {
-        color: '#DC2626',
-        fontSize: 12,
-        fontWeight: '600',
-        flex: 1,
-    },
-    retryBtn: {
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        backgroundColor: '#DC2626',
-        borderRadius: 6,
-    },
-    retryBtnText: {
-        color: '#FFFFFF',
-        fontSize: 12,
-        fontWeight: '700',
-    },
-    scrollContent: {
-        padding: 16,
-        gap: 16,
-        paddingBottom: 40,
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 12,
-    },
-    loadingText: {
-        fontSize: 14,
-        color: '#64748B',
-    },
-    darkLoadingText: {
-        color: '#94A3B8',
-    },
-    pressed: {
-        opacity: 0.75,
-    },
-});
+const createStyles = (theme: ThemeColors) =>
+    StyleSheet.create({
+        safeArea: {
+            flex: 1,
+            backgroundColor: theme.surfaceHighlight,
+        },
+        darkSafeArea: {
+            backgroundColor: theme.canvas,
+        },
+        topBar: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 16,
+            paddingVertical: 12,
+            backgroundColor: theme.surface,
+            borderBottomWidth: 1,
+            borderBottomColor: theme.border,
+        },
+        backBtn: {
+            width: 48,
+            height: 48,
+            borderRadius: 12,
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: theme.canvas,
+            borderWidth: 1,
+            borderColor: theme.border,
+        },
+        darkBackBtn: {
+            backgroundColor: theme.surfaceHighlight,
+            borderColor: theme.border,
+        },
+        topBarCenter: {
+            flex: 1,
+            marginHorizontal: 12,
+        },
+        screenTitle: {
+            fontSize: 17,
+            fontWeight: '800',
+            color: theme.textPrimary,
+            letterSpacing: -0.3,
+        },
+        screenSubtitle: {
+            fontSize: 12,
+            fontWeight: '500',
+            color: theme.textSecondary,
+        },
+        statusPill: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            paddingHorizontal: 10,
+            paddingVertical: 6,
+            borderRadius: 20,
+            backgroundColor: theme.canvas,
+            borderWidth: 1,
+            borderColor: theme.border,
+        },
+        darkStatusPill: {
+            backgroundColor: theme.surfaceHighlight,
+            borderColor: theme.border,
+        },
+        beaconRing: {
+            width: 14,
+            height: 14,
+            borderRadius: 7,
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        beaconRingOnline: {
+            backgroundColor: `${theme.hudGlowEmerald}40`,
+        },
+        beaconRingOffline: {
+            backgroundColor: `${theme.hazardRed}40`,
+        },
+        statusDot: {
+            width: 7,
+            height: 7,
+            borderRadius: 3.5,
+        },
+        statusDotOnline: {
+            backgroundColor: theme.hudGlowEmerald,
+        },
+        statusDotOffline: {
+            backgroundColor: theme.hazardRed,
+        },
+        statusText: {
+            fontSize: 12,
+            fontWeight: '700',
+            color: theme.textPrimary,
+        },
+        segmentedTrackWrapper: {
+            paddingHorizontal: 16,
+            paddingTop: 12,
+            paddingBottom: 4,
+        },
+        segmentedTrack: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            height: 48,
+            borderRadius: 14,
+            padding: 4,
+            backgroundColor: theme.canvas,
+            borderWidth: 1,
+            borderColor: theme.border,
+        },
+        darkSegmentedTrack: {
+            backgroundColor: theme.surface,
+            borderColor: theme.border,
+        },
+        tabPill: {
+            flex: 1,
+            height: '100%',
+            borderRadius: 10,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            backgroundColor: 'transparent',
+        },
+        tabPillActive: {
+            backgroundColor: theme.surface,
+            shadowColor: theme.surfaceDark,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.08,
+            shadowRadius: 4,
+            elevation: 2,
+        },
+        darkTabPillActive: {
+            backgroundColor: theme.surfaceHighlight,
+            borderWidth: 1,
+            borderColor: `${theme.brandAmber}59`,
+            shadowColor: theme.brandAmberText,
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.15,
+            shadowRadius: 3,
+            elevation: 2,
+        },
+        tabPillPressed: {
+            transform: [{ scale: 0.98 }],
+        },
+        tabBtnText: {
+            fontSize: 12,
+            fontWeight: '600',
+            color: theme.textSecondary,
+        },
+        tabBtnTextActive: {
+            color: theme.brandAmberText,
+            fontWeight: '700',
+        },
+        toastBanner: {
+            backgroundColor: theme.hudGlowEmerald,
+            paddingVertical: 10,
+            paddingHorizontal: 16,
+            marginHorizontal: 16,
+            marginTop: 10,
+            borderRadius: 8,
+        },
+        toastText: {
+            color: theme.surfaceDark,
+            fontSize: 13,
+            fontWeight: '600',
+            textAlign: 'center',
+        },
+        errorBanner: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            backgroundColor: theme.hazardRedLight,
+            paddingHorizontal: 14,
+            paddingVertical: 10,
+            marginHorizontal: 16,
+            marginTop: 10,
+            borderRadius: 8,
+        },
+        errorBannerText: {
+            color: theme.hazardRed,
+            fontSize: 12,
+            fontWeight: '600',
+            flex: 1,
+        },
+        retryBtn: {
+            paddingHorizontal: 10,
+            paddingVertical: 4,
+            backgroundColor: theme.hazardRed,
+            borderRadius: 6,
+        },
+        retryBtnText: {
+            color: theme.textOnDark,
+            fontSize: 12,
+            fontWeight: '700',
+        },
+        scrollContent: {
+            padding: 16,
+            gap: 16,
+            paddingBottom: 40,
+        },
+        loadingContainer: {
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: 12,
+        },
+        loadingText: {
+            fontSize: 14,
+            color: theme.textSecondary,
+        },
+        pressed: {
+            opacity: 0.75,
+        },
+    });

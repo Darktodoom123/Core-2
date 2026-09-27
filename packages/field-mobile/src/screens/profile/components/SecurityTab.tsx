@@ -11,7 +11,8 @@ import {
 import { Icon } from '../../../components/common/Icon';
 import type { IconName } from '../../../components/common/Icon';
 import type { FieldApiClient } from '../../../services/apiClient';
-import { useTheme } from '../../../theme';
+import { useTheme, useThemedStyles } from '../../../theme';
+import type { ThemeColors } from '../../../theme';
 import type {
     SecuritySettingsData,
     TrustedDeviceItem,
@@ -66,7 +67,8 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
     onSecurityUpdated,
     onOpenOtpModal,
 }) => {
-    const { isDarkHud } = useTheme();
+    const { isDarkHud, theme } = useTheme();
+    const styles = useThemedStyles(createStyles);
     const isSystemAdmin = role === 'system_administrator';
 
     // Password form state
@@ -119,7 +121,7 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
         if (!newPassword) {
             return {
                 label: 'None',
-                color: isDarkHud ? '#64748B' : '#94A3B8',
+                color: theme.textMuted,
                 percent: 0,
             };
         }
@@ -127,7 +129,7 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
         if (complexityScore <= 2) {
             return {
                 label: 'Weak',
-                color: '#EF4444',
+                color: theme.hazardRed,
                 percent: Math.max(16, (complexityScore / 6) * 100),
             };
         }
@@ -135,7 +137,8 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
         if (complexityScore <= 4) {
             return {
                 label: 'Fair',
-                color: '#FFBF00',
+                // A caution, so the warning family, never brand gold.
+                color: theme.warningOrange,
                 percent: (complexityScore / 6) * 100,
             };
         }
@@ -143,14 +146,14 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
         if (complexityScore === 5) {
             return {
                 label: 'Strong',
-                color: '#10B981',
+                color: theme.successEmerald,
                 percent: (complexityScore / 6) * 100,
             };
         }
 
         return {
             label: 'Excellent',
-            color: '#059669',
+            color: theme.successEmeraldText,
             percent: 100,
         };
     };
@@ -301,7 +304,7 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
     return (
         <View style={styles.container} testID="security-tab">
             {/* Two-Factor Authentication Card */}
-            <View style={[styles.card, isDarkHud && styles.darkCard]}>
+            <View style={[styles.card]}>
                 <View style={styles.otpHeaderRow}>
                     <View style={styles.otpIconTitle}>
                         <View
@@ -319,12 +322,8 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
                             <Icon
                                 color={
                                     security.email_otp_enabled
-                                        ? isDarkHud
-                                            ? '#34D399'
-                                            : '#059669'
-                                        : isDarkHud
-                                          ? '#FFBF00'
-                                          : '#FFBF00'
+                                        ? theme.successEmerald
+                                        : theme.brandAmber
                                 }
                                 name={
                                     security.email_otp_enabled
@@ -335,20 +334,10 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
                             />
                         </View>
                         <View style={styles.otpTitleBlock}>
-                            <Text
-                                style={[
-                                    styles.cardTitle,
-                                    isDarkHud && styles.darkCardTitle,
-                                ]}
-                            >
+                            <Text style={[styles.cardTitle]}>
                                 Two-Factor Authentication
                             </Text>
-                            <Text
-                                style={[
-                                    styles.cardSubtitle,
-                                    isDarkHud && styles.darkCardSubtitle,
-                                ]}
-                            >
+                            <Text style={[styles.cardSubtitle]}>
                                 Secure your account with email verification
                                 codes
                             </Text>
@@ -376,35 +365,20 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
                     </View>
                 </View>
 
-                <Text
-                    style={[
-                        styles.otpDescription,
-                        isDarkHud && styles.darkOtpDescription,
-                    ]}
-                >
+                <Text style={[styles.otpDescription]}>
                     When enabled, sign-ins from unrecognized browsers or devices
                     require entering a 6-digit one-time code sent to your
                     verified email address.
                 </Text>
 
                 {security.has_verified_email ? (
-                    <View
-                        style={[
-                            styles.verifiedEmailBadgeRow,
-                            isDarkHud && styles.darkVerifiedEmailBadgeRow,
-                        ]}
-                    >
+                    <View style={[styles.verifiedEmailBadgeRow]}>
                         <Icon
-                            color={isDarkHud ? '#34D399' : '#059669'}
+                            color={theme.successEmerald}
                             name="check-circle"
                             size={14}
                         />
-                        <Text
-                            style={[
-                                styles.verifiedEmailText,
-                                isDarkHud && styles.darkVerifiedEmailText,
-                            ]}
-                        >
+                        <Text style={[styles.verifiedEmailText]}>
                             {userEmail
                                 ? `Codes routed to ${userEmail} (Verified)`
                                 : 'Codes routed to primary verified email'}
@@ -472,10 +446,7 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
                     </Pressable>
                     {isSystemAdmin && security.email_otp_enabled ? (
                         <Text
-                            style={[
-                                styles.adminPolicyText,
-                                isDarkHud && styles.darkAdminPolicyText,
-                            ]}
+                            style={[styles.adminPolicyText]}
                             testID="admin-2fa-policy-notice"
                         >
                             Mandatory for System Administrators by
@@ -486,21 +457,9 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
             </View>
 
             {/* Change Password Card */}
-            <View style={[styles.card, isDarkHud && styles.darkCard]}>
-                <Text
-                    style={[
-                        styles.cardTitle,
-                        isDarkHud && styles.darkCardTitle,
-                    ]}
-                >
-                    Change Password
-                </Text>
-                <Text
-                    style={[
-                        styles.cardSubtitle,
-                        isDarkHud && styles.darkCardSubtitle,
-                    ]}
-                >
+            <View style={[styles.card]}>
+                <Text style={[styles.cardTitle]}>Change Password</Text>
+                <Text style={[styles.cardSubtitle]}>
                     Ensure your account is using a long, random password
                 </Text>
 
@@ -536,12 +495,7 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
                     >
                         {/* Current Password Stacked Row */}
                         <View style={styles.stackedInputCell}>
-                            <Text
-                                style={[
-                                    styles.stackedInputLabel,
-                                    isDarkHud && styles.darkStackedInputLabel,
-                                ]}
-                            >
+                            <Text style={[styles.stackedInputLabel]}>
                                 Current Password
                             </Text>
                             <View style={styles.stackedInputRow}>
@@ -551,14 +505,9 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
                                     autoCorrect={false}
                                     onChangeText={setCurrentPassword}
                                     placeholder="Enter current password"
-                                    placeholderTextColor={
-                                        isDarkHud ? '#64748B' : '#94A3B8'
-                                    }
+                                    placeholderTextColor={theme.textMuted}
                                     secureTextEntry={!showCurrentPassword}
-                                    style={[
-                                        styles.textInput,
-                                        isDarkHud && styles.darkTextInput,
-                                    ]}
+                                    style={[styles.textInput]}
                                     testID="input-current-password"
                                     value={currentPassword}
                                 />
@@ -576,9 +525,7 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
                                     style={styles.eyeBtn}
                                 >
                                     <Icon
-                                        color={
-                                            isDarkHud ? '#94A3B8' : '#64748B'
-                                        }
+                                        color={theme.textSecondary}
                                         name={
                                             showCurrentPassword
                                                 ? 'eye-off'
@@ -599,12 +546,7 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
 
                         {/* New Password Stacked Row */}
                         <View style={styles.stackedInputCell}>
-                            <Text
-                                style={[
-                                    styles.stackedInputLabel,
-                                    isDarkHud && styles.darkStackedInputLabel,
-                                ]}
-                            >
+                            <Text style={[styles.stackedInputLabel]}>
                                 New Password
                             </Text>
                             <View style={styles.stackedInputRow}>
@@ -614,14 +556,9 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
                                     autoCorrect={false}
                                     onChangeText={setNewPassword}
                                     placeholder="Enter new password"
-                                    placeholderTextColor={
-                                        isDarkHud ? '#64748B' : '#94A3B8'
-                                    }
+                                    placeholderTextColor={theme.textMuted}
                                     secureTextEntry={!showNewPassword}
-                                    style={[
-                                        styles.textInput,
-                                        isDarkHud && styles.darkTextInput,
-                                    ]}
+                                    style={[styles.textInput]}
                                     testID="input-new-password"
                                     value={newPassword}
                                 />
@@ -637,9 +574,7 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
                                     style={styles.eyeBtn}
                                 >
                                     <Icon
-                                        color={
-                                            isDarkHud ? '#94A3B8' : '#64748B'
-                                        }
+                                        color={theme.textSecondary}
                                         name={
                                             showNewPassword ? 'eye-off' : 'eye'
                                         }
@@ -658,12 +593,7 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
 
                         {/* Confirm Password Stacked Row */}
                         <View style={styles.stackedInputCell}>
-                            <Text
-                                style={[
-                                    styles.stackedInputLabel,
-                                    isDarkHud && styles.darkStackedInputLabel,
-                                ]}
-                            >
+                            <Text style={[styles.stackedInputLabel]}>
                                 Confirm Password
                             </Text>
                             <View style={styles.stackedInputRow}>
@@ -673,14 +603,9 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
                                     autoCorrect={false}
                                     onChangeText={setConfirmPassword}
                                     placeholder="Re-enter new password"
-                                    placeholderTextColor={
-                                        isDarkHud ? '#64748B' : '#94A3B8'
-                                    }
+                                    placeholderTextColor={theme.textMuted}
                                     secureTextEntry={!showConfirmPassword}
-                                    style={[
-                                        styles.textInput,
-                                        isDarkHud && styles.darkTextInput,
-                                    ]}
+                                    style={[styles.textInput]}
                                     testID="input-confirm-password"
                                     value={confirmPassword}
                                 />
@@ -698,9 +623,7 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
                                     style={styles.eyeBtn}
                                 >
                                     <Icon
-                                        color={
-                                            isDarkHud ? '#94A3B8' : '#64748B'
-                                        }
+                                        color={theme.textSecondary}
                                         name={
                                             showConfirmPassword
                                                 ? 'eye-off'
@@ -717,12 +640,7 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
                     {newPassword ? (
                         <View style={styles.strengthContainer}>
                             <View style={styles.strengthHeader}>
-                                <Text
-                                    style={[
-                                        styles.strengthLabel,
-                                        isDarkHud && styles.darkStrengthLabel,
-                                    ]}
-                                >
+                                <Text style={[styles.strengthLabel]}>
                                     Password Strength
                                 </Text>
                                 <Text
@@ -734,12 +652,7 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
                                     {strength.label}
                                 </Text>
                             </View>
-                            <View
-                                style={[
-                                    styles.strengthTrack,
-                                    isDarkHud && styles.darkStrengthTrack,
-                                ]}
-                            >
+                            <View style={[styles.strengthTrack]}>
                                 <View
                                     style={[
                                         styles.strengthFill,
@@ -760,12 +673,7 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
                             isDarkHud && styles.darkChecklistCard,
                         ]}
                     >
-                        <Text
-                            style={[
-                                styles.checklistTitle,
-                                isDarkHud && styles.darkChecklistTitle,
-                            ]}
-                        >
+                        <Text style={[styles.checklistTitle]}>
                             Password Requirements
                         </Text>
                         <View style={styles.checklistGrid}>
@@ -783,7 +691,6 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
                                 <Text
                                     style={[
                                         styles.checkText,
-                                        isDarkHud && styles.darkCheckText,
                                         hasMinLength && styles.checkTextDone,
                                     ]}
                                 >
@@ -805,7 +712,6 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
                                 <Text
                                     style={[
                                         styles.checkText,
-                                        isDarkHud && styles.darkCheckText,
                                         hasUppercase && styles.checkTextDone,
                                     ]}
                                 >
@@ -827,7 +733,6 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
                                 <Text
                                     style={[
                                         styles.checkText,
-                                        isDarkHud && styles.darkCheckText,
                                         hasLowercase && styles.checkTextDone,
                                     ]}
                                 >
@@ -849,7 +754,6 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
                                 <Text
                                     style={[
                                         styles.checkText,
-                                        isDarkHud && styles.darkCheckText,
                                         hasNumber && styles.checkTextDone,
                                     ]}
                                 >
@@ -871,7 +775,6 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
                                 <Text
                                     style={[
                                         styles.checkText,
-                                        isDarkHud && styles.darkCheckText,
                                         hasSymbol && styles.checkTextDone,
                                     ]}
                                 >
@@ -893,7 +796,6 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
                                 <Text
                                     style={[
                                         styles.checkText,
-                                        isDarkHud && styles.darkCheckText,
                                         passwordsMatch && styles.checkTextDone,
                                     ]}
                                 >
@@ -926,7 +828,10 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
                         testID="btn-update-password"
                     >
                         {isUpdatingPassword ? (
-                            <ActivityIndicator color="#FFFFFF" size="small" />
+                            <ActivityIndicator
+                                color={theme.surfaceDark}
+                                size="small"
+                            />
                         ) : (
                             <Text style={styles.savePasswordBtnText}>
                                 Update Password
@@ -937,23 +842,13 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
             </View>
 
             {/* Trusted Devices Management Card */}
-            <View style={[styles.card, isDarkHud && styles.darkCard]}>
+            <View style={[styles.card]}>
                 <View style={styles.trustedHeaderRow}>
                     <View>
-                        <Text
-                            style={[
-                                styles.cardTitle,
-                                isDarkHud && styles.darkCardTitle,
-                            ]}
-                        >
+                        <Text style={[styles.cardTitle]}>
                             Trusted Devices ({trustedDevices.length})
                         </Text>
-                        <Text
-                            style={[
-                                styles.cardSubtitle,
-                                isDarkHud && styles.darkCardSubtitle,
-                            ]}
-                        >
+                        <Text style={[styles.cardSubtitle]}>
                             Devices authenticated with 30-day trust
                         </Text>
                     </View>
@@ -998,12 +893,7 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
 
                 <View style={styles.devicesList}>
                     {trustedDevices.length === 0 ? (
-                        <Text
-                            style={[
-                                styles.emptyText,
-                                isDarkHud && styles.darkEmptyText,
-                            ]}
-                        >
+                        <Text style={[styles.emptyText]}>
                             No trusted devices currently registered.
                         </Text>
                     ) : (
@@ -1029,11 +919,7 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
                                             ]}
                                         >
                                             <Icon
-                                                color={
-                                                    isDarkHud
-                                                        ? '#94A3B8'
-                                                        : '#2563EB'
-                                                }
+                                                color={theme.actionCobalt}
                                                 name={getPlatformIcon(
                                                     device.platform,
                                                 )}
@@ -1041,33 +927,17 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
                                             />
                                         </View>
                                         <View style={styles.deviceMeta}>
-                                            <Text
-                                                style={[
-                                                    styles.deviceLabel,
-                                                    isDarkHud &&
-                                                        styles.darkDeviceLabel,
-                                                ]}
-                                            >
+                                            <Text style={[styles.deviceLabel]}>
                                                 {device.device_label}
                                             </Text>
                                             <Text
-                                                style={[
-                                                    styles.devicePlatform,
-                                                    isDarkHud &&
-                                                        styles.darkDevicePlatform,
-                                                ]}
+                                                style={[styles.devicePlatform]}
                                             >
                                                 {device.platform} ·{' '}
                                                 {device.ip_address} (
                                                 {device.location})
                                             </Text>
-                                            <Text
-                                                style={[
-                                                    styles.deviceExpiry,
-                                                    isDarkHud &&
-                                                        styles.darkDeviceExpiry,
-                                                ]}
-                                            >
+                                            <Text style={[styles.deviceExpiry]}>
                                                 Active {device.last_used_human}{' '}
                                                 · Expires {device.expires_human}
                                             </Text>
@@ -1114,7 +984,7 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
                                         >
                                             {isProcessing ? (
                                                 <ActivityIndicator
-                                                    color="#EF4444"
+                                                    color={theme.hazardRed}
                                                     size="small"
                                                 />
                                             ) : (
@@ -1138,476 +1008,425 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
-    container: {
-        gap: 16,
-    },
-    card: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 16,
-        padding: 16,
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
-        elevation: 1,
-        overflow: 'hidden',
-    },
-    darkCard: {
-        backgroundColor: '#1E293B',
-        borderColor: '#334155',
-    },
-    cardTitle: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: '#0F172A',
-    },
-    darkCardTitle: {
-        color: '#F8FAFC',
-    },
-    cardSubtitle: {
-        fontSize: 12,
-        color: '#64748B',
-        marginTop: 2,
-    },
-    darkCardSubtitle: {
-        color: '#94A3B8',
-    },
-    otpHeaderRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-    },
-    otpIconTitle: {
-        flexDirection: 'row',
-        gap: 12,
-        flex: 1,
-    },
-    iconWrap: {
-        width: 40,
-        height: 40,
-        borderRadius: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    lightIconWrap: {
-        backgroundColor: '#FFF3C4',
-    },
-    darkIconWrap: {
-        backgroundColor: '#332800',
-    },
-    lightIconWrapSuccess: {
-        backgroundColor: '#ECFDF5',
-    },
-    darkIconWrapSuccess: {
-        backgroundColor: '#064E3B',
-    },
-    otpTitleBlock: {
-        flex: 1,
-    },
-    statusPill: {
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 6,
-    },
-    statusPillActive: {
-        backgroundColor: '#DCFCE7',
-    },
-    statusPillInactive: {
-        backgroundColor: '#F1F5F9',
-    },
-    statusPillText: {
-        fontSize: 12,
-        fontWeight: '700',
-    },
-    statusPillTextActive: {
-        color: '#15803D',
-    },
-    statusPillTextInactive: {
-        color: '#64748B',
-    },
-    otpDescription: {
-        fontSize: 13,
-        color: '#64748B',
-        lineHeight: 18,
-        marginTop: 12,
-    },
-    darkOtpDescription: {
-        color: '#94A3B8',
-    },
-    verifiedEmailBadgeRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        marginTop: 10,
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderRadius: 8,
-        backgroundColor: '#ECFDF5',
-        alignSelf: 'flex-start',
-    },
-    darkVerifiedEmailBadgeRow: {
-        backgroundColor: '#064E3B',
-    },
-    verifiedEmailText: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: '#047857',
-    },
-    darkVerifiedEmailText: {
-        color: '#6EE7B7',
-    },
-    otpActionRow: {
-        marginTop: 14,
-        alignItems: 'flex-start',
-    },
-    otpToggleBtn: {
-        minHeight: 48,
-        paddingHorizontal: 16,
-        borderRadius: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    lightOtpEnableBtn: {
-        backgroundColor: '#FFBF00',
-    },
-    darkOtpEnableBtn: {
-        backgroundColor: '#FFBF00',
-    },
-    otpDisableBtn: {
-        backgroundColor: '#FEE2E2',
-    },
-    darkOtpDisableBtn: {
-        backgroundColor: '#7F1D1D40',
-        borderWidth: 1,
-        borderColor: '#991B1B',
-    },
-    adminPolicyText: {
-        fontSize: 12,
-        color: '#64748B',
-        marginTop: 8,
-    },
-    darkAdminPolicyText: {
-        color: '#94A3B8',
-    },
-    otpToggleBtnText: {
-        fontSize: 13,
-        fontWeight: '700',
-        color: '#FFFFFF',
-    },
-    otpDisableBtnText: {
-        color: '#DC2626',
-    },
-    darkOtpDisableBtnText: {
-        color: '#FCA5A5',
-    },
-    feedbackBanner: {
-        borderRadius: 10,
-        padding: 12,
-        marginTop: 12,
-    },
-    feedbackSuccess: {
-        backgroundColor: '#ECFDF5',
-        borderWidth: 1,
-        borderColor: '#A7F3D0',
-    },
-    feedbackError: {
-        backgroundColor: '#FEF2F2',
-        borderWidth: 1,
-        borderColor: '#FECACA',
-    },
-    feedbackText: {
-        fontSize: 13,
-        fontWeight: '600',
-    },
-    feedbackSuccessText: {
-        color: '#047857',
-    },
-    feedbackErrorText: {
-        color: '#B91C1C',
-    },
-    formFields: {
-        marginTop: 16,
-        gap: 14,
-    },
-    groupedInputContainer: {
-        borderRadius: 14,
-        borderWidth: 1,
-        borderColor: '#CBD5E1',
-        backgroundColor: '#F8FAFC',
-        overflow: 'hidden',
-    },
-    darkGroupedInputContainer: {
-        backgroundColor: '#0F172A',
-        borderColor: '#334155',
-    },
-    stackedInputCell: {
-        paddingHorizontal: 14,
-        paddingTop: 10,
-        paddingBottom: 4,
-    },
-    stackedInputLabel: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: '#64748B',
-        textTransform: 'uppercase',
-        letterSpacing: 0.4,
-    },
-    darkStackedInputLabel: {
-        color: '#94A3B8',
-    },
-    stackedInputRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        minHeight: 44,
-    },
-    stackedHairlineDivider: {
-        height: StyleSheet.hairlineWidth,
-        backgroundColor: '#CBD5E1',
-        marginLeft: 14,
-    },
-    darkStackedHairlineDivider: {
-        backgroundColor: '#334155',
-    },
-    textInput: {
-        flex: 1,
-        height: 48,
-        fontSize: 14,
-        color: '#0F172A',
-    },
-    darkTextInput: {
-        color: '#F8FAFC',
-    },
-    eyeBtn: {
-        minWidth: 48,
-        minHeight: 48,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 8,
-    },
-    checklistCard: {
-        backgroundColor: '#F8FAFC',
-        borderRadius: 10,
-        padding: 12,
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
-        gap: 8,
-    },
-    darkChecklistCard: {
-        backgroundColor: '#0F172A',
-        borderColor: '#334155',
-    },
-    checklistTitle: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: '#475569',
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-    },
-    darkChecklistTitle: {
-        color: '#94A3B8',
-    },
-    checklistGrid: {
-        gap: 6,
-    },
-    checklistItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    checkIcon: {
-        fontSize: 13,
-        fontWeight: '700',
-    },
-    checkSuccess: {
-        color: '#10B981',
-    },
-    checkPending: {
-        color: '#94A3B8',
-    },
-    checkText: {
-        fontSize: 12,
-        color: '#64748B',
-    },
-    darkCheckText: {
-        color: '#94A3B8',
-    },
-    checkTextDone: {
-        color: '#10B981',
-        fontWeight: '600',
-    },
-    savePasswordBtn: {
-        minHeight: 48,
-        borderRadius: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginTop: 6,
-    },
-    lightSavePasswordBtn: {
-        backgroundColor: '#FFBF00',
-    },
-    darkSavePasswordBtn: {
-        backgroundColor: '#FFBF00',
-    },
-    savePasswordBtnText: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: '#FFFFFF',
-    },
-    trustedHeaderRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    revokeAllBtn: {
-        minHeight: 48,
-        justifyContent: 'center',
-        paddingHorizontal: 8,
-    },
-    revokeAllBtnText: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: '#DC2626',
-    },
-    devicesList: {
-        marginTop: 14,
-        gap: 10,
-    },
-    emptyText: {
-        fontSize: 13,
-        color: '#94A3B8',
-        fontStyle: 'italic',
-        paddingVertical: 8,
-    },
-    darkEmptyText: {
-        color: '#64748B',
-    },
-    deviceCard: {
-        padding: 12,
-        borderRadius: 10,
-        backgroundColor: '#F8FAFC',
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
-        gap: 10,
-    },
-    darkDeviceCard: {
-        backgroundColor: '#0F172A',
-        borderColor: '#334155',
-    },
-    deviceTopRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-    },
-    deviceMeta: {
-        flex: 1,
-        gap: 2,
-    },
-    devicePlatformBadge: {
-        width: 38,
-        height: 38,
-        borderRadius: 10,
-        backgroundColor: '#EFF6FF',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    darkDevicePlatformBadge: {
-        backgroundColor: '#1E293B',
-        borderWidth: 1,
-        borderColor: '#334155',
-    },
-    deviceLabel: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: '#0F172A',
-    },
-    darkDeviceLabel: {
-        color: '#F8FAFC',
-    },
-    devicePlatform: {
-        fontSize: 12,
-        color: '#64748B',
-    },
-    darkDevicePlatform: {
-        color: '#94A3B8',
-    },
-    deviceExpiry: {
-        fontSize: 12,
-        color: '#94A3B8',
-    },
-    darkDeviceExpiry: {
-        color: '#64748B',
-    },
-    deviceActionsRow: {
-        flexDirection: 'row',
-        gap: 8,
-        justifyContent: 'flex-end',
-    },
-    deviceLostBtn: {
-        minHeight: 48,
-        paddingHorizontal: 12,
-        borderRadius: 8,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#FEE2E2',
-    },
-    deviceLostText: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: '#DC2626',
-    },
-    deviceRevokeBtn: {
-        minHeight: 48,
-        paddingHorizontal: 12,
-        borderRadius: 8,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#F1F5F9',
-    },
-    darkDeviceRevokeBtn: {
-        backgroundColor: '#334155',
-    },
-    deviceRevokeText: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: '#475569',
-    },
-    strengthContainer: {
-        gap: 6,
-        marginTop: 2,
-    },
-    strengthHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    strengthLabel: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: '#64748B',
-    },
-    darkStrengthLabel: {
-        color: '#94A3B8',
-    },
-    strengthValue: {
-        fontSize: 12,
-        fontWeight: '700',
-    },
-    strengthTrack: {
-        height: 6,
-        backgroundColor: '#E2E8F0',
-        borderRadius: 3,
-        overflow: 'hidden',
-    },
-    darkStrengthTrack: {
-        backgroundColor: '#334155',
-    },
-    strengthFill: {
-        height: '100%',
-        borderRadius: 3,
-    },
-    disabledBtn: {
-        opacity: 0.5,
-    },
-    pressed: {
-        opacity: 0.75,
-    },
-});
+const createStyles = (theme: ThemeColors) =>
+    StyleSheet.create({
+        container: {
+            gap: 16,
+        },
+        card: {
+            backgroundColor: theme.surface,
+            borderRadius: 16,
+            padding: 16,
+            borderWidth: 1,
+            borderColor: theme.border,
+            elevation: 1,
+            overflow: 'hidden',
+        },
+        cardTitle: {
+            fontSize: 16,
+            fontWeight: '700',
+            color: theme.textPrimary,
+        },
+        cardSubtitle: {
+            fontSize: 12,
+            color: theme.textSecondary,
+            marginTop: 2,
+        },
+        otpHeaderRow: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+        },
+        otpIconTitle: {
+            flexDirection: 'row',
+            gap: 12,
+            flex: 1,
+        },
+        iconWrap: {
+            width: 40,
+            height: 40,
+            borderRadius: 10,
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        lightIconWrap: {
+            backgroundColor: theme.brandAmberLight,
+        },
+        darkIconWrap: {
+            backgroundColor: theme.brandAmberLight,
+        },
+        lightIconWrapSuccess: {
+            backgroundColor: theme.successEmeraldLight,
+        },
+        darkIconWrapSuccess: {
+            backgroundColor: theme.successEmeraldLight,
+        },
+        otpTitleBlock: {
+            flex: 1,
+        },
+        statusPill: {
+            paddingHorizontal: 10,
+            paddingVertical: 4,
+            borderRadius: 6,
+        },
+        statusPillActive: {
+            backgroundColor: theme.successEmeraldLight,
+        },
+        statusPillInactive: {
+            backgroundColor: theme.canvas,
+        },
+        statusPillText: {
+            fontSize: 12,
+            fontWeight: '700',
+        },
+        statusPillTextActive: {
+            color: theme.successEmeraldText,
+        },
+        statusPillTextInactive: {
+            color: theme.textSecondary,
+        },
+        otpDescription: {
+            fontSize: 13,
+            color: theme.textSecondary,
+            lineHeight: 18,
+            marginTop: 12,
+        },
+        verifiedEmailBadgeRow: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            marginTop: 10,
+            paddingHorizontal: 10,
+            paddingVertical: 5,
+            borderRadius: 8,
+            backgroundColor: theme.successEmeraldLight,
+            alignSelf: 'flex-start',
+        },
+        verifiedEmailText: {
+            fontSize: 12,
+            fontWeight: '600',
+            color: theme.successEmeraldText,
+        },
+        otpActionRow: {
+            marginTop: 14,
+            alignItems: 'flex-start',
+        },
+        otpToggleBtn: {
+            minHeight: 48,
+            paddingHorizontal: 16,
+            borderRadius: 10,
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        lightOtpEnableBtn: {
+            backgroundColor: theme.brandAmber,
+        },
+        darkOtpEnableBtn: {
+            backgroundColor: theme.brandAmber,
+        },
+        otpDisableBtn: {
+            backgroundColor: theme.hazardRedLight,
+        },
+        darkOtpDisableBtn: {
+            backgroundColor: `${theme.hazardRedLight}40`,
+            borderWidth: 1,
+            borderColor: theme.hazardRed,
+        },
+        adminPolicyText: {
+            fontSize: 12,
+            color: theme.textSecondary,
+            marginTop: 8,
+        },
+        otpToggleBtnText: {
+            fontSize: 13,
+            fontWeight: '700',
+            color: theme.surfaceDark,
+        },
+        otpDisableBtnText: {
+            color: theme.hazardRed,
+        },
+        darkOtpDisableBtnText: {
+            color: theme.hazardRedText,
+        },
+        feedbackBanner: {
+            borderRadius: 10,
+            padding: 12,
+            marginTop: 12,
+        },
+        feedbackSuccess: {
+            backgroundColor: theme.successEmeraldLight,
+            borderWidth: 1,
+            borderColor: theme.successEmerald,
+        },
+        feedbackError: {
+            backgroundColor: theme.hazardRedLight,
+            borderWidth: 1,
+            borderColor: theme.hazardRed,
+        },
+        feedbackText: {
+            fontSize: 13,
+            fontWeight: '600',
+        },
+        feedbackSuccessText: {
+            color: theme.successEmeraldText,
+        },
+        feedbackErrorText: {
+            color: theme.hazardRedText,
+        },
+        formFields: {
+            marginTop: 16,
+            gap: 14,
+        },
+        groupedInputContainer: {
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: theme.borderStrong,
+            backgroundColor: theme.surfaceHighlight,
+            overflow: 'hidden',
+        },
+        darkGroupedInputContainer: {
+            backgroundColor: theme.textInverse,
+            borderColor: theme.border,
+        },
+        stackedInputCell: {
+            paddingHorizontal: 14,
+            paddingTop: 10,
+            paddingBottom: 4,
+        },
+        stackedInputLabel: {
+            fontSize: 12,
+            fontWeight: '700',
+            color: theme.textSecondary,
+            textTransform: 'uppercase',
+            letterSpacing: 0.4,
+        },
+        stackedInputRow: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            minHeight: 44,
+        },
+        stackedHairlineDivider: {
+            height: StyleSheet.hairlineWidth,
+            backgroundColor: theme.borderStrong,
+            marginLeft: 14,
+        },
+        darkStackedHairlineDivider: {
+            backgroundColor: theme.border,
+        },
+        textInput: {
+            flex: 1,
+            height: 48,
+            fontSize: 14,
+            color: theme.textPrimary,
+        },
+        eyeBtn: {
+            minWidth: 48,
+            minHeight: 48,
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 8,
+        },
+        checklistCard: {
+            backgroundColor: theme.surfaceHighlight,
+            borderRadius: 10,
+            padding: 12,
+            borderWidth: 1,
+            borderColor: theme.border,
+            gap: 8,
+        },
+        darkChecklistCard: {
+            backgroundColor: theme.textInverse,
+            borderColor: theme.border,
+        },
+        checklistTitle: {
+            fontSize: 12,
+            fontWeight: '700',
+            color: theme.textSecondary,
+            textTransform: 'uppercase',
+            letterSpacing: 0.5,
+        },
+        checklistGrid: {
+            gap: 6,
+        },
+        checklistItem: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+        },
+        checkIcon: {
+            fontSize: 13,
+            fontWeight: '700',
+        },
+        checkSuccess: {
+            color: theme.hudGlowEmerald,
+        },
+        checkPending: {
+            color: theme.textMuted,
+        },
+        checkText: {
+            fontSize: 12,
+            color: theme.textSecondary,
+        },
+        checkTextDone: {
+            color: theme.hudGlowEmerald,
+            fontWeight: '600',
+        },
+        savePasswordBtn: {
+            minHeight: 48,
+            borderRadius: 10,
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginTop: 6,
+        },
+        lightSavePasswordBtn: {
+            backgroundColor: theme.brandAmber,
+        },
+        darkSavePasswordBtn: {
+            backgroundColor: theme.brandAmber,
+        },
+        savePasswordBtnText: {
+            fontSize: 14,
+            fontWeight: '700',
+            color: theme.surfaceDark,
+        },
+        trustedHeaderRow: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+        },
+        revokeAllBtn: {
+            minHeight: 48,
+            justifyContent: 'center',
+            paddingHorizontal: 8,
+        },
+        revokeAllBtnText: {
+            fontSize: 12,
+            fontWeight: '700',
+            color: theme.hazardRed,
+        },
+        devicesList: {
+            marginTop: 14,
+            gap: 10,
+        },
+        emptyText: {
+            fontSize: 13,
+            color: theme.textMuted,
+            fontStyle: 'italic',
+            paddingVertical: 8,
+        },
+        deviceCard: {
+            padding: 12,
+            borderRadius: 10,
+            backgroundColor: theme.surfaceHighlight,
+            borderWidth: 1,
+            borderColor: theme.border,
+            gap: 10,
+        },
+        darkDeviceCard: {
+            backgroundColor: theme.textInverse,
+            borderColor: theme.border,
+        },
+        deviceTopRow: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+        },
+        deviceMeta: {
+            flex: 1,
+            gap: 2,
+        },
+        devicePlatformBadge: {
+            width: 38,
+            height: 38,
+            borderRadius: 10,
+            backgroundColor: theme.actionCobaltLight,
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        darkDevicePlatformBadge: {
+            backgroundColor: theme.surface,
+            borderWidth: 1,
+            borderColor: theme.border,
+        },
+        deviceLabel: {
+            fontSize: 14,
+            fontWeight: '700',
+            color: theme.textPrimary,
+        },
+        devicePlatform: {
+            fontSize: 12,
+            color: theme.textSecondary,
+        },
+        deviceExpiry: {
+            fontSize: 12,
+            color: theme.textMuted,
+        },
+        deviceActionsRow: {
+            flexDirection: 'row',
+            gap: 8,
+            justifyContent: 'flex-end',
+        },
+        deviceLostBtn: {
+            minHeight: 48,
+            paddingHorizontal: 12,
+            borderRadius: 8,
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: theme.hazardRedLight,
+        },
+        deviceLostText: {
+            fontSize: 12,
+            fontWeight: '600',
+            color: theme.hazardRed,
+        },
+        deviceRevokeBtn: {
+            minHeight: 48,
+            paddingHorizontal: 12,
+            borderRadius: 8,
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: theme.canvas,
+        },
+        darkDeviceRevokeBtn: {
+            backgroundColor: theme.border,
+        },
+        deviceRevokeText: {
+            fontSize: 12,
+            fontWeight: '600',
+            color: theme.textSecondary,
+        },
+        strengthContainer: {
+            gap: 6,
+            marginTop: 2,
+        },
+        strengthHeader: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+        },
+        strengthLabel: {
+            fontSize: 12,
+            fontWeight: '600',
+            color: theme.textSecondary,
+        },
+        strengthValue: {
+            fontSize: 12,
+            fontWeight: '700',
+        },
+        strengthTrack: {
+            height: 6,
+            backgroundColor: theme.border,
+            borderRadius: 3,
+            overflow: 'hidden',
+        },
+        strengthFill: {
+            height: '100%',
+            borderRadius: 3,
+        },
+        disabledBtn: {
+            opacity: 0.5,
+        },
+        pressed: {
+            opacity: 0.75,
+        },
+    });

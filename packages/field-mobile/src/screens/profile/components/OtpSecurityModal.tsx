@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import { Icon } from '../../../components/common/Icon';
 import type { FieldApiClient } from '../../../services/apiClient';
-import { useTheme } from '../../../theme';
+import { useTheme, useThemedStyles } from '../../../theme';
+import type { ThemeColors } from '../../../theme';
 
 export interface OtpSecurityModalProps {
     visible: boolean;
@@ -27,7 +28,8 @@ export const OtpSecurityModal: React.FC<OtpSecurityModalProps> = ({
     onClose,
     onSuccess,
 }) => {
-    const { isDarkHud } = useTheme();
+    const { isDarkHud, theme } = useTheme();
+    const styles = useThemedStyles(createStyles);
     const [step, setStep] = useState<'password' | 'code'>('password');
     const [currentPassword, setCurrentPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -172,7 +174,7 @@ export const OtpSecurityModal: React.FC<OtpSecurityModalProps> = ({
                     onPress={handleResetAndClose}
                     style={styles.scrim}
                 />
-                <View style={[styles.dialog, isDarkHud && styles.darkDialog]}>
+                <View style={[styles.dialog]}>
                     <View style={styles.header}>
                         <View
                             style={[
@@ -183,7 +185,7 @@ export const OtpSecurityModal: React.FC<OtpSecurityModalProps> = ({
                             ]}
                         >
                             <Icon
-                                color={isDarkHud ? '#FFBF00' : '#806000'}
+                                color={theme.brandAmberText}
                                 name="shield"
                                 size={22}
                             />
@@ -191,19 +193,11 @@ export const OtpSecurityModal: React.FC<OtpSecurityModalProps> = ({
                         <View style={styles.headerTitles}>
                             <Text
                                 accessibilityRole="header"
-                                style={[
-                                    styles.title,
-                                    isDarkHud && styles.darkTitle,
-                                ]}
+                                style={[styles.title]}
                             >
                                 {title}
                             </Text>
-                            <Text
-                                style={[
-                                    styles.stepLabel,
-                                    isDarkHud && styles.darkStepLabel,
-                                ]}
-                            >
+                            <Text style={[styles.stepLabel]}>
                                 {step === 'password'
                                     ? 'Step 1 of 2 · Re-authenticate'
                                     : 'Step 2 of 2 · Verify Email Code'}
@@ -221,12 +215,7 @@ export const OtpSecurityModal: React.FC<OtpSecurityModalProps> = ({
 
                     {step === 'password' ? (
                         <View style={styles.formBody}>
-                            <Text
-                                style={[
-                                    styles.description,
-                                    isDarkHud && styles.darkDescription,
-                                ]}
-                            >
+                            <Text style={[styles.description]}>
                                 {action === 'enable'
                                     ? 'A verification code will be sent to your verified email address to confirm enabling two-factor authentication.'
                                     : 'A verification code will be sent to confirm disabling two-factor authentication for your account.'}
@@ -253,14 +242,9 @@ export const OtpSecurityModal: React.FC<OtpSecurityModalProps> = ({
                                         autoCorrect={false}
                                         onChangeText={setCurrentPassword}
                                         placeholder="Enter current password"
-                                        placeholderTextColor={
-                                            isDarkHud ? '#64748B' : '#94A3B8'
-                                        }
+                                        placeholderTextColor={theme.textMuted}
                                         secureTextEntry={!showPassword}
-                                        style={[
-                                            styles.input,
-                                            isDarkHud && styles.darkInput,
-                                        ]}
+                                        style={[styles.input]}
                                         testID="otp-modal-password-input"
                                         value={currentPassword}
                                     />
@@ -276,11 +260,7 @@ export const OtpSecurityModal: React.FC<OtpSecurityModalProps> = ({
                                         style={styles.eyeBtn}
                                     >
                                         <Icon
-                                            color={
-                                                isDarkHud
-                                                    ? '#94A3B8'
-                                                    : '#64748B'
-                                            }
+                                            color={theme.textSecondary}
                                             name={
                                                 showPassword ? 'eye-off' : 'eye'
                                             }
@@ -332,7 +312,7 @@ export const OtpSecurityModal: React.FC<OtpSecurityModalProps> = ({
                                 >
                                     {isLoading ? (
                                         <ActivityIndicator
-                                            color="#FFFFFF"
+                                            color={theme.surfaceDark}
                                             size="small"
                                         />
                                     ) : (
@@ -345,12 +325,7 @@ export const OtpSecurityModal: React.FC<OtpSecurityModalProps> = ({
                         </View>
                     ) : (
                         <View style={styles.formBody}>
-                            <Text
-                                style={[
-                                    styles.description,
-                                    isDarkHud && styles.darkDescription,
-                                ]}
-                            >
+                            <Text style={[styles.description]}>
                                 Please enter the 6-digit code sent to your email
                                 to confirm this change.
                             </Text>
@@ -371,15 +346,12 @@ export const OtpSecurityModal: React.FC<OtpSecurityModalProps> = ({
                                     maxLength={6}
                                     onChangeText={setCode}
                                     placeholder="000000"
-                                    placeholderTextColor={
-                                        isDarkHud ? '#64748B' : '#94A3B8'
-                                    }
+                                    placeholderTextColor={theme.textMuted}
                                     style={[
                                         styles.input,
                                         styles.inputSolo,
                                         styles.codeInput,
                                         isDarkHud && styles.darkInputRow,
-                                        isDarkHud && styles.darkInput,
                                     ]}
                                     testID="otp-modal-code-input"
                                     value={code}
@@ -455,7 +427,7 @@ export const OtpSecurityModal: React.FC<OtpSecurityModalProps> = ({
                                 >
                                     {isLoading ? (
                                         <ActivityIndicator
-                                            color="#FFFFFF"
+                                            color={theme.surfaceDark}
                                             size="small"
                                         />
                                     ) : (
@@ -473,215 +445,200 @@ export const OtpSecurityModal: React.FC<OtpSecurityModalProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
-    overlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.72)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
-    },
-    scrim: {
-        ...StyleSheet.absoluteFill,
-    },
-    dialog: {
-        width: '100%',
-        maxWidth: 440,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 24,
-        padding: 24,
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
-        elevation: 8,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.25,
-        shadowRadius: 16,
-    },
-    darkDialog: {
-        backgroundColor: '#1E293B',
-        borderColor: '#334155',
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        marginBottom: 16,
-    },
-    iconWrap: {
-        width: 44,
-        height: 44,
-        borderRadius: 12,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    lightIconWrap: {
-        backgroundColor: '#FFF3C4',
-    },
-    darkIconWrap: {
-        backgroundColor: '#332800',
-    },
-    headerTitles: {
-        flex: 1,
-    },
-    title: {
-        fontSize: 17,
-        fontWeight: '700',
-        color: '#0F172A',
-    },
-    darkTitle: {
-        color: '#F8FAFC',
-    },
-    stepLabel: {
-        fontSize: 12,
-        color: '#64748B',
-        marginTop: 2,
-    },
-    darkStepLabel: {
-        color: '#94A3B8',
-    },
-    description: {
-        fontSize: 14,
-        color: '#64748B',
-        lineHeight: 20,
-    },
-    darkDescription: {
-        color: '#94A3B8',
-    },
-    errorBanner: {
-        backgroundColor: '#FEE2E2',
-        borderRadius: 8,
-        padding: 10,
-        marginBottom: 16,
-    },
-    errorBannerText: {
-        color: '#DC2626',
-        fontSize: 13,
-        fontWeight: '500',
-    },
-    formBody: {
-        gap: 16,
-    },
-    fieldGroup: {
-        gap: 6,
-    },
-    fieldLabel: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: '#334155',
-    },
-    darkFieldLabel: {
-        color: '#CBD5E1',
-    },
-    inputRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        minHeight: 48,
-        backgroundColor: '#F8FAFC',
-        borderWidth: 1,
-        borderColor: '#CBD5E1',
-        borderRadius: 10,
-        paddingHorizontal: 12,
-    },
-    darkInputRow: {
-        backgroundColor: '#0F172A',
-        borderColor: '#334155',
-    },
-    inputSolo: {
-        borderWidth: 1,
-        borderColor: '#CBD5E1',
-        borderRadius: 10,
-        backgroundColor: '#F8FAFC',
-        paddingHorizontal: 12,
-    },
-    input: {
-        flex: 1,
-        height: 48,
-        fontSize: 15,
-        color: '#0F172A',
-    },
-    darkInput: {
-        color: '#F8FAFC',
-    },
-    codeInput: {
-        textAlign: 'center',
-        fontSize: 22,
-        letterSpacing: 8,
-        fontWeight: '700',
-    },
-    eyeBtn: {
-        minWidth: 48,
-        minHeight: 48,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 8,
-    },
-    resendRow: {
-        alignItems: 'flex-start',
-    },
-    resendBtn: {
-        minHeight: 48,
-        justifyContent: 'center',
-        paddingVertical: 6,
-    },
-    resendBtnText: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: '#FFBF00',
-    },
-    darkResendBtnText: {
-        color: '#FFBF00',
-    },
-    resendBtnDisabledText: {
-        color: '#94A3B8',
-    },
-    actions: {
-        flexDirection: 'row',
-        gap: 12,
-        justifyContent: 'flex-end',
-        marginTop: 8,
-    },
-    cancelBtn: {
-        minHeight: 48,
-        paddingHorizontal: 16,
-        borderRadius: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#F1F5F9',
-    },
-    darkCancelBtn: {
-        backgroundColor: '#334155',
-    },
-    cancelBtnText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#475569',
-    },
-    darkCancelBtnText: {
-        color: '#E2E8F0',
-    },
-    primaryBtn: {
-        minHeight: 48,
-        paddingHorizontal: 20,
-        borderRadius: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    lightPrimaryBtn: {
-        backgroundColor: '#FFBF00',
-    },
-    darkPrimaryBtn: {
-        backgroundColor: '#FFBF00',
-    },
-    disabledBtn: {
-        opacity: 0.5,
-    },
-    primaryBtnText: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: '#FFFFFF',
-    },
-    pressed: {
-        opacity: 0.75,
-    },
-});
+const createStyles = (theme: ThemeColors) =>
+    StyleSheet.create({
+        overlay: {
+            flex: 1,
+            backgroundColor: `${theme.surfaceDark}B8`,
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 20,
+        },
+        scrim: {
+            ...StyleSheet.absoluteFill,
+        },
+        dialog: {
+            width: '100%',
+            maxWidth: 440,
+            backgroundColor: theme.surface,
+            borderRadius: 24,
+            padding: 24,
+            borderWidth: 1,
+            borderColor: theme.border,
+            elevation: 8,
+            shadowColor: theme.surfaceDark,
+            shadowOffset: { width: 0, height: 8 },
+            shadowOpacity: 0.25,
+            shadowRadius: 16,
+        },
+        header: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+            marginBottom: 16,
+        },
+        iconWrap: {
+            width: 44,
+            height: 44,
+            borderRadius: 12,
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        lightIconWrap: {
+            backgroundColor: theme.brandAmberLight,
+        },
+        darkIconWrap: {
+            backgroundColor: theme.brandAmberLight,
+        },
+        headerTitles: {
+            flex: 1,
+        },
+        title: {
+            fontSize: 17,
+            fontWeight: '700',
+            color: theme.textPrimary,
+        },
+        stepLabel: {
+            fontSize: 12,
+            color: theme.textSecondary,
+            marginTop: 2,
+        },
+        description: {
+            fontSize: 14,
+            color: theme.textSecondary,
+            lineHeight: 20,
+        },
+        errorBanner: {
+            backgroundColor: theme.hazardRedLight,
+            borderRadius: 8,
+            padding: 10,
+            marginBottom: 16,
+        },
+        errorBannerText: {
+            color: theme.hazardRed,
+            fontSize: 13,
+            fontWeight: '500',
+        },
+        formBody: {
+            gap: 16,
+        },
+        fieldGroup: {
+            gap: 6,
+        },
+        fieldLabel: {
+            fontSize: 13,
+            fontWeight: '600',
+            color: theme.textPrimary,
+        },
+        darkFieldLabel: {
+            color: theme.textSecondary,
+        },
+        inputRow: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            minHeight: 48,
+            backgroundColor: theme.surfaceHighlight,
+            borderWidth: 1,
+            borderColor: theme.borderStrong,
+            borderRadius: 10,
+            paddingHorizontal: 12,
+        },
+        darkInputRow: {
+            backgroundColor: theme.textInverse,
+            borderColor: theme.border,
+        },
+        inputSolo: {
+            borderWidth: 1,
+            borderColor: theme.borderStrong,
+            borderRadius: 10,
+            backgroundColor: theme.surfaceHighlight,
+            paddingHorizontal: 12,
+        },
+        input: {
+            flex: 1,
+            height: 48,
+            fontSize: 15,
+            color: theme.textPrimary,
+        },
+        codeInput: {
+            textAlign: 'center',
+            fontSize: 22,
+            letterSpacing: 8,
+            fontWeight: '700',
+        },
+        eyeBtn: {
+            minWidth: 48,
+            minHeight: 48,
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 8,
+        },
+        resendRow: {
+            alignItems: 'flex-start',
+        },
+        resendBtn: {
+            minHeight: 48,
+            justifyContent: 'center',
+            paddingVertical: 6,
+        },
+        resendBtnText: {
+            fontSize: 13,
+            fontWeight: '600',
+            color: theme.brandAmber,
+        },
+        darkResendBtnText: {
+            color: theme.brandAmberText,
+        },
+        resendBtnDisabledText: {
+            color: theme.textMuted,
+        },
+        actions: {
+            flexDirection: 'row',
+            gap: 12,
+            justifyContent: 'flex-end',
+            marginTop: 8,
+        },
+        cancelBtn: {
+            minHeight: 48,
+            paddingHorizontal: 16,
+            borderRadius: 10,
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: theme.canvas,
+        },
+        darkCancelBtn: {
+            backgroundColor: theme.border,
+        },
+        cancelBtnText: {
+            fontSize: 14,
+            fontWeight: '600',
+            color: theme.textSecondary,
+        },
+        darkCancelBtnText: {
+            color: theme.textPrimary,
+        },
+        primaryBtn: {
+            minHeight: 48,
+            paddingHorizontal: 20,
+            borderRadius: 10,
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        lightPrimaryBtn: {
+            backgroundColor: theme.brandAmber,
+        },
+        darkPrimaryBtn: {
+            backgroundColor: theme.brandAmber,
+        },
+        disabledBtn: {
+            opacity: 0.5,
+        },
+        primaryBtnText: {
+            fontSize: 14,
+            fontWeight: '700',
+            color: theme.surfaceDark,
+        },
+        pressed: {
+            opacity: 0.75,
+        },
+    });

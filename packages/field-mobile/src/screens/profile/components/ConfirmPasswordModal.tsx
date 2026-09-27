@@ -9,7 +9,8 @@ import {
     View,
 } from 'react-native';
 import { Icon } from '../../../components/common/Icon';
-import { useTheme } from '../../../theme';
+import { useTheme, useThemedStyles } from '../../../theme';
+import type { ThemeColors } from '../../../theme';
 
 export interface ConfirmPasswordModalProps {
     visible: boolean;
@@ -34,7 +35,8 @@ export const ConfirmPasswordModal: React.FC<ConfirmPasswordModalProps> = ({
     onClose,
     onConfirm,
 }) => {
-    const { isDarkHud } = useTheme();
+    const { isDarkHud, theme } = useTheme();
+    const styles = useThemedStyles(createStyles);
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -76,7 +78,7 @@ export const ConfirmPasswordModal: React.FC<ConfirmPasswordModalProps> = ({
                     onPress={handleClose}
                     style={styles.scrim}
                 />
-                <View style={[styles.dialog, isDarkHud && styles.darkDialog]}>
+                <View style={[styles.dialog]}>
                     <View style={styles.header}>
                         <View
                             style={[
@@ -91,35 +93,20 @@ export const ConfirmPasswordModal: React.FC<ConfirmPasswordModalProps> = ({
                             <Icon
                                 color={
                                     isDestructive
-                                        ? '#EF4444'
-                                        : isDarkHud
-                                          ? '#FFBF00'
-                                          : '#806000'
+                                        ? theme.hazardRed
+                                        : theme.brandAmberText
                                 }
                                 name="lock"
                                 size={22}
                             />
                         </View>
-                        <Text
-                            accessibilityRole="header"
-                            style={[
-                                styles.title,
-                                isDarkHud && styles.darkTitle,
-                            ]}
-                        >
+                        <Text accessibilityRole="header" style={[styles.title]}>
                             {title}
                         </Text>
                     </View>
 
                     {description ? (
-                        <Text
-                            style={[
-                                styles.description,
-                                isDarkHud && styles.darkDescription,
-                            ]}
-                        >
-                            {description}
-                        </Text>
+                        <Text style={[styles.description]}>{description}</Text>
                     ) : null}
 
                     <View style={styles.inputContainer}>
@@ -150,14 +137,9 @@ export const ConfirmPasswordModal: React.FC<ConfirmPasswordModalProps> = ({
                                     }
                                 }}
                                 placeholder="Enter password to confirm"
-                                placeholderTextColor={
-                                    isDarkHud ? '#64748B' : '#94A3B8'
-                                }
+                                placeholderTextColor={theme.textMuted}
                                 secureTextEntry={!showPassword}
-                                style={[
-                                    styles.input,
-                                    isDarkHud && styles.darkInput,
-                                ]}
+                                style={[styles.input]}
                                 testID="confirm-password-input"
                                 value={password}
                             />
@@ -171,7 +153,7 @@ export const ConfirmPasswordModal: React.FC<ConfirmPasswordModalProps> = ({
                                 style={styles.eyeBtn}
                             >
                                 <Icon
-                                    color={isDarkHud ? '#94A3B8' : '#64748B'}
+                                    color={theme.textSecondary}
                                     name={showPassword ? 'eye-off' : 'eye'}
                                     size={18}
                                 />
@@ -225,11 +207,21 @@ export const ConfirmPasswordModal: React.FC<ConfirmPasswordModalProps> = ({
                         >
                             {isLoading ? (
                                 <ActivityIndicator
-                                    color="#FFFFFF"
+                                    color={
+                                        isDestructive
+                                            ? theme.textOnDark
+                                            : theme.surfaceDark
+                                    }
                                     size="small"
                                 />
                             ) : (
-                                <Text style={styles.submitBtnText}>
+                                <Text
+                                    style={[
+                                        styles.submitBtnText,
+                                        isDestructive &&
+                                            styles.destructiveBtnText,
+                                    ]}
+                                >
                                     {confirmLabel}
                                 </Text>
                             )}
@@ -241,174 +233,165 @@ export const ConfirmPasswordModal: React.FC<ConfirmPasswordModalProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
-    overlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.72)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
-    },
-    scrim: {
-        ...StyleSheet.absoluteFill,
-    },
-    dialog: {
-        width: '100%',
-        maxWidth: 440,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 24,
-        padding: 24,
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
-        elevation: 8,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.25,
-        shadowRadius: 16,
-    },
-    darkDialog: {
-        backgroundColor: '#1E293B',
-        borderColor: '#334155',
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        marginBottom: 8,
-    },
-    iconWrap: {
-        width: 44,
-        height: 44,
-        borderRadius: 12,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    lightIconWrap: {
-        backgroundColor: '#FFF3C4',
-    },
-    darkIconWrap: {
-        backgroundColor: '#332800',
-    },
-    iconWrapDanger: {
-        backgroundColor: '#FEE2E2',
-    },
-    title: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#0F172A',
-        flex: 1,
-    },
-    darkTitle: {
-        color: '#F8FAFC',
-    },
-    description: {
-        fontSize: 14,
-        color: '#64748B',
-        lineHeight: 20,
-        marginBottom: 16,
-    },
-    darkDescription: {
-        color: '#94A3B8',
-    },
-    inputContainer: {
-        marginBottom: 20,
-    },
-    inputLabel: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: '#334155',
-        marginBottom: 6,
-    },
-    darkInputLabel: {
-        color: '#CBD5E1',
-    },
-    inputRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        minHeight: 48,
-        backgroundColor: '#F8FAFC',
-        borderWidth: 1,
-        borderColor: '#CBD5E1',
-        borderRadius: 10,
-        paddingHorizontal: 12,
-    },
-    darkInputRow: {
-        backgroundColor: '#0F172A',
-        borderColor: '#334155',
-    },
-    inputRowError: {
-        borderColor: '#EF4444',
-    },
-    input: {
-        flex: 1,
-        height: 48,
-        fontSize: 15,
-        color: '#0F172A',
-    },
-    darkInput: {
-        color: '#F8FAFC',
-    },
-    eyeBtn: {
-        minWidth: 48,
-        minHeight: 48,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 8,
-    },
-    errorText: {
-        marginTop: 4,
-        fontSize: 12,
-        color: '#EF4444',
-    },
-    actions: {
-        flexDirection: 'row',
-        gap: 12,
-        justifyContent: 'flex-end',
-    },
-    cancelBtn: {
-        minHeight: 48,
-        paddingHorizontal: 16,
-        borderRadius: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#F1F5F9',
-    },
-    darkCancelBtn: {
-        backgroundColor: '#334155',
-    },
-    cancelBtnText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#475569',
-    },
-    darkCancelBtnText: {
-        color: '#E2E8F0',
-    },
-    submitBtn: {
-        minHeight: 48,
-        paddingHorizontal: 20,
-        borderRadius: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    lightSubmitBtn: {
-        backgroundColor: '#FFBF00',
-    },
-    darkSubmitBtn: {
-        backgroundColor: '#FFBF00',
-    },
-    destructiveBtn: {
-        backgroundColor: '#DC2626',
-    },
-    disabledBtn: {
-        opacity: 0.5,
-    },
-    submitBtnText: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: '#FFFFFF',
-    },
-    pressed: {
-        opacity: 0.75,
-    },
-});
+const createStyles = (theme: ThemeColors) =>
+    StyleSheet.create({
+        overlay: {
+            flex: 1,
+            backgroundColor: `${theme.surfaceDark}B8`,
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 20,
+        },
+        scrim: {
+            ...StyleSheet.absoluteFill,
+        },
+        dialog: {
+            width: '100%',
+            maxWidth: 440,
+            backgroundColor: theme.surface,
+            borderRadius: 24,
+            padding: 24,
+            borderWidth: 1,
+            borderColor: theme.border,
+            elevation: 8,
+            shadowColor: theme.surfaceDark,
+            shadowOffset: { width: 0, height: 8 },
+            shadowOpacity: 0.25,
+            shadowRadius: 16,
+        },
+        header: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+            marginBottom: 8,
+        },
+        iconWrap: {
+            width: 44,
+            height: 44,
+            borderRadius: 12,
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        lightIconWrap: {
+            backgroundColor: theme.brandAmberLight,
+        },
+        darkIconWrap: {
+            backgroundColor: theme.brandAmberLight,
+        },
+        iconWrapDanger: {
+            backgroundColor: theme.hazardRedLight,
+        },
+        title: {
+            fontSize: 18,
+            fontWeight: '700',
+            color: theme.textPrimary,
+            flex: 1,
+        },
+        description: {
+            fontSize: 14,
+            color: theme.textSecondary,
+            lineHeight: 20,
+            marginBottom: 16,
+        },
+        inputContainer: {
+            marginBottom: 20,
+        },
+        inputLabel: {
+            fontSize: 13,
+            fontWeight: '600',
+            color: theme.textPrimary,
+            marginBottom: 6,
+        },
+        darkInputLabel: {
+            color: theme.textSecondary,
+        },
+        inputRow: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            minHeight: 48,
+            backgroundColor: theme.surfaceHighlight,
+            borderWidth: 1,
+            borderColor: theme.borderStrong,
+            borderRadius: 10,
+            paddingHorizontal: 12,
+        },
+        darkInputRow: {
+            backgroundColor: theme.textInverse,
+            borderColor: theme.border,
+        },
+        inputRowError: {
+            borderColor: theme.hazardRed,
+        },
+        input: {
+            flex: 1,
+            height: 48,
+            fontSize: 15,
+            color: theme.textPrimary,
+        },
+        eyeBtn: {
+            minWidth: 48,
+            minHeight: 48,
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 8,
+        },
+        errorText: {
+            marginTop: 4,
+            fontSize: 12,
+            color: theme.hazardRed,
+        },
+        actions: {
+            flexDirection: 'row',
+            gap: 12,
+            justifyContent: 'flex-end',
+        },
+        cancelBtn: {
+            minHeight: 48,
+            paddingHorizontal: 16,
+            borderRadius: 10,
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: theme.canvas,
+        },
+        darkCancelBtn: {
+            backgroundColor: theme.border,
+        },
+        cancelBtnText: {
+            fontSize: 14,
+            fontWeight: '600',
+            color: theme.textSecondary,
+        },
+        darkCancelBtnText: {
+            color: theme.textPrimary,
+        },
+        submitBtn: {
+            minHeight: 48,
+            paddingHorizontal: 20,
+            borderRadius: 10,
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        lightSubmitBtn: {
+            backgroundColor: theme.brandAmber,
+        },
+        darkSubmitBtn: {
+            backgroundColor: theme.brandAmber,
+        },
+        destructiveBtn: {
+            backgroundColor: theme.hazardRed,
+        },
+        destructiveBtnText: {
+            color: theme.textOnDark,
+        },
+        disabledBtn: {
+            opacity: 0.5,
+        },
+        submitBtnText: {
+            fontSize: 14,
+            fontWeight: '700',
+            color: theme.surfaceDark,
+        },
+        pressed: {
+            opacity: 0.75,
+        },
+    });

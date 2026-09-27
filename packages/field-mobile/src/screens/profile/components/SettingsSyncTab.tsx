@@ -8,10 +8,10 @@ import {
     View,
 } from 'react-native';
 import { Icon } from '../../../components/common/Icon';
-import { colors } from '../../../components/nativeStyles';
 import { appVersionLabel } from '../../../services/appVersion';
 import { projectOutbox } from '../../../services/outboxProjection';
-import { useTheme } from '../../../theme';
+import { useTheme, useThemedStyles } from '../../../theme';
+import type { ThemeColors } from '../../../theme';
 import type { OutboxCommand } from '../../../types/index';
 
 export interface SettingsSyncTabProps {
@@ -40,7 +40,8 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
     onRequestPushPermissions,
     onLogout,
 }) => {
-    const { isDarkHud, setMode } = useTheme();
+    const { isDarkHud, setMode, theme } = useTheme();
+    const styles = useThemedStyles(createStyles);
     const [signOutModalVisible, setSignOutModalVisible] = useState(false);
 
     const projection = useMemo(
@@ -90,21 +91,9 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
     return (
         <View style={styles.container} testID="settings-sync-tab">
             {/* Display & Lighting Card */}
-            <View style={[styles.card, isDarkHud && styles.darkCard]}>
-                <Text
-                    style={[
-                        styles.cardTitle,
-                        isDarkHud && styles.darkCardTitle,
-                    ]}
-                >
-                    Display & Lighting
-                </Text>
-                <Text
-                    style={[
-                        styles.cardSubtitle,
-                        isDarkHud && styles.darkCardSubtitle,
-                    ]}
-                >
+            <View style={[styles.card]}>
+                <Text style={[styles.cardTitle]}>Display & Lighting</Text>
+                <Text style={[styles.cardSubtitle]}>
                     Configure color mode for direct sunlight or dark cabin
                     environments
                 </Text>
@@ -140,19 +129,11 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                                     styles.themeIconSquircle,
                                     !isDarkHud
                                         ? styles.themeIconSquircleActive
-                                        : isDarkHud
-                                          ? styles.darkThemeIconSquircleInactive
-                                          : styles.themeIconSquircleInactive,
+                                        : styles.themeIconSquircleInactive,
                                 ]}
                             >
                                 <Icon
-                                    color={
-                                        !isDarkHud
-                                            ? '#FFBF00'
-                                            : isDarkHud
-                                              ? '#FFBF00'
-                                              : colors.secondary
-                                    }
+                                    color={theme.brandAmber}
                                     name="sun"
                                     size={20}
                                 />
@@ -162,9 +143,7 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                                     styles.checkCircle,
                                     !isDarkHud
                                         ? styles.checkCircleActive
-                                        : isDarkHud
-                                          ? styles.darkCheckCircleInactive
-                                          : styles.checkCircleInactive,
+                                        : styles.checkCircleInactive,
                                 ]}
                             >
                                 {!isDarkHud ? (
@@ -177,7 +156,6 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                             <Text
                                 style={[
                                     styles.themeOptionTitle,
-                                    isDarkHud && styles.darkThemeOptionTitle,
                                     !isDarkHud && styles.themeOptionTitleActive,
                                 ]}
                             >
@@ -186,7 +164,6 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                             <Text
                                 style={[
                                     styles.themeOptionSublabel,
-                                    isDarkHud && styles.darkThemeOptionSublabel,
                                     !isDarkHud &&
                                         styles.themeOptionSublabelActive,
                                 ]}
@@ -225,7 +202,9 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                             >
                                 <Icon
                                     color={
-                                        isDarkHud ? '#FFBF00' : colors.secondary
+                                        isDarkHud
+                                            ? theme.brandAmber
+                                            : theme.textSecondary
                                     }
                                     name="moon"
                                     size={20}
@@ -251,7 +230,6 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                             <Text
                                 style={[
                                     styles.themeOptionTitle,
-                                    isDarkHud && styles.darkThemeOptionTitle,
                                     isDarkHud &&
                                         styles.themeOptionTitleActiveDark,
                                 ]}
@@ -261,7 +239,6 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                             <Text
                                 style={[
                                     styles.themeOptionSublabel,
-                                    isDarkHud && styles.darkThemeOptionSublabel,
                                     isDarkHud &&
                                         styles.themeOptionSublabelActiveDark,
                                 ]}
@@ -274,21 +251,9 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
             </View>
 
             {/* System & Sync Health Card */}
-            <View style={[styles.card, isDarkHud && styles.darkCard]}>
-                <Text
-                    style={[
-                        styles.cardTitle,
-                        isDarkHud && styles.darkCardTitle,
-                    ]}
-                >
-                    System & Sync Health
-                </Text>
-                <Text
-                    style={[
-                        styles.cardSubtitle,
-                        isDarkHud && styles.darkCardSubtitle,
-                    ]}
-                >
+            <View style={[styles.card]}>
+                <Text style={[styles.cardTitle]}>System & Sync Health</Text>
+                <Text style={[styles.cardSubtitle]}>
                     Local storage cache and network communication state
                 </Text>
 
@@ -316,25 +281,14 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                                 <Icon
                                     color={
                                         isOnline === false
-                                            ? isDarkHud
-                                                ? '#F87171'
-                                                : '#DC2626'
-                                            : isDarkHud
-                                              ? '#34D399'
-                                              : '#059669'
+                                            ? theme.hazardRed
+                                            : theme.successEmerald
                                     }
                                     name="cloud"
                                     size={18}
                                 />
                             </View>
-                            <Text
-                                style={[
-                                    styles.healthLabel,
-                                    isDarkHud && styles.darkHealthLabel,
-                                ]}
-                            >
-                                Connection
-                            </Text>
+                            <Text style={[styles.healthLabel]}>Connection</Text>
                         </View>
                         <View style={styles.statusPill}>
                             <View
@@ -345,12 +299,7 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                                         : styles.statusDotOnline,
                                 ]}
                             />
-                            <Text
-                                style={[
-                                    styles.healthValue,
-                                    isDarkHud && styles.darkHealthValue,
-                                ]}
-                            >
+                            <Text style={[styles.healthValue]}>
                                 {isOnline === false
                                     ? 'Offline (Saved locally)'
                                     : 'Online'}
@@ -358,12 +307,7 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                         </View>
                     </View>
 
-                    <View
-                        style={[
-                            styles.hairlineDivider,
-                            isDarkHud && styles.darkHairlineDivider,
-                        ]}
-                    />
+                    <View style={[styles.hairlineDivider]} />
 
                     {/* Outbox Data Row */}
                     <View style={styles.healthRow}>
@@ -387,32 +331,22 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                                 <Icon
                                     color={
                                         !isAuthenticated || hasAttention
-                                            ? '#EF4444'
+                                            ? theme.hazardRed
                                             : pendingCount > 0
-                                              ? isDarkHud
-                                                  ? '#FFBF00'
-                                                  : '#806000'
-                                              : isDarkHud
-                                                ? '#34D399'
-                                                : '#059669'
+                                              ? theme.brandAmberText
+                                              : theme.successEmerald
                                     }
                                     name="sync"
                                     size={18}
                                 />
                             </View>
-                            <Text
-                                style={[
-                                    styles.healthLabel,
-                                    isDarkHud && styles.darkHealthLabel,
-                                ]}
-                            >
+                            <Text style={[styles.healthLabel]}>
                                 Outbox Data
                             </Text>
                         </View>
                         <Text
                             style={[
                                 styles.healthValue,
-                                isDarkHud && styles.darkHealthValue,
                                 (!isAuthenticated || hasAttention) &&
                                     (isDarkHud
                                         ? styles.darkHealthValueAttention
@@ -444,7 +378,7 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                                 testID="open-outbox-sheet-btn"
                             >
                                 <Icon
-                                    color={isDarkHud ? '#60A5FA' : '#2563EB'}
+                                    color={theme.dutyDriving}
                                     name="sync"
                                     size={16}
                                 />
@@ -474,34 +408,23 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                                 }}
                                 style={({ pressed }) => [
                                     styles.syncNowBtn,
-                                    isDarkHud && styles.darkSyncNowBtn,
                                     pressed && styles.pressed,
                                 ]}
                                 testID="sync-outbox-now-btn"
                             >
                                 <Icon
-                                    color={isDarkHud ? '#FFF3C4' : '#806000'}
+                                    color={theme.brandAmberText}
                                     name="sync"
                                     size={16}
                                 />
-                                <Text
-                                    style={[
-                                        styles.syncNowBtnText,
-                                        isDarkHud && styles.darkSyncNowBtnText,
-                                    ]}
-                                >
+                                <Text style={[styles.syncNowBtnText]}>
                                     Sync Outbox Now ({unsyncedCount})
                                 </Text>
                             </Pressable>
                         </View>
                     ) : null}
 
-                    <View
-                        style={[
-                            styles.hairlineDivider,
-                            isDarkHud && styles.darkHairlineDivider,
-                        ]}
-                    />
+                    <View style={[styles.hairlineDivider]} />
 
                     {/* Push Alerts Row */}
                     <View style={styles.healthRow}>
@@ -521,23 +444,14 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                                 <Icon
                                     color={
                                         pushNotificationsEnabled !== true
-                                            ? isDarkHud
-                                                ? '#94A3B8'
-                                                : '#64748B'
-                                            : isDarkHud
-                                              ? '#34D399'
-                                              : '#059669'
+                                            ? theme.textSecondary
+                                            : theme.successEmerald
                                     }
                                     name="bell"
                                     size={18}
                                 />
                             </View>
-                            <Text
-                                style={[
-                                    styles.healthLabel,
-                                    isDarkHud && styles.darkHealthLabel,
-                                ]}
-                            >
+                            <Text style={[styles.healthLabel]}>
                                 Push Alerts
                             </Text>
                         </View>
@@ -550,12 +464,7 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                                         : styles.statusDotOnline,
                                 ]}
                             />
-                            <Text
-                                style={[
-                                    styles.healthValue,
-                                    isDarkHud && styles.darkHealthValue,
-                                ]}
-                            >
+                            <Text style={[styles.healthValue]}>
                                 {pushNotificationsEnabled === null
                                     ? 'Checking…'
                                     : pushNotificationsEnabled
@@ -582,24 +491,14 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                                 ]}
                                 testID="enable-push-btn"
                             >
-                                <Text
-                                    style={[
-                                        styles.pushPermBtnText,
-                                        isDarkHud && styles.darkPushPermBtnText,
-                                    ]}
-                                >
+                                <Text style={[styles.pushPermBtnText]}>
                                     Enable Push Alerts
                                 </Text>
                             </Pressable>
                         </View>
                     ) : null}
 
-                    <View
-                        style={[
-                            styles.hairlineDivider,
-                            isDarkHud && styles.darkHairlineDivider,
-                        ]}
-                    />
+                    <View style={[styles.hairlineDivider]} />
 
                     {/* Field App Version Row */}
                     <View style={styles.healthRow}>
@@ -613,26 +512,16 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                                 ]}
                             >
                                 <Icon
-                                    color={isDarkHud ? '#94A3B8' : '#64748B'}
+                                    color={theme.textSecondary}
                                     name="smartphone"
                                     size={18}
                                 />
                             </View>
-                            <Text
-                                style={[
-                                    styles.healthLabel,
-                                    isDarkHud && styles.darkHealthLabel,
-                                ]}
-                            >
+                            <Text style={[styles.healthLabel]}>
                                 Field App Version
                             </Text>
                         </View>
-                        <Text
-                            style={[
-                                styles.healthValueMuted,
-                                isDarkHud && styles.darkHealthValueMuted,
-                            ]}
-                        >
+                        <Text style={[styles.healthValueMuted]}>
                             {appVersionLabel()}
                         </Text>
                     </View>
@@ -668,7 +557,7 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                             ]}
                         >
                             <Icon
-                                color={isDarkHud ? '#F87171' : '#DC2626'}
+                                color={theme.hazardRed}
                                 name="log-out"
                                 size={20}
                             />
@@ -682,18 +571,13 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                             >
                                 Sign out
                             </Text>
-                            <Text
-                                style={[
-                                    styles.signOutDescription,
-                                    isDarkHud && styles.darkSignOutDescription,
-                                ]}
-                            >
+                            <Text style={[styles.signOutDescription]}>
                                 End this field session on this device
                             </Text>
                         </View>
                     </View>
                     <Icon
-                        color={isDarkHud ? '#94A3B8' : '#64748B'}
+                        color={theme.textSecondary}
                         name="chevron-right"
                         size={18}
                     />
@@ -718,22 +602,18 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                         onPress={() => setSignOutModalVisible(false)}
                         style={styles.modalScrim}
                     />
-                    <View
-                        style={[
-                            styles.confirmDialog,
-                            isDarkHud && styles.darkConfirmDialog,
-                        ]}
-                    >
+                    <View style={[styles.confirmDialog]}>
                         <View style={styles.confirmIconBadge}>
-                            <Icon color="#DC2626" name="log-out" size={24} />
+                            <Icon
+                                color={theme.hazardRed}
+                                name="log-out"
+                                size={24}
+                            />
                         </View>
 
                         <Text
                             accessibilityRole="header"
-                            style={[
-                                styles.confirmTitle,
-                                isDarkHud && styles.darkConfirmTitle,
-                            ]}
+                            style={[styles.confirmTitle]}
                         >
                             Sign out of the field app?
                         </Text>
@@ -747,12 +627,7 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                                 </Text>
                             </View>
                         ) : (
-                            <Text
-                                style={[
-                                    styles.confirmMessage,
-                                    isDarkHud && styles.darkConfirmMessage,
-                                ]}
-                            >
+                            <Text style={[styles.confirmMessage]}>
                                 You can sign back in when you need to access
                                 field work.
                             </Text>
@@ -805,524 +680,464 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
-    container: {
-        gap: 16,
-    },
-    card: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 16,
-        padding: 16,
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
-        elevation: 1,
-        overflow: 'hidden',
-    },
-    darkCard: {
-        backgroundColor: '#1E293B',
-        borderColor: '#334155',
-    },
-    cardTitle: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: '#0F172A',
-    },
-    darkCardTitle: {
-        color: '#F8FAFC',
-    },
-    cardSubtitle: {
-        fontSize: 12,
-        color: '#64748B',
-        marginTop: 2,
-    },
-    darkCardSubtitle: {
-        color: '#94A3B8',
-    },
-    themeSelectorCard: {
-        flexDirection: 'row',
-        gap: 12,
-        marginTop: 14,
-    },
-    darkThemeSelectorCard: {},
-    darkThemeOption: {
-        backgroundColor: '#0F172A',
-        borderColor: '#334155',
-    },
-    themeOption: {
-        flex: 1,
-        padding: 14,
-        borderRadius: 14,
-        borderWidth: 1.5,
-        borderColor: '#E2E8F0',
-        backgroundColor: '#F8FAFC',
-        minHeight: 96,
-        justifyContent: 'space-between',
-        gap: 12,
-    },
-    themeOptionHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    themeIconSquircle: {
-        width: 36,
-        height: 36,
-        borderRadius: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    themeIconSquircleActive: {
-        backgroundColor: '#FFF3C4',
-    },
-    themeIconSquircleActiveDark: {
-        backgroundColor: '#33280040',
-    },
-    themeIconSquircleInactive: {
-        backgroundColor: '#E2E8F0',
-    },
-    darkThemeIconSquircleInactive: {
-        backgroundColor: '#334155',
-    },
-    checkCircle: {
-        width: 22,
-        height: 22,
-        borderRadius: 11,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    checkCircleActive: {
-        backgroundColor: '#FFF3C4',
-        borderWidth: 1.5,
-        borderColor: '#FFBF00',
-    },
-    checkCircleActiveDark: {
-        backgroundColor: '#332800',
-        borderWidth: 1.5,
-        borderColor: '#FFBF00',
-    },
-    checkCircleInactive: {
-        borderWidth: 1.5,
-        borderColor: '#CBD5E1',
-    },
-    darkCheckCircleInactive: {
-        borderWidth: 1.5,
-        borderColor: '#475569',
-    },
-    themeOptionActive: {
-        borderColor: '#FFBF00',
-        backgroundColor: '#FFF3C4',
-    },
-    themeOptionActiveDark: {
-        borderColor: '#FFBF00',
-        backgroundColor: '#33280026',
-    },
-    themeOptionCopy: {
-        gap: 2,
-    },
-    themeOptionTitle: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: '#0F172A',
-    },
-    themeOptionTitleActive: {
-        color: '#806000',
-    },
-    themeOptionTitleActiveDark: {
-        color: '#FFBF00',
-    },
-    darkThemeOptionTitle: {
-        color: '#F8FAFC',
-    },
-    themeOptionSublabel: {
-        fontSize: 12,
-        color: '#64748B',
-    },
-    themeOptionSublabelActive: {
-        color: '#806000',
-    },
-    themeOptionSublabelActiveDark: {
-        color: '#FFBF00',
-    },
-    darkThemeOptionSublabel: {
-        color: '#94A3B8',
-    },
-    themeCheckmark: {
-        fontSize: 12,
-        fontWeight: '800',
-        color: '#FFBF00',
-    },
-    themeCheckmarkDark: {
-        fontSize: 12,
-        fontWeight: '800',
-        color: '#FFBF00',
-    },
-    healthInsetContainer: {
-        marginTop: 14,
-        borderRadius: 14,
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
-        backgroundColor: '#F8FAFC',
-        overflow: 'hidden',
-    },
-    darkHealthInsetContainer: {
-        backgroundColor: '#0F172A',
-        borderColor: '#334155',
-    },
-    healthLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-    },
-    healthSquircle: {
-        width: 32,
-        height: 32,
-        borderRadius: 8,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    healthSquircleSuccess: {
-        backgroundColor: '#ECFDF5',
-    },
-    darkHealthSquircleSuccess: {
-        backgroundColor: '#064E3B60',
-    },
-    healthSquircleWarning: {
-        backgroundColor: '#FFF3C4',
-    },
-    darkHealthSquircleWarning: {
-        backgroundColor: '#33280060',
-    },
-    healthSquircleNeutral: {
-        backgroundColor: '#F1F5F9',
-    },
-    darkHealthSquircleNeutral: {
-        backgroundColor: '#334155',
-    },
-    healthSquircleAttention: {
-        backgroundColor: '#FEE2E2',
-    },
-    darkHealthSquircleAttention: {
-        backgroundColor: '#7F1D1D60',
-    },
-    hairlineDivider: {
-        height: StyleSheet.hairlineWidth,
-        marginLeft: 54,
-        backgroundColor: '#E2E8F0',
-    },
-    darkHairlineDivider: {
-        backgroundColor: '#334155',
-    },
-    syncBtnContainer: {
-        paddingHorizontal: 12,
-        paddingBottom: 12,
-        paddingTop: 4,
-    },
-    healthRows: {
-        marginTop: 14,
-        gap: 12,
-    },
-    healthRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 12,
-        paddingVertical: 12,
-        minHeight: 48,
-    },
-    healthLabel: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: '#475569',
-    },
-    darkHealthLabel: {
-        color: '#94A3B8',
-    },
-    healthValue: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: '#0F172A',
-    },
-    darkHealthValue: {
-        color: '#F8FAFC',
-    },
-    healthValueWarning: {
-        color: '#FFBF00',
-    },
-    darkHealthValueWarning: {
-        color: '#FFBF00',
-    },
-    healthValueAttention: {
-        color: '#DC2626',
-    },
-    darkHealthValueAttention: {
-        color: '#F87171',
-    },
-    healthValueMuted: {
-        fontSize: 12,
-        color: '#94A3B8',
-    },
-    darkHealthValueMuted: {
-        color: '#64748B',
-    },
-    statusPill: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-    },
-    statusDot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-    },
-    statusDotOnline: {
-        backgroundColor: '#10B981',
-    },
-    statusDotOffline: {
-        backgroundColor: '#EF4444',
-    },
-    viewOutboxBtn: {
-        minHeight: 44,
-        borderRadius: 10,
-        backgroundColor: '#EFF6FF',
-        borderWidth: 1,
-        borderColor: '#BFDBFE',
-        flexDirection: 'row',
-        gap: 8,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 8,
-    },
-    darkViewOutboxBtn: {
-        backgroundColor: 'rgba(37, 99, 235, 0.15)',
-        borderColor: 'rgba(37, 99, 235, 0.35)',
-    },
-    viewOutboxBtnText: {
-        fontSize: 13,
-        fontWeight: '700',
-        color: '#2563EB',
-    },
-    darkViewOutboxBtnText: {
-        color: '#60A5FA',
-    },
-    syncNowBtn: {
-        minHeight: 48,
-        borderRadius: 10,
-        backgroundColor: '#FFF3C4',
-        borderWidth: 1,
-        borderColor: '#FFF3C4',
-        flexDirection: 'row',
-        gap: 8,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    darkSyncNowBtn: {
-        backgroundColor: '#332800',
-        borderColor: '#332800',
-    },
-    syncNowBtnText: {
-        fontSize: 13,
-        fontWeight: '700',
-        color: '#806000',
-    },
-    darkSyncNowBtnText: {
-        color: '#FFBF00',
-    },
-    pushPermBtn: {
-        minHeight: 48,
-        borderRadius: 10,
-        backgroundColor: '#F1F5F9',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    darkPushPermBtn: {
-        backgroundColor: '#334155',
-    },
-    pushPermBtnText: {
-        fontSize: 13,
-        fontWeight: '700',
-        color: '#334155',
-    },
-    darkPushPermBtnText: {
-        color: '#F8FAFC',
-    },
-    signOutCard: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 16,
-        padding: 16,
-        borderWidth: 1,
-        borderColor: '#FECACA',
-        elevation: 1,
-        overflow: 'hidden',
-    },
-    darkSignOutCard: {
-        backgroundColor: '#1E293B',
-        borderColor: '#7F1D1D60',
-    },
-    signOutRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        minHeight: 48,
-    },
-    signOutLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        flex: 1,
-    },
-    signOutIconWrap: {
-        width: 36,
-        height: 36,
-        borderRadius: 10,
-        backgroundColor: '#FEE2E2',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    darkSignOutIconWrap: {
-        backgroundColor: '#7F1D1D40',
-    },
-    signOutCopy: {
-        flex: 1,
-    },
-    signOutTitle: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: '#DC2626',
-    },
-    darkSignOutTitle: {
-        color: '#F87171',
-    },
-    signOutDescription: {
-        fontSize: 12,
-        color: '#64748B',
-        marginTop: 1,
-    },
-    darkSignOutDescription: {
-        color: '#94A3B8',
-    },
-    chevron: {
-        fontSize: 18,
-        color: '#94A3B8',
-        fontWeight: '700',
-    },
-    darkChevron: {
-        color: '#64748B',
-    },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.72)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
-    },
-    modalScrim: {
-        ...StyleSheet.absoluteFill,
-    },
-    confirmDialog: {
-        width: '100%',
-        maxWidth: 400,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 24,
-        padding: 24,
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.15,
-        shadowRadius: 20,
-        elevation: 8,
-    },
-    darkConfirmDialog: {
-        backgroundColor: '#1E293B',
-        borderColor: '#334155',
-    },
-    confirmIconBadge: {
-        width: 52,
-        height: 52,
-        borderRadius: 16,
-        backgroundColor: '#FEE2E2',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 16,
-    },
-    confirmTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#0F172A',
-        textAlign: 'center',
-        marginBottom: 8,
-    },
-    darkConfirmTitle: {
-        color: '#F8FAFC',
-    },
-    confirmMessage: {
-        fontSize: 14,
-        color: '#64748B',
-        textAlign: 'center',
-        lineHeight: 20,
-        marginBottom: 20,
-    },
-    darkConfirmMessage: {
-        color: '#94A3B8',
-    },
-    warningCallout: {
-        backgroundColor: '#FFF3C4',
-        borderRadius: 10,
-        padding: 12,
-        marginBottom: 20,
-        borderWidth: 1,
-        borderColor: '#FFF3C4',
-    },
-    warningCalloutText: {
-        fontSize: 13,
-        color: '#806000',
-        lineHeight: 18,
-        textAlign: 'center',
-        fontWeight: '500',
-    },
-    confirmActions: {
-        flexDirection: 'row',
-        gap: 12,
-        width: '100%',
-    },
-    confirmCancelBtn: {
-        flex: 1,
-        minHeight: 48,
-        borderRadius: 10,
-        backgroundColor: '#F1F5F9',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    darkConfirmCancelBtn: {
-        backgroundColor: '#334155',
-    },
-    confirmCancelText: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: '#475569',
-    },
-    darkConfirmCancelText: {
-        color: '#E2E8F0',
-    },
-    confirmSubmitBtn: {
-        flex: 1,
-        minHeight: 48,
-        borderRadius: 10,
-        backgroundColor: '#DC2626',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    confirmSubmitText: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: '#FFFFFF',
-    },
-    pressed: {
-        opacity: 0.75,
-    },
-    pressedCard: {
-        transform: [{ scale: 0.98 }],
-        opacity: 0.85,
-    },
-});
+const createStyles = (theme: ThemeColors) =>
+    StyleSheet.create({
+        container: {
+            gap: 16,
+        },
+        card: {
+            backgroundColor: theme.surface,
+            borderRadius: 16,
+            padding: 16,
+            borderWidth: 1,
+            borderColor: theme.border,
+            elevation: 1,
+            overflow: 'hidden',
+        },
+        cardTitle: {
+            fontSize: 16,
+            fontWeight: '700',
+            color: theme.textPrimary,
+        },
+        cardSubtitle: {
+            fontSize: 12,
+            color: theme.textSecondary,
+            marginTop: 2,
+        },
+        themeSelectorCard: {
+            flexDirection: 'row',
+            gap: 12,
+            marginTop: 14,
+        },
+        darkThemeSelectorCard: {},
+        darkThemeOption: {
+            backgroundColor: theme.textInverse,
+            borderColor: theme.border,
+        },
+        themeOption: {
+            flex: 1,
+            padding: 14,
+            borderRadius: 14,
+            borderWidth: 1.5,
+            borderColor: theme.border,
+            backgroundColor: theme.surfaceHighlight,
+            minHeight: 96,
+            justifyContent: 'space-between',
+            gap: 12,
+        },
+        themeOptionHeader: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+        },
+        themeIconSquircle: {
+            width: 36,
+            height: 36,
+            borderRadius: 10,
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        themeIconSquircleActive: {
+            backgroundColor: theme.brandAmberLight,
+        },
+        themeIconSquircleActiveDark: {
+            backgroundColor: `${theme.brandAmberLight}40`,
+        },
+        themeIconSquircleInactive: {
+            backgroundColor: theme.border,
+        },
+        checkCircle: {
+            width: 22,
+            height: 22,
+            borderRadius: 11,
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        checkCircleActive: {
+            backgroundColor: theme.brandAmberLight,
+            borderWidth: 1.5,
+            borderColor: theme.brandAmber,
+        },
+        checkCircleActiveDark: {
+            backgroundColor: theme.brandAmberLight,
+            borderWidth: 1.5,
+            borderColor: theme.brandAmber,
+        },
+        checkCircleInactive: {
+            borderWidth: 1.5,
+            borderColor: theme.borderStrong,
+        },
+        themeOptionActive: {
+            borderColor: theme.brandAmber,
+            backgroundColor: theme.brandAmberLight,
+        },
+        themeOptionActiveDark: {
+            borderColor: theme.brandAmber,
+            backgroundColor: `${theme.brandAmberLight}26`,
+        },
+        themeOptionCopy: {
+            gap: 2,
+        },
+        themeOptionTitle: {
+            fontSize: 14,
+            fontWeight: '700',
+            color: theme.textPrimary,
+        },
+        themeOptionTitleActive: {
+            color: theme.brandAmberText,
+        },
+        themeOptionTitleActiveDark: {
+            color: theme.brandAmber,
+        },
+        themeOptionSublabel: {
+            fontSize: 12,
+            color: theme.textSecondary,
+        },
+        themeOptionSublabelActive: {
+            color: theme.brandAmberText,
+        },
+        themeOptionSublabelActiveDark: {
+            color: theme.brandAmber,
+        },
+        themeCheckmark: {
+            fontSize: 12,
+            fontWeight: '800',
+            color: theme.brandAmber,
+        },
+        themeCheckmarkDark: {
+            fontSize: 12,
+            fontWeight: '800',
+            color: theme.brandAmber,
+        },
+        healthInsetContainer: {
+            marginTop: 14,
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: theme.border,
+            backgroundColor: theme.surfaceHighlight,
+            overflow: 'hidden',
+        },
+        darkHealthInsetContainer: {
+            backgroundColor: theme.textInverse,
+            borderColor: theme.border,
+        },
+        healthLeft: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+        },
+        healthSquircle: {
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        healthSquircleSuccess: {
+            backgroundColor: theme.successEmeraldLight,
+        },
+        darkHealthSquircleSuccess: {
+            backgroundColor: `${theme.successEmeraldLight}60`,
+        },
+        healthSquircleWarning: {
+            backgroundColor: theme.brandAmberLight,
+        },
+        darkHealthSquircleWarning: {
+            backgroundColor: `${theme.brandAmberLight}60`,
+        },
+        healthSquircleNeutral: {
+            backgroundColor: theme.canvas,
+        },
+        darkHealthSquircleNeutral: {
+            backgroundColor: theme.border,
+        },
+        healthSquircleAttention: {
+            backgroundColor: theme.hazardRedLight,
+        },
+        darkHealthSquircleAttention: {
+            backgroundColor: `${theme.hazardRedLight}60`,
+        },
+        hairlineDivider: {
+            height: StyleSheet.hairlineWidth,
+            marginLeft: 54,
+            backgroundColor: theme.border,
+        },
+        syncBtnContainer: {
+            paddingHorizontal: 12,
+            paddingBottom: 12,
+            paddingTop: 4,
+        },
+        healthRows: {
+            marginTop: 14,
+            gap: 12,
+        },
+        healthRow: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingHorizontal: 12,
+            paddingVertical: 12,
+            minHeight: 48,
+        },
+        healthLabel: {
+            fontSize: 13,
+            fontWeight: '600',
+            color: theme.textSecondary,
+        },
+        healthValue: {
+            fontSize: 13,
+            fontWeight: '600',
+            color: theme.textPrimary,
+        },
+        healthValueWarning: {
+            color: theme.brandAmber,
+        },
+        darkHealthValueWarning: {
+            color: theme.brandAmberText,
+        },
+        healthValueAttention: {
+            color: theme.hazardRed,
+        },
+        darkHealthValueAttention: {
+            color: theme.hazardRedText,
+        },
+        healthValueMuted: {
+            fontSize: 12,
+            color: theme.textMuted,
+        },
+        statusPill: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+        },
+        statusDot: {
+            width: 8,
+            height: 8,
+            borderRadius: 4,
+        },
+        statusDotOnline: {
+            backgroundColor: theme.hudGlowEmerald,
+        },
+        statusDotOffline: {
+            backgroundColor: theme.hazardRed,
+        },
+        viewOutboxBtn: {
+            minHeight: 44,
+            borderRadius: 10,
+            backgroundColor: theme.actionCobaltLight,
+            borderWidth: 1,
+            borderColor: theme.actionCobalt,
+            flexDirection: 'row',
+            gap: 8,
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginBottom: 8,
+        },
+        darkViewOutboxBtn: {
+            backgroundColor: `${theme.actionCobalt}26`,
+            borderColor: `${theme.actionCobalt}59`,
+        },
+        viewOutboxBtnText: {
+            fontSize: 13,
+            fontWeight: '700',
+            color: theme.actionCobalt,
+        },
+        darkViewOutboxBtnText: {
+            color: theme.dutyDriving,
+        },
+        syncNowBtn: {
+            minHeight: 48,
+            borderRadius: 10,
+            backgroundColor: theme.brandAmberLight,
+            borderWidth: 1,
+            borderColor: theme.brandAmberLight,
+            flexDirection: 'row',
+            gap: 8,
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        syncNowBtnText: {
+            fontSize: 13,
+            fontWeight: '700',
+            color: theme.brandAmberText,
+        },
+        pushPermBtn: {
+            minHeight: 48,
+            borderRadius: 10,
+            backgroundColor: theme.canvas,
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        darkPushPermBtn: {
+            backgroundColor: theme.border,
+        },
+        pushPermBtnText: {
+            fontSize: 13,
+            fontWeight: '700',
+            color: theme.textPrimary,
+        },
+        signOutCard: {
+            backgroundColor: theme.surface,
+            borderRadius: 16,
+            padding: 16,
+            borderWidth: 1,
+            borderColor: theme.hazardRed,
+            elevation: 1,
+            overflow: 'hidden',
+        },
+        darkSignOutCard: {
+            backgroundColor: theme.surface,
+            borderColor: `${theme.hazardRedLight}60`,
+        },
+        signOutRow: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            minHeight: 48,
+        },
+        signOutLeft: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+            flex: 1,
+        },
+        signOutIconWrap: {
+            width: 36,
+            height: 36,
+            borderRadius: 10,
+            backgroundColor: theme.hazardRedLight,
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        darkSignOutIconWrap: {
+            backgroundColor: `${theme.hazardRedLight}40`,
+        },
+        signOutCopy: {
+            flex: 1,
+        },
+        signOutTitle: {
+            fontSize: 14,
+            fontWeight: '700',
+            color: theme.hazardRed,
+        },
+        darkSignOutTitle: {
+            color: theme.hazardRedText,
+        },
+        signOutDescription: {
+            fontSize: 12,
+            color: theme.textSecondary,
+            marginTop: 1,
+        },
+        chevron: {
+            fontSize: 18,
+            color: theme.textMuted,
+            fontWeight: '700',
+        },
+        modalOverlay: {
+            flex: 1,
+            backgroundColor: `${theme.surfaceDark}B8`,
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 20,
+        },
+        modalScrim: {
+            ...StyleSheet.absoluteFill,
+        },
+        confirmDialog: {
+            width: '100%',
+            maxWidth: 400,
+            backgroundColor: theme.surface,
+            borderRadius: 24,
+            padding: 24,
+            alignItems: 'center',
+            borderWidth: 1,
+            borderColor: theme.border,
+            shadowColor: theme.surfaceDark,
+            shadowOffset: { width: 0, height: 8 },
+            shadowOpacity: 0.15,
+            shadowRadius: 20,
+            elevation: 8,
+        },
+        confirmIconBadge: {
+            width: 52,
+            height: 52,
+            borderRadius: 16,
+            backgroundColor: theme.hazardRedLight,
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginBottom: 16,
+        },
+        confirmTitle: {
+            fontSize: 18,
+            fontWeight: '700',
+            color: theme.textPrimary,
+            textAlign: 'center',
+            marginBottom: 8,
+        },
+        confirmMessage: {
+            fontSize: 14,
+            color: theme.textSecondary,
+            textAlign: 'center',
+            lineHeight: 20,
+            marginBottom: 20,
+        },
+        warningCallout: {
+            backgroundColor: theme.brandAmberLight,
+            borderRadius: 10,
+            padding: 12,
+            marginBottom: 20,
+            borderWidth: 1,
+            borderColor: theme.brandAmberLight,
+        },
+        warningCalloutText: {
+            fontSize: 13,
+            color: theme.brandAmberText,
+            lineHeight: 18,
+            textAlign: 'center',
+            fontWeight: '500',
+        },
+        confirmActions: {
+            flexDirection: 'row',
+            gap: 12,
+            width: '100%',
+        },
+        confirmCancelBtn: {
+            flex: 1,
+            minHeight: 48,
+            borderRadius: 10,
+            backgroundColor: theme.canvas,
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        darkConfirmCancelBtn: {
+            backgroundColor: theme.border,
+        },
+        confirmCancelText: {
+            fontSize: 14,
+            fontWeight: '700',
+            color: theme.textSecondary,
+        },
+        darkConfirmCancelText: {
+            color: theme.textPrimary,
+        },
+        confirmSubmitBtn: {
+            flex: 1,
+            minHeight: 48,
+            borderRadius: 10,
+            backgroundColor: theme.hazardRed,
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        confirmSubmitText: {
+            fontSize: 14,
+            fontWeight: '700',
+            color: theme.textOnDark,
+        },
+        pressed: {
+            opacity: 0.75,
+        },
+        pressedCard: {
+            transform: [{ scale: 0.98 }],
+            opacity: 0.85,
+        },
+    });

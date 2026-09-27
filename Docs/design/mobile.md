@@ -156,7 +156,7 @@ Rules for new and touched code:
 - Home header has one status control. The `SyncStatusPill` carries both
   connection and sync ("Synced", "Offline", "Syncing", "N need attention",
   failed); there is no separate online pill. The light/dark setting lives in
-  the Profile sheet's Display & Lighting section, not the header. The bell
+  the Profile screen's Settings tab (Display & Lighting), not the header. The bell
   counts only items for the operator from other people (assignments awaiting
   a response); sync problems are counted once, in the pill. The bell's sheet
   opens with `includeSyncItems={false}`, so it never lists sync failures or
@@ -358,10 +358,11 @@ live browser mode do not apply.
 The current code predates this file. Do not add to this debt, and fix it
 opportunistically in code you touch:
 
-- Two palettes (`theme/tokens.ts` and `components/nativeStyles.ts`). 50
-  files still import the light-only `nativeStyles` colors (2026-09-27).
-- 47 component and screen files contain hex literals, and `#FFBF00` appears
-  245 times outside `src/theme` (2026-09-27).
+- Two palettes (`theme/tokens.ts` and `components/nativeStyles.ts`). 26
+  files still import the light-only `nativeStyles` colors (2026-09-28).
+- 23 component and screen files contain hex literals, and `#FFBF00` appears
+  61 times outside `src/theme` (2026-09-28). The Profile screen and
+  its tabs are migrated and guarded by `designTokenAdoption.test.ts`.
 - Resting panels combine a border with a shadow (`sharedStyles.panel`,
   `shadows.md`).
 - `createMachinedStyles` in `src/theme/index.tsx` (uppercase "pedal" buttons and
