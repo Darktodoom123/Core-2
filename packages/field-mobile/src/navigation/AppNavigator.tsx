@@ -2285,13 +2285,15 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         ],
     );
 
+    // The unit comes from the same current job home shows: the opened live
+    // job, otherwise the first live one.
     const currentAsset =
-        activeJob?.asset_assignments?.find(
+        currentJob?.asset_assignments?.find(
             (a) => a.operational_asset_id === selectedAssetId,
         ) ||
-        (activeJob?.asset_assignments &&
-        activeJob.asset_assignments.length === 1
-            ? activeJob.asset_assignments[0]
+        (currentJob?.asset_assignments &&
+        currentJob.asset_assignments.length === 1
+            ? currentJob.asset_assignments[0]
             : null) ||
         (liveJobs.length === 1 && liveJobs[0]?.asset_assignments?.length === 1
             ? liveJobs[0].asset_assignments[0]
@@ -2676,12 +2678,12 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                             <DvirScreen
                                 activeJobReference={resolvedJobReference}
                                 apiClient={apiClient}
-                                assetAssignments={activeJob?.asset_assignments}
-                                assetCode={resolvedAssetCode}
-                                assetKind={
-                                    currentAsset?.asset_kind || 'mobile_crane'
-                                }
-                                assetName={resolvedAssetName}
+                                assetAssignments={currentJob?.asset_assignments}
+                                // Never a display placeholder: an unknown unit
+                                // shows the DVIR's no-equipment state instead.
+                                assetCode={walletAssetCode}
+                                assetKind={currentAsset?.asset_kind}
+                                assetName={currentAsset?.asset_name ?? ''}
                                 commandOutbox={commandOutbox}
                                 initialMode={dvirInitialMode}
                                 inspectorName={resolvedOperatorName}

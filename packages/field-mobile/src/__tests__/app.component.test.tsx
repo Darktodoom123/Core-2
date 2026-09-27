@@ -1632,6 +1632,56 @@ describe('native application component tree', () => {
         }
     });
 
+    it('inspects the real unit, never a placeholder, when the operator has several jobs', async () => {
+        const withUnit = (
+            id: number,
+            reference: string,
+            code: string,
+        ): DispatchJob => ({
+            ...driverJob,
+            id,
+            reference,
+            status: { value: 'accepted', label: 'Accepted' },
+            my_assignment: {
+                id: id * 10,
+                response_status: 'accepted',
+                response_status_label: 'Accepted',
+            },
+            asset_assignments: [
+                {
+                    id: id * 100,
+                    dispatch_job_id: id,
+                    operational_asset_id: id * 1000,
+                    asset_code: code,
+                    asset_name: 'Rough-Terrain Crane',
+                    asset_kind: 'crane',
+                },
+            ],
+        });
+        const { fetchFn } = createApi({
+            assignedJobs: [
+                withUnit(301, 'DISP-301', 'CRN-301'),
+                withUnit(302, 'DISP-302', 'CRN-302'),
+            ],
+        });
+
+        await renderScreen(
+            <App
+                baseUrl={apiBaseUrl}
+                fetchFn={fetchFn}
+                tokenStorage={new TestTokenStorage(rawToken)}
+            />,
+        );
+
+        await fireEvent.press(await screen.findByTestId('tile-dvir'));
+        await fireEvent.press(await screen.findByTestId('add-defects-button'));
+
+        expect(screen.getByTestId('defect-sheet-unit')).toHaveTextContent(
+            /CRN-301 · Mobile crane/,
+        );
+        expect(screen.queryByText(/Assigned Unit/)).toBeNull();
+    });
+
     it('hides the unused Drive Routes tile from the dashboard', async () => {
         const { fetchFn } = createApi({ assignedJobs: [driverJob] });
 
