@@ -231,32 +231,35 @@ export function FuelBanner({
             ]}
             testID={testID}
         >
-            <Icon name={BANNER_ICONS[tone]} size={20} color={icon} />
-            <View style={{ flex: 1, gap: 4 }}>
-                {title ? (
-                    <Text
-                        style={{
-                            color: theme.textPrimary,
-                            fontWeight: '700',
-                            fontSize: 15,
-                        }}
-                    >
-                        {title}
-                    </Text>
-                ) : null}
-                {message ? (
-                    <Text
-                        style={{
-                            color: theme.textPrimary,
-                            fontSize: 14,
-                            lineHeight: 20,
-                        }}
-                    >
-                        {message}
-                    </Text>
-                ) : null}
-                {children}
+            <View style={fuelStyles.bannerRow}>
+                <Icon name={BANNER_ICONS[tone]} size={20} color={icon} />
+                <View style={{ flex: 1, gap: 4 }}>
+                    {title ? (
+                        <Text
+                            style={{
+                                color: theme.textPrimary,
+                                fontWeight: '700',
+                                fontSize: 15,
+                            }}
+                        >
+                            {title}
+                        </Text>
+                    ) : null}
+                    {message ? (
+                        <Text
+                            style={{
+                                color: theme.textPrimary,
+                                fontSize: 14,
+                                lineHeight: 20,
+                            }}
+                        >
+                            {message}
+                        </Text>
+                    ) : null}
+                </View>
             </View>
+            {/* Actions span the banner's full width under the message. */}
+            {children}
         </View>
     );
 }

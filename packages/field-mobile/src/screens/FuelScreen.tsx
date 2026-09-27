@@ -12,8 +12,10 @@ import {
 import {
     FuelBanner,
     FuelButton,
+    FuelSegmented,
     fuelStyles,
 } from '../components/fuel/fuel-controls';
+import { FuelEmptyState } from '../components/fuel/fuel-empty-state';
 import { FuelLogForm } from '../components/fuel/fuel-log-form';
 import {
     FuelRequestDetail,
@@ -39,6 +41,40 @@ export interface FuelScreenProps {
     draftStore?: FuelDraftStore;
     /** Opens this request directly, e.g. from a fuel notification tap. */
     initialRequestId?: number | null;
+}
+
+function emptyStateFor(
+    tab: 'requests' | 'logs',
+    hasError: boolean,
+    isOnline: boolean,
+) {
+    if (hasError) {
+        return {
+            icon: 'cloud' as const,
+            title: "Fuel records didn't load",
+            body: 'Use Refresh fuel records above when you have signal. Anything saved on this phone is kept.',
+        };
+    }
+
+    if (!isOnline) {
+        return {
+            icon: 'cloud' as const,
+            title: 'Nothing saved on this phone',
+            body: 'Reconnect to load your fuel history.',
+        };
+    }
+
+    return tab === 'requests'
+        ? {
+              icon: 'fuel' as const,
+              title: 'No fuel requests yet',
+              body: 'Tap Request fuel to ask the office for fuel. Approved requests appear here, ready to refuel.',
+          }
+        : {
+              icon: 'clipboard' as const,
+              title: 'No refuels recorded yet',
+              body: 'After you refuel against an approved request, the record and receipt appear here.',
+          };
 }
 
 export function FuelScreen({
@@ -334,18 +370,15 @@ export function FuelScreen({
                             />
                         )}
 
-                        <View style={fuelStyles.row}>
-                            <FuelButton
-                                title="Requests"
-                                selected={tab === 'requests'}
-                                onPress={() => setTab('requests')}
-                            />
-                            <FuelButton
-                                title="Fuel logs"
-                                selected={tab === 'logs'}
-                                onPress={() => setTab('logs')}
-                            />
-                        </View>
+                        <FuelSegmented
+                            onChange={setTab}
+                            options={[
+                                { value: 'requests', label: 'Requests' },
+                                { value: 'logs', label: 'Fuel logs' },
+                            ]}
+                            testIDPrefix="fuel-tab"
+                            value={tab}
+                        />
 
                         {tab === 'requests' &&
                             fuel.queuedRequests.map((queued) => (
@@ -360,22 +393,16 @@ export function FuelScreen({
                         )}
 
                         {!fuel.loading &&
-                            !fuel.error &&
                             visible.length === 0 &&
                             (tab === 'logs' ||
                                 fuel.queuedRequests.length === 0) && (
-                                <Text
-                                    style={[
-                                        fuelStyles.body,
-                                        { color: theme.textSecondary },
-                                    ]}
-                                >
-                                    {isOnline === true
-                                        ? tab === 'requests'
-                                            ? 'No fuel requests yet. Tap "Request fuel" to start one.'
-                                            : 'No refuels recorded yet.'
-                                        : 'No fuel records saved on this device yet. Reconnect to load your history.'}
-                                </Text>
+                                <FuelEmptyState
+                                    {...emptyStateFor(
+                                        tab,
+                                        Boolean(fuel.error),
+                                        isOnline === true,
+                                    )}
+                                />
                             )}
 
                         {ready.length > 0 && (

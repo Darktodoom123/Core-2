@@ -29,12 +29,15 @@ export const fuelStyles = StyleSheet.create({
     title: { fontSize: 20, fontWeight: '700' },
     body: { fontSize: 14, lineHeight: 21 },
     banner: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
         gap: 12,
         padding: 14,
         borderRadius: 12,
-        borderLeftWidth: 4,
+        borderWidth: 1,
+    },
+    bannerRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 12,
     },
     card: {
         borderRadius: 14,

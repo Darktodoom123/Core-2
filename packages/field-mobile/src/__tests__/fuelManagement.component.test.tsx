@@ -1059,3 +1059,49 @@ it.each([
         expect(screen.queryByText(/Submitted/)).toBeNull();
     },
 );
+
+describe('Fuel landing layout', () => {
+    it('shows a real empty state and a two-way Requests / Fuel logs switch', async () => {
+        const { api, store, commandOutbox, syncQueue } = setup();
+        const screen = await renderFuelScreen({
+            api,
+            store,
+            commandOutbox,
+            syncQueue,
+            isOnline: true,
+        });
+
+        expect(await screen.findByTestId('fuel-empty-state')).toBeTruthy();
+        expect(screen.getByText('No fuel requests yet')).toBeTruthy();
+
+        const requestsTab = screen.getByTestId('fuel-tab-requests');
+
+        expect(requestsTab.props.accessibilityState).toMatchObject({
+            selected: true,
+        });
+
+        await fireEvent.press(screen.getByTestId('fuel-tab-logs'));
+
+        expect(screen.getByText('No refuels recorded yet')).toBeTruthy();
+    });
+
+    it('still explains the empty list when loading failed, with the retry inside the banner', async () => {
+        const { api, store, commandOutbox, syncQueue } = setup();
+
+        api.fetchFuelRequests.mockRejectedValue(
+            new TypeError('Network failed'),
+        );
+
+        const screen = await renderFuelScreen({
+            api,
+            store,
+            commandOutbox,
+            syncQueue,
+            isOnline: true,
+        });
+
+        expect(await screen.findByTestId('fuel-empty-state')).toBeTruthy();
+        expect(screen.getByText("Fuel records didn't load")).toBeTruthy();
+        expect(screen.getByText('Refresh fuel records')).toBeTruthy();
+    });
+});
