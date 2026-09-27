@@ -49,6 +49,7 @@ import {
 import { nativeLocationAdapter } from '../native/locationAdapter';
 import { AssignedJobsListScreen } from '../screens/AssignedJobsListScreen';
 import { DispatchOrdersScreen } from '../screens/DispatchOrdersScreen';
+import { walletAssets } from '../screens/documents/document-catalog';
 import { DocumentsWalletScreen } from '../screens/DocumentsWalletScreen';
 import { DvirScreen } from '../screens/DvirScreen';
 import { FieldSafetyScreen } from '../screens/FieldSafetyScreen';
@@ -2460,26 +2461,20 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         clearTrackingPause();
     };
 
-    const availableAssets = useMemo(() => {
-        const map = new Map<string, string>();
-
-        if (walletAssetCode) {
-            map.set(walletAssetCode, resolvedAssetName || walletAssetCode);
-        }
-
-        jobs.forEach((j) => {
-            j.asset_assignments?.forEach((a) => {
-                if (a.asset_code) {
-                    map.set(a.asset_code, a.asset_name || a.asset_code);
-                }
-            });
-        });
-
-        return Array.from(map.entries()).map(([code, name]) => ({
-            assetCode: code,
-            assetName: name,
-        }));
-    }, [jobs, walletAssetCode, resolvedAssetName]);
+    // Documents follow the linked unit, not every unit on every job.
+    const documentAssets = useMemo(
+        () =>
+            walletAssets(
+                linkedAssetCode
+                    ? {
+                          assetCode: linkedAssetCode,
+                          assetName: linkedAsset?.asset_name ?? undefined,
+                      }
+                    : null,
+                { assetCode: walletAssetCode, assetName: resolvedAssetName },
+            ),
+        [linkedAssetCode, linkedAsset, walletAssetCode, resolvedAssetName],
+    );
 
     useEffect(() => {
         if (
@@ -2861,8 +2856,8 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                             />
                         ) : activeAppView === 'documents' ? (
                             <DocumentsWalletScreen
-                                assetCode={walletAssetCode}
-                                assignedAssets={availableAssets}
+                                assetCode={documentAssets[0]?.assetCode}
+                                assignedAssets={documentAssets}
                                 onBack={() => setActiveAppView('main')}
                                 operatorName={resolvedOperatorName}
                             />

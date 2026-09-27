@@ -80,3 +80,16 @@ export const isImageFile = (uri?: string | null): boolean =>
 
 export const fileNameFromUri = (uri?: string | null): string | null =>
     uri ? (uri.split('/').pop() ?? null) : null;
+
+/**
+ * The wallet shows the unit the operator is linked to; before linking, the
+ * current job's unit. Never every unit on every assigned job.
+ */
+export function walletAssets(
+    linked: AssignedAsset | null,
+    fallback: AssignedAsset | null,
+): AssignedAsset[] {
+    const asset = linked?.assetCode ? linked : fallback;
+
+    return asset?.assetCode ? [asset] : [];
+}
