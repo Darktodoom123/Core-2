@@ -767,3 +767,69 @@ it('accepts valid reported_at timestamp from offline queue within bounds and rej
     $resFuture->assertUnprocessable()
         ->assertJsonValidationErrors(['reported_at']);
 });
+
+it('accepts the replacement-unit request the field phone sends after a failed pre-trip', function (string $status, string $context): void {
+    Queue::fake();
+
+    /** @var User $worker */
+    $worker = User::factory()->create(['is_active' => true]);
+    $worker->syncRoles([RoleName::CraneOperator->value]);
+    $token = $worker->createToken('Mobile Token')->plainTextToken;
+
+    $asset = OperationalAsset::query()->create([
+        'code' => 'CRN-REPL-01',
+        'name' => '60T Tadano Crane',
+        'kind' => 'mobile_crane',
+        'status' => 'under_maintenance',
+    ]);
+
+    $job = DispatchJob::query()->create([
+        'reference' => 'DISP-REPL-'.$status,
+        'client' => 'Acme Corp',
+        'title' => 'Beam Lift',
+        'site' => 'North Gate',
+        'priority' => DispatchPriority::Routine,
+        'status' => DispatchStatus::from($status),
+        'version' => 4,
+        'created_by' => $this->adminUser->id,
+    ]);
+
+    DispatchPersonnelAssignment::query()->create([
+        'dispatch_job_id' => $job->id,
+        'user_id' => $worker->id,
+        'assignment_type' => 'operator',
+        'assigned_by' => $worker->id,
+        'response_status' => AssignmentResponse::Accepted,
+        'created_at' => now(),
+    ]);
+
+    DispatchAssetAssignment::query()->create([
+        'dispatch_job_id' => $job->id,
+        'operational_asset_id' => $asset->id,
+        'assignment_type' => 'primary',
+        'status' => 'assigned',
+        'assigned_by' => $worker->id,
+        'created_at' => now(),
+    ]);
+
+    $commandId = (string) Str::uuid();
+
+    // Mirrors buildReplacementRequest in packages/field-mobile/src/components/sheets/replacement-request/replacement-request.ts.
+    $this->withToken($token)->postJson("/api/v1/dispatch-jobs/{$job->id}/delays", [
+        'dispatch_job_id' => $job->id,
+        'job_version' => 4,
+        'context' => $context,
+        'reason' => 'equipment_issue',
+        'operational_asset_id' => $asset->id,
+        'notes' => 'Replacement unit needed. Hoist brake slipping',
+        'reported_at' => now()->subMinute()->toIso8601String(),
+        'command_id' => $commandId,
+    ], ['X-Command-Id' => $commandId])
+        ->assertCreated()
+        ->assertJsonPath('data.delay.reason', 'equipment_issue')
+        ->assertJsonPath('data.delay.notes', 'Replacement unit needed. Hoist brake slipping')
+        ->assertJsonPath('data.delay.operational_asset_id', $asset->id);
+})->with([
+    'travelling to site' => ['en_route', 'transit'],
+    'before leaving' => ['accepted', 'on_site'],
+]);
