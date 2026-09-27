@@ -1,7 +1,7 @@
 # Product Requirement Document (PRD) — v1.1
 ## Mobile-First Field Asset Tracking & Operator Shift Lifecycle
 
-**Version:** 1.1 (2026-09-26)
+**Version:** 1.1 (2026-09-26, revised 2026-09-27)
 **Supersedes:** [mobile-lifecycle.md](mobile-lifecycle.md) (v1.0 baseline, retained unchanged)
 
 ## Change log
@@ -29,6 +29,15 @@ Changes from the v1.0 baseline:
    is unchanged.
 5. **Offline storage narrowed to SQLite.** v1.0 listed "SQLite / Room /
    CoreData"; the Expo Android client uses Expo SQLite.
+6. **In-app Drive Mode removed (2026-09-27).** The field client no longer has
+   a Drive Routes / Drive Mode screen. While a job is accepted, dispatched or
+   en route, its card offers **Directions**, which opens the phone's maps app
+   at the site pin, or the site address when no pin is set. Transit is still
+   recorded through the job's `Start Transit` / `Arrived On Site` steps and
+   the *On Duty — Driving / Transit* HoS status. See 5.2 for truck-ban routing.
+7. **Finished-work history added (2026-09-27).** New Step 9 defines how
+   completed and cancelled jobs, DVIRs, fuel requests and safety reports
+   leave live work and become read-only history.
 
 All other requirements are unchanged from v1.0.
 
@@ -115,6 +124,22 @@ Status roles map to colors in [Docs/design/mobile.md](../../design/mobile.md#tel
 * **Safeguard Intercept:** If the operator forgot to release the machine in Step 7, an intercept modal displays: *"You are still linked to CRN-101. Release unit and turn off tracking?"* Tapping **Confirm** unbinds the unit automatically.
 * **System State:** Duty status reverts to *Off Duty*. Daily shift hours are submitted to payroll.
 
+### Step 9: Finished Work History
+* **Description:** Work the server has finished leaves live work and becomes a read-only record the operator can look back on.
+* **Rule:** Only the server moves an item into history. A `Complete` still waiting in the phone's outbox stays live and shows as waiting to send. History items carry no actions.
+* **Jobs:**
+  * A job is finished when the server reports `completed` or `cancelled`. The server stamps `completed_at` / `cancelled_at` when the status changes and clears them if the job is reopened.
+  * `GET /api/v1/dispatch-jobs` returns live jobs only; `?scope=history` returns the operator's finished jobs from the last 30 days (`?days=` up to 90), newest first, paginated.
+  * A job is in an operator's history only if they were still assigned when it finished. Declined jobs and jobs they were reassigned off are excluded.
+  * Dispatch shows **Needs Response · Active · History**. Home, the Dispatch badge and location sharing use live jobs only; the unit's position is never sent against a finished job.
+  * Opening a finished job (`GET /api/v1/dispatch-jobs/{id}/history`) shows the status steps the server recorded with their times, the job's delays, and the operator's own job report. Steps the server never recorded are left out, not inferred.
+  * A finish time is shown only when the server recorded one; otherwise the card shows the scheduled date, labelled as such.
+* **DVIR:** History lists server inspections from the last 30 days. It starts empty, never shows sample records, and marks an inspection saved on the phone as *Saved on this phone* until the server returns it.
+* **Fuel:** Requests read **Ready to refuel · In progress · Finished**, where finished means `logged`, `rejected` or `withdrawn`.
+* **Safety:** **Your reports** (`GET /api/v1/safety/my-reports`) shows the operator's own hazard reports as *Open* or *Fixed* and their stop-work orders as *Stop-work active* or *Lifted*, from the last 30 days.
+* **Failure states:** A history list that fails to load says so and offers a retry. It never shows an empty state that implies there is no history.
+* **Out of scope for the phone:** SOS incident history stays on the web. Rental and equipment handover records are reviewed on the web.
+
 ---
 
 ## 4. Edge Cases & System Guardrails
@@ -186,7 +211,7 @@ For transit operations involving lowbed/flatbed units (`TRK-202`) carrying crane
 * **Dispatch Scheduling Rule:**
   * Dispatch orders tagged as `Heavy Transit / Mobilization` must validate departure and arrival windows outside of these blackout periods (e.g., standard off-peak transit runs from **10:00 PM to 05:00 AM**).
 * **Routes Integration:**
-  * The **Drive Routes (Heavy Transit)** entry point should flag MMDA truck-designated routes (e.g., C-5, Roxas Boulevard, R-10) and prohibit routes crossing restricted local roads. The field client currently hides this entry point until routing ships.
+  * The field client has no in-app routing. **Directions** hands navigation to the phone's maps app, which does not apply truck bans, bridge weight limits or clearances. For heavy transit, dispatch must put the MMDA-compliant route (for example via C-5, Roxas Boulevard or R-10, avoiding restricted local roads) in the job's site notes.
 
 ### 5.3. Supported Shift Profiles
 1. **Day Shift (Standard Site Work):** `07:00 AM – 05:00 PM` (10 hours total: includes toolbox meeting, pre-trip DVIR, and 1-hour lunch).

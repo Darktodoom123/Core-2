@@ -49,7 +49,9 @@ defines behavior. It does not define colors or visual styling; this file does.
   offline, queued, syncing, conflict, and synchronized.
 - Component rules: verb–object labels, errors near the action, explained
   disabled actions, and confirmations that name the record and consequence.
-- The heavy-crane driver flow (Drive mode, Park and secure, Crane setup mode).
+- The heavy-crane driver flow (Park and secure, Crane setup mode). Drive mode
+  was removed from the field client on 2026-09-27; job cards hand directions
+  to the phone's maps app (mobile-lifecycle-v1.1, change log item 6).
 - GPT presentation rules.
 - Bans on decorative gradients, sparkle/AI branding, sci-fi control rooms,
   neon maps, and ornamental motion.
@@ -260,7 +262,7 @@ The launcher grid is the approved home-screen pattern. The home screen is
 - Status on a tile uses a badge with text or a count plus a semantic color, for
   example a pending-dispatch count or "DVIR required".
 - Hide tiles for features that are not shipped. Do not show them disabled.
-  Drive Routes is currently hidden.
+  Drive Routes was removed on 2026-09-27 rather than hidden.
 - Prefer showing every tile without horizontal scrolling. If swiping is
   unavoidable, show a visible affordance and make sure the most-used tiles
   appear first.

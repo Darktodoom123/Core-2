@@ -71,10 +71,10 @@ duplicate dispatch.
   indicators. A year view remains future scope for higher-level planning and
   reporting rather than dispatch execution.
 - Drivers and operators prioritize today's assigned work, job status, safety checks, location, fuel, and sync state.
-- For mobile-crane driver assignments, the field surface starts in a heavy-vehicle
-  **Drive mode** with a route preview, current position, site entrance or staging
-  point, ETA, and route freshness. It must not assume that a car route is safe for
-  the assigned crane.
+- For mobile-crane driver assignments, the field client has no in-app route
+  (Drive mode was removed on 2026-09-27). Directions open the phone's maps app,
+  which must not be treated as safe for the assigned crane: heavy-transit routes
+  come from dispatch in the job's site notes.
 - Selecting a heavy-crane asset for a Driver assignment changes the assignment
   summary and field copy to identify the crane. Driving access alone never
   unlocks crane-operation controls; those controls are permission- and
@@ -131,7 +131,10 @@ their color with explicit text and an icon; cobalt remains informational.
 
 ### Heavy-crane driver mobile flow
 
-- **Drive mode:** Use a compact route card on the assigned-work screen and open
+- **Drive mode:** Removed from the field client on 2026-09-27; job cards offer
+  **Directions** to the phone's maps app instead (see
+  [mobile-lifecycle-v1.1.md](../prds/mobile-prd/mobile-lifecycle-v1.1.md),
+  change log item 6). Kept for reference if in-app routing returns: use a compact route card on the assigned-work screen and open
   the full map for deliberate review. Show the current position, destination,
   site gate or staging area, ETA, and route freshness. If routing data supports
   them, surface heavy-vehicle constraints such as clearance, weight, access,
