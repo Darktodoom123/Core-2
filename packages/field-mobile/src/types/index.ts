@@ -918,6 +918,7 @@ export interface WeatherTelemetry {
 }
 
 export interface EquipmentHandoverInitiateData {
+    dispatch_job_id?: number;
     handover_token: string;
     pin: string;
     expires_at: string;
@@ -933,18 +934,14 @@ export interface EquipmentHandoverInitiateResponse extends EquipmentHandoverInit
     data?: EquipmentHandoverInitiateData;
 }
 
+/** What the server returns once a relief operator's claim is accepted. */
 export interface EquipmentHandoverClaimResponse {
     dispatch_job_id: number;
     asset_code: string;
-    claimed_by_user_id: number;
-    claimed_at: string;
-    message?: string;
-    data?: {
-        dispatch_job_id: number;
-        asset_code: string;
-        claimed_by_user_id: number;
-        claimed_at: string;
-    };
+    status: 'transferred';
+    previous_operator_id: number;
+    active_operator_id: number;
+    active_operator_name: string;
 }
 
 export interface HosClocks {

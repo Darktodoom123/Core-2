@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
     Alert,
     Platform,
@@ -45,6 +45,7 @@ import { projectOutbox } from '../services/outboxProjection';
 import { useTheme } from '../theme';
 import type {
     DispatchJob,
+    EquipmentHandoverClaimResponse,
     DispatchStatus,
     DutyStatus,
     OutboxCommand,
@@ -395,50 +396,10 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     const elapsedClock = hosCompliance.elapsedClock;
     const limitCounterLabel = hosCompliance.limitCounterLabel;
 
-    const [handoverPin, setHandoverPin] = useState<string>('');
-    const [handoverReliefName, setHandoverReliefName] = useState<string>(
-        'Standby / Incoming Relief',
-    );
-
-    useEffect(() => {
-        if (reliefHandoverOpen && activeJob && apiClient) {
-            apiClient
-                .initiateEquipmentHandover(activeJob.id)
-                .then((res) => {
-                    if (res?.pin) {
-                        setHandoverPin(res.pin);
-                    }
-
-                    if (res?.relief_operator?.name) {
-                        setHandoverReliefName(res.relief_operator.name);
-                    }
-                })
-                .catch(() => {
-                    if (!handoverPin) {
-                        setHandoverPin('8421');
-                    }
-                });
-        }
-    }, [reliefHandoverOpen, activeJob, apiClient, handoverPin]);
-
-    const handleClaimHandover = async (pin?: string) => {
-        const targetJobId =
-            activeJob?.id || (jobs.length > 0 && jobs[0] ? jobs[0].id : 1);
-
-        if (apiClient) {
-            try {
-                await apiClient.claimEquipmentHandover(
-                    targetJobId,
-                    pin || handoverPin || '8421',
-                );
-            } catch {
-                // Outbox or local fallback preserves workflow continuity
-            }
-        }
-
+    // Only a claim the server accepted links the unit on this phone.
+    const handleHandoverClaimed = (claim: EquipmentHandoverClaimResponse) => {
         setIsLinkedLocal(true);
-        onLinkUnit?.(effectiveAssetCode);
-        setReliefHandoverOpen(false);
+        onLinkUnit?.(claim.asset_code);
         onRefresh?.();
     };
 
@@ -1563,16 +1524,13 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
 
             {/* Smart Dual Hot-Seating Relief Handover Modal */}
             <ReliefHandoverModal
+                apiClient={apiClient}
                 assetCode={effectiveAssetCode}
-                handoverPin={handoverPin || '8421'}
+                isOnline={isOnline}
+                jobId={activeJob?.id ?? null}
                 mode={reliefHandoverMode}
-                onClaim1Tap={() => void handleClaimHandover()}
-                onClaimWithPin={(pin) => void handleClaimHandover(pin)}
+                onClaimed={handleHandoverClaimed}
                 onClose={() => setReliefHandoverOpen(false)}
-                onInitiatePushHandover={() => {
-                    // Push notification alert dispatched to scheduled incoming relief operator
-                }}
-                reliefOperatorName={handoverReliefName}
                 visible={reliefHandoverOpen}
             />
 

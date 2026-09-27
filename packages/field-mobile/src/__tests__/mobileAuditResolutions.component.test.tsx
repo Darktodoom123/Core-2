@@ -10,6 +10,7 @@ import { JobListItemCard } from '../components/cards/JobListItemCard';
 import { FieldSafetySheet } from '../components/sheets/field-safety-sheet';
 import { AssignedJobsListScreen } from '../screens/AssignedJobsListScreen';
 import { DvirScreen } from '../screens/DvirScreen';
+import { ApiClientError } from '../services/apiClient';
 import type { DispatchJob } from '../types/index';
 
 jest.setTimeout(25000);
@@ -269,15 +270,30 @@ describe('Mobile Application Audit Resolutions Component Tests', () => {
             // Pressing claim handover opens ReliefHandoverModal in incoming_claim mode
             await fireEvent.press(claimBtn);
             expect(view.getByTestId('relief-handover-modal')).toBeTruthy();
-            expect(view.getByText('Claim Equipment Handover')).toBeTruthy();
+            expect(view.getByText('Claim a unit')).toBeTruthy();
         });
 
-        it('executes claimEquipmentHandover and links unit when relief claim is confirmed', async () => {
-            const mockClaim = jest.fn().mockResolvedValue({ success: true });
+        it('links the unit only after the server accepts the relief claim', async () => {
+            const mockClaim = jest
+                .fn()
+                .mockRejectedValueOnce(
+                    new ApiClientError(
+                        'That PIN is not right for this unit.',
+                        422,
+                    ),
+                )
+                .mockResolvedValueOnce({
+                    dispatch_job_id: 42,
+                    asset_code: 'CRN-7',
+                    status: 'transferred',
+                    previous_operator_id: 3,
+                    active_operator_id: 9,
+                    active_operator_name: 'Alex Rivera',
+                });
             const mockRefresh = jest.fn();
             const mockLinkUnit = jest.fn();
             const mockApiClient: any = {
-                claimEquipmentHandover: mockClaim,
+                claimEquipmentHandoverByUnit: mockClaim,
                 fetchShiftStatus: jest.fn().mockResolvedValue({}),
                 fetchWeatherTelemetry: jest.fn().mockResolvedValue(null),
             };
@@ -286,6 +302,7 @@ describe('Mobile Application Audit Resolutions Component Tests', () => {
                 <AssignedJobsListScreen
                     {...baseScreenProps}
                     apiClient={mockApiClient}
+                    isOnline
                     isUnitLinked={false}
                     jobs={[]}
                     onLinkUnit={mockLinkUnit}
@@ -295,18 +312,38 @@ describe('Mobile Application Audit Resolutions Component Tests', () => {
                 />,
             );
 
-            // Open handover claim modal
             await fireEvent.press(
                 view.getByTestId('incoming-handover-claim-btn'),
             );
-            expect(view.getByTestId('relief-handover-modal')).toBeTruthy();
+            expect(view.queryByTestId('claim-1tap-btn')).toBeNull();
 
-            // Press 1-tap claim
-            const tapClaimBtn = view.getByTestId('claim-1tap-btn');
-            await fireEvent.press(tapClaimBtn);
+            await fireEvent.changeText(
+                view.getByTestId('handover-unit-input'),
+                'crn-7',
+            );
+            await fireEvent.changeText(
+                view.getByTestId('handover-pin-input'),
+                '1111',
+            );
+            await fireEvent.press(view.getByTestId('claim-pin-btn'));
 
-            expect(mockClaim).toHaveBeenCalledWith(1, '8421');
-            expect(mockLinkUnit).toHaveBeenCalled();
+            // Rejected: nothing is linked and the sheet stays open.
+            expect(
+                await view.findByText('That PIN is not right for this unit.'),
+            ).toBeTruthy();
+            expect(mockLinkUnit).not.toHaveBeenCalled();
+            expect(view.getByText('No unit assigned')).toBeTruthy();
+
+            await fireEvent.changeText(
+                view.getByTestId('handover-pin-input'),
+                '5307',
+            );
+            await fireEvent.press(view.getByTestId('claim-pin-btn'));
+
+            await waitFor(() =>
+                expect(mockLinkUnit).toHaveBeenCalledWith('CRN-7'),
+            );
+            expect(mockClaim).toHaveBeenLastCalledWith('CRN-7', '5307');
             expect(mockRefresh).toHaveBeenCalled();
         });
 

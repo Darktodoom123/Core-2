@@ -991,6 +991,26 @@ export class FieldApiClient {
         return this.handleResponse<EquipmentHandoverClaimResponse>(response);
     }
 
+    /**
+     * A relief operator claims a unit by its code and the outgoing operator's
+     * PIN. The server cancels the handover after five wrong PINs.
+     */
+    public async claimEquipmentHandoverByUnit(
+        assetCode: string,
+        pin: string,
+    ): Promise<EquipmentHandoverClaimResponse> {
+        const response = await this.fetchFn(
+            `${this.baseUrl}/api/v1/equipment-handovers/claim`,
+            {
+                method: 'POST',
+                headers: this.getHeaders(),
+                body: JSON.stringify({ asset_code: assetCode, pin }),
+            },
+        );
+
+        return this.handleResponse<EquipmentHandoverClaimResponse>(response);
+    }
+
     public async fetchCurrentHosShift(): Promise<CurrentHosShiftResponse> {
         const url = `${this.baseUrl}/api/v1/hos/current-shift`;
         const response = await this.fetchFn(url, {

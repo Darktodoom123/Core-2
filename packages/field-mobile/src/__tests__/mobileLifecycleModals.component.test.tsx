@@ -6,7 +6,6 @@ import {
     EndShiftSafeguardModal,
     OnSiteConfirmationModal,
     PreTripDefectFallbackModal,
-    ReliefHandoverModal,
 } from '../components/index';
 import { AssignedJobsListScreen } from '../screens/AssignedJobsListScreen';
 import { DispatchOrdersScreen } from '../screens/DispatchOrdersScreen';
@@ -208,60 +207,6 @@ describe('Mobile Lifecycle Modals & Operational Safeguards', () => {
             // Tap Standby / Await Dispatch
             await fireEvent.press(view.getByTestId('fallback-standby-btn'));
             expect(onStandby).toHaveBeenCalledTimes(1);
-        });
-    });
-
-    describe('ReliefHandoverModal (Smart Dual: 1-Tap Scheduled Push + 4-Digit PIN)', () => {
-        it('supports 1-tap push notification dispatch for outgoing operator', async () => {
-            const onPush = jest.fn();
-            const onClose = jest.fn();
-
-            const view = await render(
-                <ReliefHandoverModal
-                    assetCode="CRN-101"
-                    handoverPin="8421"
-                    mode="outgoing_offer"
-                    onClose={onClose}
-                    onInitiatePushHandover={onPush}
-                    reliefOperatorName="Carlos Reyes (Night Shift)"
-                    visible={true}
-                />,
-            );
-
-            expect(view.getByTestId('relief-handover-modal')).toBeTruthy();
-            expect(view.getByText('Equipment Hot-Seat Handover')).toBeTruthy();
-            expect(view.getByText('Carlos Reyes (Night Shift)')).toBeTruthy();
-            expect(view.getByText('8')).toBeTruthy();
-            expect(view.getByText('4')).toBeTruthy();
-            expect(view.getAllByText('2').length).toBeGreaterThanOrEqual(1);
-            expect(view.getAllByText('1').length).toBeGreaterThanOrEqual(1);
-
-            // Fire 1-tap push
-            await fireEvent.press(view.getByTestId('send-push-handover-btn'));
-            expect(onPush).toHaveBeenCalledTimes(1);
-            expect(view.getByText('Handover Alert Sent!')).toBeTruthy();
-        });
-
-        it('supports 4-digit PIN entry for incoming operator claim', async () => {
-            const onClaimWithPin = jest.fn();
-            const onClose = jest.fn();
-
-            const view = await render(
-                <ReliefHandoverModal
-                    assetCode="CRN-101"
-                    mode="incoming_claim"
-                    onClaimWithPin={onClaimWithPin}
-                    onClose={onClose}
-                    visible={true}
-                />,
-            );
-
-            expect(view.getByText('Claim Equipment Handover')).toBeTruthy();
-            const pinInput = view.getByTestId('handover-pin-input');
-            await fireEvent.changeText(pinInput, '8421');
-            await fireEvent.press(view.getByTestId('claim-pin-btn'));
-
-            expect(onClaimWithPin).toHaveBeenCalledWith('8421');
         });
     });
 

@@ -28,6 +28,10 @@ const MIGRATED = [
     ...fs
         .readdirSync(path.join(SRC, 'components', 'sheets', 'outbox'))
         .map((file) => `components/sheets/outbox/${file}`),
+    'components/sheets/ReliefHandoverModal.tsx',
+    ...fs
+        .readdirSync(path.join(SRC, 'components', 'sheets', 'relief-handover'))
+        .map((file) => `components/sheets/relief-handover/${file}`),
     'components/sheets/ReportDelayModal.tsx',
     ...fs
         .readdirSync(path.join(SRC, 'components', 'sheets', 'report-delay'))

@@ -136,32 +136,6 @@ export const HosScreen: React.FC<HosScreenProps> = ({
     const [isSaved, setIsSaved] = useState(false);
     const [safeguardModalOpen, setSafeguardModalOpen] = useState(false);
     const [reliefHandoverOpen, setReliefHandoverOpen] = useState(false);
-    const [handoverPin, setHandoverPin] = useState<string>('');
-    const [handoverReliefName, setHandoverReliefName] = useState<string>(
-        'Standby / Incoming Relief',
-    );
-
-    useEffect(() => {
-        if (reliefHandoverOpen && activeJobId && apiClient) {
-            apiClient
-                .initiateEquipmentHandover(activeJobId)
-                .then((res) => {
-                    if (res?.pin) {
-                        setHandoverPin(res.pin);
-                    }
-
-                    if (res?.relief_operator?.name) {
-                        setHandoverReliefName(res.relief_operator.name);
-                    }
-                })
-                .catch(() => {
-                    if (!handoverPin) {
-                        setHandoverPin('8421');
-                    }
-                });
-        }
-    }, [reliefHandoverOpen, activeJobId, apiClient, handoverPin]);
-
     // Confirmation & Micro-interaction Animations (Apple HIG spring & hardware-accelerated transforms)
     const stampScale = useMemo(() => new Animated.Value(0.95), []);
     const stampOpacity = useMemo(() => new Animated.Value(0), []);
@@ -530,14 +504,11 @@ export const HosScreen: React.FC<HosScreenProps> = ({
 
             {/* Smart Dual Hot-Seating Relief Handover Modal */}
             <ReliefHandoverModal
-                assetCode={linkedAssetCode || 'CRN-101'}
-                handoverPin={handoverPin || '8421'}
+                apiClient={apiClient}
+                assetCode={linkedAssetCode ?? undefined}
+                jobId={activeJobId ?? null}
                 mode="outgoing_offer"
                 onClose={() => setReliefHandoverOpen(false)}
-                onInitiatePushHandover={() => {
-                    // Push notification alert dispatched to scheduled incoming relief operator
-                }}
-                reliefOperatorName={handoverReliefName}
                 visible={reliefHandoverOpen}
             />
         </View>
