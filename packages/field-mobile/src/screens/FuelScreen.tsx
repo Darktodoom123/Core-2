@@ -23,6 +23,7 @@ import {
     QueuedFuelRequestItem,
 } from '../components/fuel/fuel-request-detail';
 import { FuelRequestForm } from '../components/fuel/fuel-request-form';
+import { fuelSections } from '../components/fuel/fuel-sections';
 import { TileScreenHeader } from '../components/layout/tile-screen-header';
 import { useFuelManagement } from '../hooks/useFuelManagement';
 import type { FuelCommandQueue } from '../hooks/useFuelManagement';
@@ -167,8 +168,7 @@ export function FuelScreen({
     const visible = fuel.requests.filter(
         (request) => tab === 'requests' || request.logs.length > 0,
     );
-    const ready = visible.filter((request) => request.status === 'verified');
-    const others = visible.filter((request) => request.status !== 'verified');
+    const sections = fuelSections(tab, visible);
     const hasDraft = Boolean(draft.quantity || draft.purpose || draft.pending);
 
     return (
@@ -405,47 +405,35 @@ export function FuelScreen({
                                 />
                             )}
 
-                        {ready.length > 0 && (
-                            <Text
-                                style={{
-                                    color: theme.textPrimary,
-                                    fontWeight: '700',
-                                    fontSize: 15,
-                                }}
+                        {sections.map((section) => (
+                            <View
+                                key={section.title ?? 'logs'}
+                                style={{ gap: 12 }}
                             >
-                                Ready to refuel
-                            </Text>
-                        )}
-                        {ready.map((request) => (
-                            <FuelRequestListItem
-                                key={request.id}
-                                request={request}
-                                onPress={() => {
-                                    fuel.dismissNotice();
-                                    showRequest(request);
-                                }}
-                            />
-                        ))}
-                        {ready.length > 0 && others.length > 0 && (
-                            <Text
-                                style={{
-                                    color: theme.textPrimary,
-                                    fontWeight: '700',
-                                    fontSize: 15,
-                                }}
-                            >
-                                Other requests
-                            </Text>
-                        )}
-                        {others.map((request) => (
-                            <FuelRequestListItem
-                                key={request.id}
-                                request={request}
-                                onPress={() => {
-                                    fuel.dismissNotice();
-                                    showRequest(request);
-                                }}
-                            />
+                                {section.title ? (
+                                    <Text
+                                        accessibilityRole="header"
+                                        testID={`fuel-section-${section.title}`}
+                                        style={{
+                                            color: theme.textPrimary,
+                                            fontWeight: '700',
+                                            fontSize: 15,
+                                        }}
+                                    >
+                                        {section.title}
+                                    </Text>
+                                ) : null}
+                                {section.requests.map((request) => (
+                                    <FuelRequestListItem
+                                        key={request.id}
+                                        request={request}
+                                        onPress={() => {
+                                            fuel.dismissNotice();
+                                            showRequest(request);
+                                        }}
+                                    />
+                                ))}
+                            </View>
                         ))}
 
                         {fuel.nextPage && (

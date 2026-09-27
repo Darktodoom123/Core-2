@@ -1105,3 +1105,75 @@ describe('Fuel landing layout', () => {
         expect(screen.getByText('Refresh fuel records')).toBeTruthy();
     });
 });
+
+describe('Fuel request history', () => {
+    const withStatus = (
+        id: number,
+        status: MobileFuelRequest['status'],
+    ): MobileFuelRequest => ({
+        ...request,
+        id,
+        reference: `FUEL-${id}`,
+        status,
+    });
+
+    const order = (screen: Awaited<ReturnType<typeof renderFuelScreen>>) =>
+        screen
+            .getAllByTestId(/^(fuel-section-|fuel-view-request-)/)
+            .map((node) =>
+                String(node.props.testID)
+                    .replace('fuel-section-', '')
+                    .replace('fuel-view-request-', 'FUEL-'),
+            );
+
+    it('keeps finished requests under their own heading, below live ones', async () => {
+        const { api, store, commandOutbox, syncQueue } = setup([
+            withStatus(31, 'logged'),
+            withStatus(32, 'approved'),
+            withStatus(33, 'withdrawn'),
+            withStatus(34, 'verified'),
+            withStatus(35, 'rejected'),
+            withStatus(36, 'submitted'),
+        ]);
+        const screen = await renderFuelScreen({
+            api,
+            store,
+            commandOutbox,
+            syncQueue,
+            isOnline: true,
+        });
+
+        await screen.findByTestId('fuel-view-request-31');
+
+        const sequence = order(screen);
+        const at = (text: string) => sequence.indexOf(text);
+
+        expect(at('FUEL-34')).toBeLessThan(at('In progress'));
+        expect(at('In progress')).toBeLessThan(at('FUEL-32'));
+        expect(at('FUEL-36')).toBeLessThan(at('Finished'));
+
+        for (const done of ['FUEL-31', 'FUEL-33', 'FUEL-35']) {
+            expect(at(done)).toBeGreaterThan(at('Finished'));
+        }
+
+        expect(screen.queryByText('Other requests')).toBeNull();
+    });
+
+    it('shows no live headings when every request is finished', async () => {
+        const { api, store, commandOutbox, syncQueue } = setup([
+            withStatus(41, 'rejected'),
+        ]);
+        const screen = await renderFuelScreen({
+            api,
+            store,
+            commandOutbox,
+            syncQueue,
+            isOnline: true,
+        });
+
+        await screen.findByTestId('fuel-view-request-41');
+
+        expect(screen.getByText('Finished')).toBeTruthy();
+        expect(screen.queryByText('In progress')).toBeNull();
+    });
+});
