@@ -8,7 +8,6 @@ import {
     DefectSheet,
     DvirWalkaroundPhotos,
     findDefects,
-    WALKAROUND_ANGLES,
 } from '../components/inspection';
 import type {
     WalkaroundAngle,
@@ -294,17 +293,10 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     const needsDefectPhotos = isUnsafe;
     // A reported problem needs words: where it is and how bad it is.
     const remarksMissing = needsDefectPhotos && remarks.trim() === '';
-    // A clean inspection, pre- or post-trip, needs all four walkaround
-    // photos: the unit as taken over and as parked. Reporting a defect is
-    // never blocked by a missing photo.
-    const walkaroundRequired = mode !== 'history' && !isUnsafe;
-    const walkaroundMissing = walkaroundRequired
-        ? WALKAROUND_ANGLES.filter((angle) => !walkaroundPhotos[angle.key])
-              .length
-        : 0;
+    // Walkaround photos are optional on pre- and post-trip; whatever is
+    // taken is sent with the inspection.
     const missing = dvirMissingItems({
         readingsValid: readings.isValid,
-        photosMissing: walkaroundMissing,
         shutdownChecksUnanswered: postTripUnanswered,
         remarksMissing,
         attested,
@@ -613,9 +605,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                             onCapturePhoto={handleCapturePhoto}
                             onRemovePhoto={handleRemovePhoto}
                             photos={walkaroundPhotos}
-                            requirement={
-                                walkaroundRequired ? 'required' : 'optional'
-                            }
+                            requirement="optional"
                             title="Take walkaround photos"
                         />
                         <DvirCabPhotoCard

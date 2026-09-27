@@ -6,19 +6,16 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
  */
 export function dvirMissingItems({
     readingsValid,
-    photosMissing,
     shutdownChecksUnanswered,
     remarksMissing,
     attested,
 }: {
     readingsValid: boolean;
-    photosMissing: number;
     shutdownChecksUnanswered: number;
     remarksMissing: boolean;
     attested: boolean;
 }): string[] {
     return [
-        photosMissing > 0 ? plural(photosMissing, 'walkaround photo') : null,
         readingsValid ? null : 'engine hours',
         shutdownChecksUnanswered > 0
             ? plural(shutdownChecksUnanswered, 'shutdown check')
