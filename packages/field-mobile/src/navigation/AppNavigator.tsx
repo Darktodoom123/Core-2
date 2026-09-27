@@ -2610,6 +2610,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                         {activeAppView === 'safety' ? (
                             <FieldSafetyScreen
                                 actorId={user?.id}
+                                apiClient={apiClient}
                                 activeSite={currentJob?.site ?? null}
                                 commands={outboxCommands.filter(
                                     (command) =>

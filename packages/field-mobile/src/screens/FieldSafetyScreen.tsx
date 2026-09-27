@@ -12,6 +12,7 @@ import { PhotoAttachmentPicker } from '../components/attachments/PhotoAttachment
 import type { PhotoAttachment } from '../components/attachments/PhotoAttachmentPicker';
 import { colors } from '../components/nativeStyles';
 import { nativeLocationAdapter } from '../native/locationAdapter';
+import type { FieldApiClient } from '../services/apiClient';
 import { durableAttachmentStorage } from '../services/durableAttachmentStorage';
 import type {
     OutboxCommand,
@@ -19,6 +20,7 @@ import type {
     WorkStoppageCommandPayload,
     WorkStoppageType,
 } from '../types';
+import { MySafetyReportsList } from './safety/my-safety-reports';
 
 type SafetyMode = 'home' | 'hazard' | 'stop-work';
 type HazardSeverity = SafetyHazardCommandPayload['severity'];
@@ -33,6 +35,8 @@ interface CapturedLocation {
 
 export interface FieldSafetyScreenProps {
     actorId?: number;
+    /** Loads the operator's own reports and their outcomes. */
+    apiClient?: FieldApiClient;
     activeSite?: string | null;
     isOnline?: boolean | null;
     commands: OutboxCommand[];
@@ -63,6 +67,7 @@ const categoryOptions = [
 
 export function FieldSafetyScreen({
     actorId,
+    apiClient,
     activeSite,
     isOnline,
     commands,
@@ -392,7 +397,7 @@ export function FieldSafetyScreen({
                     <Text style={styles.sectionLabel}>Recent safety sync</Text>
                     {safetyCommands.length === 0 ? (
                         <Text style={styles.emptyText}>
-                            Safety reports you submit will appear here.
+                            Nothing waiting to send from this phone.
                         </Text>
                     ) : (
                         safetyCommands
@@ -405,6 +410,8 @@ export function FieldSafetyScreen({
                                 />
                             ))
                     )}
+
+                    <MySafetyReportsList apiClient={apiClient} />
                 </ScrollView>
             ) : (
                 <ScrollView
@@ -453,7 +460,9 @@ export function FieldSafetyScreen({
                                 />
                                 <ChoiceButton
                                     label="Imminent Danger (RA 11058 §20)"
-                                    selected={stoppageType === 'imminent_danger'}
+                                    selected={
+                                        stoppageType === 'imminent_danger'
+                                    }
                                     onPress={() =>
                                         setStoppageType('imminent_danger')
                                     }
@@ -483,9 +492,7 @@ export function FieldSafetyScreen({
                                         condition exists that may cause death or
                                         serious physical injury.
                                     </Text>
-                                    <Text
-                                        style={styles.statutoryRegulationRef}
-                                    >
+                                    <Text style={styles.statutoryRegulationRef}>
                                         Regulatory Reference: DOLE D.O. 13 s.
                                         1998 Section 8 & RA 11058 Section 20
                                     </Text>

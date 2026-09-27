@@ -15,6 +15,7 @@ import type {
     EquipmentHandoverClaimResponse,
     EquipmentHandoverInitiateResponse,
     JobHistoryDetail,
+    MySafetyReports,
     JobHistoryPage,
     HosClocks,
     JobReportCommandPayload,
@@ -655,6 +656,16 @@ export class FieldApiClient {
         );
 
         return this.handleResponse<JobHistoryDetail>(response);
+    }
+
+    /** The operator's own hazard reports and stop-work orders, with outcomes. */
+    public async fetchMySafetyReports(days = 30): Promise<MySafetyReports> {
+        const response = await this.fetchFn(
+            `${this.baseUrl}/api/v1/safety/my-reports?days=${days}`,
+            { method: 'GET', headers: this.getHeaders() },
+        );
+
+        return this.handleResponse<MySafetyReports>(response);
     }
 
     public async fetchLocationWeather(

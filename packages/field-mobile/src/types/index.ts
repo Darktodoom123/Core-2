@@ -998,3 +998,36 @@ export interface CurrentHosShiftResponse {
 }
 
 export * from './account';
+
+/** A hazard the operator reported, and whether it has been fixed. */
+export interface MySafetyHazard {
+    id: number;
+    ticket_code: string;
+    project_site: string;
+    category: string;
+    severity: string;
+    status: string;
+    work_stoppage_issued: boolean;
+    reported_at: string;
+    rectified_at: string | null;
+    rectification_notes: string | null;
+}
+
+/** A stop-work order the operator issued, and whether it was lifted. */
+export interface MyWorkStoppage {
+    id: number;
+    notice_number: string;
+    project_site: string;
+    reason: string;
+    affected_area: string;
+    is_active: boolean;
+    issued_at: string;
+    lifted_at: string | null;
+    lift_reason: string | null;
+}
+
+/** GET /api/v1/safety/my-reports */
+export interface MySafetyReports {
+    hazards: MySafetyHazard[];
+    work_stoppages: MyWorkStoppage[];
+}
