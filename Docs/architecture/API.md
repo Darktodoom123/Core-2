@@ -412,6 +412,7 @@ The `/api/v1` prefix is composed from module- and platform-owned route files. Al
 - `POST /api/v1/fuel-requests/{fuelRequest}/logs` (`throttle:30,1`, `X-Command-Id`): Record a verified request; multipart `receipt` or `no_receipt_reason` (+ `no_receipt_note` for `other`), optional `receipt_number`.
 - `POST /api/v1/fuel-requests/{fuelRequest}/withdraw` (`throttle:30,1`, `X-Command-Id`): Requester withdrawal while `submitted`/`forwarded`; idempotent.
 - `POST /api/v1/locations` (`throttle:location`): High-frequency GPS telemetry sharing pings (lat, lng, speed, heading, accuracy).
+- `POST /api/v1/locations/batch` (`throttle:location`): Up to 50 pings as `{ pings: [{ command_id, ...ping }] }`, used by the phone to send a backlog. Each ping is checked and stored on its own under its own `command_id` (a resend is answered from the record), and the reply lists `{ command_id, status, message }` per ping, so one refused ping never refuses the others. The request is refused whole (422) only when it is empty, over 50, or repeats or omits a `command_id`.
 - `GET /api/v1/dispatch/jobs/{id}/weather`: Real-time weather and wind telemetry for lift site.
 - `POST /api/v1/dispatch/jobs/{id}/weather-standby`: Report weather hold / high wind safety delay.
 

@@ -7,6 +7,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     Route::middleware(['auth:sanctum', 'active', 'api-token'])->group(function () {
         Route::middleware('throttle:location')->group(function () {
             Route::post('/locations', [LocationController::class, 'store'])->name('locations.store');
+            Route::post('/locations/batch', [LocationController::class, 'storeBatch'])->name('locations.store-batch');
         });
     });
 });
