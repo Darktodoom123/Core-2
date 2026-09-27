@@ -1613,3 +1613,94 @@ describe('CommandOutboxManager', () => {
         assert.equal(outbox.getCommand(stop.id)?.state, 'completed');
     });
 });
+
+describe('unit link commands', () => {
+    test('a stuck command on the same job does not hold up the unit link', async () => {
+        const outbox = await createOutbox(31);
+        const stuck = await outbox.enqueueTransitionStatus(1, 'arrived', 1);
+        const link = await outbox.enqueueLinkUnit({
+            operational_asset_id: 42,
+            dispatch_job_id: 1,
+            asset_code: 'CRN-101',
+        });
+        const release = await outbox.enqueueReleaseUnit({
+            asset_code: 'CRN-101',
+        });
+        const calls: string[] = [];
+        const apiClient = {
+            transitionStatus: async () => {
+                throw new ApiClientError('Stale version.', 409);
+            },
+            linkUnit: async () => {
+                calls.push('link');
+
+                return {};
+            },
+            releaseUnit: async () => {
+                calls.push('release');
+
+                return null;
+            },
+        } as unknown as FieldApiClient;
+
+        await outbox.processQueue(apiClient);
+
+        assert.equal(outbox.getCommand(stuck.id)?.state, 'conflict');
+        assert.deepEqual(calls, ['link', 'release']);
+        assert.equal(outbox.getCommand(link.id)?.state, 'completed');
+        assert.equal(outbox.getCommand(release.id)?.state, 'completed');
+    });
+
+    test('a refused link can be discarded while the job has later commands waiting', async () => {
+        const outbox = await createOutbox(33);
+        const link = await outbox.enqueueLinkUnit({
+            operational_asset_id: 42,
+            dispatch_job_id: 1,
+            asset_code: 'CRN-101',
+        });
+        await outbox.enqueueTransitionStatus(1, 'arrived', 1);
+        const apiClient = {
+            linkUnit: async () => {
+                throw new ApiClientError('You are not assigned.', 422);
+            },
+            transitionStatus: async () => {
+                throw new ApiClientError('Server error.', 500);
+            },
+        } as unknown as FieldApiClient;
+
+        await outbox.processQueue(apiClient);
+        assert.equal(outbox.getCommand(link.id)?.state, 'failed');
+
+        await outbox.discardCommand(link.id);
+
+        assert.equal(outbox.getCommand(link.id), undefined);
+    });
+
+    test('a release waits for an earlier link that has not gone through', async () => {
+        const outbox = await createOutbox(32);
+        const link = await outbox.enqueueLinkUnit({
+            operational_asset_id: 42,
+            asset_code: 'CRN-101',
+        });
+        const release = await outbox.enqueueReleaseUnit({
+            asset_code: 'CRN-101',
+        });
+        let releaseCalls = 0;
+        const apiClient = {
+            linkUnit: async () => {
+                throw new ApiClientError('Server error.', 500);
+            },
+            releaseUnit: async () => {
+                releaseCalls += 1;
+
+                return null;
+            },
+        } as unknown as FieldApiClient;
+
+        await outbox.processQueue(apiClient);
+
+        assert.notEqual(outbox.getCommand(link.id)?.state, 'completed');
+        assert.equal(releaseCalls, 0);
+        assert.equal(outbox.getCommand(release.id)?.state, 'queued');
+    });
+});

@@ -33,6 +33,7 @@ import type {
 import type { FieldApiClient } from './apiClient';
 import { ApiClientError } from './apiClient';
 import { durableAttachmentStorage } from './durableAttachmentStorage';
+import { hasLaterDependent, isUnitLinkCommand } from './outboxDependencies';
 
 export type OutboxListener = (commands: OutboxCommand[]) => void;
 
@@ -97,6 +98,12 @@ function commandScope(command: OutboxCommand): string {
         command.type === 'certify_hos_shift'
     ) {
         return `hos:${command.actorId}`;
+    }
+
+    // Link and release stay in order with each other, and a stuck job
+    // command (e.g. a location ping) never holds up the unit link.
+    if (isUnitLinkCommand(command)) {
+        return `unit-link:${command.actorId}`;
     }
 
     return command.jobId === null || command.jobId === undefined
@@ -1037,19 +1044,9 @@ export class CommandOutboxManager {
 
             // Check for dependent commands for the same job (queued, syncing, or retryable failed)
             if (command.jobId !== null && command.jobId !== undefined) {
-                const hasDependent = this.getCommands().some(
-                    (c) =>
-                        c.jobId === command.jobId &&
-                        c.id !== command.id &&
-                        (Date.parse(c.createdAt) >
-                            Date.parse(command.createdAt) ||
-                            (Date.parse(c.createdAt) ===
-                                Date.parse(command.createdAt) &&
-                                c.id.localeCompare(command.id) > 0)) &&
-                        (c.state === 'queued' ||
-                            c.state === 'syncing' ||
-                            (c.state === 'failed' &&
-                                c.error?.retryable === true)),
+                const hasDependent = hasLaterDependent(
+                    command,
+                    this.getCommands(),
                 );
 
                 if (hasDependent) {

@@ -4,6 +4,7 @@ import type {
     OutboxCommandState,
     OutboxCommandType,
 } from '../types/index';
+import { hasLaterDependent } from './outboxDependencies';
 
 export type SyncPillTone =
     'online' | 'offline' | 'checking' | 'attention' | 'failed' | 'syncing';
@@ -562,20 +563,9 @@ export function isCommandDiscardable(
         };
     }
 
-    // Check for dependent uncompleted commands for the same job
-    if (allCommands && command.jobId !== null && command.jobId !== undefined) {
-        const hasDependent = allCommands.some(
-            (c) =>
-                c.jobId === command.jobId &&
-                c.id !== command.id &&
-                (Date.parse(c.createdAt) > Date.parse(command.createdAt) ||
-                    (Date.parse(c.createdAt) ===
-                        Date.parse(command.createdAt) &&
-                        c.id.localeCompare(command.id) > 0)) &&
-                (c.state === 'queued' ||
-                    c.state === 'syncing' ||
-                    (c.state === 'failed' && c.error?.retryable === true)),
-        );
+    // Check for later commands that still depend on this one
+    if (allCommands) {
+        const hasDependent = hasLaterDependent(command, allCommands);
 
         if (hasDependent) {
             return {
