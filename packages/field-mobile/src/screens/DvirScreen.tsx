@@ -7,7 +7,6 @@ import {
     PreTripDefectFallbackModal,
 } from '../components/index';
 import {
-    CAB_ANGLES,
     DEFECT_ANGLES,
     DVIR_DEFECT_CATEGORIES,
     DvirDefectsModal,
@@ -30,6 +29,7 @@ import {
 } from '../utils/equipmentClassification';
 import { DvirAssetSelector } from './dvir/dvir-asset-selector';
 import { DvirAttestation } from './dvir/dvir-attestation';
+import { DvirCabPhotoCard } from './dvir/dvir-cab-photo-card';
 import { DvirDefectsSection } from './dvir/dvir-defects-section';
 import { DvirFooterAction } from './dvir/dvir-footer-action';
 import { DvirHistoryArchive } from './dvir/dvir-history-archive';
@@ -575,13 +575,10 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                             photos={walkaroundPhotos}
                             title="Take walkaround photos"
                         />
-                        <DvirWalkaroundPhotos
-                            angles={CAB_ANGLES}
+                        <DvirCabPhotoCard
                             onCapturePhoto={handleCapturePhoto}
                             onRemovePhoto={handleRemovePhoto}
-                            photos={walkaroundPhotos}
-                            testID="dvir-cab-photo"
-                            title="Cab / dashboard photo · optional"
+                            photo={walkaroundPhotos.cab}
                         />
 
                         {/* Section 3: Add new defects tailored to designated equipment */}
