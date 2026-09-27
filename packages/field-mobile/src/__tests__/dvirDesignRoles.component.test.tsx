@@ -50,12 +50,12 @@ async function addDefect(view: View, id: string) {
 }
 
 describe.each(MODES)('DVIR design roles (%s)', (mode, theme: ThemeColors) => {
-    it('shows the dispatch lockout in hazard red, with gold swap and neutral standby actions', async () => {
+    it('shows the dispatch lockout in hazard red, with gold replacement request and neutral standby actions', async () => {
         const view = await renderDvir(mode);
         await fireEvent.press(view.getByTestId('safety-status-unsafe'));
 
         const banner = flat(view, 'dvir-lockout-banner');
-        const swap = flat(view, 'dvir-lockout-swap-unit-btn');
+        const swap = flat(view, 'dvir-lockout-request-replacement-btn');
         const standby = flat(view, 'dvir-lockout-standby-btn');
 
         expect(banner.backgroundColor).toBe(theme.hazardRedLight);
@@ -64,9 +64,7 @@ describe.each(MODES)('DVIR design roles (%s)', (mode, theme: ThemeColors) => {
             theme.hazardRedText,
         );
         expect(swap.backgroundColor).toBe(theme.brandAmber);
-        expect(textColor(view, 'Swap Replacement Unit')).toBe(
-            theme.surfaceDark,
-        );
+        expect(textColor(view, 'Ask for replacement')).toBe(theme.surfaceDark);
         expect(standby.backgroundColor).toBe(theme.surface);
         expect(swap.minHeight).toBeGreaterThanOrEqual(48);
         expect(standby.minHeight).toBeGreaterThanOrEqual(48);

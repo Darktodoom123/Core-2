@@ -27,7 +27,6 @@ import type { HomeTile } from '../components/layout/home-tile-grid';
 import { HomeTileGrid } from '../components/layout/home-tile-grid';
 import { colors, shadows } from '../components/nativeStyles';
 import { SyncStatusPanel } from '../components/panels/sync-status-panel';
-import { ChangeUnitModal } from '../components/sheets/ChangeUnitModal';
 import { DispatchIntakeSheet } from '../components/sheets/DispatchIntakeSheet';
 import { DutyStatusSelectorModal } from '../components/sheets/DutyStatusSelectorModal';
 import { EndShiftSafeguardModal } from '../components/sheets/EndShiftSafeguardModal';
@@ -37,6 +36,7 @@ import { OutboxStatusSheet } from '../components/sheets/OutboxStatusSheet';
 import { PreTripDefectFallbackModal } from '../components/sheets/PreTripDefectFallbackModal';
 import { ProfileSheet } from '../components/sheets/profile-sheet';
 import { ReliefHandoverModal } from '../components/sheets/ReliefHandoverModal';
+import { ReplacementRequestSheet } from '../components/sheets/replacement-request/replacement-request-sheet';
 import { ReportDelayModal } from '../components/sheets/ReportDelayModal';
 import { isFetchError } from '../connectivity/networkMonitor';
 import { useHosCompliance } from '../hooks/useHosCompliance';
@@ -104,7 +104,10 @@ export interface AssignedJobsListScreenProps {
     isUnitLinked?: boolean;
     onLinkUnit?: (assetCode: string) => void;
     dvirStatus?: DvirReadinessStatus | 'passed';
-    onSwapUnit?: (newUnitCode: string, reason: string) => void;
+    /** Asks dispatch for a replacement; the phone never switches units itself. */
+    onRequestReplacement?: (note: string) => void;
+    /** False when there is no job to send a replacement request with. */
+    canRequestReplacement?: boolean;
     preTripDefectLockout?: boolean;
     onOpenRental?: () => void;
     onToggleLocationSharing?: () => void;
@@ -173,7 +176,8 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     isUnitLinked,
     onLinkUnit,
     dvirStatus,
-    onSwapUnit,
+    onRequestReplacement,
+    canRequestReplacement = false,
     preTripDefectLockout = false,
     onOpenRental,
     onToggleLocationSharing,
@@ -217,7 +221,8 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     const [reliefHandoverMode, setReliefHandoverMode] = useState<
         'outgoing_offer' | 'incoming_claim'
     >('outgoing_offer');
-    const [changeUnitModalOpen, setChangeUnitModalOpen] = useState(false);
+    const [replacementOpen, setReplacementOpen] = useState(false);
+    const [replacementRequested, setReplacementRequested] = useState(false);
     const [defectFallbackModalOpen, setDefectFallbackModalOpen] =
         useState(false);
     const [isLinkedLocal, setIsLinkedLocal] = useState<boolean>(
@@ -226,9 +231,6 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     const [localDvirStatus, setLocalDvirStatus] = useState<
         DvirReadinessStatus | 'passed' | undefined
     >(dvirStatus);
-    const [overriddenAssetCode, setOverriddenAssetCode] = useState<
-        string | null
-    >(null);
     const [localDefectLockout, setLocalDefectLockout] = useState<
         boolean | null
     >(null);
@@ -375,10 +377,10 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     const assetCode =
         primaryAsset?.asset_code ||
         (activeJob ? 'Assigned Unit' : 'UNASSIGNED');
-    const effectiveAssetCode = overriddenAssetCode || assetCode;
+    const effectiveAssetCode = assetCode;
     const isLinked = isUnitLinked !== undefined ? isUnitLinked : isLinkedLocal;
-    // No job, no swapped-in unit, no lockout: the shift has no unit at all.
-    const hasNoUnit = !activeJob && !overriddenAssetCode && !isLinked;
+    // No job and no linked unit: the shift has no unit at all.
+    const hasNoUnit = !activeJob && !isLinked;
     const openReliefClaim = () => {
         setReliefHandoverMode('incoming_claim');
         setReliefHandoverOpen(true);
@@ -903,7 +905,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                             <View style={styles.defectLockoutBadge}>
                                 <Icon color="#FFFFFF" name="alert" size={14} />
                                 <Text style={styles.defectLockoutBadgeText}>
-                                    SAFETY LOCKOUT · UnderMaintenance
+                                    SAFETY LOCKOUT
                                 </Text>
                             </View>
                             <Text
@@ -921,24 +923,29 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                 isDarkHud && styles.darkDefectLockoutNotice,
                             ]}
                         >
-                            Critical defect detected during pre-trip inspection.
-                            Telemetry unbound. Operator remains On Duty.
+                            {replacementRequested
+                                ? 'Replacement requested. You stay on this unit until dispatch reassigns your job.'
+                                : 'Your pre-trip inspection reported a defect. You remain On Duty.'}
                         </Text>
                         <View style={styles.fallbackActionsRow}>
                             <Pressable
-                                accessibilityLabel="Swap or link replacement unit"
+                                accessibilityLabel="Ask dispatch for a replacement unit"
                                 accessibilityRole="button"
-                                onPress={() => setChangeUnitModalOpen(true)}
+                                onPress={() => setReplacementOpen(true)}
                                 style={({ pressed }) => [
                                     styles.fallbackSwapBtn,
                                     isDarkHud && styles.darkFallbackSwapBtn,
                                     pressed && styles.pressed,
                                 ]}
-                                testID="fallback-swap-unit-btn"
+                                testID="home-request-replacement-btn"
                             >
-                                <Icon color="#FFFFFF" name="sync" size={14} />
+                                <Icon
+                                    color="#FFFFFF"
+                                    name="message"
+                                    size={14}
+                                />
                                 <Text style={styles.fallbackSwapBtnText}>
-                                    Swap Replacement Unit
+                                    Ask for replacement
                                 </Text>
                             </Pressable>
                             <Pressable
@@ -1534,20 +1541,16 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 visible={reliefHandoverOpen}
             />
 
-            {/* Change / Swap Unit Modal */}
-            <ChangeUnitModal
-                currentAssetCode={effectiveAssetCode}
-                onClose={() => setChangeUnitModalOpen(false)}
-                onConfirmUnitChange={(newUnitCode, reason) => {
-                    setChangeUnitModalOpen(false);
+            <ReplacementRequestSheet
+                assetCode={effectiveAssetCode}
+                canSend={canRequestReplacement}
+                onClose={() => setReplacementOpen(false)}
+                onSend={(note) => {
                     setDefectFallbackModalOpen(false);
-                    setOverriddenAssetCode(newUnitCode);
-                    setIsLinkedLocal(true);
-                    setLocalDvirStatus('pending');
-                    setLocalDefectLockout(false);
-                    onSwapUnit?.(newUnitCode, reason);
+                    setReplacementRequested(true);
+                    onRequestReplacement?.(note);
                 }}
-                visible={changeUnitModalOpen}
+                visible={replacementOpen}
             />
 
             {/* Pre-Trip Defect Fallback Modal */}
@@ -1566,9 +1569,9 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                         'Pre-trip DVIR defect lockout',
                     );
                 }}
-                onSwapUnit={() => {
+                onRequestReplacement={() => {
                     setDefectFallbackModalOpen(false);
-                    setChangeUnitModalOpen(true);
+                    setReplacementOpen(true);
                 }}
                 visible={defectFallbackModalOpen}
             />

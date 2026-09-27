@@ -13,7 +13,7 @@ export interface OnSiteConfirmationModalProps {
 
 export const OnSiteConfirmationModal: React.FC<
     OnSiteConfirmationModalProps
-> = ({ visible, assetCode = 'CRN-101', onConfirm, onCancel }) => {
+> = ({ visible, assetCode = 'your unit', onConfirm, onCancel }) => {
     const { isDarkHud } = useTheme();
 
     return (

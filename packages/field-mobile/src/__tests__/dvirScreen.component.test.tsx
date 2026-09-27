@@ -766,26 +766,23 @@ describe('DvirScreen Component & Workflows', () => {
         await fireEvent.press(view.getByTestId('defects-modal-done'));
     });
 
-    it('triggers pre-trip defect lockout fallback modal on unsafe pre-trip inspection and allows swapping unit to CRN-102', async () => {
+    it('shows the lockout fallback after an unsafe pre-trip and asks dispatch for a replacement', async () => {
         const onDefectLockout = jest.fn();
-        const onSwapUnit = jest.fn();
-        const onSave = jest.fn();
+        const onRequestReplacement = jest.fn();
 
         const view = await render(
             <DvirScreen
                 assetCode="CRN-101"
                 assetName="100T Liebherr Crane"
+                canRequestReplacement
                 initialMode="pre_trip"
                 onDefectLockout={onDefectLockout}
-                onSaveInspectionRecord={onSave}
-                onSwapUnit={onSwapUnit}
+                onRequestReplacement={onRequestReplacement}
+                onSaveInspectionRecord={jest.fn()}
             />,
         );
 
-        // Mark as Unsafe to operate
         await fireEvent.press(view.getByTestId('safety-status-unsafe'));
-
-        // Complete DVIR
         await enterEngineHours(view);
         await fireEvent.changeText(
             view.getByTestId('dvir-remarks-input'),
@@ -793,36 +790,29 @@ describe('DvirScreen Component & Workflows', () => {
         );
         await fireEvent.press(view.getByTestId('complete-dvir-button'));
 
-        // Lockout callback is invoked and modal appears
         expect(onDefectLockout).toHaveBeenCalledWith(
             'CRN-101',
-            expect.objectContaining({
-                hasDefects: true,
-                type: 'pre_trip',
-            }),
+            expect.objectContaining({ hasDefects: true, type: 'pre_trip' }),
         );
-        expect(view.getByTestId('pre-trip-defect-fallback-modal')).toBeTruthy();
+        expect(view.getByText('SAFETY LOCKOUT')).toBeTruthy();
+
+        await fireEvent.press(
+            view.getByTestId('fallback-request-replacement-btn'),
+        );
+        await fireEvent.changeText(
+            view.getByTestId('replacement-request-note'),
+            'Hoist brake slipping',
+        );
+        await fireEvent.press(view.getByTestId('replacement-request-send'));
+
+        expect(onRequestReplacement).toHaveBeenCalledWith(
+            'Hoist brake slipping',
+        );
         expect(
-            view.getByText('SAFETY LOCKOUT · UnderMaintenance'),
-        ).toBeTruthy();
-
-        // Tap Swap / Link Replacement Unit in Fallback Modal
-        await fireEvent.press(view.getByTestId('fallback-swap-unit-btn'));
-        expect(view.getByTestId('change-unit-modal')).toBeTruthy();
-
-        // Select CRN-102 as replacement unit
-        await fireEvent.press(view.getByTestId('unit-option-CRN-102'));
-        await fireEvent.press(view.getByTestId('confirm-change-unit-btn'));
-
-        expect(onSwapUnit).toHaveBeenCalledWith('CRN-102', expect.any(String));
-
-        // Fresh pre-trip inspection notice is displayed for CRN-102
-        expect(view.getByTestId('fresh-inspection-notice')).toBeTruthy();
-        expect(
-            view.getByText(
-                'Replacement Unit CRN-102 Linked. Fresh Pre-Trip Inspection Initiated.',
-            ),
-        ).toBeTruthy();
+            view.getByTestId('replacement-requested-notice'),
+        ).toHaveTextContent(
+            /You stay on CRN-101 until dispatch reassigns your job/,
+        );
     });
 
     it('navigates to standby and backs out when standby chosen from defect fallback modal', async () => {
@@ -927,29 +917,6 @@ describe('DvirScreen Component & Workflows', () => {
                 type: 'pre_trip',
             }),
         );
-    });
-
-    it('clears previous defect remarks when swapping to replacement machinery', async () => {
-        const view = await render(
-            <DvirScreen assetCode="CRN-101" initialMode="pre_trip" />,
-        );
-
-        // Enter remarks and mark unsafe
-        await fireEvent.changeText(
-            view.getByTestId('dvir-remarks-input'),
-            'Cracked hydraulic outrigger cylinder detected.',
-        );
-        await fireEvent.press(view.getByTestId('safety-status-unsafe'));
-        await enterEngineHours(view);
-        await fireEvent.press(view.getByTestId('complete-dvir-button'));
-
-        // Swap unit to CRN-102
-        await fireEvent.press(view.getByTestId('fallback-swap-unit-btn'));
-        await fireEvent.press(view.getByTestId('unit-option-CRN-102'));
-        await fireEvent.press(view.getByTestId('confirm-change-unit-btn'));
-
-        // Fresh inspection initiated: remarks input is cleared
-        expect(view.getByTestId('dvir-remarks-input').props.value).toBe('');
     });
 
     it('supports multi-asset selection, blocks submission until an asset is selected, and allows selection', async () => {

@@ -76,7 +76,7 @@ export const HosScreen: React.FC<HosScreenProps> = ({
         startedAt: '08:00 AM',
         hoursElapsed: 4.5,
     },
-    linkedAssetCode = 'CRN-101',
+    linkedAssetCode = null,
     maxDriveHours = 11,
     maxShiftHours = 14,
     cycleHoursLimit = 70,
@@ -489,11 +489,15 @@ export const HosScreen: React.FC<HosScreenProps> = ({
 
             {/* End Shift Safeguard Intercept Modal */}
             <EndShiftSafeguardModal
-                assetCode={linkedAssetCode || 'CRN-101'}
+                assetCode={linkedAssetCode ?? undefined}
                 onCancel={() => setSafeguardModalOpen(false)}
                 onConfirmReleaseAndClockOut={() => {
                     setSafeguardModalOpen(false);
-                    onReleaseUnit?.(linkedAssetCode || 'CRN-101');
+
+                    if (linkedAssetCode) {
+                        onReleaseUnit?.(linkedAssetCode);
+                    }
+
                     setSelectedStatus('off_duty');
                     executeDutyUpdate('off_duty');
                     onToggleShift?.('off_shift');

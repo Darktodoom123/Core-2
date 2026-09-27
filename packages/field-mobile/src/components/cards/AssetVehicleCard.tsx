@@ -28,16 +28,17 @@ export interface AssetVehicleCardProps {
 }
 
 export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
-    assetCode = 'ALB-CRN-050',
-    assetName = 'Liebherr LTM 1050-3.1',
+    // No invented unit data: anything not supplied is simply not shown.
+    assetCode = '',
+    assetName = '',
     assetKind = 'mobile_crane',
-    ratedCapacity = '50T All-Terrain',
-    attachments = ['20T Counterweight', 'Jib Extension'],
+    ratedCapacity,
+    attachments = [],
     dvirStatus = 'cleared',
     activeJob = null,
     dispatchPrefix = '',
-    engineHours = '4,820 hrs',
-    fuelPercent = 82,
+    engineHours,
+    fuelPercent,
     onChangeUnit,
     onPress,
     variant = 'detailed',
@@ -287,7 +288,7 @@ export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
                     ? 'Tap to view equipment specifications, DVIR inspection, or setup fleet status'
                     : undefined
             }
-            accessibilityLabel={`Assigned Asset ${assetCode}, ${assetName}. Capacity: ${ratedCapacity}. ${activeJob ? `Active Dispatch: ${activeJob.reference}` : 'Yard Standby'}`}
+            accessibilityLabel={`Assigned Asset ${assetCode}, ${assetName}. ${ratedCapacity ? `Capacity: ${ratedCapacity}. ` : ''}${activeJob ? `Active Dispatch: ${activeJob.reference}` : 'Yard Standby'}`}
             accessibilityRole={onPress ? 'button' : undefined}
             onPress={onPress}
             style={({ pressed }: { pressed?: boolean } = {}) => [

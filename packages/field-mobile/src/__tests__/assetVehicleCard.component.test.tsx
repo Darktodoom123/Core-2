@@ -34,10 +34,17 @@ describe('AssetVehicleCard Component', () => {
         },
     };
 
-    it('renders default heavy crane data, capacity, and DVIR cleared badge in daylight mode', async () => {
+    it('renders the unit data it is given, and DVIR cleared badge in daylight mode', async () => {
         const view = await render(
             <ThemeProvider initialMode="light">
-                <AssetVehicleCard />
+                <AssetVehicleCard
+                    assetCode="ALB-CRN-050"
+                    assetName="Liebherr LTM 1050-3.1"
+                    attachments={['20T Counterweight', 'Jib Extension']}
+                    engineHours="4,820 hrs"
+                    fuelPercent={82}
+                    ratedCapacity="50T All-Terrain"
+                />
             </ThemeProvider>,
         );
 
@@ -54,6 +61,25 @@ describe('AssetVehicleCard Component', () => {
         ).toBeTruthy();
         expect(view.getByText('4,820 hrs')).toBeTruthy();
         expect(view.getByText('82% Fuel')).toBeTruthy();
+    });
+
+    it('never invents a unit, capacity, engine hours or fuel level', async () => {
+        const view = await render(
+            <ThemeProvider initialMode="light">
+                <AssetVehicleCard />
+            </ThemeProvider>,
+        );
+
+        for (const invented of [
+            'ALB-CRN-050',
+            'Liebherr LTM 1050-3.1',
+            '50T All-Terrain',
+            '4,820 hrs',
+        ]) {
+            expect(view.queryByText(invented)).toBeNull();
+        }
+
+        expect(view.queryByText(/% Fuel/)).toBeNull();
     });
 
     it('renders active dispatch mission details when assigned a job', async () => {

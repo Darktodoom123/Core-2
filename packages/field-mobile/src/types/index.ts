@@ -61,8 +61,8 @@ export interface AssetAssignment {
     latest_delay?: DispatchJobDelayInfo | null;
 }
 
-export type DelayContextType =
-    'transit' | 'site' | 'on_site' | 'equipment' | 'personnel' | 'external';
+/** The server accepts only these two delay contexts. */
+export type DelayContextType = 'transit' | 'on_site';
 export type DelayReasonCode = string;
 
 export interface DispatchJobDelayInfo {
@@ -89,6 +89,7 @@ export interface ReportDelayPayload {
     operational_asset_id?: number | null;
     context: DelayContextType;
     reason: DelayReasonCode;
+    reason_label?: string | null;
     estimated_minutes?: number | null;
     notes?: string | null;
     reported_at?: string;

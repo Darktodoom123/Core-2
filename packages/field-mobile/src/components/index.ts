@@ -12,7 +12,7 @@ export * from './cards/LocationWeatherCard';
 export * from './sheets/OnSiteConfirmationModal';
 export * from './sheets/EndShiftSafeguardModal';
 export * from './sheets/ReliefHandoverModal';
-export * from './sheets/ChangeUnitModal';
+export * from './sheets/replacement-request/replacement-request-sheet';
 export * from './sheets/PreTripDefectFallbackModal';
 export * from './sheets/DispatchIntakeSheet';
 export * from './sheets/field-safety-sheet';

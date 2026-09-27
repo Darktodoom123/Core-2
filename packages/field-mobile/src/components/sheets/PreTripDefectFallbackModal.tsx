@@ -7,14 +7,15 @@ import { shadows } from '../nativeStyles';
 export interface PreTripDefectFallbackModalProps {
     visible: boolean;
     assetCode?: string;
-    onSwapUnit: () => void;
+    /** Opens the request to dispatch for a replacement unit. */
+    onRequestReplacement: () => void;
     onStandby: () => void;
     onClose?: () => void;
 }
 
 export const PreTripDefectFallbackModal: React.FC<
     PreTripDefectFallbackModalProps
-> = ({ visible, assetCode = 'CRN-101', onSwapUnit, onStandby, onClose }) => {
+> = ({ visible, assetCode, onRequestReplacement, onStandby, onClose }) => {
     const { isDarkHud } = useTheme();
 
     return (
@@ -56,7 +57,7 @@ export const PreTripDefectFallbackModal: React.FC<
                                 isDarkHud && styles.darkStatusPillText,
                             ]}
                         >
-                            SAFETY LOCKOUT · UnderMaintenance
+                            SAFETY LOCKOUT
                         </Text>
                     </View>
 
@@ -75,18 +76,20 @@ export const PreTripDefectFallbackModal: React.FC<
                             isDarkHud && styles.darkPromptText,
                         ]}
                     >
-                        Unit{' '}
-                        <Text
-                            style={[
-                                styles.assetHighlight,
-                                isDarkHud && styles.darkAssetHighlight,
-                            ]}
-                        >
-                            {assetCode}
-                        </Text>{' '}
-                        has failed pre-trip inspection due to critical defects.
-                        Dispatch is blocked and phone telemetry has been
-                        automatically unbound from this unit.
+                        {assetCode ? 'Unit ' : 'Your unit '}
+                        {assetCode ? (
+                            <Text
+                                style={[
+                                    styles.assetHighlight,
+                                    isDarkHud && styles.darkAssetHighlight,
+                                ]}
+                            >
+                                {assetCode}
+                            </Text>
+                        ) : null}
+                        {assetCode ? ' ' : ''}
+                        failed its pre-trip inspection. It is locked out of
+                        dispatch once your inspection reaches the server.
                     </Text>
 
                     {/* HoS Guardrail Card */}
@@ -115,27 +118,31 @@ export const PreTripDefectFallbackModal: React.FC<
 
                     {/* Operational Fallback Actions */}
                     <View style={styles.actionColumn}>
-                        {/* Option A: Swap / Link Replacement Unit */}
+                        {/* Option A: ask dispatch for another unit */}
                         <Pressable
-                            accessibilityLabel="Swap or link replacement unit"
+                            accessibilityLabel="Ask dispatch for a replacement unit"
                             accessibilityRole="button"
-                            onPress={onSwapUnit}
+                            onPress={onRequestReplacement}
                             style={({ pressed }) => [
                                 styles.swapButton,
                                 isDarkHud && styles.darkSwapButton,
                                 pressed && styles.pressed,
                             ]}
-                            testID="fallback-swap-unit-btn"
+                            testID="fallback-request-replacement-btn"
                         >
                             <View style={styles.actionButtonContent}>
-                                <Icon color="#FFFFFF" name="sync" size={18} />
+                                <Icon
+                                    color="#FFFFFF"
+                                    name="message"
+                                    size={18}
+                                />
                                 <View style={styles.actionTextWrap}>
                                     <Text style={styles.swapButtonText}>
-                                        Swap / Link Replacement Unit
+                                        Ask dispatch for a replacement
                                     </Text>
                                     <Text style={styles.swapButtonSubtext}>
-                                        Enter replacement unit (e.g. CRN-102) to
-                                        start fresh pre-trip
+                                        Dispatch assigns the new unit; your job
+                                        updates when they do
                                     </Text>
                                 </View>
                             </View>

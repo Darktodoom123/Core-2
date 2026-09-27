@@ -30,6 +30,7 @@ import {
 } from '../components/cards/job-card/job-lifecycle';
 import { colors, sharedStyles } from '../components/nativeStyles';
 import { OutboxStatusSheet } from '../components/sheets/OutboxStatusSheet';
+import { buildReplacementRequest } from '../components/sheets/replacement-request/replacement-request';
 import type { DigitalSignatureData } from '../components/signature/DigitalSignatureModal';
 import { EmergencySosSheet } from '../components/sos';
 import {
@@ -591,9 +592,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     const [dvirStatus, setDvirStatus] = useState<
         'pending' | 'cleared' | 'passed' | 'defect'
     >('pending');
-    const [overriddenAssetCode, setOverriddenAssetCode] = useState<
-        string | null
-    >(null);
     const [weather, setWeather] = useState<WeatherTelemetry | null>(null);
     const [isLoadingWeather, setIsLoadingWeather] = useState(false);
     const [weatherError, setWeatherError] = useState<string | null>(null);
@@ -1929,37 +1927,39 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         [activeJob, commandOutbox, handleRequestFailure, jobs, syncQueue],
     );
 
-    const handleSwapUnit = useCallback(
-        async (newUnitCode: string, reason?: string) => {
-            setOverriddenAssetCode(newUnitCode);
-            setIsUnitLinked(true);
-            setDvirStatus('pending');
-            setLocationSharingActive(true);
+    /**
+     * Ask dispatch for a replacement unit. The phone never switches units by
+     * itself: only dispatch can assign one, and the job updates when it does.
+     */
+    const handleRequestReplacement = useCallback(
+        async (note: string) => {
+            if (!currentJob) {
+                return;
+            }
 
-            const effectiveJob = currentJob;
-
-            if (effectiveJob) {
-                try {
-                    await commandOutbox.enqueueReportDelay(
-                        {
-                            dispatch_job_id: effectiveJob.id,
-                            context: 'equipment',
-                            reason: 'mechanical_breakdown',
-                            notes: `Unit swapped to ${newUnitCode}. Reason: ${reason || 'Equipment replacement / defect swap'}`,
-                            reported_at: new Date().toISOString(),
-                        },
-                        effectiveJob.version,
-                    );
-                    void syncQueue();
-                } catch (error) {
-                    console.warn(
-                        '[AppNavigator] Failed to enqueue equipment swap delay command:',
-                        error,
-                    );
-                }
+            try {
+                await commandOutbox.enqueueReportDelay(
+                    buildReplacementRequest({
+                        // Only name a unit when the job has exactly one.
+                        asset:
+                            currentJob.asset_assignments?.length === 1
+                                ? currentJob.asset_assignments[0]
+                                : null,
+                        job: currentJob,
+                        note,
+                        reportedAt: new Date().toISOString(),
+                    }),
+                    currentJob.version,
+                );
+                void syncQueue();
+            } catch (error: unknown) {
+                await handleRequestFailure(
+                    error,
+                    'Replacement request saved on this phone and will retry.',
+                );
             }
         },
-        [commandOutbox, currentJob, syncQueue],
+        [commandOutbox, currentJob, handleRequestFailure, syncQueue],
     );
 
     const handleReportSafetyHazard = useCallback(
@@ -2300,7 +2300,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
             : null) ||
         null;
     const resolvedAssetCode =
-        overriddenAssetCode ||
         currentAsset?.asset_code ||
         (activeJob?.asset_assignments && activeJob.asset_assignments.length > 1
             ? ''
@@ -2714,7 +2713,8 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                     setDvirStatus('cleared');
                                 }}
                                 onSelectAsset={(id) => setSelectedAssetId(id)}
-                                onSwapUnit={handleSwapUnit}
+                                canRequestReplacement={Boolean(currentJob)}
+                                onRequestReplacement={handleRequestReplacement}
                                 onSwitchToStandby={() => {
                                     handleChangeDutyStatus(
                                         'standby',
@@ -2961,7 +2961,10 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                     preTripDefectLockout={
                                         dvirStatus === 'defect'
                                     }
-                                    onSwapUnit={handleSwapUnit}
+                                    canRequestReplacement={Boolean(currentJob)}
+                                    onRequestReplacement={
+                                        handleRequestReplacement
+                                    }
                                     locationSharingActive={
                                         locationSharingActive
                                     }

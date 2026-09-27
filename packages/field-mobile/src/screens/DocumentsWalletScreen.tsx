@@ -37,8 +37,8 @@ export interface DocumentsWalletScreenProps {
 
 export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
     onBack,
-    assetCode = 'ALB-CRN-050',
-    operatorName = 'Alex Rivera',
+    assetCode = '',
+    operatorName = '',
     assignedAssets,
 }) => {
     const { theme } = useTheme();

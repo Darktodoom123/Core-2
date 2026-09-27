@@ -9,14 +9,14 @@ export interface DvirLockoutWarningProps {
     mode: 'pre_trip' | 'post_trip' | 'history';
     onBack: DvirScreenProps['onBack'];
     onSwitchToStandby: DvirScreenProps['onSwitchToStandby'];
-    setChangeUnitModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+    onRequestReplacement: () => void;
 }
 
 export const DvirLockoutWarning: React.FC<DvirLockoutWarningProps> = ({
     mode,
     onBack,
     onSwitchToStandby,
-    setChangeUnitModalOpen,
+    onRequestReplacement,
 }) => {
     const { theme } = useTheme();
     const styles = useThemedStyles(createStyles);
@@ -33,11 +33,11 @@ export const DvirLockoutWarning: React.FC<DvirLockoutWarningProps> = ({
                 {mode === 'pre_trip' ? (
                     <View style={styles.bannerActionsRow}>
                         <Pressable
-                            accessibilityLabel="Swap or link replacement unit"
+                            accessibilityLabel="Ask dispatch for a replacement unit"
                             accessibilityRole="button"
-                            onPress={() => setChangeUnitModalOpen(true)}
+                            onPress={onRequestReplacement}
                             style={styles.bannerSwapBtn}
-                            testID="dvir-lockout-swap-unit-btn"
+                            testID="dvir-lockout-request-replacement-btn"
                         >
                             <Icon
                                 color={theme.surfaceDark}
@@ -45,7 +45,7 @@ export const DvirLockoutWarning: React.FC<DvirLockoutWarningProps> = ({
                                 size={16}
                             />
                             <Text style={styles.bannerSwapBtnText}>
-                                Swap Replacement Unit
+                                Ask for replacement
                             </Text>
                         </Pressable>
                         <Pressable

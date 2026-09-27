@@ -13,7 +13,7 @@ export interface EndShiftSafeguardModalProps {
 
 export const EndShiftSafeguardModal: React.FC<EndShiftSafeguardModalProps> = ({
     visible,
-    assetCode = 'CRN-101',
+    assetCode = 'your unit',
     onConfirmReleaseAndClockOut,
     onCancel,
 }) => {

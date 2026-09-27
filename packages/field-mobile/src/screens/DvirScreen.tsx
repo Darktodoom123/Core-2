@@ -2,10 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { PhotoAttachment } from '../components/attachments/PhotoAttachmentPicker';
 import { Icon } from '../components/common/Icon';
-import {
-    ChangeUnitModal,
-    PreTripDefectFallbackModal,
-} from '../components/index';
+import { PreTripDefectFallbackModal } from '../components/index';
 import {
     DEFECT_ANGLES,
     DefectSheet,
@@ -17,6 +14,7 @@ import type {
     WalkaroundPhotosMap,
 } from '../components/inspection';
 import { TileScreenHeader } from '../components/layout/tile-screen-header';
+import { ReplacementRequestSheet } from '../components/sheets/replacement-request/replacement-request-sheet';
 import type { FieldApiClient } from '../services/apiClient';
 import type { CommandOutboxManager } from '../services/commandOutbox';
 import { useTheme, useThemedStyles } from '../theme';
@@ -71,18 +69,21 @@ export interface DvirScreenProps {
     onBack?: () => void;
     onSaveInspectionRecord?: (record: DvirInspectionRecord) => void;
     onDefectLockout?: (assetCode: string, record: DvirInspectionRecord) => void;
-    onSwapUnit?: (newUnitCode: string, reason: string) => void;
+    /** Asks dispatch for a replacement; the phone never switches units itself. */
+    onRequestReplacement?: (note: string) => void;
+    /** False when there is no job to send a replacement request with. */
+    canRequestReplacement?: boolean;
     onSwitchToStandby?: () => void;
     onPreTripPassed?: (assetCode: string, record: DvirInspectionRecord) => void;
 }
 
 export const DvirScreen: React.FC<DvirScreenProps> = ({
-    assetCode = 'ALB-CRN-050',
-    assetName = '50T Tadano All-Terrain Crane',
+    assetCode = '',
+    assetName = '',
     assetKind,
     equipmentType,
-    inspectorName = 'Alex Rivera (Certified Crane Operator)',
-    activeJobReference = 'DISP-2026-0891',
+    inspectorName = '',
+    activeJobReference,
     initialMode = 'pre_trip',
     apiClient,
     commandOutbox,
@@ -93,7 +94,8 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     onBack,
     onSaveInspectionRecord,
     onDefectLockout,
-    onSwapUnit,
+    onRequestReplacement,
+    canRequestReplacement = false,
     onSwitchToStandby,
     onPreTripPassed,
 }) => {
@@ -143,14 +145,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
             ? activeAssignment.engine_hours
             : null;
 
-    const [overriddenAssetCode, setOverriddenAssetCode] = useState<{
-        propCode: string;
-        localCode: string;
-    } | null>(null);
-    const localAssetCode =
-        overriddenAssetCode && overriddenAssetCode.propCode === currentAssetCode
-            ? overriddenAssetCode.localCode
-            : currentAssetCode;
+    const localAssetCode = currentAssetCode;
 
     const isUnassigned =
         !localAssetCode ||
@@ -165,10 +160,8 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
 
     const [defectFallbackModalOpen, setDefectFallbackModalOpen] =
         useState(false);
-    const [changeUnitModalOpen, setChangeUnitModalOpen] = useState(false);
-    const [freshInspectionNotice, setFreshInspectionNotice] = useState<
-        string | null
-    >(null);
+    const [replacementOpen, setReplacementOpen] = useState(false);
+    const [replacementRequested, setReplacementRequested] = useState(false);
 
     const [mode, setMode] = useState<'pre_trip' | 'post_trip' | 'history'>(
         initialMode,
@@ -557,18 +550,18 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                 ) : (
                     /* Create DVIR (Exact Match to Uploaded Screenshots 1, 2 & 3) */
                     <View style={styles.formContainer}>
-                        {freshInspectionNotice ? (
+                        {replacementRequested ? (
                             <View
                                 style={[styles.freshInspectionBanner]}
-                                testID="fresh-inspection-notice"
+                                testID="replacement-requested-notice"
                             >
                                 <Icon
-                                    color={theme.successEmerald}
-                                    name="check-circle"
+                                    color={theme.textPrimary}
+                                    name="clock"
                                     size={16}
                                 />
                                 <Text style={[styles.freshInspectionText]}>
-                                    {freshInspectionNotice}
+                                    {`Replacement requested. You stay on ${localAssetCode || 'this unit'} until dispatch reassigns your job.`}
                                 </Text>
                             </View>
                         ) : null}
@@ -623,7 +616,9 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                 mode={mode}
                                 onBack={onBack}
                                 onSwitchToStandby={onSwitchToStandby}
-                                setChangeUnitModalOpen={setChangeUnitModalOpen}
+                                onRequestReplacement={() =>
+                                    setReplacementOpen(true)
+                                }
                             />
                         ) : null}
                         {/* Inline Meters Input Row (Preserving Test Compatibility) */}
@@ -699,36 +694,22 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                     onSwitchToStandby?.();
                     onBack?.();
                 }}
-                onSwapUnit={() => {
+                onRequestReplacement={() => {
                     setDefectFallbackModalOpen(false);
-                    setChangeUnitModalOpen(true);
+                    setReplacementOpen(true);
                 }}
                 visible={defectFallbackModalOpen}
             />
 
-            {/* Change / Swap Unit Modal */}
-            <ChangeUnitModal
-                currentAssetCode={localAssetCode}
-                onClose={() => setChangeUnitModalOpen(false)}
-                onConfirmUnitChange={(newUnitCode, reason) => {
-                    setChangeUnitModalOpen(false);
-                    setDefectFallbackModalOpen(false);
-                    setOverriddenAssetCode({
-                        propCode: assetCode,
-                        localCode: newUnitCode,
-                    });
-                    setSelectedDefectIds([]);
-                    setWalkaroundPhotos({});
-                    setSafetyStatus('safe');
-                    setRemarks('');
-                    setIsSaved(false);
-                    setMode('pre_trip');
-                    setFreshInspectionNotice(
-                        `Replacement Unit ${newUnitCode} Linked. Fresh Pre-Trip Inspection Initiated.`,
-                    );
-                    onSwapUnit?.(newUnitCode, reason);
+            <ReplacementRequestSheet
+                assetCode={localAssetCode}
+                canSend={canRequestReplacement}
+                onClose={() => setReplacementOpen(false)}
+                onSend={(note) => {
+                    setReplacementRequested(true);
+                    onRequestReplacement?.(note);
                 }}
-                visible={changeUnitModalOpen}
+                visible={replacementOpen}
             />
         </View>
     );
