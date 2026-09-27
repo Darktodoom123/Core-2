@@ -11,6 +11,7 @@ import { Icon } from '../../common/Icon';
 import type { IconName } from '../../common/Icon';
 import { HoldToConfirmTransitButton } from './hold-to-confirm-button';
 import { JobCardDelayBanner } from './job-card-delay-banner';
+import { JobDirectionsButton } from './job-directions-button';
 
 export interface JobCardResponseActionsProps {
     job: DispatchJob;
@@ -122,6 +123,12 @@ interface HoldStep {
     progressTestID: string;
     a11y: string;
 }
+
+const HEADING_TO_SITE: DispatchStatus[] = [
+    'accepted',
+    'dispatched',
+    'en_route',
+];
 
 function holdStepFor(job: DispatchJob): HoldStep | null {
     const status = job.status?.value || 'scheduled';
@@ -236,6 +243,10 @@ export const JobCardProgressActions: React.FC<JobCardProgressActionsProps> = ({
         <View style={styles.nonPendingActionsContainer}>
             {step ? (
                 <View style={styles.progressionActionRow}>{step}</View>
+            ) : null}
+
+            {HEADING_TO_SITE.includes(status) ? (
+                <JobDirectionsButton job={job} />
             ) : null}
 
             <JobCardDelayBanner
