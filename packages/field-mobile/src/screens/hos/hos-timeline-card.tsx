@@ -43,12 +43,11 @@ export const HosTimelineCard: React.FC<HosTimelineCardProps> = ({
                             : `24-HOUR DUTY TIMELINE — ${selectedDay.dayLabel.toUpperCase()}`}
                     </Text>
                     <Text style={[hosSharedStyles.sectionHelper]}>
-                        Visual ELD graph of 24-hour shift status progression
-                        (00:00 to 24:00).
+                        Your duty status across the day, 00:00 to 24:00.
                     </Text>
                 </View>
                 <View style={[styles.cycleBadge]}>
-                    <Text style={[styles.cycleBadgeText]}>8-DAY CYCLE</Text>
+                    <Text style={[styles.cycleBadgeText]}>LAST 8 DAYS</Text>
                 </View>
             </View>
 
@@ -128,7 +127,7 @@ export const HosTimelineCard: React.FC<HosTimelineCardProps> = ({
                                     : selectedDay.certificationStatus ===
                                         'certified'
                                       ? 'Shift Certified'
-                                      : '34-Hour HoS Restart'}
+                                      : 'Rest day'}
                             </Text>
                             <View
                                 style={[

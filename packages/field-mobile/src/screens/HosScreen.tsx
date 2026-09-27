@@ -20,8 +20,6 @@ import { HosClocksCard } from './hos/hos-clocks-card';
 import { DUTY_STATUS_OPTIONS, EMPTY_TIMELINE_DAY } from './hos/hos-constants';
 import { HosContinuousRestBanner } from './hos/hos-continuous-rest-banner';
 import { HosDutyStatusSelector } from './hos/hos-duty-status-selector';
-import { HosEndShiftCard } from './hos/hos-end-shift-card';
-import { TIMELINE_HISTORY_DAYS } from './hos/hos-fixtures';
 import { HosShiftLimitBanner } from './hos/hos-shift-limit-banner';
 import { HosShiftLog } from './hos/hos-shift-log';
 import { HosStandbyReasonSelector } from './hos/hos-standby-reason-selector';
@@ -36,16 +34,11 @@ export type {
     TimelineDayHistory,
     TimelineSegment,
 } from './hos/hos-types';
-export { INITIAL_LOG_EVENTS, TIMELINE_HISTORY_DAYS } from './hos/hos-fixtures';
 
 export interface HosScreenProps {
     operatorName?: string;
-    userRole?: string;
     shiftInfo?: ShiftInfo;
     linkedAssetCode?: string | null;
-    maxDriveHours?: number;
-    maxShiftHours?: number;
-    cycleHoursLimit?: number;
     timelineHistory?: TimelineDayHistory[];
     apiClient?: FieldApiClient;
     activeJobId?: number;
@@ -65,20 +58,19 @@ export interface HosScreenProps {
     onEndShift?: () => void;
 }
 
+const OFF_SHIFT: ShiftInfo = {
+    status: 'off_shift',
+    dutyStatus: 'off_duty',
+    startedAt: null,
+    hoursElapsed: null,
+};
+
 export const HosScreen: React.FC<HosScreenProps> = ({
-    operatorName = 'Alex Rivera',
-    userRole = 'Certified Crane Operator',
-    shiftInfo = {
-        status: 'on_shift',
-        dutyStatus: 'operating',
-        startedAt: '08:00 AM',
-        hoursElapsed: 4.5,
-    },
+    operatorName = '',
+    // Nothing is assumed: without server data the operator is off duty.
+    shiftInfo = OFF_SHIFT,
     linkedAssetCode = null,
-    maxDriveHours = 11,
-    maxShiftHours = 14,
-    cycleHoursLimit = 70,
-    timelineHistory = TIMELINE_HISTORY_DAYS,
+    timelineHistory = [],
     apiClient,
     activeJobId,
     onBack,
@@ -117,10 +109,16 @@ export const HosScreen: React.FC<HosScreenProps> = ({
         localStatus: DutyStatus;
     } | null>(null);
 
+    // What the server last accepted; the selection below is only a draft.
+    const shiftActive =
+        shiftInfo.status !== 'off_shift' && shiftInfo.dutyStatus !== 'off_duty';
+    const currentStatus: DutyStatus = shiftActive
+        ? (shiftInfo.dutyStatus ?? 'operating')
+        : 'off_duty';
     const selectedStatus: DutyStatus =
         overriddenStatus && overriddenStatus.propStatus === shiftInfo.dutyStatus
             ? overriddenStatus.localStatus
-            : (shiftInfo.dutyStatus ?? 'operating');
+            : currentStatus;
 
     const setSelectedStatus = (status: DutyStatus) => {
         setOverriddenStatus({
@@ -131,7 +129,8 @@ export const HosScreen: React.FC<HosScreenProps> = ({
     const [standbyReason, setStandbyReason] =
         useState<StandbyReason>('waiting_on_client');
     const [remarks, setRemarks] = useState('');
-    const [isCertified, setIsCertified] = useState(true);
+    // The operator ticks the certification themselves; it never starts ticked.
+    const [isCertified, setIsCertified] = useState(false);
     const [isSaved, setIsSaved] = useState(false);
     const [safeguardModalOpen, setSafeguardModalOpen] = useState(false);
     const [reliefHandoverOpen, setReliefHandoverOpen] = useState(false);
@@ -180,72 +179,14 @@ export const HosScreen: React.FC<HosScreenProps> = ({
     }, [isSaved, stampOpacity, stampScale]);
 
     const hosCompliance = useHosCompliance(shiftInfo, { timelineHistory });
-    const hoursElapsed = hosCompliance.hoursElapsed;
-    const hasServerClock =
-        shiftInfo.shiftElapsedMinutes !== null &&
-        shiftInfo.shiftElapsedMinutes !== undefined;
-    const limitCounterHours = hosCompliance.limitCounterHours;
-    const cycleHoursElapsed =
-        shiftInfo.cycleAccumulatedMinutes !== null &&
-        shiftInfo.cycleAccumulatedMinutes !== undefined
-            ? shiftInfo.cycleAccumulatedMinutes / 60
-            : null;
-
-    // DOLE 10-Hour Shift Limit Compliance Checks
-    const isDoleWarning = hosCompliance.isDoleWarning;
-    const isDoleCapExceeded = hosCompliance.isDoleCapExceeded;
-
-    // Remaining ELD calculations
-    const driveRemainingHours =
-        shiftInfo.driveRemainingMinutes !== null &&
-        shiftInfo.driveRemainingMinutes !== undefined
-            ? shiftInfo.driveRemainingMinutes / 60
-            : null;
-    const shiftRemainingHours =
-        shiftInfo.shiftWindowRemainingMinutes !== null &&
-        shiftInfo.shiftWindowRemainingMinutes !== undefined
-            ? shiftInfo.shiftWindowRemainingMinutes / 60
-            : null;
-    const cycleRemainingHours =
-        shiftInfo.cycleRemainingMinutes !== null &&
-        shiftInfo.cycleRemainingMinutes !== undefined
-            ? shiftInfo.cycleRemainingMinutes / 60
-            : null;
-    const breakCountdownHours =
-        shiftInfo.breakCountdownMinutes !== null &&
-        shiftInfo.breakCountdownMinutes !== undefined
-            ? shiftInfo.breakCountdownMinutes / 60
-            : null;
-    const shiftOperatingHours =
-        shiftInfo.operatingMinutes !== null &&
-        shiftInfo.operatingMinutes !== undefined
-            ? shiftInfo.operatingMinutes / 60
-            : null;
-    const shiftDrivingHours =
-        shiftInfo.drivingMinutes !== null &&
-        shiftInfo.drivingMinutes !== undefined
-            ? shiftInfo.drivingMinutes / 60
-            : null;
-    const shiftStandbyHours =
-        shiftInfo.standbyMinutes !== null &&
-        shiftInfo.standbyMinutes !== undefined
-            ? shiftInfo.standbyMinutes / 60
-            : null;
-    const shiftBreakHours =
-        shiftInfo.breakMinutes !== null && shiftInfo.breakMinutes !== undefined
-            ? shiftInfo.breakMinutes / 60
-            : null;
+    const toHours = (minutes: number | null | undefined) =>
+        minutes === null || minutes === undefined ? null : minutes / 60;
     const durationBreakdown: Array<[string, number | null]> = [
-        ['Operating', shiftOperatingHours],
-        ['Driving', shiftDrivingHours],
-        ['Standby', shiftStandbyHours],
-        ['Breaks', shiftBreakHours],
+        ['Operating', toHours(shiftInfo.operatingMinutes)],
+        ['Driving', toHours(shiftInfo.drivingMinutes)],
+        ['Standby', toHours(shiftInfo.standbyMinutes)],
+        ['Breaks', toHours(shiftInfo.breakMinutes)],
     ];
-
-    const shiftProgressPercent =
-        hasServerClock && hoursElapsed !== null
-            ? Math.min(100, Math.round((hoursElapsed / maxShiftHours) * 100))
-            : null;
 
     const executeDutyUpdate = async (
         statusToSet: DutyStatus = selectedStatus,
@@ -290,6 +231,12 @@ export const HosScreen: React.FC<HosScreenProps> = ({
             DUTY_STATUS_OPTIONS[0]
         );
     }, [selectedStatus]);
+    const currentConfig =
+        DUTY_STATUS_OPTIONS.find((opt) => opt.status === currentStatus) ??
+        DUTY_STATUS_OPTIONS[DUTY_STATUS_OPTIONS.length - 1];
+    const shiftLine = shiftActive
+        ? `On shift since ${shiftInfo.startedAt ?? 'earlier today'}`
+        : 'No shift running';
 
     return (
         <View style={[styles.screenRoot]} testID="hos-screen">
@@ -306,17 +253,19 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                                 styles.dutyBadgeDot,
                                 {
                                     backgroundColor:
-                                        theme[activeConfig.accentToken],
+                                        theme[currentConfig.accentToken],
                                 },
                             ]}
                         />
                         <Text style={[styles.dutyPillBadgeText]}>
-                            {activeConfig.badge}
+                            {currentConfig.badge}
                         </Text>
                     </View>
                 }
-                subtitle={`Operator: ${operatorName} · Shift Started: ${shiftInfo?.startedAt ?? 'Unavailable'} (${shiftInfo.hoursElapsed == null ? 'Unavailable' : `${shiftInfo.hoursElapsed.toFixed(1)}h`} Elapsed)`}
-                title="Duty Status & Shift Management"
+                subtitle={
+                    operatorName ? `${operatorName} · ${shiftLine}` : shiftLine
+                }
+                title="Duty status"
             />
 
             {/* 2. Scrollable Cockpit Content */}
@@ -342,34 +291,24 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                     />
                 ) : null}
                 {/* DOLE 10-Hour Shift Limit Compliance Warning / Hard Stop Banner */}
-                {isDoleWarning || isDoleCapExceeded ? (
+                {hosCompliance.isDoleWarning ||
+                hosCompliance.isDoleCapExceeded ? (
                     <HosShiftLimitBanner
-                        isDoleCapExceeded={isDoleCapExceeded}
+                        isDoleCapExceeded={hosCompliance.isDoleCapExceeded}
                         setReliefHandoverOpen={setReliefHandoverOpen}
                     />
                 ) : null}
-                {/* 3. Live ELD Clocks Card */}
                 <HosClocksCard
-                    breakCountdownHours={breakCountdownHours}
-                    cycleHoursElapsed={cycleHoursElapsed}
-                    cycleHoursLimit={cycleHoursLimit}
-                    cycleRemainingHours={cycleRemainingHours}
-                    driveRemainingHours={driveRemainingHours}
                     durationBreakdown={durationBreakdown}
-                    hasServerClock={hasServerClock}
-                    hoursElapsed={hoursElapsed}
-                    isDoleCapExceeded={isDoleCapExceeded}
-                    isDoleWarning={isDoleWarning}
-                    limitCounterHours={limitCounterHours}
-                    maxDriveHours={maxDriveHours}
-                    maxShiftHours={maxShiftHours}
-                    shiftInfo={shiftInfo}
-                    shiftProgressPercent={shiftProgressPercent}
-                    shiftRemainingHours={shiftRemainingHours}
-                    userRole={userRole}
+                    isDoleCapExceeded={hosCompliance.isDoleCapExceeded}
+                    isDoleWarning={hosCompliance.isDoleWarning}
+                    limitCounterHours={hosCompliance.limitCounterHours}
+                    shiftActive={shiftActive}
+                    startedAt={shiftInfo.startedAt ?? null}
                 />
                 {/* 4. Active Duty Status Selector */}
                 <HosDutyStatusSelector
+                    currentStatus={currentStatus}
                     selectedStatus={selectedStatus}
                     setIsSaved={setIsSaved}
                     setSelectedStatus={setSelectedStatus}
@@ -385,6 +324,7 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                 {/* 6. Remarks & Duty Transition Submission Card */}
                 <HosCertifyCard
                     activeConfig={activeConfig}
+                    currentStatus={currentStatus}
                     certCheckScale={certCheckScale}
                     handleConfirm={handleConfirm}
                     handleToggleCert={handleToggleCert}
@@ -397,18 +337,7 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                     stampOpacity={stampOpacity}
                     stampScale={stampScale}
                 />
-                {/* 6b. Compliant End Shift & Clock Out Safeguard Card */}
-                <HosEndShiftCard
-                    executeDutyUpdate={executeDutyUpdate}
-                    linkedAssetCode={linkedAssetCode}
-                    onEndShift={onEndShift}
-                    onToggleShift={onToggleShift}
-                    selectedStatus={selectedStatus}
-                    setSafeguardModalOpen={setSafeguardModalOpen}
-                    setSelectedStatus={setSelectedStatus}
-                    shiftInfo={shiftInfo}
-                />
-                {/* 7. 24-Hour Duty Timeline Graph (Samsara / ELD Visual Graph) & 8-Day Cycle History */}
+                {/* Duty timeline for the selected day */}
                 <HosTimelineCard
                     historyDays={historyDays}
                     selectedDay={selectedDay}
@@ -490,31 +419,5 @@ const createStyles = (theme: ThemeColors) =>
             padding: 16,
             paddingBottom: 36,
             width: '100%',
-        },
-        syncStatusBanner: {
-            alignItems: 'center',
-            backgroundColor: theme.actionCobaltLight,
-            borderColor: theme.actionCobalt,
-            borderRadius: 12,
-            borderWidth: 1,
-            flexDirection: 'row',
-            gap: 8,
-            marginBottom: 14,
-            paddingHorizontal: 12,
-            paddingVertical: 10,
-        },
-        syncStatusBannerFailed: {
-            backgroundColor: theme.hazardRedLight,
-            borderColor: theme.hazardRed,
-        },
-        syncStatusText: {
-            color: theme.textPrimary,
-            flex: 1,
-            fontSize: 12,
-            fontWeight: '700',
-            lineHeight: 16,
-        },
-        syncStatusTextFailed: {
-            color: theme.hazardRedText,
         },
     });

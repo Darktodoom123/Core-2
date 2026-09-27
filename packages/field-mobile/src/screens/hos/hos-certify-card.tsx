@@ -9,11 +9,14 @@ import {
 } from 'react-native';
 import { useTheme, useThemedStyles } from '../../theme';
 import type { ThemeColors } from '../../theme';
+import type { DutyStatus } from '../../types/index';
 import { createHosSharedStyles } from './hos-shared-styles';
 import type { DutyStatusOptionConfig } from './hos-types';
 
 export interface HosCertifyCardProps {
     activeConfig: DutyStatusOptionConfig;
+    /** The status the server last accepted. */
+    currentStatus: DutyStatus;
     certCheckScale: Animated.Value;
     handleConfirm: () => void;
     handleToggleCert: () => void;
@@ -29,6 +32,7 @@ export interface HosCertifyCardProps {
 
 export const HosCertifyCard: React.FC<HosCertifyCardProps> = ({
     activeConfig,
+    currentStatus,
     certCheckScale,
     handleConfirm,
     handleToggleCert,
@@ -43,7 +47,10 @@ export const HosCertifyCard: React.FC<HosCertifyCardProps> = ({
 }) => {
     const { theme } = useTheme();
     const styles = useThemedStyles(createStyles);
-    // Only a server-accepted change is green; pending is informational, failed is critical.
+    // Green only once the server reports the new status; until then the
+    // change is waiting, and a refused change is red.
+    const isAccepted =
+        !pendingDutyState && currentStatus === activeConfig.status;
     const stampTone =
         pendingDutyState === 'failed'
             ? {
@@ -51,24 +58,30 @@ export const HosCertifyCard: React.FC<HosCertifyCardProps> = ({
                   edge: theme.hazardRed,
                   text: theme.hazardRedText,
               }
-            : pendingDutyState
+            : isAccepted
               ? {
-                    surface: theme.actionCobaltLight,
-                    edge: theme.actionCobalt,
-                    text: theme.textPrimary,
-                }
-              : {
                     surface: theme.successEmeraldLight,
                     edge: theme.successEmerald,
                     text: theme.successEmeraldText,
+                }
+              : {
+                    surface: theme.surfaceHighlight,
+                    edge: theme.borderStrong,
+                    text: theme.textPrimary,
                 };
+    const isCurrent = currentStatus === activeConfig.status;
+    const isOffDuty = activeConfig.status === 'off_duty';
+    const canConfirm = isCertified && !isCurrent;
+    const actionLabel = isCurrent
+        ? 'This is your current status'
+        : isOffDuty
+          ? 'End shift & go off duty'
+          : `Change to ${activeConfig.title}`;
     const hosSharedStyles = useThemedStyles(createHosSharedStyles);
 
     return (
         <View style={[hosSharedStyles.sectionCard]}>
-            <Text style={[styles.inputLabel]}>
-                Duty Transition Remarks &amp; Notes
-            </Text>
+            <Text style={[styles.inputLabel]}>Remarks · optional</Text>
             <TextInput
                 accessibilityLabel="Duty transition remarks"
                 multiline
@@ -113,20 +126,19 @@ export const HosCertifyCard: React.FC<HosCertifyCardProps> = ({
             {/* Update & Certify Duty Status Action Button / Stamp */}
             {!isSaved ? (
                 <Pressable
-                    accessibilityLabel="Update and certify duty status"
+                    accessibilityLabel={actionLabel}
                     accessibilityRole="button"
-                    disabled={!isCertified}
+                    accessibilityState={{ disabled: !canConfirm }}
+                    disabled={!canConfirm}
                     onPress={handleConfirm}
                     style={({ pressed }) => [
                         styles.actionButton,
-                        !isCertified && styles.actionButtonDisabled,
+                        !canConfirm && styles.actionButtonDisabled,
                         pressed && hosSharedStyles.actionButtonPressed,
                     ]}
                     testID="confirm-hos-btn"
                 >
-                    <Text style={[styles.actionBtnText]}>
-                        ✓ Update &amp; Certify Duty Status
-                    </Text>
+                    <Text style={[styles.actionBtnText]}>{actionLabel}</Text>
                 </Pressable>
             ) : (
                 <Animated.View
@@ -150,10 +162,10 @@ export const HosCertifyCard: React.FC<HosCertifyCardProps> = ({
                         ]}
                     >
                         {pendingDutyState === 'failed'
-                            ? '⚠ DUTY STATUS NOT ACCEPTED'
-                            : pendingDutyState
-                              ? '↻ DUTY STATUS PENDING SYNC'
-                              : '✓ DUTY STATUS UPDATED & CERTIFIED'}
+                            ? 'Not accepted'
+                            : isAccepted
+                              ? 'Accepted by the server'
+                              : 'Waiting for the server'}
                     </Text>
                     <Text
                         style={[
@@ -162,10 +174,8 @@ export const HosCertifyCard: React.FC<HosCertifyCardProps> = ({
                         ]}
                     >
                         {pendingDutyState === 'failed'
-                            ? 'Review the failed action in Outbox.'
-                            : pendingDutyState
-                              ? `Waiting for server acceptance · ${activeConfig.title}`
-                              : `Accepted: ${activeConfig.title} (${new Date().toLocaleTimeString()})`}
+                            ? 'See the message at the top of this screen.'
+                            : activeConfig.title}
                     </Text>
                 </Animated.View>
             )}

@@ -42,8 +42,8 @@ export const HosShiftLimitBanner: React.FC<HosShiftLimitBannerProps> = ({
                     ]}
                 >
                     {isDoleCapExceeded
-                        ? '10h Maximum Operating Cap Exceeded — Mandatory Rest Period.'
-                        : 'Approaching 10h Operating Limit — Prepare for Handover or Shift Closure.'}
+                        ? '10h operating limit reached. Stop operating and driving; hand over or end your shift.'
+                        : 'Approaching the 10h operating limit. Prepare your handover or end your shift.'}
                 </Text>
             </View>
             <Pressable

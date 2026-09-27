@@ -5,12 +5,12 @@ import { HosCertifyCard } from '../screens/hos/hos-certify-card';
 import { DUTY_STATUS_OPTIONS } from '../screens/hos/hos-constants';
 import { HosDutyGraph } from '../screens/hos/hos-duty-graph';
 import { HosDutyStatusSelector } from '../screens/hos/hos-duty-status-selector';
-import { TIMELINE_HISTORY_DAYS } from '../screens/hos/hos-fixtures';
 import { HosShiftLimitBanner } from '../screens/hos/hos-shift-limit-banner';
 import { HosStandbyReasonSelector } from '../screens/hos/hos-standby-reason-selector';
 import { ThemeProvider } from '../theme';
 import type { ThemeColors, ThemeMode } from '../theme';
 import { darkHudThemeColors, lightThemeColors } from '../theme/tokens';
+import { TIMELINE_HISTORY_DAYS } from './hos-test-fixtures';
 
 const MODES = [
     ['light', lightThemeColors],
@@ -38,6 +38,7 @@ describe.each(MODES)('HoS design roles (%s)', (mode, theme: ThemeColors) => {
         const view = await inTheme(
             mode,
             <HosDutyStatusSelector
+                currentStatus="off_duty"
                 selectedStatus="operating"
                 setIsSaved={jest.fn()}
                 setSelectedStatus={jest.fn()}
@@ -124,6 +125,7 @@ describe.each(MODES)('HoS design roles (%s)', (mode, theme: ThemeColors) => {
     it('fills the certify action with Signal Gold and dark ink once certified', async () => {
         const props = {
             activeConfig: DUTY_STATUS_OPTIONS[0],
+            currentStatus: 'off_duty' as const,
             certCheckScale: new Animated.Value(1),
             handleConfirm: jest.fn(),
             handleToggleCert: jest.fn(),
@@ -143,25 +145,27 @@ describe.each(MODES)('HoS design roles (%s)', (mode, theme: ThemeColors) => {
         expect(flat(view, 'confirm-hos-btn').backgroundColor).toBe(
             theme.brandAmber,
         );
-        expect(textColor(view, '✓ Update & Certify Duty Status')).toBe(
-            theme.surfaceDark,
-        );
+        expect(
+            textColor(view, 'Change to On Duty — Crane / Machine Operating'),
+        ).toBe(theme.surfaceDark);
         await fireEvent.press(view.getByTestId('confirm-hos-btn'));
         expect(props.handleConfirm).toHaveBeenCalled();
     });
 
     it.each([
-        [null, 'successEmeraldLight', 'successEmerald'],
-        ['syncing', 'actionCobaltLight', 'actionCobalt'],
-        ['failed', 'hazardRedLight', 'hazardRed'],
+        [null, 'operating', 'successEmeraldLight', 'successEmerald'],
+        [null, 'off_duty', 'surfaceHighlight', 'borderStrong'],
+        ['syncing', 'off_duty', 'surfaceHighlight', 'borderStrong'],
+        ['failed', 'off_duty', 'hazardRedLight', 'hazardRed'],
     ] as const)(
-        'never shows a %s duty change as accepted green unless the server accepted it',
-        async (pendingDutyState, surface, edge) => {
+        'shows a %s change as green only once the server reports it (server: %s)',
+        async (pendingDutyState, currentStatus, surface, edge) => {
             const view = await inTheme(
                 mode,
                 <HosCertifyCard
                     activeConfig={DUTY_STATUS_OPTIONS[0]}
                     certCheckScale={new Animated.Value(1)}
+                    currentStatus={currentStatus}
                     handleConfirm={jest.fn()}
                     handleToggleCert={jest.fn()}
                     isCertified

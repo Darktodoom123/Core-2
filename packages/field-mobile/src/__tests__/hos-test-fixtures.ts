@@ -1,6 +1,9 @@
 // Demonstration duty history. HosScreen uses TIMELINE_HISTORY_DAYS as the
 // default `timelineHistory` when no server history is passed in.
-import type { ShiftLogEvent, TimelineDayHistory } from './hos-types';
+import type {
+    ShiftLogEvent,
+    TimelineDayHistory,
+} from '../screens/hos/hos-types';
 
 export const INITIAL_LOG_EVENTS: ShiftLogEvent[] = [
     {

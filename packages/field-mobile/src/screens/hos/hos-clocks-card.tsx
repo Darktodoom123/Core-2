@@ -1,247 +1,169 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Icon } from '../../components/common/Icon';
-import type { HosComplianceResult } from '../../hooks/useHosCompliance';
 import { useTheme, useThemedStyles } from '../../theme';
 import type { ThemeColors } from '../../theme';
-import type { ShiftInfo } from '../../types/index';
-import { formatHoursMinutes } from './hos-constants';
+import {
+    DOLE_CAP_HOURS,
+    DOLE_WARNING_HOURS,
+    formatHoursMinutes,
+} from './hos-constants';
 
 export interface HosClocksCardProps {
-    breakCountdownHours: number | null;
-    cycleHoursElapsed: number | null;
-    cycleHoursLimit: number;
-    cycleRemainingHours: number | null;
-    driveRemainingHours: number | null;
+    /** The server reports a shift in progress. */
+    shiftActive: boolean;
+    /** When the shift started, as shown to the operator. */
+    startedAt: string | null;
+    /** Server total of operating + driving today, in hours. */
+    limitCounterHours: number | null;
+    isDoleWarning: boolean;
+    isDoleCapExceeded: boolean;
+    /** Server-accepted time per duty type, in hours. */
     durationBreakdown: Array<[string, number | null]>;
-    hasServerClock: boolean;
-    hoursElapsed: HosComplianceResult['hoursElapsed'];
-    isDoleCapExceeded: HosComplianceResult['isDoleCapExceeded'];
-    isDoleWarning: HosComplianceResult['isDoleWarning'];
-    limitCounterHours: HosComplianceResult['limitCounterHours'];
-    maxDriveHours: number;
-    maxShiftHours: number;
-    shiftInfo: ShiftInfo;
-    shiftProgressPercent: number | null;
-    shiftRemainingHours: number | null;
-    userRole: string;
 }
 
-/** At or under this many hours left, a clock is shown as a warning. */
-const LOW_REMAINING_HOURS = 1;
+type Tone = 'neutral' | 'warning' | 'hazard';
 
-type ClockTone = 'neutral' | 'warning' | 'hazard';
-
-function getRemainingTone(remainingHours: number | null): ClockTone {
-    if (remainingHours === null) {
-        return 'neutral';
-    }
-
-    if (remainingHours <= 0) {
-        return 'hazard';
-    }
-
-    return remainingHours <= LOW_REMAINING_HOURS ? 'warning' : 'neutral';
-}
-
-interface HosClockDialProps {
-    id: 'drive' | 'shift' | 'cycle' | 'break';
-    label: string;
-    remainingHours: number | null;
-    sublabel: string;
-}
-
-const HosClockDial: React.FC<HosClockDialProps> = ({
-    id,
-    label,
-    remainingHours,
-    sublabel,
+/**
+ * The shift's clock against the DOLE-OSHC operating limit (warning at 9h,
+ * stop at 10h of operating + driving), and time per duty type. Only server
+ * totals are shown; nothing is estimated on the phone.
+ */
+export const HosClocksCard: React.FC<HosClocksCardProps> = ({
+    shiftActive,
+    startedAt,
+    limitCounterHours,
+    isDoleWarning,
+    isDoleCapExceeded,
+    durationBreakdown,
 }) => {
     const { theme } = useTheme();
     const styles = useThemedStyles(createStyles);
-    const tone = getRemainingTone(remainingHours);
+
+    if (!shiftActive) {
+        return (
+            <View style={styles.card} testID="hos-clocks-card">
+                <Text style={styles.heading}>SHIFT CLOCK</Text>
+                <View style={styles.empty} testID="hos-clocks-empty">
+                    <Icon color={theme.textSecondary} name="clock" size={22} />
+                    <View style={styles.emptyCopy}>
+                        <Text style={styles.emptyTitle}>No shift running</Text>
+                        <Text style={styles.emptyBody}>
+                            Your totals start when you go on duty.
+                        </Text>
+                    </View>
+                </View>
+            </View>
+        );
+    }
+
+    const tone: Tone = isDoleCapExceeded
+        ? 'hazard'
+        : isDoleWarning
+          ? 'warning'
+          : 'neutral';
     const toneColor = {
         neutral: theme.textPrimary,
         warning: theme.warningOrangeText,
         hazard: theme.hazardRedText,
     }[tone];
-
-    return (
-        <View style={[styles.clockCell]}>
-            <Text style={[styles.clockCellLabel]}>{label}</Text>
-            <View style={styles.clockValueRow}>
-                {tone === 'neutral' ? null : (
-                    <View testID={`hos-clock-${id}-alert`}>
-                        <Icon color={toneColor} name="alert" size={16} />
-                    </View>
-                )}
-                <Text
-                    style={[styles.clockCellValue, { color: toneColor }]}
-                    testID={`hos-clock-${id}-value`}
-                >
-                    {formatHoursMinutes(remainingHours)}
-                </Text>
-            </View>
-            <Text style={[styles.clockCellSub]}>{sublabel}</Text>
-        </View>
-    );
-};
-
-export const HosClocksCard: React.FC<HosClocksCardProps> = ({
-    breakCountdownHours,
-    cycleHoursElapsed,
-    cycleHoursLimit,
-    cycleRemainingHours,
-    driveRemainingHours,
-    durationBreakdown,
-    hasServerClock,
-    hoursElapsed,
-    isDoleCapExceeded,
-    isDoleWarning,
-    limitCounterHours,
-    maxDriveHours,
-    maxShiftHours,
-    shiftInfo,
-    shiftProgressPercent,
-    shiftRemainingHours,
-    userRole,
-}) => {
-    const { theme } = useTheme();
-    const styles = useThemedStyles(createStyles);
-    const shiftProgress = shiftProgressPercent ?? 0;
-    // DOLE-OSHC: warn at 9.0h, hard cap at 10.0h (server-backed flags).
-    const doleTone: ClockTone = isDoleCapExceeded
-        ? 'hazard'
-        : isDoleWarning
-          ? 'warning'
-          : 'neutral';
-    const gaugeFillColor = {
+    const fillColor = {
         neutral: theme.successEmerald,
         warning: theme.warningOrange,
         hazard: theme.hazardRed,
-    }[doleTone];
-    const counterColor = {
-        neutral: theme.textPrimary,
-        warning: theme.warningOrangeText,
-        hazard: theme.hazardRedText,
-    }[doleTone];
+    }[tone];
+    const percent =
+        limitCounterHours === null
+            ? 0
+            : Math.min(100, (limitCounterHours / DOLE_CAP_HOURS) * 100);
 
     return (
-        <View style={[styles.clocksCard]} testID="hos-eld-clocks-card">
-            <View style={styles.cardHeader}>
-                <View style={styles.badgeRow}>
-                    <Icon color={theme.textSecondary} name="clock" size={18} />
-                    <Text style={[styles.clocksCardHeading]}>
-                        LIVE ELD DUTY CLOCKS
-                    </Text>
-                </View>
-                <Text style={[styles.cycleText]}>{userRole.toUpperCase()}</Text>
-            </View>
-
-            {/* 4-Cell Dials Grid */}
-            <View style={styles.clocksGrid}>
-                <HosClockDial
-                    id="drive"
-                    label="Drive / Operating"
-                    remainingHours={driveRemainingHours}
-                    sublabel={`of ${maxDriveHours}h limit`}
-                />
-                <HosClockDial
-                    id="shift"
-                    label="Shift Window"
-                    remainingHours={shiftRemainingHours}
-                    sublabel={`of ${maxShiftHours}h daily`}
-                />
-                <HosClockDial
-                    id="cycle"
-                    label={`${cycleHoursLimit}-Hr 8-Day Cycle`}
-                    remainingHours={cycleRemainingHours}
-                    sublabel={
-                        cycleHoursElapsed === null
-                            ? 'Unavailable'
-                            : `${cycleHoursElapsed.toFixed(1)}h logged`
-                    }
-                />
-                <HosClockDial
-                    id="break"
-                    label="Break Countdown"
-                    remainingHours={breakCountdownHours}
-                    sublabel="until 30m rest"
-                />
+        <View style={styles.card} testID="hos-clocks-card">
+            <View style={styles.headerRow}>
+                <Text style={styles.heading}>SHIFT CLOCK</Text>
+                {startedAt ? (
+                    <Text style={styles.since}>{`Since ${startedAt}`}</Text>
+                ) : null}
             </View>
 
             <View
-                accessibilityLabel="DOLE operating limit counter"
-                style={[styles.limitCounterRow]}
+                accessibilityLabel={
+                    limitCounterHours === null
+                        ? 'Operating and driving time: waiting for server totals'
+                        : `Operating and driving: ${formatHoursMinutes(limitCounterHours)} of ${DOLE_CAP_HOURS} hours`
+                }
+                style={styles.counter}
+                testID="hos-limit-counter"
             >
-                <Text style={[styles.clockCellLabel]}>
-                    {shiftInfo.limitCounterLabel ?? 'Operating + driving'} limit
-                    counter
-                </Text>
-                <View style={styles.clockValueRow}>
-                    {doleTone === 'neutral' ? null : (
-                        <View testID="hos-limit-counter-alert">
-                            <Icon color={counterColor} name="alert" size={16} />
-                        </View>
-                    )}
+                <Text style={styles.counterLabel}>Operating + driving</Text>
+                {limitCounterHours === null ? (
                     <Text
-                        style={[styles.clockCellValue, { color: counterColor }]}
-                        testID="hos-limit-counter-value"
+                        style={styles.waiting}
+                        testID="hos-limit-counter-waiting"
                     >
-                        {formatHoursMinutes(limitCounterHours)}
+                        Waiting for server totals
                     </Text>
-                </View>
-            </View>
-
-            {/* Shift Progress Gauge Bar */}
-            <View style={styles.gaugeContainer}>
-                <View style={styles.gaugeMetaRow}>
-                    <Text style={[styles.gaugeMetaLabel]}>
-                        Daily Shift Elapsed:{' '}
-                        {hasServerClock && hoursElapsed !== null
-                            ? `${hoursElapsed.toFixed(1)} / ${maxShiftHours}h`
-                            : 'Unavailable'}
-                    </Text>
-                    <Text style={[styles.gaugeMetaPercent]}>
-                        {shiftProgressPercent === null
-                            ? 'Unavailable'
-                            : `${shiftProgressPercent}% Used`}
-                    </Text>
-                </View>
-                <View style={[styles.gaugeTrack]}>
+                ) : (
+                    <View style={styles.valueRow}>
+                        {tone === 'neutral' ? null : (
+                            <View testID="hos-limit-counter-alert">
+                                <Icon
+                                    color={toneColor}
+                                    name="alert"
+                                    size={18}
+                                />
+                            </View>
+                        )}
+                        <Text
+                            style={[styles.counterValue, { color: toneColor }]}
+                            testID="hos-limit-counter-value"
+                        >
+                            {formatHoursMinutes(limitCounterHours)}
+                        </Text>
+                        <Text style={styles.counterOf}>
+                            {`of ${DOLE_CAP_HOURS}h`}
+                        </Text>
+                    </View>
+                )}
+                <View style={styles.track}>
                     <View
                         style={[
-                            styles.gaugeFill,
+                            styles.fill,
                             {
-                                backgroundColor: gaugeFillColor,
-                                width: `${shiftProgress}%`,
+                                backgroundColor: fillColor,
+                                width: `${percent}%`,
                             },
                         ]}
-                        testID="hos-shift-gauge-fill"
+                        testID="hos-limit-gauge-fill"
+                    />
+                    <View
+                        style={[
+                            styles.marker,
+                            {
+                                left: `${(DOLE_WARNING_HOURS / DOLE_CAP_HOURS) * 100}%`,
+                            },
+                        ]}
                     />
                 </View>
+                <Text style={styles.rule}>
+                    {tone === 'hazard'
+                        ? `Limit reached. Stop operating and driving; hand over or end your shift.`
+                        : tone === 'warning'
+                          ? `Past ${DOLE_WARNING_HOURS}h. Plan your handover before ${DOLE_CAP_HOURS}h.`
+                          : `DOLE-OSHC: warning at ${DOLE_WARNING_HOURS}h, stop at ${DOLE_CAP_HOURS}h.`}
+                </Text>
             </View>
 
             <View
-                accessibilityLabel="Accepted shift duration breakdown"
-                style={styles.clocksGrid}
+                accessibilityLabel="Time per duty type this shift"
+                style={styles.grid}
                 testID="hos-duration-breakdown"
             >
                 {durationBreakdown.map(([label, value]) => (
-                    <View key={label} style={[styles.clockCell]}>
-                        <Text style={[styles.clockCellLabel]}>{label}</Text>
-                        <Text
-                            style={[
-                                styles.clockCellValue,
-                                { color: theme.textPrimary },
-                            ]}
-                        >
-                            {formatHoursMinutes(value)}
-                        </Text>
-                        <Text style={[styles.clockCellSub]}>
-                            {value === null
-                                ? 'not synced yet'
-                                : 'server accepted'}
+                    <View key={label} style={styles.cell}>
+                        <Text style={styles.cellLabel}>{label}</Text>
+                        <Text style={styles.cellValue}>
+                            {value === null ? '—' : formatHoursMinutes(value)}
                         </Text>
                     </View>
                 ))}
@@ -252,18 +174,114 @@ export const HosClocksCard: React.FC<HosClocksCardProps> = ({
 
 const createStyles = (theme: ThemeColors) =>
     StyleSheet.create({
-        badgeRow: {
-            alignItems: 'center',
-            flexDirection: 'row',
-            gap: 6,
+        card: {
+            backgroundColor: theme.surface,
+            borderColor: theme.border,
+            borderRadius: 16,
+            borderWidth: 1,
+            gap: 12,
+            marginBottom: 16,
+            padding: 16,
         },
-        cardHeader: {
+        headerRow: {
             alignItems: 'center',
             flexDirection: 'row',
             justifyContent: 'space-between',
-            marginBottom: 12,
         },
-        clockCell: {
+        heading: {
+            color: theme.textSecondary,
+            fontSize: 12,
+            fontWeight: '700',
+            letterSpacing: 0.6,
+        },
+        since: {
+            color: theme.textSecondary,
+            fontSize: 13,
+        },
+        empty: {
+            alignItems: 'center',
+            backgroundColor: theme.surfaceHighlight,
+            borderRadius: 12,
+            flexDirection: 'row',
+            gap: 12,
+            padding: 14,
+        },
+        emptyCopy: {
+            flex: 1,
+            gap: 2,
+        },
+        emptyTitle: {
+            color: theme.textPrimary,
+            fontSize: 16,
+            fontWeight: '700',
+        },
+        emptyBody: {
+            color: theme.textSecondary,
+            fontSize: 14,
+        },
+        counter: {
+            backgroundColor: theme.surfaceHighlight,
+            borderColor: theme.border,
+            borderRadius: 12,
+            borderWidth: 1,
+            gap: 8,
+            padding: 14,
+        },
+        counterLabel: {
+            color: theme.textSecondary,
+            fontSize: 13,
+            fontWeight: '700',
+        },
+        valueRow: {
+            alignItems: 'baseline',
+            flexDirection: 'row',
+            gap: 6,
+        },
+        counterValue: {
+            fontSize: 28,
+            fontVariant: ['tabular-nums'],
+            fontWeight: '700',
+        },
+        counterOf: {
+            color: theme.textSecondary,
+            fontSize: 16,
+            fontWeight: '500',
+        },
+        waiting: {
+            color: theme.textSecondary,
+            fontSize: 16,
+            fontWeight: '500',
+        },
+        track: {
+            backgroundColor: theme.border,
+            borderRadius: 6,
+            height: 10,
+            overflow: 'hidden',
+            position: 'relative',
+            width: '100%',
+        },
+        fill: {
+            borderRadius: 6,
+            height: '100%',
+        },
+        marker: {
+            backgroundColor: theme.warningOrange,
+            height: '100%',
+            position: 'absolute',
+            top: 0,
+            width: 2,
+        },
+        rule: {
+            color: theme.textSecondary,
+            fontSize: 13,
+            lineHeight: 18,
+        },
+        grid: {
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: 10,
+        },
+        cell: {
             backgroundColor: theme.surfaceHighlight,
             borderColor: theme.border,
             borderRadius: 10,
@@ -272,91 +290,16 @@ const createStyles = (theme: ThemeColors) =>
             minWidth: '45%',
             padding: 12,
         },
-        clockCellLabel: {
+        cellLabel: {
             color: theme.textSecondary,
             fontSize: 12,
             fontWeight: '700',
             marginBottom: 4,
         },
-        clockCellSub: {
-            color: theme.textSecondary,
-            fontSize: 12,
-            fontWeight: '500',
-            marginTop: 2,
-        },
-        clockCellValue: {
+        cellValue: {
+            color: theme.textPrimary,
             fontSize: 18,
+            fontVariant: ['tabular-nums'],
             fontWeight: '700',
-        },
-        clockValueRow: {
-            alignItems: 'center',
-            flexDirection: 'row',
-            gap: 4,
-        },
-        clocksCard: {
-            backgroundColor: theme.surface,
-            borderColor: theme.border,
-            borderRadius: 16,
-            borderWidth: 1,
-            marginBottom: 16,
-            padding: 16,
-        },
-        clocksCardHeading: {
-            color: theme.textPrimary,
-            fontSize: 13,
-            fontWeight: '700',
-            letterSpacing: 0.5,
-        },
-        clocksGrid: {
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-            gap: 10,
-            marginBottom: 14,
-        },
-        cycleText: {
-            color: theme.textSecondary,
-            fontSize: 12,
-            fontWeight: '700',
-        },
-        gaugeContainer: {
-            marginTop: 2,
-        },
-        gaugeFill: {
-            borderRadius: 6,
-            height: '100%',
-        },
-        gaugeMetaLabel: {
-            color: theme.textSecondary,
-            fontSize: 12,
-            fontWeight: '500',
-        },
-        gaugeMetaPercent: {
-            color: theme.textPrimary,
-            fontSize: 12,
-            fontWeight: '700',
-        },
-        gaugeMetaRow: {
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            marginBottom: 6,
-        },
-        gaugeTrack: {
-            backgroundColor: theme.border,
-            borderRadius: 6,
-            height: 8,
-            overflow: 'hidden',
-            width: '100%',
-        },
-        limitCounterRow: {
-            alignItems: 'center',
-            backgroundColor: theme.surfaceHighlight,
-            borderColor: theme.border,
-            borderRadius: 10,
-            borderWidth: 1,
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            marginBottom: 14,
-            paddingHorizontal: 12,
-            paddingVertical: 10,
         },
     });

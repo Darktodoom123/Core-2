@@ -7,12 +7,15 @@ import { DUTY_STATUS_OPTIONS } from './hos-constants';
 import { createHosSharedStyles } from './hos-shared-styles';
 
 export interface HosDutyStatusSelectorProps {
+    /** The status the server last accepted. */
+    currentStatus: DutyStatus;
     selectedStatus: DutyStatus;
     setIsSaved: React.Dispatch<React.SetStateAction<boolean>>;
     setSelectedStatus: (status: DutyStatus) => void;
 }
 
 export const HosDutyStatusSelector: React.FC<HosDutyStatusSelectorProps> = ({
+    currentStatus,
     selectedStatus,
     setIsSaved,
     setSelectedStatus,
@@ -30,22 +33,23 @@ export const HosDutyStatusSelector: React.FC<HosDutyStatusSelectorProps> = ({
                 accessibilityRole="header"
                 style={[hosSharedStyles.sectionTitle]}
             >
-                SELECT ACTIVE DUTY STATUS
+                CHANGE DUTY STATUS
             </Text>
             <Text style={[hosSharedStyles.sectionHelper]}>
-                Tap to switch duty status. Complies with DOLE-OSHC and DOT ELD
-                mandates.
+                Choose a status, then confirm below.
             </Text>
 
             <View style={styles.dutyOptionsList}>
                 {DUTY_STATUS_OPTIONS.map((opt) => {
                     const isSelected = selectedStatus === opt.status;
+                    const isCurrent = currentStatus === opt.status;
 
                     return (
                         <Pressable
                             key={opt.status}
-                            accessibilityLabel={`${opt.title}, ${opt.subtitle}`}
-                            accessibilityRole="button"
+                            accessibilityLabel={`${opt.title}, ${opt.subtitle}${isCurrent ? ', current status' : ''}`}
+                            accessibilityRole="radio"
+                            accessibilityState={{ checked: isSelected }}
                             onPress={() => {
                                 setSelectedStatus(opt.status);
                                 setIsSaved(false);
@@ -94,6 +98,16 @@ export const HosDutyStatusSelector: React.FC<HosDutyStatusSelectorProps> = ({
                                     <Text style={[styles.optionSubtitle]}>
                                         {opt.subtitle}
                                     </Text>
+                                    {isCurrent ? (
+                                        <View
+                                            style={styles.currentTag}
+                                            testID={`duty-current-${opt.status}`}
+                                        >
+                                            <Text style={styles.currentTagText}>
+                                                CURRENT
+                                            </Text>
+                                        </View>
+                                    ) : null}
                                 </View>
                             </View>
 
@@ -170,8 +184,24 @@ const createStyles = (theme: ThemeColors) =>
         },
         optionSubtitle: {
             color: theme.textSecondary,
-            fontSize: 12,
+            fontSize: 13,
             marginTop: 2,
+        },
+        currentTag: {
+            alignSelf: 'flex-start',
+            backgroundColor: theme.surfaceHighlight,
+            borderColor: theme.borderStrong,
+            borderRadius: 6,
+            borderWidth: 1,
+            marginTop: 6,
+            paddingHorizontal: 6,
+            paddingVertical: 2,
+        },
+        currentTagText: {
+            color: theme.textPrimary,
+            fontSize: 12,
+            fontWeight: '700',
+            letterSpacing: 0.4,
         },
         optionTitle: {
             color: theme.textPrimary,

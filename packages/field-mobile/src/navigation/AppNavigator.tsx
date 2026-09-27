@@ -2646,11 +2646,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 pendingDutyState={pendingHosState}
                                 timelineHistory={timelineHistory}
                                 shiftInfo={shiftInfo}
-                                userRole={
-                                    user?.role
-                                        ? user.role.replaceAll('_', ' ')
-                                        : 'Field Operator'
-                                }
                             />
                         ) : activeAppView === 'dvir' ? (
                             <DvirScreen

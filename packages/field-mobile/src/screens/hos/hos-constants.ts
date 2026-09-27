@@ -1,6 +1,10 @@
 import type { StandbyReason } from '../../types/index';
 import type { DutyStatusOptionConfig, TimelineDayHistory } from './hos-types';
 
+/** DOLE-OSHC operating limit on operating + driving time per shift. */
+export const DOLE_WARNING_HOURS = 9;
+export const DOLE_CAP_HOURS = 10;
+
 export const DUTY_STATUS_OPTIONS: DutyStatusOptionConfig[] = [
     {
         status: 'operating',
@@ -29,16 +33,16 @@ export const DUTY_STATUS_OPTIONS: DutyStatusOptionConfig[] = [
     {
         status: 'on_break',
         badge: 'BRK',
-        title: 'On Break — 30-min Meal / Rest Period',
-        subtitle: 'Mandatory 30-minute rest or lunch pause',
+        title: 'On Break — Meal / Rest',
+        subtitle: 'Meal, rest or lunch pause',
         iconName: 'tools',
         accentToken: 'successEmerald',
     },
     {
         status: 'off_duty',
         badge: 'OFF',
-        title: 'Off Duty — Shift Complete',
-        subtitle: 'Clocked out from work, 10-hour daily rest reset',
+        title: 'Off Duty — End Shift',
+        subtitle: 'Clock out and end your shift',
         iconName: 'power',
         accentToken: 'textSecondary',
     },

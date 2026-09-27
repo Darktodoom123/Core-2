@@ -123,6 +123,7 @@ const createStyles = (theme: ThemeColors) =>
             borderRadius: 12,
             borderWidth: 1,
             gap: 12,
+            marginBottom: 16,
             padding: 14,
         },
         rejected: {

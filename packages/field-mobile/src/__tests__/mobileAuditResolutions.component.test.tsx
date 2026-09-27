@@ -475,7 +475,7 @@ describe('Mobile Application Audit Resolutions Component Tests', () => {
         });
     });
 
-    describe('Issue 2: DOLE 4.5-Hour Continuous Rest Prompter', () => {
+    describe('Issue 2: 4.5-hour break prompt (fatigue, not a legal limit)', () => {
         it('renders DOLE continuous rest banner when operating unbroken for >= 270 minutes (4.5 hours)', async () => {
             const onChangeDutyStatus = jest.fn();
             const view = await render(
@@ -499,9 +499,7 @@ describe('Mobile Application Audit Resolutions Component Tests', () => {
                 view.getByTestId('dole-continuous-counter-pill'),
             ).toBeTruthy();
             expect(view.getByText(/4\.7h continuous/i)).toBeTruthy();
-            expect(
-                view.getByText(/DOLE Mandatory Rest Break Required/i),
-            ).toBeTruthy();
+            expect(view.getByText(/Time for a break/i)).toBeTruthy();
 
             const breakBtn = view.getByTestId('dole-continuous-break-btn');
             expect(breakBtn).toBeTruthy();
@@ -535,9 +533,7 @@ describe('Mobile Application Audit Resolutions Component Tests', () => {
 
             const banner = view.getByTestId('dole-continuous-rest-banner');
             expect(banner).toBeTruthy();
-            expect(
-                view.getByText(/DOLE Mandatory Rest Break Required/i),
-            ).toBeTruthy();
+            expect(view.getByText(/Time for a break/i)).toBeTruthy();
             expect(view.getByText(/4\.7h continuous/i)).toBeTruthy();
         });
 
@@ -556,13 +552,9 @@ describe('Mobile Application Audit Resolutions Component Tests', () => {
 
             const banner = view.getByTestId('dole-continuous-rest-banner');
             expect(banner).toBeTruthy();
-            expect(
-                view.getByText(/Approaching 4\.5h Continuous Operation/i),
-            ).toBeTruthy();
+            expect(view.getByText(/Plan a break soon/i)).toBeTruthy();
             expect(view.getByText(/4\.2h continuous/i)).toBeTruthy();
-            expect(
-                view.getByText(/Prepare to transition to standby/i),
-            ).toBeTruthy();
+            expect(view.getByText(/Plan a rest or standby/i)).toBeTruthy();
         });
     });
 

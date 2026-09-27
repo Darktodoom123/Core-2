@@ -1,4 +1,8 @@
 import { useMemo } from 'react';
+import {
+    DOLE_CAP_HOURS,
+    DOLE_WARNING_HOURS,
+} from '../screens/hos/hos-constants';
 import type { DutyStatus, ShiftInfo } from '../types/index';
 
 export interface TimelineEvent {
@@ -34,7 +38,7 @@ export interface DoleContinuousBreakPrompt {
 }
 
 export interface HosComplianceResult {
-    // 4.5h Continuous Driving / Operating Rest Compliance (DOLE D.O. 13 / D.O. 118-12)
+    // 4.5h without a break: a fatigue prompt, not a legal limit
     continuousOperatingMinutes: number;
     continuousOperatingHours: number;
     continuousRemainingMinutes: number;
@@ -95,14 +99,14 @@ export function calculateContinuousOperatingMinutes(
                 const raw = ev.occurredAt ?? ev.occurrenceTime ?? ev.startTime;
 
                 if (!raw) {
-return NaN;
-}
+                    return NaN;
+                }
 
                 const parsed = Date.parse(raw);
 
                 if (!Number.isNaN(parsed)) {
-return parsed;
-}
+                    return parsed;
+                }
 
                 const match = raw.match(
                     /(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?/i,
@@ -114,12 +118,12 @@ return parsed;
                     const meridiem = match[4]?.toUpperCase();
 
                     if (meridiem === 'PM' && hours < 12) {
-hours += 12;
-}
+                        hours += 12;
+                    }
 
                     if (meridiem === 'AM' && hours === 12) {
-hours = 0;
-}
+                        hours = 0;
+                    }
 
                     const d = new Date(currentTimeMs);
                     d.setHours(hours, minutes, 0, 0);
@@ -139,16 +143,16 @@ hours = 0;
                     const mMatch = durStr.match(/(\d+)\s*m/i);
 
                     if (hMatch) {
-mins += parseFloat(hMatch[1]) * 60;
-}
+                        mins += parseFloat(hMatch[1]) * 60;
+                    }
 
                     if (mMatch) {
-mins += parseInt(mMatch[1], 10);
-}
+                        mins += parseInt(mMatch[1], 10);
+                    }
 
                     if (mins > 0) {
-return mins;
-}
+                        return mins;
+                    }
                 }
 
                 return 0;
@@ -273,24 +277,26 @@ export function useHosCompliance(
         let breakSuggestion: DoleContinuousBreakPrompt | null = null;
 
         if (isContinuousRestRequired) {
+            // A fatigue prompt, not a legal limit: the regulated limit is the
+            // DOLE-OSHC 10h operating + driving cap.
             breakSuggestion = {
-                title: 'DOLE Mandatory Rest Break Required',
-                subtitle: '4.5 Hours Continuous Operation Limit Reached',
+                title: 'Time for a break',
+                subtitle: '4.5 hours of operating or driving without a break',
                 message:
-                    'Under Philippine DOLE-OSHC regulations (D.O. 13 s. 1998 / D.O. 118-12), operators must not exceed 4.5 continuous unbroken hours of driving or equipment operation. A mandatory rest or standby break is required.',
+                    'Long stretches without rest raise fatigue risk. Take a break or log standby before you continue.',
                 severity: 'critical',
-                actionLabel: 'Log Standby / Take Break',
-                regulationRef: 'DOLE D.O. 13 s. 1998 / D.O. 118-12 Section 8',
+                actionLabel: 'Take a break',
+                regulationRef: '',
             };
         } else if (isContinuousRestWarning) {
             breakSuggestion = {
-                title: 'Approaching 4.5h Continuous Operation',
-                subtitle: `${continuousRemaining} min remaining before mandatory rest`,
+                title: 'Plan a break soon',
+                subtitle: `${continuousRemaining} min to 4.5 hours without a break`,
                 message:
-                    'Operator is approaching the 4.5 continuous operating limit. Prepare to transition to standby or scheduled rest.',
+                    'You have been operating or driving for a long stretch. Plan a rest or standby.',
                 severity: 'warning',
-                actionLabel: 'Plan Rest Break',
-                regulationRef: 'DOLE D.O. 13 s. 1998 / D.O. 118-12 Section 8',
+                actionLabel: 'Plan a break',
+                regulationRef: '',
             };
         }
 
@@ -304,9 +310,11 @@ export function useHosCompliance(
 
         const isDoleWarning =
             safeShift?.doleWarning ??
-            (limitCounterHours !== null && limitCounterHours >= 9.0);
+            (limitCounterHours !== null &&
+                limitCounterHours >= DOLE_WARNING_HOURS);
         const isDoleCapExceeded =
-            (limitCounterHours !== null && limitCounterHours >= 10.0) ||
+            (limitCounterHours !== null &&
+                limitCounterHours >= DOLE_CAP_HOURS) ||
             safeShift?.fatigueStatus === 'critical' ||
             safeShift?.fatigueStatus === 'violation';
 
