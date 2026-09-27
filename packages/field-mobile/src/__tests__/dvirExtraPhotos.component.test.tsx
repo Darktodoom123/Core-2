@@ -17,25 +17,27 @@ const renderDvir = () =>
 describe('DVIR cab and defect photos', () => {
     jest.setTimeout(15000);
 
-    it('offers an optional cab / dashboard photo as one compact card', async () => {
+    it('makes the whole cab card an obvious button to add the photo', async () => {
         const view = await renderDvir();
-        const cab = view.getByTestId('dvir-cab-photo');
+        const card = view.getByTestId('dvir-cab-photo');
 
-        expect(within(cab).getByText('Cab / dashboard')).toBeTruthy();
-        expect(within(cab).getByText('Optional')).toBeTruthy();
+        expect(card.props.accessibilityRole).toBe('button');
+        expect(card.props.accessibilityLabel).toBe(
+            'Add cab / dashboard photo, optional',
+        );
+        expect(within(card).getByText('Cab / dashboard')).toBeTruthy();
+        expect(within(card).getByText('Optional')).toBeTruthy();
         expect(
-            within(cab).getByText(
+            within(card).getByText(
                 'Hour meter, warning lights and load moment indicator.',
             ),
         ).toBeTruthy();
-        // One label, not a section title plus a repeated slot caption.
-        expect(within(cab).queryByText('Cab / Dashboard')).toBeNull();
+        // A visible call to action, not just an empty box.
+        expect(within(card).getByText('Add photo')).toBeTruthy();
+        expect(within(card).queryByText('Cab / Dashboard')).toBeNull();
 
-        const slot = StyleSheet.flatten(
-            within(cab).getByTestId('slot-cab').props.style,
-        );
-        expect(slot.width).toBe(72);
-        expect(slot.height).toBe(72);
+        const style = StyleSheet.flatten(card.props.style);
+        expect(style.minHeight).toBeGreaterThanOrEqual(72);
     });
 
     it.each([
@@ -54,7 +56,9 @@ describe('DVIR cab and defect photos', () => {
             );
 
             expect(card.backgroundColor).toBe(theme.surface);
-            expect(card.borderColor).toBe(theme.border);
+            // A tappable card uses the secondary-button border, not a resting one.
+        expect(card.borderColor).toBe(theme.borderStrong);
+        expect(card.backgroundColor).not.toBe(theme.brandAmber);
         },
     );
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     ActivityIndicator,
     Image,
@@ -20,7 +20,10 @@ export interface DvirCabPhotoCardProps {
     onRemovePhoto: (angle: WalkaroundAngle) => void;
 }
 
-/** One optional photo from the seat: hour meter, warning lights, LMI. */
+/**
+ * One optional photo from the seat: hour meter, warning lights, LMI. The
+ * whole card is the button, with a visible "Add photo" call to action.
+ */
 export const DvirCabPhotoCard: React.FC<DvirCabPhotoCardProps> = ({
     photo,
     onCapturePhoto,
@@ -29,95 +32,132 @@ export const DvirCabPhotoCard: React.FC<DvirCabPhotoCardProps> = ({
     const { theme } = useTheme();
     const styles = useThemedStyles(createStyles);
     const { loadingAngle, choosePhoto } = usePhotoCapture(onCapturePhoto);
+    const [pressed, setPressed] = useState(false);
     const isLoading = loadingAngle === 'cab';
 
     return (
-        <View style={styles.card} testID="dvir-cab-photo">
+        <View style={styles.wrap}>
             <Pressable
                 accessibilityHint="Opens the camera or photo library"
                 accessibilityLabel={
-                    photo ? 'Retake cab photo' : 'Add cab / dashboard photo'
+                    photo
+                        ? 'Retake cab / dashboard photo'
+                        : 'Add cab / dashboard photo, optional'
                 }
                 accessibilityRole="button"
-                android_ripple={{ color: theme.border, borderless: false }}
+                accessibilityState={{ busy: isLoading }}
+                android_ripple={{ color: theme.border }}
                 disabled={isLoading}
                 onPress={() => choosePhoto('cab', 'Cab / dashboard')}
-                style={[styles.slot, photo ? styles.slotCaptured : null]}
-                testID="slot-cab"
+                onPressIn={() => setPressed(true)}
+                onPressOut={() => setPressed(false)}
+                style={[
+                    styles.card,
+                    photo ? styles.cardCaptured : null,
+                    pressed ? styles.cardPressed : null,
+                ]}
+                testID="dvir-cab-photo"
             >
-                {isLoading ? (
-                    <ActivityIndicator color={theme.textSecondary} />
-                ) : photo ? (
-                    <Image
-                        accessibilityLabel="Cab photo thumbnail"
-                        source={{ uri: photo.uri }}
-                        style={styles.thumbnail}
-                    />
-                ) : (
-                    <Icon color={theme.textSecondary} name="camera" size={26} />
-                )}
-            </Pressable>
-
-            <View style={styles.text}>
-                <View style={styles.titleRow}>
-                    <Text style={styles.title}>Cab / dashboard</Text>
-                    <View style={styles.optionalPill}>
-                        <Text style={styles.optionalText}>Optional</Text>
-                    </View>
-                </View>
-                <Text style={styles.hint}>
-                    Hour meter, warning lights and load moment indicator.
-                </Text>
-                {photo ? (
-                    <Pressable
-                        accessibilityLabel="Remove cab photo"
-                        accessibilityRole="button"
-                        hitSlop={8}
-                        onPress={() => onRemovePhoto('cab')}
-                        style={styles.remove}
-                        testID="remove-cab"
-                    >
+                <View style={[styles.well, photo ? styles.wellPhoto : null]}>
+                    {isLoading ? (
+                        <ActivityIndicator color={theme.textSecondary} />
+                    ) : photo ? (
+                        <Image
+                            accessibilityLabel="Cab photo thumbnail"
+                            source={{ uri: photo.uri }}
+                            style={styles.thumbnail}
+                        />
+                    ) : (
                         <Icon
                             color={theme.textPrimary}
-                            name="close"
-                            size={14}
+                            name="camera"
+                            size={24}
                         />
-                        <Text style={styles.removeText}>Remove photo</Text>
-                    </Pressable>
-                ) : null}
-            </View>
+                    )}
+                </View>
+
+                <View style={styles.text}>
+                    <View style={styles.titleRow}>
+                        <Text style={styles.title}>Cab / dashboard</Text>
+                        {photo ? (
+                            <Icon
+                                color={theme.successEmeraldText}
+                                name="check-circle"
+                                size={16}
+                            />
+                        ) : (
+                            <View style={styles.optionalPill}>
+                                <Text style={styles.optionalText}>
+                                    Optional
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+                    <Text style={styles.hint}>
+                        Hour meter, warning lights and load moment indicator.
+                    </Text>
+                </View>
+
+                <View style={styles.cta}>
+                    <Icon color={theme.textPrimary} name="camera" size={16} />
+                    <Text style={styles.ctaText}>
+                        {photo ? 'Retake' : 'Add photo'}
+                    </Text>
+                </View>
+            </Pressable>
+
+            {photo ? (
+                <Pressable
+                    accessibilityLabel="Remove cab photo"
+                    accessibilityRole="button"
+                    hitSlop={8}
+                    onPress={() => onRemovePhoto('cab')}
+                    style={styles.remove}
+                    testID="remove-cab"
+                >
+                    <Icon color={theme.textSecondary} name="close" size={14} />
+                    <Text style={styles.removeText}>Remove photo</Text>
+                </Pressable>
+            ) : null}
         </View>
     );
 };
 
 const createStyles = (theme: ThemeColors) =>
     StyleSheet.create({
+        wrap: {
+            marginBottom: 18,
+        },
         card: {
             alignItems: 'center',
             backgroundColor: theme.surface,
-            borderColor: theme.border,
+            borderColor: theme.borderStrong,
             borderRadius: 14,
-            borderWidth: 1,
+            borderWidth: 1.5,
             flexDirection: 'row',
-            gap: 14,
-            marginBottom: 18,
-            padding: 12,
+            gap: 12,
+            minHeight: 80,
+            overflow: 'hidden',
+            paddingHorizontal: 12,
+            paddingVertical: 12,
         },
-        slot: {
+        cardCaptured: {
+            borderColor: theme.successEmerald,
+        },
+        cardPressed: {
+            backgroundColor: theme.surfaceHighlight,
+        },
+        well: {
             alignItems: 'center',
             backgroundColor: theme.surfaceHighlight,
-            borderColor: theme.borderStrong,
             borderRadius: 12,
-            borderStyle: 'dashed',
-            borderWidth: 1.5,
-            height: 72,
+            height: 56,
             justifyContent: 'center',
             overflow: 'hidden',
-            width: 72,
+            width: 56,
         },
-        slotCaptured: {
-            borderColor: theme.successEmerald,
-            borderStyle: 'solid',
+        wellPhoto: {
+            backgroundColor: theme.surface,
         },
         thumbnail: {
             height: '100%',
@@ -131,7 +171,7 @@ const createStyles = (theme: ThemeColors) =>
             alignItems: 'center',
             flexDirection: 'row',
             flexWrap: 'wrap',
-            gap: 8,
+            gap: 6,
         },
         title: {
             color: theme.textPrimary,
@@ -154,15 +194,33 @@ const createStyles = (theme: ThemeColors) =>
             fontSize: 13,
             lineHeight: 18,
         },
+        // Visible secondary call to action: outlined, never gold.
+        cta: {
+            alignItems: 'center',
+            backgroundColor: theme.surface,
+            borderColor: theme.borderStrong,
+            borderRadius: 10,
+            borderWidth: 1,
+            flexDirection: 'row',
+            gap: 6,
+            minHeight: 40,
+            paddingHorizontal: 10,
+        },
+        ctaText: {
+            color: theme.textPrimary,
+            fontSize: 14,
+            fontWeight: '700',
+        },
         remove: {
             alignItems: 'center',
-            alignSelf: 'flex-start',
+            alignSelf: 'flex-end',
             flexDirection: 'row',
             gap: 6,
             minHeight: 48,
+            paddingHorizontal: 4,
         },
         removeText: {
-            color: theme.textPrimary,
+            color: theme.textSecondary,
             fontSize: 14,
             fontWeight: '700',
         },
