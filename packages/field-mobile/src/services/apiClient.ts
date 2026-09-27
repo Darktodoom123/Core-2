@@ -35,6 +35,48 @@ import type {
     WorkStoppageCommandPayload,
 } from '../types/index';
 
+/** A ping batch that has not answered by now is given up and retried. */
+export const LOCATION_BATCH_TIMEOUT_MS = 45_000;
+
+/** The server's answer for one ping in a batch. */
+export interface LocationBatchResult {
+    commandId: string;
+    status: number;
+    message: string | null;
+}
+
+/** Keeps only well-formed answers; a missing answer is retried later. */
+export function readLocationBatchResults(body: unknown): LocationBatchResult[] {
+    // handleResponse already unwraps { data }, but accept either shape.
+    const data = Array.isArray(body)
+        ? body
+        : body && typeof body === 'object' && 'data' in body
+          ? (body as { data: unknown }).data
+          : null;
+
+    if (!Array.isArray(data)) {
+        return [];
+    }
+
+    return data.flatMap((item: unknown) => {
+        if (!item || typeof item !== 'object') {
+            return [];
+        }
+
+        const { command_id, status, message } = item as Record<string, unknown>;
+
+        return typeof command_id === 'string' && typeof status === 'number'
+            ? [
+                  {
+                      commandId: command_id,
+                      status,
+                      message: typeof message === 'string' ? message : null,
+                  },
+              ]
+            : [];
+    });
+}
+
 export class ApiClientError extends Error {
     public status: number;
     public errorCode?: string;
@@ -982,6 +1024,59 @@ export class FieldApiClient {
         });
 
         return this.handleResponse<unknown>(response);
+    }
+
+    /**
+     * Sends several pings in one request. Each ping keeps its own command id
+     * and gets its own answer, so one refused ping never refuses the others.
+     */
+    public async shareLocationBatch(
+        pings: ReadonlyArray<{
+            commandId: string;
+            payload: LocationSharePayload;
+        }>,
+    ): Promise<LocationBatchResult[]> {
+        // A hung request would hold the whole outbox, so give up and retry;
+        // resending is safe because each ping keeps its command id.
+        const controller =
+            typeof AbortController !== 'undefined'
+                ? new AbortController()
+                : null;
+        const timer = controller
+            ? setTimeout(() => controller.abort(), LOCATION_BATCH_TIMEOUT_MS)
+            : null;
+
+        try {
+            const response = await this.fetchFn(
+                `${this.baseUrl}/api/v1/locations/batch`,
+                {
+                    method: 'POST',
+                    headers: this.getHeaders(),
+                    body: JSON.stringify({
+                        pings: pings.map(({ commandId, payload }) => ({
+                            ...payload,
+                            command_id: commandId,
+                        })),
+                    }),
+                    signal: controller?.signal,
+                },
+            );
+            const body = await this.handleResponse<unknown>(response);
+
+            return readLocationBatchResults(body);
+        } catch (error: unknown) {
+            if (controller?.signal.aborted) {
+                throw new ApiClientError('Location batch timed out.', 408, {
+                    errorCode: 'TIMEOUT',
+                });
+            }
+
+            throw error;
+        } finally {
+            if (timer) {
+                clearTimeout(timer);
+            }
+        }
     }
 
     public async submitJobReport(

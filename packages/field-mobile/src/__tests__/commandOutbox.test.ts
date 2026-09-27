@@ -5,7 +5,10 @@ import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { describe, test } from 'node:test';
 import type { FieldApiClient } from '../services/apiClient';
-import { ApiClientError } from '../services/apiClient';
+import {
+    ApiClientError,
+    readLocationBatchResults,
+} from '../services/apiClient';
 import { CommandOutboxManager } from '../services/commandOutbox';
 import { durableAttachmentStorage } from '../services/durableAttachmentStorage';
 import {
@@ -1850,5 +1853,187 @@ describe('location pings', () => {
         await outbox.discardCommand(refused.id);
 
         assert.equal(outbox.getCommand(refused.id), undefined);
+    });
+});
+
+describe('ping batches', () => {
+    function ping(index: number) {
+        return {
+            dispatch_job_id: 1,
+            latitude: 14.5,
+            longitude: 121,
+            sharing_enabled: true,
+            captured_at: new Date(
+                Date.UTC(2026, 8, 28, 8, 0, index),
+            ).toISOString(),
+        };
+    }
+
+    async function outboxWithPings(actorId: number, count: number) {
+        const outbox = await createOutbox(actorId);
+        const pings = [];
+
+        for (let index = 0; index < count; index += 1) {
+            pings.push(await outbox.enqueueShareLocation(ping(index)));
+        }
+
+        return { outbox, pings };
+    }
+
+    type BatchCall = Array<{ commandId: string }>;
+
+    test('a backlog goes out 25 pings per request', async () => {
+        const { outbox, pings } = await outboxWithPings(51, 120);
+        const calls: BatchCall[] = [];
+
+        await outbox.processQueue({
+            shareLocationBatch: async (items: BatchCall) => {
+                calls.push(items);
+
+                return items.map(({ commandId }) => ({
+                    commandId,
+                    status: 201,
+                    message: null,
+                }));
+            },
+        } as unknown as FieldApiClient);
+
+        assert.deepEqual(
+            calls.map((items) => items.length),
+            [25, 25, 25, 25, 20],
+        );
+        assert.deepEqual(
+            calls.flat().map((item) => item.commandId),
+            pings.map((command) => command.id),
+        );
+        assert.ok(
+            pings.every(
+                (command) =>
+                    outbox.getCommand(command.id)?.state === 'completed',
+            ),
+        );
+    });
+
+    test('a refused ping fails alone and the rest are stored', async () => {
+        const { outbox, pings } = await outboxWithPings(52, 3);
+
+        await outbox.processQueue({
+            shareLocationBatch: async (items: BatchCall) =>
+                items.map(({ commandId }, index) => ({
+                    commandId,
+                    status: index === 1 ? 422 : 201,
+                    message: index === 1 ? 'Not assigned.' : null,
+                })),
+        } as unknown as FieldApiClient);
+
+        assert.equal(outbox.getCommand(pings[0].id)?.state, 'completed');
+        assert.equal(outbox.getCommand(pings[1].id)?.state, 'failed');
+        assert.equal(
+            outbox.getCommand(pings[1].id)?.error?.message,
+            'Not assigned.',
+        );
+        assert.equal(outbox.getCommand(pings[2].id)?.state, 'completed');
+    });
+
+    test('when the whole request fails, every ping in it waits and retries', async () => {
+        const { outbox, pings } = await outboxWithPings(53, 20);
+        let calls = 0;
+
+        await outbox.processQueue({
+            shareLocationBatch: async () => {
+                calls += 1;
+
+                throw new ApiClientError('Tracking unavailable.', 503);
+            },
+        } as unknown as FieldApiClient);
+
+        // One request, then the line waits out the backoff.
+        assert.equal(calls, 1);
+        assert.ok(
+            pings.every(
+                (command) => outbox.getCommand(command.id)?.state === 'queued',
+            ),
+        );
+    });
+
+    test('a ping the server did not answer is sent again later', async () => {
+        const { outbox, pings } = await outboxWithPings(54, 2);
+
+        await outbox.processQueue({
+            shareLocationBatch: async (items: BatchCall) => [
+                { commandId: items[0].commandId, status: 201, message: null },
+            ],
+        } as unknown as FieldApiClient);
+
+        assert.equal(outbox.getCommand(pings[0].id)?.state, 'completed');
+        assert.equal(outbox.getCommand(pings[1].id)?.state, 'queued');
+        assert.ok(outbox.getCommand(pings[1].id)?.nextAttemptAt);
+    });
+
+    test('an expired sign-in is refreshed once instead of logging out', async () => {
+        const { outbox, pings } = await outboxWithPings(55, 2);
+        let calls = 0;
+
+        const result = await outbox.processQueue({
+            refreshToken: async () => 'fresh-token',
+            shareLocationBatch: async (items: BatchCall) => {
+                calls += 1;
+
+                if (calls === 1) {
+                    throw new ApiClientError('Unauthenticated.', 401);
+                }
+
+                return items.map(({ commandId }) => ({
+                    commandId,
+                    status: 201,
+                    message: null,
+                }));
+            },
+        } as unknown as FieldApiClient);
+
+        assert.equal(calls, 2);
+        assert.notEqual(result.requiresAuthentication, true);
+        assert.equal(outbox.getCommand(pings[1].id)?.state, 'completed');
+    });
+
+    test('only well-formed answers from the server are trusted', () => {
+        assert.deepEqual(
+            readLocationBatchResults({
+                data: [
+                    { command_id: 'a', status: 201, message: null },
+                    { command_id: 'b', status: '201' },
+                    null,
+                    { status: 422 },
+                    { command_id: 'c', status: 422, message: 'Not assigned.' },
+                ],
+            }),
+            [
+                { commandId: 'a', status: 201, message: null },
+                { commandId: 'c', status: 422, message: 'Not assigned.' },
+            ],
+        );
+        assert.deepEqual(readLocationBatchResults({ data: 'nope' }), []);
+        assert.deepEqual(readLocationBatchResults(null), []);
+    });
+
+    test('a batch tells the app about changes twice, not once per ping', async () => {
+        const { outbox } = await outboxWithPings(56, 25);
+        let notifications = 0;
+        outbox.subscribe(() => {
+            notifications += 1;
+        });
+
+        await outbox.processQueue({
+            shareLocationBatch: async (items: BatchCall) =>
+                items.map(({ commandId }) => ({
+                    commandId,
+                    status: 201,
+                    message: null,
+                })),
+        } as unknown as FieldApiClient);
+
+        // On subscribe, then once when the pings are marked as sending and
+        // once with the results.
+        assert.equal(notifications, 3);
     });
 });

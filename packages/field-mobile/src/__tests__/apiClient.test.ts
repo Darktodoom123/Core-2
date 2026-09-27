@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
-import { FieldApiClient, ApiClientError } from '../services/apiClient';
+import {
+    ApiClientError,
+    FieldApiClient,
+    LOCATION_BATCH_TIMEOUT_MS,
+} from '../services/apiClient';
 import type { DispatchJob } from '../types/index';
 
 describe('FieldApiClient', () => {
@@ -825,5 +829,96 @@ describe('FieldApiClient', () => {
         assert.equal(r2, 'shared-new-token');
         assert.equal(r3, 'shared-new-token');
         assert.equal(refreshInvocations, 1);
+    });
+});
+
+describe('location batches', () => {
+    test('a hung batch request is given up as a timeout', async (context) => {
+        context.mock.timers.enable({ apis: ['setTimeout'] });
+        const hangingFetch = (_url: string, init: RequestInit) =>
+            new Promise<Response>((_resolve, reject) => {
+                init.signal?.addEventListener('abort', () =>
+                    reject(new Error('Aborted')),
+                );
+            });
+        const client = new FieldApiClient({
+            baseUrl: 'http://localhost:8000',
+            getToken: () => 'test-bearer-token-123',
+            fetchFn: hangingFetch as unknown as typeof fetch,
+        });
+
+        const sending = client.shareLocationBatch([
+            {
+                commandId: '11111111-1111-4111-8111-111111111111',
+                payload: {
+                    latitude: 14.5,
+                    longitude: 121,
+                    sharing_enabled: true,
+                    captured_at: '2026-09-28T08:00:00.000Z',
+                },
+            },
+        ]);
+        context.mock.timers.tick(LOCATION_BATCH_TIMEOUT_MS);
+
+        await assert.rejects(sending, (error: unknown) => {
+            assert.ok(error instanceof ApiClientError);
+            assert.equal(error.status, 408);
+            assert.equal(error.errorCode, 'TIMEOUT');
+
+            return true;
+        });
+    });
+
+    test('sends every ping with its own command id in one request', async () => {
+        const bodies: unknown[] = [];
+        const client = new FieldApiClient({
+            baseUrl: 'http://localhost:8000',
+            getToken: () => 'test-bearer-token-123',
+            fetchFn: (async (url: string, init: RequestInit) => {
+                bodies.push({ url, body: JSON.parse(String(init.body)) });
+
+                return new Response(
+                    JSON.stringify({
+                        data: [{ command_id: 'a', status: 201, message: null }],
+                    }),
+                    {
+                        status: 200,
+                        headers: { 'Content-Type': 'application/json' },
+                    },
+                );
+            }) as unknown as typeof fetch,
+        });
+
+        const answers = await client.shareLocationBatch([
+            {
+                commandId: 'a',
+                payload: {
+                    latitude: 14.5,
+                    longitude: 121,
+                    sharing_enabled: true,
+                    captured_at: '2026-09-28T08:00:00.000Z',
+                },
+            },
+        ]);
+
+        assert.deepEqual(answers, [
+            { commandId: 'a', status: 201, message: null },
+        ]);
+        assert.deepEqual(bodies, [
+            {
+                url: 'http://localhost:8000/api/v1/locations/batch',
+                body: {
+                    pings: [
+                        {
+                            latitude: 14.5,
+                            longitude: 121,
+                            sharing_enabled: true,
+                            captured_at: '2026-09-28T08:00:00.000Z',
+                            command_id: 'a',
+                        },
+                    ],
+                },
+            },
+        ]);
     });
 });

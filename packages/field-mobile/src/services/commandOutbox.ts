@@ -30,7 +30,7 @@ import type {
     SafetyHazardCommandPayload,
     WorkStoppageCommandPayload,
 } from '../types/index';
-import type { FieldApiClient } from './apiClient';
+import type { FieldApiClient, LocationBatchResult } from './apiClient';
 import { ApiClientError } from './apiClient';
 import { durableAttachmentStorage } from './durableAttachmentStorage';
 import {
@@ -40,6 +40,7 @@ import {
     pingCanBeResent,
     pingIsSettledAside,
 } from './outboxDependencies';
+import { answersFor, collectPingBatch } from './outboxPingBatch';
 
 export type OutboxListener = (commands: OutboxCommand[]) => void;
 
@@ -121,6 +122,14 @@ function commandScope(command: OutboxCommand): string {
     return command.jobId === null || command.jobId === undefined
         ? `command:${command.id}`
         : `job:${command.jobId}`;
+}
+
+function canRefreshToken(apiClient: FieldApiClient): boolean {
+    const client = apiClient as unknown as { canRefreshToken?: () => boolean };
+
+    return typeof client.canRefreshToken === 'function'
+        ? client.canRefreshToken()
+        : typeof apiClient.refreshToken === 'function';
 }
 
 function emptyResult(): OutboxProcessResult {
@@ -208,6 +217,8 @@ function isVerifiedServerRejection(command: OutboxCommand): boolean {
 export class CommandOutboxManager {
     private commands = new Map<string, OutboxCommand>();
     private listeners = new Set<OutboxListener>();
+    private quietDepth = 0;
+    private notifyPending = false;
     private processingActors = new Set<number>();
     private refreshAttemptedCommands = new Set<string>();
     private activeActorId: number | null = null;
@@ -245,10 +256,35 @@ export class CommandOutboxManager {
     }
 
     private notify(): void {
+        if (this.quietDepth > 0) {
+            this.notifyPending = true;
+
+            return;
+        }
+
         const list = this.getCommands();
 
         for (const listener of this.listeners) {
             listener(list);
+        }
+    }
+
+    /**
+     * Saves made inside `work` tell listeners once at the end instead of
+     * once each; a batch of pings would otherwise re-render the app per ping.
+     */
+    private async quietly<T>(work: () => Promise<T>): Promise<T> {
+        this.quietDepth += 1;
+
+        try {
+            return await work();
+        } finally {
+            this.quietDepth -= 1;
+
+            if (this.quietDepth === 0 && this.notifyPending) {
+                this.notifyPending = false;
+                this.notify();
+            }
         }
     }
 
@@ -752,9 +788,10 @@ export class CommandOutboxManager {
 
         this.processingActors.add(actorId);
         const blockedScopes = new Set<string>();
+        const sentInBatch = new Set<string>();
 
         try {
-            for (const command of this.getCommands().sort((left, right) => {
+            const ordered = this.getCommands().sort((left, right) => {
                 const leftPriority = left.priority === 'emergency' ? 0 : 1;
                 const rightPriority = right.priority === 'emergency' ? 0 : 1;
 
@@ -763,7 +800,13 @@ export class CommandOutboxManager {
                     Date.parse(left.createdAt) - Date.parse(right.createdAt) ||
                     left.id.localeCompare(right.id)
                 );
-            })) {
+            });
+
+            for (const command of ordered) {
+                if (sentInBatch.has(command.id)) {
+                    continue;
+                }
+
                 const scope = commandScope(command);
 
                 if (pingCanBeResent(command)) {
@@ -836,13 +879,40 @@ export class CommandOutboxManager {
                     continue;
                 }
 
-                await this.executeCommand(command, apiClient, result);
+                // A backlog of pings goes out many per request.
+                const batch =
+                    isLocationPing(command) &&
+                    typeof apiClient.shareLocationBatch === 'function'
+                        ? collectPingBatch(
+                              command,
+                              ordered,
+                              commandScope,
+                              this.now().getTime(),
+                          )
+                        : [command];
+
+                batch.forEach((item) => sentInBatch.add(item.id));
+
+                if (batch.length > 1) {
+                    await this.sendPingBatch(batch, apiClient, result);
+                } else {
+                    await this.executeCommand(command, apiClient, result);
+                }
 
                 if (result.requiresAuthentication) {
                     break;
                 }
 
-                if (this.commands.get(command.id)?.state !== 'completed') {
+                if (
+                    batch.some((item) => {
+                        const state = this.commands.get(item.id);
+
+                        return (
+                            state?.state !== 'completed' &&
+                            !(state && pingIsSettledAside(state))
+                        );
+                    })
+                ) {
                     blockedScopes.add(scope);
                 }
             }
@@ -1646,15 +1716,7 @@ export class CommandOutboxManager {
                 );
             }
 
-            command.state = 'completed';
-            command.stage = null;
-            command.stageMessage = null;
-            command.error = null;
-            command.nextAttemptAt = null;
-            command.completedAt = this.now().toISOString();
-            this.lastSuccessfulSyncAt = command.completedAt;
-            await this.persist(command);
-            result.completed += 1;
+            await this.markCompleted(command, result);
 
             return response;
         } catch (error: unknown) {
@@ -1664,18 +1726,7 @@ export class CommandOutboxManager {
                     error !== null &&
                     (error as Record<string, unknown>).status === 401);
 
-            const canRefresh =
-                typeof (
-                    apiClient as unknown as {
-                        canRefreshToken?: () => boolean;
-                    }
-                ).canRefreshToken === 'function'
-                    ? (
-                          apiClient as unknown as {
-                              canRefreshToken: () => boolean;
-                          }
-                      ).canRefreshToken()
-                    : typeof apiClient.refreshToken === 'function';
+            const canRefresh = canRefreshToken(apiClient);
 
             if (
                 isUnauthorized &&
@@ -1703,6 +1754,93 @@ export class CommandOutboxManager {
 
             return null;
         }
+    }
+
+    /**
+     * Sends pings in one request and settles each from its own answer, the
+     * same way a single ping would be settled.
+     */
+    private async sendPingBatch(
+        batch: OutboxCommand[],
+        apiClient: FieldApiClient,
+        result: OutboxProcessResult,
+        afterTokenRefresh = false,
+    ): Promise<void> {
+        const startedAt = this.now().toISOString();
+
+        await this.quietly(async () => {
+            for (const command of batch) {
+                command.state = 'syncing';
+                command.nextAttemptAt = null;
+                command.attempts += 1;
+                command.lastAttemptAt = startedAt;
+                await this.persist(command);
+            }
+        });
+
+        let answers: LocationBatchResult[];
+
+        try {
+            answers = await apiClient.shareLocationBatch(
+                batch.map((command) => ({
+                    commandId: command.id,
+                    payload: command.payload as unknown as LocationSharePayload,
+                })),
+            );
+        } catch (error: unknown) {
+            // Same as a single command: refresh an expired sign-in once.
+            if (
+                error instanceof ApiClientError &&
+                error.status === 401 &&
+                !afterTokenRefresh &&
+                canRefreshToken(apiClient) &&
+                (await apiClient.refreshToken().catch(() => null))
+            ) {
+                return this.sendPingBatch(batch, apiClient, result, true);
+            }
+
+            await this.quietly(async () => {
+                for (const command of batch) {
+                    await this.handleExecutionFailure(command, error, result);
+                }
+            });
+
+            return;
+        }
+
+        await this.quietly(async () => {
+            for (const [command, answer] of answersFor(batch, answers)) {
+                if (!answer) {
+                    await this.deferRetry(command, result);
+                } else if (answer.status >= 200 && answer.status < 300) {
+                    await this.markCompleted(command, result);
+                } else {
+                    await this.handleExecutionFailure(
+                        command,
+                        new ApiClientError(
+                            answer.message ?? 'The server refused this ping.',
+                            answer.status,
+                        ),
+                        result,
+                    );
+                }
+            }
+        });
+    }
+
+    private async markCompleted(
+        command: OutboxCommand,
+        result: OutboxProcessResult,
+    ): Promise<void> {
+        command.state = 'completed';
+        command.stage = null;
+        command.stageMessage = null;
+        command.error = null;
+        command.nextAttemptAt = null;
+        command.completedAt = this.now().toISOString();
+        this.lastSuccessfulSyncAt = command.completedAt;
+        await this.persist(command);
+        result.completed += 1;
     }
 
     private async handleExecutionFailure(
