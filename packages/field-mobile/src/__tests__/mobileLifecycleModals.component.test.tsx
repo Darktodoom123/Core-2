@@ -549,108 +549,29 @@ describe('Mobile Lifecycle Modals & Operational Safeguards', () => {
             ).toBeNull();
         });
 
-        it('goes off duty without asking to release a unit when there is no unit', async () => {
-            const onChangeDutyStatus = jest.fn();
-            const onReleaseUnit = jest.fn();
-
+        it('shows an honest duty line with no shift, never Unavailable', async () => {
             const view = await render(
                 <AssignedJobsListScreen
                     isLoading={false}
                     jobs={[]}
-                    onChangeDutyStatus={onChangeDutyStatus}
                     onRefresh={jest.fn()}
-                    onReleaseUnit={onReleaseUnit}
                     onSelectJob={jest.fn()}
                     onSosHoldComplete={jest.fn()}
                     outboxCommands={[]}
                     shiftInfo={{
-                        status: 'on_shift',
-                        dutyStatus: 'standby',
-                        startedAt: '08:00 AM',
-                        hoursElapsed: 2.0,
+                        status: 'off_shift',
+                        dutyStatus: 'off_duty',
+                        startedAt: null,
+                        hoursElapsed: null,
                     }}
                 />,
             );
 
-            await fireEvent.press(view.getByTestId('hero-duty-status-bar'));
-            await fireEvent.press(
-                view.getByLabelText(/Off Duty — Shift Complete/i),
+            expect(view.getByTestId('hero-duty-status-bar')).toHaveTextContent(
+                /No shift running/,
             );
-            await fireEvent.press(view.getByTestId('confirm-duty-status-btn'));
-
-            expect(view.queryByTestId('end-shift-safeguard-modal')).toBeNull();
+            expect(view.queryByText(/Unavailable/)).toBeNull();
             expect(view.queryByText(/UNASSIGNED/)).toBeNull();
-            expect(onReleaseUnit).not.toHaveBeenCalled();
-            expect(onChangeDutyStatus.mock.calls[0][0]).toBe('off_duty');
-        });
-
-        it('intercepts off_duty selection from DutyStatusSelectorModal with EndShiftSafeguardModal when linked to an active unit', async () => {
-            const onChangeDutyStatus = jest.fn();
-            const onToggleShift = jest.fn();
-            const onReleaseUnit = jest.fn();
-
-            const view = await render(
-                <AssignedJobsListScreen
-                    isLoading={false}
-                    jobs={[mockAcceptedJob]}
-                    onChangeDutyStatus={onChangeDutyStatus}
-                    onRefresh={jest.fn()}
-                    onReleaseUnit={onReleaseUnit}
-                    onSelectJob={jest.fn()}
-                    onSosHoldComplete={jest.fn()}
-                    onToggleShift={onToggleShift}
-                    outboxCommands={[]}
-                    shiftInfo={{
-                        status: 'on_shift',
-                        dutyStatus: 'operating',
-                        startedAt: '08:00 AM',
-                        hoursElapsed: 5.0,
-                    }}
-                />,
-            );
-
-            // Open DutyStatusSelectorModal via persistent duty status bar
-            await fireEvent.press(view.getByTestId('hero-duty-status-bar'));
-            expect(view.getByTestId('duty-status-sheet')).toBeTruthy();
-
-            // Select off_duty
-            await fireEvent.press(
-                view.getByLabelText(/Off Duty — Shift Complete/i),
-            );
-
-            // Confirm selection
-            await fireEvent.press(view.getByTestId('confirm-duty-status-btn'));
-
-            // EndShiftSafeguardModal should appear immediately because linked to asset
-            expect(view.getByTestId('end-shift-safeguard-modal')).toBeTruthy();
-            expect(view.getByText(/You are still linked to/i)).toBeTruthy();
-            expect(onChangeDutyStatus).not.toHaveBeenCalled();
-            expect(onToggleShift).not.toHaveBeenCalled();
-            expect(onReleaseUnit).not.toHaveBeenCalled();
-
-            // When cancelling, shift is not ended
-            await fireEvent.press(view.getByTestId('cancel-safeguard-btn'));
-            expect(view.queryByTestId('end-shift-safeguard-modal')).toBeNull();
-            expect(onChangeDutyStatus).not.toHaveBeenCalled();
-            expect(onToggleShift).not.toHaveBeenCalled();
-            expect(onReleaseUnit).not.toHaveBeenCalled();
-
-            // Reopen and confirm release
-            await fireEvent.press(view.getByTestId('hero-duty-status-bar'));
-            await fireEvent.press(
-                view.getByLabelText(/Off Duty — Shift Complete/i),
-            );
-            await fireEvent.press(view.getByTestId('confirm-duty-status-btn'));
-            expect(view.getByTestId('end-shift-safeguard-modal')).toBeTruthy();
-
-            await fireEvent.press(view.getByTestId('confirm-safeguard-btn'));
-            expect(onReleaseUnit).toHaveBeenCalledWith('CRN-101');
-            expect(onToggleShift).toHaveBeenCalledWith('off_shift');
-            expect(onChangeDutyStatus).toHaveBeenCalledWith(
-                'off_duty',
-                undefined,
-                undefined,
-            );
         });
     });
 

@@ -7,7 +7,6 @@ import {
 import '@testing-library/react-native/matchers';
 import React from 'react';
 import { StyleSheet } from 'react-native';
-import { DutyStatusSelectorModal } from '../components/sheets/DutyStatusSelectorModal';
 import { AssignedJobsListScreen } from '../screens/AssignedJobsListScreen';
 import { DocumentsWalletScreen } from '../screens/DocumentsWalletScreen';
 
@@ -102,90 +101,15 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
         ],
     };
 
-    describe('DutyStatusSelectorModal', () => {
-        it('renders 5 heavy equipment duty states with shift fatigue gauge', async () => {
-            const onSelect = jest.fn();
-            const onClose = jest.fn();
-
-            const view = await render(
-                <DutyStatusSelectorModal
-                    currentDutyStatus="operating"
-                    hoursElapsed={4.5}
-                    maxShiftHours={10}
-                    onClose={onClose}
-                    onSelectDutyStatus={onSelect}
-                    visible={true}
-                />,
-            );
-
-            expect(view.getByText('Select Duty Status')).toBeTruthy();
-            expect(
-                view.getByText('Shift Duty Clock: 4.5h / 10h Limit'),
-            ).toBeTruthy();
-            expect(
-                view.getByText('On Duty — Crane / Machine Operating'),
-            ).toBeTruthy();
-            expect(view.getByText('On Duty — Driving / Transit')).toBeTruthy();
-            expect(
-                view.getByText('On Duty — Standby / Delay (Demurrage)'),
-            ).toBeTruthy();
-            expect(
-                view.getByText('On Break — Meal / Rest Period'),
-            ).toBeTruthy();
-            expect(view.getByText('Off Duty — Shift Complete')).toBeTruthy();
-        });
-
-        it('shows billable demurrage reasons when standby is selected', async () => {
-            const onSelect = jest.fn();
-            const onClose = jest.fn();
-
-            const view = await render(
-                <DutyStatusSelectorModal
-                    currentDutyStatus="operating"
-                    hoursElapsed={5.0}
-                    maxShiftHours={10}
-                    onClose={onClose}
-                    onSelectDutyStatus={onSelect}
-                    visible={true}
-                />,
-            );
-
-            // Select standby option
-            await fireEvent.press(view.getByTestId('duty-option-standby'));
-            expect(view.getByTestId('standby-reason-section')).toBeTruthy();
-            expect(
-                view.getByText('STANDBY REASON (DEMURRAGE BILLING)'),
-            ).toBeTruthy();
-
-            // Select weather hold reason
-            await fireEvent.press(view.getByTestId('reason-weather_hold'));
-
-            // Enter optional remarks
-            await fireEvent.changeText(
-                view.getByTestId('duty-remarks-input'),
-                'Typhoon Signal 2 gusts at 45kph - site crane operations halted by Safety Officer.',
-            );
-
-            // Confirm
-            await fireEvent.press(view.getByTestId('confirm-duty-status-btn'));
-            expect(onSelect).toHaveBeenCalledWith(
-                'standby',
-                'weather_hold',
-                'Typhoon Signal 2 gusts at 45kph - site crane operations halted by Safety Officer.',
-            );
-            expect(onClose).toHaveBeenCalled();
-        });
-    });
-
     describe('AssignedJobsListScreen Persistent Duty Bar', () => {
-        it('updates persistent duty status when confirmed via selector modal', async () => {
-            const onChangeDutyStatus = jest.fn();
+        it('opens Hours of Service from the duty bar; there is no second picker on home', async () => {
+            const onOpenHos = jest.fn();
 
             const view = await render(
                 <AssignedJobsListScreen
                     isLoading={false}
                     jobs={[mockJob]}
-                    onChangeDutyStatus={onChangeDutyStatus}
+                    onOpenHos={onOpenHos}
                     onRefresh={jest.fn()}
                     onSelectJob={jest.fn()}
                     onSosHoldComplete={jest.fn()}
@@ -194,33 +118,19 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
                         status: 'on_shift',
                         dutyStatus: 'operating',
                         hoursElapsed: 4.0,
+                        limitCounterMinutes: 180,
                     }}
                 />,
             );
 
-            // Initially operating
             expect(view.getByText('On Duty — Crane Operating')).toBeTruthy();
-            expect(view.getByText('OPR')).toBeTruthy();
+            expect(
+                view.getByText('3h 00m of 10h operating + driving'),
+            ).toBeTruthy();
 
-            // Open duty modal by tapping persistent duty bar
             await fireEvent.press(view.getByTestId('hero-duty-status-bar'));
-            expect(view.getByTestId('duty-status-sheet')).toBeTruthy();
-
-            // Select Standby
-            await fireEvent.press(view.getByTestId('duty-option-standby'));
-            await fireEvent.press(view.getByTestId('reason-waiting_on_client'));
-
-            // Confirm
-            await fireEvent.press(view.getByTestId('confirm-duty-status-btn'));
-            expect(onChangeDutyStatus).toHaveBeenCalledWith(
-                'standby',
-                'waiting_on_client',
-                undefined,
-            );
-
-            // Verified immediate update on screen
-            expect(view.getByText('On Duty — Standby / Delay')).toBeTruthy();
-            expect(view.getByText('SBY')).toBeTruthy();
+            expect(onOpenHos).toHaveBeenCalled();
+            expect(view.queryByTestId('duty-status-sheet')).toBeNull();
         });
 
         it('renders neutral launcher tiles in a non-scrolling grid with user-friendly text', async () => {

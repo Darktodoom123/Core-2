@@ -28,8 +28,6 @@ import { HomeTileGrid } from '../components/layout/home-tile-grid';
 import { colors, shadows } from '../components/nativeStyles';
 import { SyncStatusPanel } from '../components/panels/sync-status-panel';
 import { DispatchIntakeSheet } from '../components/sheets/DispatchIntakeSheet';
-import { DutyStatusSelectorModal } from '../components/sheets/DutyStatusSelectorModal';
-import { EndShiftSafeguardModal } from '../components/sheets/EndShiftSafeguardModal';
 import { NotificationsSheet } from '../components/sheets/notifications-sheet';
 import { OnSiteConfirmationModal } from '../components/sheets/OnSiteConfirmationModal';
 import { OutboxStatusSheet } from '../components/sheets/OutboxStatusSheet';
@@ -51,10 +49,10 @@ import type {
     OutboxCommand,
     ReportDelayPayload,
     ShiftInfo,
-    ShiftStatus,
     StandbyReason,
     WeatherTelemetry,
 } from '../types/index';
+import { DOLE_CAP_HOURS, formatHoursMinutes } from './hos/hos-constants';
 
 export interface AssignedJobsListScreenProps {
     jobs: DispatchJob[];
@@ -87,7 +85,6 @@ export interface AssignedJobsListScreenProps {
         nextStatus: DispatchStatus,
         version: number,
     ) => void;
-    onToggleShift?: (nextStatus: ShiftStatus) => void;
     onChangeDutyStatus?: (
         dutyStatus: DutyStatus,
         standbyReason?: StandbyReason,
@@ -163,7 +160,6 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     onAcceptAssignment,
     onRejectAssignment,
     onTransitionStatus,
-    onToggleShift,
     onChangeDutyStatus,
     onOpenDvir,
     onOpenHos,
@@ -201,21 +197,16 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     isAuthenticated = true,
     onRecaptureAttachment,
 }) => {
-    const { isDarkHud } = useTheme();
+    const { isDarkHud, theme } = useTheme();
     const [delayModalJob, setDelayModalJob] = useState<DispatchJob | null>(
         null,
     );
-    const [dutyModalOpen, setDutyModalOpen] = useState(false);
     const [profileSheetOpen, setProfileSheetOpen] = useState(false);
     const [notificationsSheetOpen, setNotificationsSheetOpen] = useState(false);
     const [outboxSheetOpen, setOutboxSheetOpen] = useState(false);
     const [signOutConfirmationOpen, setSignOutConfirmationOpen] =
         useState(false);
-    const [endShiftSafeguardOpen, setEndShiftSafeguardOpen] = useState(false);
     const [dispatchIntakeOpen, setDispatchIntakeOpen] = useState(false);
-    const [pendingOffDutyRemarks, setPendingOffDutyRemarks] = useState<
-        string | undefined
-    >(undefined);
     const [onSiteConfirmationOpen, setOnSiteConfirmationOpen] = useState(false);
     const [reliefHandoverOpen, setReliefHandoverOpen] = useState(false);
     const [reliefHandoverMode, setReliefHandoverMode] = useState<
@@ -320,20 +311,19 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
             ? overriddenDutyStatus.localStatus
             : (shiftInfo.dutyStatus ?? 'operating');
 
+    // Duty categories have their own colours; brand gold is never a duty.
     const getDutyColor = (duty: DutyStatus): string => {
         switch (duty) {
             case 'operating':
-                return '#FFBF00';
+                return theme.dutyOnDuty;
             case 'driving':
-                return '#2563EB';
+                return theme.dutyDriving;
             case 'standby':
-                return '#FFBF00';
+                return theme.dutyStandby;
             case 'on_break':
-                return '#059669';
-            case 'off_duty':
-                return '#475569';
+                return theme.successEmerald;
             default:
-                return colors.amberDark;
+                return theme.textSecondary;
         }
     };
 
@@ -393,11 +383,16 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
             ? localDefectLockout
             : preTripDefectLockout || currentDvirStatus === 'defect';
     const hosCompliance = useHosCompliance(shiftInfo);
-    const hoursElapsed = hosCompliance.hoursElapsed;
     const isDoleWarning = hosCompliance.isDoleWarning;
     const isDoleCapExceeded = hosCompliance.isDoleCapExceeded;
-    const elapsedClock = hosCompliance.elapsedClock;
-    const limitCounterLabel = hosCompliance.limitCounterLabel;
+    // One honest line under the duty status: no shift, the DOLE counter,
+    // or that the server hasn't sent totals yet.
+    const dutySummary =
+        currentDuty === 'off_duty'
+            ? 'No shift running'
+            : hosCompliance.limitCounterHours === null
+              ? 'Waiting for server totals'
+              : `${formatHoursMinutes(hosCompliance.limitCounterHours)} of ${DOLE_CAP_HOURS}h operating + driving`;
 
     // Only a claim the server accepted links the unit on this phone.
     const handleHandoverClaimed = (claim: EquipmentHandoverClaimResponse) => {
@@ -482,11 +477,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 onOpenFuel?.();
                 break;
             case 'hos':
-                if (onOpenHos) {
-                    onOpenHos();
-                } else {
-                    setDutyModalOpen(true);
-                }
+                onOpenHos?.();
 
                 break;
             case 'dvir':
@@ -786,10 +777,10 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
 
                 {/* Samsara-Style Persistent Duty Status Bar */}
                 <Pressable
-                    accessibilityHint="Tap to change active duty status or view shift fatigue gauge"
-                    accessibilityLabel={`Duty status: ${getDutyLabel(currentDuty)}, ${hoursElapsed === null ? 'hours unavailable' : `${hoursElapsed.toFixed(1)} hours active`}`}
+                    accessibilityHint="Opens Hours of Service"
+                    accessibilityLabel={`Duty status: ${getDutyLabel(currentDuty)}, ${dutySummary}`}
                     accessibilityRole="button"
-                    onPress={() => setDutyModalOpen(true)}
+                    onPress={() => onOpenHos?.()}
                     style={({ pressed }) => [
                         styles.dutyStatusBar,
                         isDarkHud && styles.darkDutyStatusBar,
@@ -807,13 +798,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                             <Text
                                 style={[
                                     styles.dutyBadgeText,
-                                    {
-                                        color:
-                                            currentDuty === 'operating' ||
-                                            currentDuty === 'standby'
-                                                ? '#0F172A'
-                                                : '#FFFFFF',
-                                    },
+                                    { color: theme.textInverse },
                                 ]}
                             >
                                 {getDutyBadge(currentDuty)}
@@ -834,7 +819,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                     isDarkHud && styles.darkDutyStatusElapsed,
                                 ]}
                             >
-                                ({elapsedClock} elapsed · {limitCounterLabel})
+                                {dutySummary}
                             </Text>
                         </View>
                     </View>
@@ -1304,41 +1289,6 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 onSelect={handleNavSelect}
             />
 
-            {/* Duty Status Selector Sheet Modal */}
-            <DutyStatusSelectorModal
-                currentDutyStatus={currentDuty}
-                hoursElapsed={hoursElapsed}
-                maxShiftHours={shiftInfo.maxShiftHours ?? 10}
-                onClose={() => setDutyModalOpen(false)}
-                onSelectDutyStatus={(status, reason, remarks) => {
-                    if (status === 'off_duty') {
-                        if (assetCode) {
-                            setDutyModalOpen(false);
-                            setPendingOffDutyRemarks(remarks);
-                            setEndShiftSafeguardOpen(true);
-
-                            return;
-                        }
-
-                        setOverriddenDutyStatus({
-                            propStatus: shiftInfo.dutyStatus,
-                            localStatus: 'off_duty',
-                        });
-                        onToggleShift?.('off_shift');
-                        onChangeDutyStatus?.(status, reason, remarks);
-
-                        return;
-                    }
-
-                    setOverriddenDutyStatus({
-                        propStatus: shiftInfo.dutyStatus,
-                        localStatus: status,
-                    });
-                    onChangeDutyStatus?.(status, reason, remarks);
-                }}
-                visible={dutyModalOpen}
-            />
-
             {/* Dispatch Focused Assignment Intake Sheet */}
             <DispatchIntakeSheet
                 apiClient={apiClient}
@@ -1501,32 +1451,6 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                     }
                 }}
                 visible={onSiteConfirmationOpen}
-            />
-
-            {/* End Shift Safeguard Intercept Modal */}
-            <EndShiftSafeguardModal
-                assetCode={effectiveAssetCode || undefined}
-                onCancel={() => {
-                    setEndShiftSafeguardOpen(false);
-                    setPendingOffDutyRemarks(undefined);
-                }}
-                onConfirmReleaseAndClockOut={() => {
-                    setEndShiftSafeguardOpen(false);
-                    setIsLinkedLocal(false);
-                    onReleaseUnit?.(effectiveAssetCode);
-                    setOverriddenDutyStatus({
-                        propStatus: shiftInfo.dutyStatus,
-                        localStatus: 'off_duty',
-                    });
-                    onToggleShift?.('off_shift');
-                    onChangeDutyStatus?.(
-                        'off_duty',
-                        undefined,
-                        pendingOffDutyRemarks,
-                    );
-                    setPendingOffDutyRemarks(undefined);
-                }}
-                visible={endShiftSafeguardOpen}
             />
 
             {/* Smart Dual Hot-Seating Relief Handover Modal */}

@@ -3010,7 +3010,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                             );
                                         }
                                     }}
-                                    onToggleShift={handleToggleShift}
                                     outboxCommands={outboxCommands}
                                     isAuthenticated={status === 'authenticated'}
                                     lastSuccessfulSyncAt={commandOutbox.getLastSuccessfulSyncAt()}
