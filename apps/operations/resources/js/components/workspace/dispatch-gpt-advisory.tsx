@@ -225,6 +225,11 @@ function LegacyDispatchGptAdvisory({
             {selectedForAccept && (
                 <AcceptGptModal
                     rec={selectedForAccept}
+                    job={job}
+                    manualAssignmentUrl={assignmentWorkspaceUrl(
+                        job.id,
+                        returnTo,
+                    )}
                     initialPersonnelIds={modalPersonnelIds}
                     initialAssetIds={modalAssetIds}
                     onClose={() => {

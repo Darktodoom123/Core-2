@@ -190,7 +190,7 @@ export function DispatchAdvisoryCard({
     const personnel = rec?.proposed_personnel ?? [];
     const assets = rec?.proposed_assets ?? [];
     const hasResources = personnel.length > 0 || assets.length > 0;
-    const showResources = !pending && hasResources;
+    const showResources = !pending && hasResources && !expired && !stale;
     const status = pending
         ? processing
             ? 'Checking resources'
@@ -394,6 +394,14 @@ export function DispatchAdvisoryCard({
                                         />
                                         Refresh suggestions
                                     </Button>
+                                    {manualUrl && (
+                                        <Link
+                                            href={manualUrl}
+                                            className="mt-2 inline-flex min-h-11 items-center font-medium text-brand-strong underline"
+                                        >
+                                            Assign resources manually
+                                        </Link>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -455,6 +463,13 @@ export function DispatchAdvisoryCard({
                             </div>
                         </div>
                     </div>
+                )}
+
+                {(expired || stale) && hasResources && (
+                    <p className="rounded-lg bg-surface-subtle p-3 text-xs text-ink-soft">
+                        The previous proposal is hidden because its resource
+                        check is no longer current.
+                    </p>
                 )}
 
                 {showResources ? (
@@ -891,7 +906,7 @@ export function DispatchAdvisoryCard({
                                     )
                                 }
                             >
-                                Review &amp; Resolve Conflicts
+                                Review suggested assignments
                             </Button>
                         ) : (
                             <>

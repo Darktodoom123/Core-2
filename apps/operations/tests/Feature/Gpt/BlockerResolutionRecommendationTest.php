@@ -76,6 +76,7 @@ test('no eligible option yields useful deterministic advice without a model call
     expect($rec->status->value)->toBe('pending_review')
         ->and($rec->model)->toBe('rules')
         ->and($rec->recommendation['blocker']['code'])->toBe('missing_personnel')
+        ->and($rec->recommendation['summary'])->toContain('No eligible crane operator was found')
         ->and($rec->recommendation['options'])->toBe([])
         ->and(OpenAiClientWrapper::recordedRequests())->toBeEmpty()
         ->and(Cache::get('gpt_rate_limit:system:'.now()->format('Y-m-d')))->toBeNull();

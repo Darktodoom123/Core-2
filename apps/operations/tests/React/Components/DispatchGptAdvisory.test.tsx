@@ -201,7 +201,7 @@ describe('dispatch GPT advisory', () => {
         );
 
         expect(
-            screen.getByText('AI dispatch blocker assistance'),
+            screen.getByText('AI-ranked resource options'),
         ).toBeInTheDocument();
         expect(screen.getByText('Suggested operator')).toBeInTheDocument();
         expect(
@@ -209,7 +209,7 @@ describe('dispatch GPT advisory', () => {
         ).not.toBeInTheDocument();
         expect(
             screen.getByRole('link', {
-                name: /review option in assignment workflow/i,
+                name: /review suggested operator for crane operator/i,
             }),
         ).toHaveAttribute(
             'href',
@@ -240,6 +240,64 @@ describe('dispatch GPT advisory', () => {
         expect(
             screen.getByText(/no AI model was used for this result/i),
         ).toBeInTheDocument();
+    });
+
+    it('shows comparable blocker facts and freshness without a manager-only history dead end', () => {
+        render(
+            <DispatchGptAdvisory
+                job={job(10)}
+                capabilities={capabilities({
+                    blocker_resolution_enabled: true,
+                    view_gpt_governance: false,
+                })}
+                recommendations={[
+                    recommendation({
+                        purpose: 'dispatch_blocker_resolution',
+                        generated_at: '2026-09-05T08:00:00+08:00',
+                        expires_at: '2099-09-05T08:15:00+08:00',
+                        recommendation: {
+                            job_version: 1,
+                            summary: 'Review eligible crew.',
+                            blocker: {
+                                code: 'missing_personnel',
+                                resource_kind: 'personnel',
+                                action: 'assign',
+                                assignment_type: 'crane_operator',
+                            },
+                        },
+                        blocker_options: [
+                            {
+                                id: 1,
+                                candidate_id: 2,
+                                candidate_name: 'Sam Cruz',
+                                resource_kind: 'personnel',
+                                assignment_type: 'crane_operator',
+                                explanation:
+                                    'Recorded availability is available.',
+                                evidence: {
+                                    availability: 'available',
+                                    credential: 'valid',
+                                    schedule_conflicts: 0,
+                                },
+                            },
+                        ],
+                    }),
+                ]}
+            />,
+        );
+
+        expect(
+            screen.queryByRole('link', { name: 'Advice history' }),
+        ).not.toBeInTheDocument();
+        expect(screen.getByText('Find a crane operator')).toBeInTheDocument();
+        expect(screen.getByText(/checked /i)).toBeInTheDocument();
+        expect(screen.getByText(/valid until /i)).toBeInTheDocument();
+        expect(screen.getByText('No overlap found')).toBeInTheDocument();
+        expect(
+            screen.getByRole('link', {
+                name: 'Review Sam Cruz for crane operator',
+            }),
+        ).toHaveClass('min-h-11');
     });
 
     it('sends project shifts to Fill coverage without requesting AI', () => {
@@ -848,7 +906,7 @@ describe('dispatch GPT advisory', () => {
         ).not.toBeInTheDocument();
 
         const reviewConflictsButton = screen.getByRole('button', {
-            name: 'Review & Resolve Conflicts',
+            name: 'Review suggested assignments',
         });
         expect(reviewConflictsButton).toBeInTheDocument();
 
@@ -870,6 +928,112 @@ describe('dispatch GPT advisory', () => {
                 'Operator shift limit exceeded on this date',
             ),
         ).toBeInTheDocument();
+    });
+
+    it('names the crane still required when saving a partial AI suggestion', () => {
+        render(
+            <DispatchGptAdvisory
+                job={{
+                    ...job(10),
+                    resource_requirements: {
+                        personnel: { crane_operator: 1 },
+                        assets: { crane: 1 },
+                    },
+                }}
+                capabilities={capabilities()}
+                recommendations={[
+                    recommendation({
+                        proposed_assets: [],
+                        conflicts: [{ reason: 'No eligible crane was found.' }],
+                    }),
+                ]}
+            />,
+        );
+
+        fireEvent.click(
+            screen.getByRole('button', {
+                name: 'Review suggested assignments',
+            }),
+        );
+        const dialog = screen.getByRole('dialog');
+        expect(
+            within(dialog).getByText('Review partial assignment'),
+        ).toBeInTheDocument();
+        expect(within(dialog).getByText('1 crane')).toBeInTheDocument();
+        expect(
+            within(dialog).getByText(
+                /does not make the dispatch ready to activate/i,
+            ),
+        ).toBeInTheDocument();
+        expect(
+            within(dialog).getByRole('button', {
+                name: 'Save 1 crew; 1 crane still required',
+            }),
+        ).toBeEnabled();
+        expect(
+            within(dialog).getByRole('link', {
+                name: 'Find remaining resources manually',
+            }),
+        ).toHaveAttribute(
+            'href',
+            expect.stringContaining('/operations/dispatch-jobs/10'),
+        );
+        expect(router.post).not.toHaveBeenCalled();
+    });
+
+    it('updates remaining requirements when the manager changes the review selection', () => {
+        render(
+            <DispatchGptAdvisory
+                job={{
+                    ...job(10),
+                    resource_requirements: {
+                        personnel: { crane_operator: 1 },
+                        assets: { crane: 1 },
+                    },
+                }}
+                capabilities={capabilities()}
+                recommendations={[
+                    recommendation({
+                        proposed_assets: [
+                            {
+                                operational_asset_id: 4,
+                                name: '220T Crane',
+                                asset_code: 'CR-220',
+                                assignment_type: 'crane',
+                            },
+                        ],
+                        conflicts: [
+                            { reason: 'Check crane capacity before dispatch.' },
+                        ],
+                    }),
+                ]}
+            />,
+        );
+
+        fireEvent.click(
+            screen.getByRole('button', {
+                name: 'Review suggested assignments',
+            }),
+        );
+        const dialog = screen.getByRole('dialog');
+        expect(
+            within(dialog).getByText('Review crew & equipment'),
+        ).toBeInTheDocument();
+        fireEvent.click(
+            within(dialog).getByRole('checkbox', {
+                name: 'Select CR-220 · 220T Crane',
+            }),
+        );
+        expect(
+            within(dialog).getByText('Review partial assignment'),
+        ).toBeInTheDocument();
+        expect(within(dialog).getByText('1 crane')).toBeInTheDocument();
+        expect(
+            within(dialog).getByRole('button', {
+                name: 'Save 1 crew; 1 crane still required',
+            }),
+        ).toBeEnabled();
+        expect(router.post).not.toHaveBeenCalled();
     });
 
     it('passes card selections into modal and submits updated modular selections', async () => {

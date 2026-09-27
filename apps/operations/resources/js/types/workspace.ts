@@ -1146,6 +1146,12 @@ export interface GptRecommendationViewModel {
         resource_kind: 'personnel' | 'asset';
         assignment_type: string;
         explanation: string;
+        evidence?: {
+            availability?: string;
+            credential?: string;
+            readiness?: string;
+            schedule_conflicts?: number;
+        };
     }> | null;
     proposed_personnel?: Array<{
         user_id: number;

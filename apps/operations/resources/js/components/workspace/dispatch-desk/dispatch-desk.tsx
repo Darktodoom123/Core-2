@@ -17,7 +17,7 @@ import {
     Users,
     X,
 } from 'lucide-react';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
     Button,
@@ -1586,7 +1586,42 @@ function DispatchReviewPanel({
     capabilities: WorkspaceCapabilities;
 }) {
     const [expandedJobId, setExpandedJobId] = useState<number | null>(null);
+    const [adviceNow, setAdviceNow] = useState(() => Date.now());
     const aiAssistanceRef = useRef<HTMLDivElement>(null);
+    const advicePurpose = capabilities.blocker_resolution_enabled
+        ? 'dispatch_blocker_resolution'
+        : 'dispatch_assignment';
+    const latestAdvice = recommendations
+        .filter(
+            (item) =>
+                item.subject_id === job?.id && item.purpose === advicePurpose,
+        )
+        .reduce<GptRecommendationViewModel | undefined>(
+            (latest, item) => (!latest || item.id > latest.id ? item : latest),
+            undefined,
+        );
+
+    useEffect(() => {
+        if (
+            !latestAdvice?.expires_at ||
+            latestAdvice.status !== 'pending_review'
+        ) {
+            return;
+        }
+
+        const expiresAt = Date.parse(latestAdvice.expires_at);
+
+        if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+            return;
+        }
+
+        const timer = window.setTimeout(
+            () => setAdviceNow(Date.now()),
+            expiresAt - Date.now() + 1,
+        );
+
+        return () => window.clearTimeout(timer);
+    }, [latestAdvice?.expires_at, latestAdvice?.status]);
 
     if (!job) {
         return (
@@ -1621,6 +1656,24 @@ function DispatchReviewPanel({
         ? href
         : href.replace(/#.*$/, '#dispatch-context');
     const assignmentHref = `/operations/dispatch-jobs/${job.id}?${new URLSearchParams({ return_to: returnTo }).toString()}#assignment-summary`;
+    const adviceExpired =
+        latestAdvice?.is_expired ||
+        (latestAdvice?.expires_at &&
+            Date.parse(latestAdvice.expires_at) <= adviceNow);
+    const adviceHint =
+        latestAdvice?.status === 'draft' ||
+        latestAdvice?.status === 'processing'
+            ? 'Checking resources'
+            : latestAdvice?.status === 'failed'
+              ? 'Check unavailable'
+              : latestAdvice?.status === 'pending_review' &&
+                  (adviceExpired || latestAdvice.is_stale)
+                ? 'Refresh needed'
+                : latestAdvice?.status === 'pending_review'
+                  ? capabilities.blocker_resolution_enabled
+                      ? `${latestAdvice.blocker_options?.length ?? 0} options ready`
+                      : 'Suggestion ready'
+                  : null;
 
     return (
         <section
@@ -1748,28 +1801,38 @@ function DispatchReviewPanel({
                             {!['completed', 'cancelled'].includes(
                                 job.status.value,
                             ) && (
-                                <button
-                                    type="button"
-                                    aria-controls="dispatch-ai-assistance"
-                                    onClick={() => {
-                                        aiAssistanceRef.current?.scrollIntoView(
-                                            {
-                                                behavior: 'smooth',
-                                                block: 'start',
-                                            },
-                                        );
-                                        aiAssistanceRef.current?.focus({
-                                            preventScroll: true,
-                                        });
-                                    }}
-                                    className="inline-flex min-h-9 items-center gap-1.5 self-start rounded-md border border-line/60 bg-surface px-2.5 text-xs font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden sm:self-auto"
-                                >
-                                    <Sparkles
-                                        className="h-3.5 w-3.5 text-brand-strong"
-                                        aria-hidden="true"
-                                    />
-                                    <span>AI assistance</span>
-                                </button>
+                                <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+                                    <button
+                                        type="button"
+                                        aria-controls="dispatch-ai-assistance"
+                                        onClick={() => {
+                                            aiAssistanceRef.current?.scrollIntoView(
+                                                {
+                                                    behavior: 'smooth',
+                                                    block: 'start',
+                                                },
+                                            );
+                                            aiAssistanceRef.current?.focus({
+                                                preventScroll: true,
+                                            });
+                                        }}
+                                        className="inline-flex min-h-9 items-center gap-1.5 self-start rounded-md border border-line/60 bg-surface px-2.5 text-xs font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden sm:self-auto"
+                                    >
+                                        <Sparkles
+                                            className="h-3.5 w-3.5 text-brand-strong"
+                                            aria-hidden="true"
+                                        />
+                                        <span>AI assistance</span>
+                                    </button>
+                                    {adviceHint && (
+                                        <span
+                                            role="status"
+                                            className="text-xs text-ink-soft"
+                                        >
+                                            {adviceHint}
+                                        </span>
+                                    )}
+                                </div>
                             )}
                         </div>
                     </div>

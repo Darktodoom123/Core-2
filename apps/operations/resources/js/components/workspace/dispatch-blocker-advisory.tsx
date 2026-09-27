@@ -1,7 +1,7 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui';
-import { humanize } from '@/lib/formatters';
+import { formatDateTime, humanize } from '@/lib/formatters';
 import type {
     DispatchJobViewModel,
     GptRecommendationViewModel,
@@ -23,6 +23,7 @@ export function DispatchBlockerAdvisory({
     const [pollingStoppedFor, setPollingStoppedFor] = useState<number | null>(
         null,
     );
+    const [clockNow, setClockNow] = useState(() => Date.now());
     const rec = useMemo(
         () =>
             recommendations
@@ -43,15 +44,44 @@ export function DispatchBlockerAdvisory({
         requesting || rec?.status === 'draft' || rec?.status === 'processing';
     const pendingId = rec?.id ?? -job.id;
     const pollingStopped = pending && pollingStoppedFor === pendingId;
-    const expired = rec?.status !== 'accepted' && Boolean(rec?.is_expired);
+    const expiresAt = rec?.expires_at ? Date.parse(rec.expires_at) : null;
+    const expired =
+        rec?.status !== 'accepted' &&
+        (Boolean(rec?.is_expired) ||
+            (expiresAt !== null &&
+                Number.isFinite(expiresAt) &&
+                expiresAt <= clockNow));
     const stale =
         rec?.is_stale ||
         (rec?.recommendation.job_version !== undefined &&
             rec.recommendation.job_version !== job.version);
     const ready = rec?.status === 'pending_review' && !expired && !stale;
     const blocker = rec?.recommendation.blocker as
-        | { code?: string; assignment_type?: string; reasons?: string[] }
+        | {
+              code?: string;
+              resource_kind?: string;
+              action?: string;
+              assignment_type?: string;
+              reasons?: string[];
+          }
         | undefined;
+    const resourceLabel = humanize(blocker?.assignment_type ?? 'resource');
+    const blockerHeading =
+        blocker?.action === 'reassign'
+            ? `Replace ${resourceLabel}`
+            : blocker?.resource_kind === 'asset'
+              ? `Find ${resourceLabel} equipment`
+              : `Find a ${resourceLabel}`;
+
+    useEffect(() => {
+        if (!rec?.expires_at || rec.status === 'accepted') {
+            return;
+        }
+
+        const timer = window.setInterval(() => setClockNow(Date.now()), 1_000);
+
+        return () => window.clearInterval(timer);
+    }, [rec?.expires_at, rec?.status]);
 
     useEffect(() => {
         if (!pending || pollingStopped) {
@@ -104,12 +134,16 @@ export function DispatchBlockerAdvisory({
                     id={`blocker-advice-${job.id}`}
                     className="text-sm font-semibold text-ink"
                 >
-                    AI dispatch blocker assistance
+                    {rec?.model === 'rules'
+                        ? 'Resource eligibility check'
+                        : rec?.status === 'pending_review'
+                          ? 'AI-ranked resource options'
+                          : 'Resource assistance'}
                 </h3>
-                {rec && (
+                {rec && capabilities.view_gpt_governance && (
                     <Link
                         href={`/?view=gpt-recommendations&selected=${rec.id}`}
-                        className="text-xs text-brand-strong underline"
+                        className="inline-flex min-h-11 items-center text-xs text-brand-strong underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
                     >
                         Advice history
                     </Link>
@@ -144,12 +178,7 @@ export function DispatchBlockerAdvisory({
                         <>
                             <div>
                                 <p className="font-medium text-ink">
-                                    {humanize(
-                                        blocker?.code ?? 'resource blocker',
-                                    )}
-                                    {blocker?.assignment_type
-                                        ? ` · ${humanize(blocker.assignment_type)}`
-                                        : ''}
+                                    {blockerHeading}
                                 </p>
                                 {blocker?.reasons?.[0] && (
                                     <p className="mt-1 text-ink-soft">
@@ -159,6 +188,14 @@ export function DispatchBlockerAdvisory({
                                 <p className="mt-1 text-ink-soft">
                                     {String(rec?.recommendation.summary ?? '')}
                                 </p>
+                                {rec?.generated_at && (
+                                    <p className="mt-2 text-xs text-ink-soft">
+                                        Checked{' '}
+                                        {formatDateTime(rec.generated_at)}
+                                        {rec.expires_at &&
+                                            ` · Valid until ${formatDateTime(rec.expires_at)}`}
+                                    </p>
+                                )}
                                 {rec?.model === 'rules' && (
                                     <p className="mt-1 text-xs text-ink-soft">
                                         Based on recorded eligibility checks; no
@@ -167,42 +204,124 @@ export function DispatchBlockerAdvisory({
                                 )}
                             </div>
                             {(rec?.blocker_options ?? []).length ? (
-                                <ul className="space-y-2">
-                                    {rec?.blocker_options?.map((option) => {
-                                        const url = `/operations/dispatch-jobs/${job.id}?${new URLSearchParams({ advice_id: String(rec.id), option_id: String(option.id), return_to: page.url })}`;
+                                <div>
+                                    <p className="mb-2 text-xs font-medium text-ink-soft">
+                                        {(rec?.blocker_options ?? []).length}{' '}
+                                        eligible{' '}
+                                        {(rec?.blocker_options ?? []).length ===
+                                        1
+                                            ? 'option'
+                                            : 'options'}
+                                        {rec?.model !== 'rules'
+                                            ? ' · AI ranked'
+                                            : ''}
+                                    </p>
+                                    <ul className="space-y-2">
+                                        {rec?.blocker_options?.map((option) => {
+                                            const url = `/operations/dispatch-jobs/${job.id}?${new URLSearchParams({ advice_id: String(rec.id), option_id: String(option.id), return_to: page.url })}`;
+                                            const candidateName =
+                                                option.candidate_name ??
+                                                option.candidate_code ??
+                                                `Resource #${option.candidate_id}`;
+                                            const evidence = option.evidence;
 
-                                        return (
-                                            <li
-                                                key={option.id}
-                                                className="rounded-lg border border-line p-3"
-                                            >
-                                                <p className="font-medium text-ink">
-                                                    {option.candidate_name ??
-                                                        `Resource #${option.candidate_id}`}
-                                                </p>
-                                                {option.candidate_code && (
-                                                    <p className="text-xs text-ink-soft">
-                                                        {option.candidate_code}
-                                                    </p>
-                                                )}
-                                                <p className="mt-1 text-xs text-ink-soft">
-                                                    {option.explanation}
-                                                </p>
-                                                <Link
-                                                    href={url}
-                                                    className="mt-2 inline-block text-xs font-medium text-brand-strong underline"
+                                            return (
+                                                <li
+                                                    key={option.id}
+                                                    className="rounded-lg border border-line p-3"
                                                 >
-                                                    Review option in assignment
-                                                    workflow
-                                                </Link>
-                                            </li>
-                                        );
-                                    })}
-                                </ul>
+                                                    <p className="font-medium text-ink">
+                                                        {candidateName}
+                                                    </p>
+                                                    {option.candidate_code && (
+                                                        <p className="text-xs text-ink-soft">
+                                                            {
+                                                                option.candidate_code
+                                                            }
+                                                        </p>
+                                                    )}
+                                                    <p className="mt-1 text-xs text-ink-soft">
+                                                        {humanize(
+                                                            option.assignment_type,
+                                                        )}{' '}
+                                                        ·{' '}
+                                                        {option.resource_kind ===
+                                                        'asset'
+                                                            ? 'equipment'
+                                                            : 'crew'}
+                                                    </p>
+                                                    <dl className="mt-2 grid gap-1 text-xs text-ink-soft sm:grid-cols-2">
+                                                        {option.resource_kind ===
+                                                        'personnel' ? (
+                                                            <>
+                                                                <div>
+                                                                    <dt className="inline font-medium text-ink">
+                                                                        Availability:{' '}
+                                                                    </dt>
+                                                                    <dd className="inline">
+                                                                        {humanize(
+                                                                            evidence?.availability ??
+                                                                                'not recorded',
+                                                                        )}
+                                                                    </dd>
+                                                                </div>
+                                                                <div>
+                                                                    <dt className="inline font-medium text-ink">
+                                                                        Credential:{' '}
+                                                                    </dt>
+                                                                    <dd className="inline">
+                                                                        {humanize(
+                                                                            evidence?.credential ??
+                                                                                'not recorded',
+                                                                        )}
+                                                                    </dd>
+                                                                </div>
+                                                            </>
+                                                        ) : (
+                                                            <div>
+                                                                <dt className="inline font-medium text-ink">
+                                                                    Readiness:{' '}
+                                                                </dt>
+                                                                <dd className="inline">
+                                                                    {humanize(
+                                                                        evidence?.readiness ??
+                                                                            'not recorded',
+                                                                    )}
+                                                                </dd>
+                                                            </div>
+                                                        )}
+                                                        <div>
+                                                            <dt className="inline font-medium text-ink">
+                                                                Schedule:{' '}
+                                                            </dt>
+                                                            <dd className="inline">
+                                                                {evidence?.schedule_conflicts ===
+                                                                0
+                                                                    ? 'No overlap found'
+                                                                    : 'Review in assignments'}
+                                                            </dd>
+                                                        </div>
+                                                    </dl>
+                                                    <p className="mt-2 text-xs text-ink-soft">
+                                                        Highlighted check:{' '}
+                                                        {option.explanation}
+                                                    </p>
+                                                    <Link
+                                                        href={url}
+                                                        aria-label={`Review ${candidateName} for ${humanize(option.assignment_type)}`}
+                                                        className="mt-2 inline-flex min-h-11 items-center rounded-lg border border-line px-3 text-xs font-medium text-brand-strong underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                                                    >
+                                                        Review {candidateName}
+                                                    </Link>
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
+                                </div>
                             ) : (
                                 <p className="text-ink-soft">
-                                    No eligible replacement was found. Review
-                                    resources manually.
+                                    No eligible {resourceLabel} was found.
+                                    Review resources manually.
                                 </p>
                             )}
                         </>
@@ -211,8 +330,7 @@ export function DispatchBlockerAdvisory({
                             {rec?.status === 'accepted'
                                 ? 'The reviewed option was saved. Check the readiness panel for any remaining blockers.'
                                 : rec?.status === 'failed'
-                                  ? (rec.error_message ??
-                                    'Advice could not be generated.')
+                                  ? 'The resource check could not finish. Try again or review assignments manually.'
                                   : rec?.status === 'stale' || stale || expired
                                     ? 'Resources may have changed. Refresh before reviewing an option.'
                                     : 'Request a check for the current dispatch resource blocker.'}
@@ -228,6 +346,7 @@ export function DispatchBlockerAdvisory({
                             <Button
                                 size="sm"
                                 variant="secondary"
+                                className="min-h-11"
                                 onClick={() => {
                                     setPollingStoppedFor(null);
                                     router.reload({
@@ -242,6 +361,7 @@ export function DispatchBlockerAdvisory({
                             <Button
                                 size="sm"
                                 variant="secondary"
+                                className="min-h-11"
                                 onClick={() => request(Boolean(rec))}
                             >
                                 {rec?.status === 'accepted'
@@ -253,7 +373,7 @@ export function DispatchBlockerAdvisory({
                         )}
                         <Link
                             href={manualUrl}
-                            className="inline-flex items-center text-xs font-medium text-brand-strong underline"
+                            className="inline-flex min-h-11 items-center text-xs font-medium text-brand-strong underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
                         >
                             Review assignments manually
                         </Link>

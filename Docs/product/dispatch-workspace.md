@@ -79,6 +79,10 @@ option exists, the card gives manual guidance without a model call. Project
 shifts guide authorized planners to **Fill coverage** in their project plan.
 Approvals, permits, and safety blockers remain in the readiness workflow; AI
 advice never clears them.
+The blocker card shows the check time and validity window, consistent recorded
+availability/credential or asset-readiness and schedule facts, and a named
+review action for each option. Governance history links appear only for roles
+that can open that section. The dispatch header shows a compact result state.
 While the new flow is disabled, the existing `dispatch_assignment` advisory
 remains the on-request workspace experience. Its AI-generated explanations
 require human verification. The server rejects suggestions with clock times
@@ -87,6 +91,11 @@ from vetted candidates, and marks resources beyond recorded typed quantities
 as optional and unselected. The manager may select them deliberately. Prior
 recommendations stay available in governance history. The server-vetted
 blocker flow is disabled by default until a controlled rollout.
+Expired or stale proposals are hidden from the job card and require refresh;
+manual assignment remains available. If selected resources leave typed crew or
+equipment requirements unmet, the confirmation dialog names those remaining
+requirements and states that saving the partial assignment does not make the
+dispatch ready to activate.
 
 Active dispatches opened through **Monitor field execution** use an execution
 focused view for office users. It leads with the recorded dispatch status, recent

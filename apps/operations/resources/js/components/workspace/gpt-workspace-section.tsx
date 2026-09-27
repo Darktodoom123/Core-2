@@ -26,6 +26,7 @@ import {
 import { cn } from '@/lib/utils';
 import type { Auth } from '@/types/auth';
 import type {
+    DispatchJobViewModel,
     GptRecommendationViewModel,
     PaginationMeta,
     WorkspaceCapabilities,
@@ -1575,8 +1576,76 @@ function Gpt15MinCountdown({
     );
 }
 
+function remainingRecordedRequirements(
+    job: DispatchJobViewModel | undefined,
+    rec: GptRecommendationViewModel,
+    selectedPersonnelIds: number[],
+    selectedAssetIds: number[],
+): string[] {
+    if (!job?.resource_requirements) {
+        return [];
+    }
+
+    const counts = {
+        personnel: new Map<string, number>(),
+        assets: new Map<string, number>(),
+    };
+    const add = (kind: 'personnel' | 'assets', type: string) => {
+        counts[kind].set(type, (counts[kind].get(type) ?? 0) + 1);
+    };
+    job.personnel_assignments.forEach((assignment) =>
+        add('personnel', assignment.type),
+    );
+    job.asset_assignments.forEach((assignment) =>
+        add('assets', assignment.type),
+    );
+    const assignedPeople = new Set(
+        job.personnel_assignments.map((item) => item.user_id),
+    );
+    const assignedAssets = new Set(
+        job.asset_assignments.map((item) => item.operational_asset_id),
+    );
+    rec.proposed_personnel?.forEach((person) => {
+        if (
+            selectedPersonnelIds.includes(person.user_id) &&
+            !assignedPeople.has(person.user_id)
+        ) {
+            add('personnel', person.assignment_type);
+        }
+    });
+    rec.proposed_assets?.forEach((asset) => {
+        if (
+            selectedAssetIds.includes(asset.operational_asset_id) &&
+            !assignedAssets.has(asset.operational_asset_id)
+        ) {
+            add('assets', asset.assignment_type);
+        }
+    });
+
+    const remaining: string[] = [];
+
+    for (const kind of ['personnel', 'assets'] as const) {
+        for (const [type, required] of Object.entries(
+            job.resource_requirements[kind],
+        )) {
+            const missing = required - (counts[kind].get(type) ?? 0);
+
+            if (missing > 0) {
+                const resource = humanize(type);
+                remaining.push(
+                    `${missing} ${resource}${missing === 1 ? '' : 's'}`,
+                );
+            }
+        }
+    }
+
+    return remaining;
+}
+
 export function AcceptGptModal({
     rec,
+    job,
+    manualAssignmentUrl,
     onClose,
     returnFocusTo,
     initialPersonnelIds,
@@ -1584,6 +1653,8 @@ export function AcceptGptModal({
     focusCancel = false,
 }: {
     rec: GptRecommendationViewModel;
+    job?: DispatchJobViewModel;
+    manualAssignmentUrl?: string;
     onClose: () => void;
     returnFocusTo?: HTMLElement | null;
     initialPersonnelIds?: number[];
@@ -1623,6 +1694,13 @@ export function AcceptGptModal({
         (rec.proposed_personnel?.length ?? 0) > 0 ||
         (rec.proposed_assets?.length ?? 0) > 0;
     const totalSelected = selectedPersonnelIds.length + selectedAssetIds.length;
+    const remainingRequirements = remainingRecordedRequirements(
+        job,
+        rec,
+        selectedPersonnelIds,
+        selectedAssetIds,
+    );
+    const partialPlan = remainingRequirements.length > 0;
 
     function handleSubmit(e: FormEvent) {
         e.preventDefault();
@@ -1660,12 +1738,38 @@ export function AcceptGptModal({
             title={
                 <span className="flex items-center gap-3 text-success-strong">
                     <CheckCircle className="h-6 w-6" aria-hidden="true" />
-                    Review crew &amp; equipment
+                    {partialPlan
+                        ? 'Review partial assignment'
+                        : 'Review crew & equipment'}
                 </span>
             }
-            description={`Confirm this resource plan for Dispatch #${rec.subject_id}. Availability and job requirements will be checked again before any assignments are applied.`}
+            description={`Review selected resources for Dispatch #${rec.subject_id}. Availability and job requirements will be checked again before saving.`}
         >
             <div className="space-y-4">
+                {partialPlan && (
+                    <div className="rounded-lg border border-warning/30 bg-warning-soft p-3 text-sm text-ink">
+                        <p className="font-semibold">
+                            Still required after this save
+                        </p>
+                        <ul className="mt-1 list-disc pl-5">
+                            {remainingRequirements.map((requirement) => (
+                                <li key={requirement}>{requirement}</li>
+                            ))}
+                        </ul>
+                        <p className="mt-2 text-xs text-ink-soft">
+                            Saving these resources does not make the dispatch
+                            ready to activate.
+                        </p>
+                        {manualAssignmentUrl && (
+                            <Link
+                                href={manualAssignmentUrl}
+                                className="mt-2 inline-flex min-h-11 items-center font-medium text-brand-strong underline"
+                            >
+                                Find remaining resources manually
+                            </Link>
+                        )}
+                    </div>
+                )}
                 {Boolean(rec.conflicts?.length) && (
                     <div className="border-warning-subtle flex items-start gap-2 rounded-lg border bg-warning-soft p-3 text-xs text-warning-strong">
                         <AlertTriangle
@@ -1840,7 +1944,11 @@ export function AcceptGptModal({
                             : hasProposedResources
                               ? totalSelected === 0
                                   ? 'Confirm & Apply Selected'
-                                  : `Confirm & Apply ${formatResourceCount(selectedPersonnelIds.length, selectedAssetIds.length)}`
+                                  : partialPlan
+                                    ? remainingRequirements.length === 1
+                                        ? `Save ${formatResourceCount(selectedPersonnelIds.length, selectedAssetIds.length)}; ${remainingRequirements[0]} still required`
+                                        : `Save ${formatResourceCount(selectedPersonnelIds.length, selectedAssetIds.length)}; requirements remain`
+                                    : `Confirm & Apply ${formatResourceCount(selectedPersonnelIds.length, selectedAssetIds.length)}`
                               : 'Confirm & Apply Resource Plan'}
                     </Button>
                 </form>

@@ -587,7 +587,7 @@ describe('dispatch advisory', () => {
         expect(onReview).toHaveBeenCalledWith([2], [3]);
     });
 
-    it('shows Review & Resolve Conflicts button when recommendation has conflicts', () => {
+    it('offers review without claiming conflicts are resolved', () => {
         const onReview = vi.fn();
         show({
             recommendation: {
@@ -604,7 +604,7 @@ describe('dispatch advisory', () => {
         ).not.toBeInTheDocument();
 
         const conflictButton = screen.getByRole('button', {
-            name: 'Review & Resolve Conflicts',
+            name: 'Review suggested assignments',
         });
         expect(conflictButton).toBeInTheDocument();
 
@@ -756,16 +756,23 @@ describe('dispatch advisory', () => {
         expect(props.onRetry).not.toHaveBeenCalled();
     });
 
-    it('renders suggested resources with muted styling and no checkboxes when expired', () => {
+    it('hides expired resources and keeps manual assignment available', () => {
         show({
             recommendation: {
                 ...proposal,
                 status: 'expired',
             },
+            manualAssignmentUrl: '/operations/dispatch-jobs/10',
         });
 
         expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
-        expect(screen.getByText('Sample Operator')).toBeInTheDocument();
-        expect(screen.getByText('Crawler Crane')).toBeInTheDocument();
+        expect(screen.queryByText('Sample Operator')).not.toBeInTheDocument();
+        expect(screen.queryByText('Crawler Crane')).not.toBeInTheDocument();
+        expect(
+            screen.getByText(/previous proposal is hidden/i),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByRole('link', { name: 'Assign resources manually' }),
+        ).toHaveAttribute('href', '/operations/dispatch-jobs/10');
     });
 });
