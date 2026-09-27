@@ -25,13 +25,10 @@ export const DvirLockoutWarning: React.FC<DvirLockoutWarningProps> = ({
         <View style={[styles.lockoutBanner]} testID="dvir-lockout-banner">
             <Icon color={theme.hazardRedText} name="alert" size={20} />
             <View style={styles.lockoutCopy}>
-                <Text style={[styles.lockoutTitle]}>
-                    DISPATCH LOCKOUT ACTIVE
-                </Text>
+                <Text style={[styles.lockoutTitle]}>UNIT WILL BE LOCKED</Text>
                 <Text style={[styles.lockoutText]}>
-                    Vehicle marked unsafe or contains critical defects. Machine
-                    is locked from dispatch until verified by a certified
-                    mechanic.
+                    Submitting this inspection takes the unit out of dispatch
+                    until a mechanic verifies the repair.
                 </Text>
                 {mode === 'pre_trip' ? (
                     <View style={styles.bannerActionsRow}>

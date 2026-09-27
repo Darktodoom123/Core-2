@@ -269,9 +269,10 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
         [selectedDefectIds],
     );
 
-    const hasCriticalDefects = selectedDefects.some((d) => d.critical);
-    const isUnsafe = safetyStatus === 'unsafe' || hasCriticalDefects;
-    const needsDefectPhotos = isUnsafe || selectedDefects.length > 0;
+    // The server takes the unit out of service for any reported defect, not
+    // only critical ones, so every pick counts as a lockout here too.
+    const isUnsafe = safetyStatus === 'unsafe' || selectedDefects.length > 0;
+    const needsDefectPhotos = isUnsafe;
     // A reported problem needs words: where it is and how bad it is.
     const remarksMissing = needsDefectPhotos && remarks.trim() === '';
 
@@ -304,9 +305,8 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
 
     const handleApplyDefects = (defectIds: string[]) => {
         setSelectedDefectIds(defectIds);
-        const selected = findDefects(defectIds);
 
-        if (selected.some((item) => item.critical)) {
+        if (defectIds.length > 0) {
             setSafetyStatus('unsafe');
         }
 
@@ -317,6 +317,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
         // Construct checks list with tailored default items for equipment + selected defects
         const checksList = buildDvirChecks({
             chocksDeployed,
+            declaredUnsafe: safetyStatus === 'unsafe',
             designatedEquipment,
             mode,
             outriggersStowed,
@@ -354,8 +355,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
         onSaveInspectionRecord?.(record);
 
         const isPreTripLockout =
-            (mode === 'pre_trip' || initialMode === 'pre_trip') &&
-            (hasCriticalDefects || isUnsafe);
+            (mode === 'pre_trip' || initialMode === 'pre_trip') && isUnsafe;
 
         if (isPreTripLockout) {
             onDefectLockout?.(localAssetCode, record);

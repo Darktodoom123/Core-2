@@ -19,9 +19,40 @@ export type WalkaroundPhotoPayload = ReturnType<
     typeof buildWalkaroundPhotosPayload
 >[number];
 
+/** Where each defect group is filed on the server; the rest are structural. */
+const CHECK_CATEGORY_BY_GROUP: Record<
+    string,
+    TechnicianInspectionCheck['category']
+> = {
+    tires_wheels: 'tires_tracks',
+    in_cab_controls: 'safety_devices',
+    crane_lmi_safety: 'safety_devices',
+    tower_crane_cab: 'safety_devices',
+    brakes_suspension: 'hydraulics',
+    mobile_crane_outriggers: 'hydraulics',
+    exterior_front: 'fluids',
+    tower_crane_trolley: 'electrical',
+    tower_crane_electrical: 'electrical',
+};
+
+/**
+ * Sent when the operator marks the unit unsafe without naming a defect, so
+ * the server has a critical check to lock the unit on and to put in the
+ * work order.
+ */
+const DECLARED_UNSAFE_CHECK: TechnicianInspectionCheck = {
+    id: 'operator-declared-unsafe',
+    category: 'safety_devices',
+    label: 'Operator declared the unit unsafe to operate',
+    status: 'critical',
+    statusLabel: 'Critical Defect · Block dispatch',
+    icon: '',
+};
+
 /** Default equipment checks, reported defects, and post-trip shutdown checks. */
 export function buildDvirChecks({
     chocksDeployed,
+    declaredUnsafe,
     designatedEquipment,
     mode,
     outriggersStowed,
@@ -29,6 +60,8 @@ export function buildDvirChecks({
     selectedDefects,
 }: {
     chocksDeployed: boolean;
+    /** The operator chose "Unsafe" on the safety status. */
+    declaredUnsafe: boolean;
     designatedEquipment: DesignatedEquipmentType | null;
     mode: DvirMode;
     outriggersStowed: boolean;
@@ -38,35 +71,21 @@ export function buildDvirChecks({
     const defaultChecks = getDefaultInspectionChecks(designatedEquipment);
     const checksList: TechnicianInspectionCheck[] = [
         ...defaultChecks.map((chk) => ({ ...chk })),
-        ...selectedDefects.map((def) => {
-            const mappedCategory: TechnicianInspectionCheck['category'] =
-                def.categoryKey === 'tires_wheels'
-                    ? 'tires_tracks'
-                    : def.categoryKey === 'in_cab_controls' ||
-                        def.categoryKey === 'crane_lmi_safety'
-                      ? 'safety_devices'
-                      : def.categoryKey === 'brakes_suspension' ||
-                          def.categoryKey === 'mobile_crane_outriggers'
-                        ? 'hydraulics'
-                        : def.categoryKey === 'exterior_front'
-                          ? 'fluids'
-                          : def.categoryKey === 'tower_crane_trolley'
-                            ? 'electrical'
-                            : 'structural';
-
-            return {
-                id: def.id,
-                category: mappedCategory,
-                label: `${def.categoryTitle}: ${def.label}`,
-                status: def.critical
-                    ? ('critical' as const)
-                    : ('attention' as const),
-                statusLabel: def.critical
-                    ? 'Critical Defect · Block dispatch'
-                    : 'Needs attention · Reported defect',
-                icon: '',
-            };
-        }),
+        ...selectedDefects.map((def) => ({
+            id: def.id,
+            category: CHECK_CATEGORY_BY_GROUP[def.categoryKey] ?? 'structural',
+            label: `${def.categoryTitle}: ${def.label}`,
+            status: def.critical
+                ? ('critical' as const)
+                : ('attention' as const),
+            statusLabel: def.critical
+                ? 'Critical Defect · Block dispatch'
+                : 'Needs attention · Reported defect',
+            icon: '',
+        })),
+        ...(declaredUnsafe && selectedDefects.length === 0
+            ? [{ ...DECLARED_UNSAFE_CHECK }]
+            : []),
         ...(mode === 'post_trip'
             ? [
                   {
@@ -175,7 +194,9 @@ export function buildDvirRecord({
             mode === 'post_trip' ? readingOrNull(odometerKm) : undefined,
         engineHours: readingOrNull(engineHours),
         hasDefects: selectedDefects.length > 0 || isUnsafe,
-        criticalDefectsCount: selectedDefects.filter((d) => d.critical).length,
+        // Matches the server, which counts the critical checks it receives.
+        criticalDefectsCount: checksList.filter((c) => c.status === 'critical')
+            .length,
         checks: checksList,
         signatureCaptured: attested,
         signatureData: null,

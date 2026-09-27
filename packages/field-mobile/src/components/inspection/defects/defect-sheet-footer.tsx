@@ -6,16 +6,14 @@ import { Icon } from '../../common/Icon';
 
 export interface DefectSheetFooterProps {
     count: number;
-    criticalCount: number;
     onDone: () => void;
 }
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
-/** Sticky footer: warns before a critical pick locks the unit, then applies. */
+/** Sticky footer: warns that any reported defect locks the unit, then applies. */
 export const DefectSheetFooter: React.FC<DefectSheetFooterProps> = ({
     count,
-    criticalCount,
     onDone,
 }) => {
     const { theme } = useTheme();
@@ -23,7 +21,7 @@ export const DefectSheetFooter: React.FC<DefectSheetFooterProps> = ({
 
     return (
         <View style={styles.footer}>
-            {criticalCount > 0 ? (
+            {count > 0 ? (
                 <View accessibilityLiveRegion="polite" style={styles.warning}>
                     <Icon
                         color={theme.hazardRedText}
@@ -31,7 +29,7 @@ export const DefectSheetFooter: React.FC<DefectSheetFooterProps> = ({
                         size={16}
                     />
                     <Text style={styles.warningText}>
-                        {`${plural(criticalCount, 'critical defect')} — the unit will be locked when you submit.`}
+                        {`${plural(count, 'defect')} reported — the unit will be locked when you submit.`}
                     </Text>
                 </View>
             ) : null}

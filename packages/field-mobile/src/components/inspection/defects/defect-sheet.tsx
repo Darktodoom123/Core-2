@@ -16,7 +16,7 @@ import { getEquipmentPresentation } from '../../../utils/equipmentClassification
 import { Icon } from '../../common/Icon';
 import { DefectGroup } from './defect-group';
 import { DefectQuickPicks } from './defect-quick-picks';
-import { defectGroupsFor, findDefects } from './defect-sets';
+import { defectGroupsFor } from './defect-sets';
 import { DefectSheetFooter } from './defect-sheet-footer';
 import { UNIT_TYPES } from './unit-type';
 import { UnitTypePicker } from './unit-type-picker';
@@ -69,10 +69,6 @@ const DefectSheetBody: React.FC<DefectSheetProps> = ({
               }))
               .filter((group) => group.items.length > 0)
         : groups;
-    const criticalCount = findDefects(selected).filter(
-        (d) => d.critical,
-    ).length;
-
     const toggleDefect = (id: string) =>
         setSelected((current) =>
             current.includes(id)
@@ -201,7 +197,6 @@ const DefectSheetBody: React.FC<DefectSheetProps> = ({
                         </ScrollView>
                         <DefectSheetFooter
                             count={selected.length}
-                            criticalCount={criticalCount}
                             onDone={() => {
                                 onApplyDefects(selected);
                                 onClose();

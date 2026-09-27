@@ -25,9 +25,7 @@ export const DefectRow: React.FC<DefectRowProps> = ({
     return (
         <Pressable
             accessibilityHint={
-                isCritical
-                    ? 'Critical: locks the unit when submitted'
-                    : undefined
+                isCritical ? 'Critical severity' : 'Needs attention'
             }
             accessibilityLabel={item.label}
             accessibilityRole="checkbox"

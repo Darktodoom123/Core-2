@@ -185,7 +185,7 @@ describe('DvirScreen Component & Workflows', () => {
         // Select Unsafe -> lockout banner displays
         await fireEvent.press(unsafeBtn);
         expect(view.getByTestId('dvir-lockout-banner')).toBeTruthy();
-        expect(view.getByText('DISPATCH LOCKOUT ACTIVE')).toBeTruthy();
+        expect(view.getByText('UNIT WILL BE LOCKED')).toBeTruthy();
 
         // Select Safe again
         await fireEvent.press(safeBtn);
@@ -288,7 +288,7 @@ describe('DvirScreen Component & Workflows', () => {
             view.getByText('Hydraulic Jack Cylinders & Pilot Check Valves'),
         ).toBeTruthy();
         expect(view.getByTestId('dvir-lockout-banner')).toBeTruthy();
-        expect(view.getByText('DISPATCH LOCKOUT ACTIVE')).toBeTruthy();
+        expect(view.getByText('UNIT WILL BE LOCKED')).toBeTruthy();
     });
 
     it('filters and selects Tower Crane specific defects including Weather-Vaning mechanism', async () => {
@@ -677,7 +677,7 @@ describe('DvirScreen Component & Workflows', () => {
         // Safe/Unsafe toggle switches to unsafe and displays critical lockout banner
         await fireEvent.press(view.getByTestId('safety-status-unsafe'));
         expect(view.getByTestId('dvir-lockout-banner')).toBeTruthy();
-        expect(view.getByText('DISPATCH LOCKOUT ACTIVE')).toBeTruthy();
+        expect(view.getByText('UNIT WILL BE LOCKED')).toBeTruthy();
 
         // Defects modal in dark HUD mode
         await fireEvent.press(view.getByTestId('add-defects-button'));

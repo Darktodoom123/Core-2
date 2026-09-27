@@ -91,7 +91,7 @@ test('every common pick exists in that unit type’s list', () => {
     }
 });
 
-test('critical defects lock the unit; the rest need attention', () => {
+test('defects carry a critical or attention severity', () => {
     const boom = ALL_DEFECTS.find((d) => d.id === 'crane_telescopic_boom')!;
     const floats = ALL_DEFECTS.find((d) => d.id === 'crane_outrigger_floats')!;
 

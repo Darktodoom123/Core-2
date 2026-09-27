@@ -60,7 +60,7 @@ describe.each(MODES)('DVIR design roles (%s)', (mode, theme: ThemeColors) => {
 
         expect(banner.backgroundColor).toBe(theme.hazardRedLight);
         expect(banner.borderColor).toBe(theme.hazardRed);
-        expect(textColor(view, 'DISPATCH LOCKOUT ACTIVE')).toBe(
+        expect(textColor(view, 'UNIT WILL BE LOCKED')).toBe(
             theme.hazardRedText,
         );
         expect(swap.backgroundColor).toBe(theme.brandAmber);

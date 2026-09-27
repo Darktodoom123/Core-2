@@ -115,7 +115,7 @@ describe.each(MODES)('Add defects sheet (%s)', (mode, theme: ThemeColors) => {
         ).toMatchObject({ checked: true });
     });
 
-    it('shows which defects lock the unit before the operator picks them', async () => {
+    it('shows each defect’s severity before the operator picks it', async () => {
         const view = await renderSheet(mode);
 
         await fireEvent.press(
@@ -138,7 +138,26 @@ describe.each(MODES)('Add defects sheet (%s)', (mode, theme: ThemeColors) => {
 
         expect(
             view.getByText(
-                '1 critical defect — the unit will be locked when you submit.',
+                '1 defect reported — the unit will be locked when you submit.',
+            ),
+        ).toBeTruthy();
+    });
+
+    it('warns that an ATTENTION defect locks the unit too, as the server does', async () => {
+        const view = await renderSheet(mode);
+
+        expect(view.queryByText(/will be locked/)).toBeNull();
+
+        await fireEvent.press(
+            view.getByTestId('category-toggle-tower_crane_jib'),
+        );
+        await fireEvent.press(
+            view.getByTestId('defect-item-tower_catwalk_lifeline'),
+        );
+
+        expect(
+            view.getByText(
+                '1 defect reported — the unit will be locked when you submit.',
             ),
         ).toBeTruthy();
     });

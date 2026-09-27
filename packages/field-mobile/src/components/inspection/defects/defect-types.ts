@@ -5,7 +5,7 @@ export interface DefectItem {
     label: string;
     categoryKey: string;
     categoryTitle: string;
-    /** A critical defect locks the unit out of dispatch. */
+    /** Severity for maintenance; every reported defect locks the unit. */
     critical?: boolean;
     /** Narrows a shared group item to these unit types. */
     onlyFor?: DesignatedEquipmentType[];
