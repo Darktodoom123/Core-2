@@ -47,8 +47,11 @@ describe('HosScreen Component & Workflows', () => {
     it('shows server-accepted duration breakdowns and separates pending duty sync', async () => {
         const view = await render(
             <HosScreen
+                dutySync={{
+                    problem: null,
+                    waiting: [{ id: 'cmd-1', what: 'Driving' }],
+                }}
                 pendingDutyState="queued"
-                pendingDutyStatus="driving"
                 shiftInfo={{
                     status: 'on_shift',
                     dutyStatus: 'operating',
@@ -63,10 +66,9 @@ describe('HosScreen Component & Workflows', () => {
             />,
         );
 
-        expect(view.getByTestId('hos-duty-sync-status')).toBeTruthy();
-        expect(
-            view.getByText('Duty update pending sync: driving'),
-        ).toBeTruthy();
+        expect(view.getByTestId('hos-sync-waiting')).toHaveTextContent(
+            /Waiting to send: Driving/,
+        );
         expect(view.getByTestId('hos-duration-breakdown')).toBeTruthy();
         expect(view.getAllByText('2h 00m').length).toBeGreaterThanOrEqual(1);
         expect(view.getAllByText('server accepted').length).toBe(4);

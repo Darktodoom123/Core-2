@@ -54,6 +54,7 @@ import {
     queuedHosCommands,
     serverClockOffsetMs,
 } from '../screens/hos/hos-duty-command';
+import { hosSyncSummary } from '../screens/hos/hos-sync-summary';
 import { HosScreen } from '../screens/HosScreen';
 import type {
     ShiftLogEvent,
@@ -2039,6 +2040,38 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         [commandOutbox, handleRequestFailure],
     );
 
+    // A rejected duty change holds every later one; once it is discarded
+    // or retried, send the rest straight away.
+    const handleDiscardDutyChange = useCallback(
+        (commandId: string) => {
+            void commandOutbox
+                .discardCommand(commandId)
+                .then(() => syncQueue())
+                .catch((error: unknown) =>
+                    handleRequestFailure(
+                        error,
+                        'Failed to discard the duty change.',
+                    ),
+                );
+        },
+        [commandOutbox, handleRequestFailure, syncQueue],
+    );
+
+    const handleRetryDutyChange = useCallback(
+        (commandId: string) => {
+            void commandOutbox
+                .retryCommand(commandId, apiClient)
+                .then(() => syncQueue())
+                .catch((error: unknown) =>
+                    handleRequestFailure(
+                        error,
+                        'Failed to retry the duty change.',
+                    ),
+                );
+        },
+        [apiClient, commandOutbox, handleRequestFailure, syncQueue],
+    );
+
     const handleRentalCheckout = useCallback(
         async (data: RentalCheckoutData) => {
             const linkedJob =
@@ -2496,12 +2529,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                 left.id.localeCompare(right.id),
         );
     const pendingHosCommand = pendingHosCommands[pendingHosCommands.length - 1];
-    const pendingHosDutyStatus = pendingHosCommand
-        ? pendingHosCommand.type === 'certify_hos_shift'
-            ? 'off_duty'
-            : ((pendingHosCommand.payload.duty_status as
-                  DutyStatus | undefined) ?? 'operating')
-        : null;
     const pendingHosState =
         pendingHosCommand?.state === 'queued' ||
         pendingHosCommand?.state === 'syncing' ||
@@ -2613,26 +2640,10 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 onToggleShift={handleToggleShift}
                                 onUpdateDutyStatus={handleChangeDutyStatus}
                                 operatorName={resolvedOperatorName}
-                                pendingDutyEvents={pendingHosCommands.map(
-                                    (command) => ({
-                                        id: command.id,
-                                        status:
-                                            command.type === 'certify_hos_shift'
-                                                ? 'off_duty'
-                                                : ((command.payload
-                                                      .duty_status as
-                                                      DutyStatus | undefined) ??
-                                                  'operating'),
-                                        state: command.state,
-                                        occurredAt:
-                                            typeof command.payload
-                                                .occurred_at === 'string'
-                                                ? command.payload.occurred_at
-                                                : null,
-                                    }),
-                                )}
+                                dutySync={hosSyncSummary(outboxCommands)}
+                                onDiscardDutyChange={handleDiscardDutyChange}
+                                onRetryDutyChange={handleRetryDutyChange}
                                 pendingDutyState={pendingHosState}
-                                pendingDutyStatus={pendingHosDutyStatus}
                                 timelineHistory={timelineHistory}
                                 shiftInfo={shiftInfo}
                                 userRole={

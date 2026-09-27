@@ -7,7 +7,6 @@ import {
     Text,
     View,
 } from 'react-native';
-import { Icon } from '../components/common/Icon';
 import { TileScreenHeader } from '../components/layout/tile-screen-header';
 import { EndShiftSafeguardModal } from '../components/sheets/EndShiftSafeguardModal';
 import { ReliefHandoverModal } from '../components/sheets/ReliefHandoverModal';
@@ -26,6 +25,8 @@ import { TIMELINE_HISTORY_DAYS } from './hos/hos-fixtures';
 import { HosShiftLimitBanner } from './hos/hos-shift-limit-banner';
 import { HosShiftLog } from './hos/hos-shift-log';
 import { HosStandbyReasonSelector } from './hos/hos-standby-reason-selector';
+import { HosSyncBanner } from './hos/hos-sync-banner';
+import type { HosSyncSummary } from './hos/hos-sync-summary';
 import { HosTimelineCard } from './hos/hos-timeline-card';
 import type { TimelineDayHistory } from './hos/hos-types';
 
@@ -54,14 +55,11 @@ export interface HosScreenProps {
         standbyReason?: StandbyReason,
         remarks?: string,
     ) => Promise<boolean | void> | boolean | void;
-    pendingDutyStatus?: DutyStatus | null;
     pendingDutyState?: 'queued' | 'syncing' | 'failed' | null;
-    pendingDutyEvents?: Array<{
-        id: string;
-        status: DutyStatus;
-        state: string;
-        occurredAt: string | null;
-    }>;
+    /** Unsent or failed duty changes, from the outbox. */
+    dutySync?: HosSyncSummary | null;
+    onDiscardDutyChange?: (commandId: string) => void;
+    onRetryDutyChange?: (commandId: string) => void;
     onReleaseUnit?: (assetCode: string) => void;
     onToggleShift?: (nextStatus: 'on_shift' | 'off_shift') => void;
     onEndShift?: () => void;
@@ -88,9 +86,10 @@ export const HosScreen: React.FC<HosScreenProps> = ({
     onReleaseUnit,
     onToggleShift,
     onEndShift,
-    pendingDutyStatus = null,
     pendingDutyState = null,
-    pendingDutyEvents = [],
+    dutySync = null,
+    onDiscardDutyChange,
+    onRetryDutyChange,
 }) => {
     const { theme } = useTheme();
     const styles = useThemedStyles(createStyles);
@@ -326,76 +325,11 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                 contentContainerStyle={styles.contentContainer}
                 style={styles.scrollView}
             >
-                {pendingDutyState && pendingDutyStatus ? (
-                    <View
-                        accessibilityRole={
-                            pendingDutyState === 'failed' ? 'alert' : undefined
-                        }
-                        style={[
-                            styles.syncStatusBanner,
-                            pendingDutyState === 'failed' &&
-                                styles.syncStatusBannerFailed,
-                        ]}
-                        testID="hos-duty-sync-status"
-                    >
-                        <Icon
-                            color={
-                                pendingDutyState === 'failed'
-                                    ? theme.hazardRedText
-                                    : theme.actionCobalt
-                            }
-                            name={
-                                pendingDutyState === 'failed'
-                                    ? 'alert'
-                                    : 'cloud'
-                            }
-                            size={17}
-                        />
-                        <Text
-                            style={[
-                                styles.syncStatusText,
-                                pendingDutyState === 'failed' &&
-                                    styles.syncStatusTextFailed,
-                            ]}
-                        >
-                            {pendingDutyState === 'failed'
-                                ? 'Duty update was not accepted. Review the failed action in Outbox.'
-                                : `Duty update pending sync: ${pendingDutyStatus.replace('_', ' ')}`}
-                        </Text>
-                    </View>
-                ) : null}
-
-                {pendingDutyEvents.length > 1 ? (
-                    <View
-                        accessibilityLabel={`${pendingDutyEvents.length} duty events waiting for synchronization`}
-                        style={[styles.syncStatusBanner]}
-                        testID="hos-duty-sync-queue"
-                    >
-                        <Icon
-                            color={theme.actionCobalt}
-                            name="list"
-                            size={17}
-                        />
-                        <View style={{ flex: 1 }}>
-                            <Text style={[styles.syncStatusText]}>
-                                Pending duty events are ordered locally; server
-                                totals remain unchanged.
-                            </Text>
-                            {pendingDutyEvents.map((event, index) => (
-                                <Text
-                                    key={event.id}
-                                    style={[styles.syncStatusText]}
-                                >
-                                    {index + 1}.{' '}
-                                    {event.status.replace('_', ' ')} ·{' '}
-                                    {event.state === 'failed'
-                                        ? 'Rejected'
-                                        : 'Pending'}
-                                </Text>
-                            ))}
-                        </View>
-                    </View>
-                ) : null}
+                <HosSyncBanner
+                    onDiscard={onDiscardDutyChange}
+                    onRetry={onRetryDutyChange}
+                    summary={dutySync}
+                />
 
                 {/* DOLE 4.5-Hour Continuous Operation Rest Prompter Banner */}
                 {hosCompliance.breakSuggestion ? (
