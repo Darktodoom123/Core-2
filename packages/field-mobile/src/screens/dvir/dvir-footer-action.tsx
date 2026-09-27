@@ -9,6 +9,8 @@ export interface DvirFooterActionProps {
     hasUnselectedMultiAsset: boolean;
     isSaved: boolean;
     isUnassigned: boolean;
+    /** Meter readings are missing or invalid; completing is blocked. */
+    readingsInvalid?: boolean;
 }
 
 export const DvirFooterAction: React.FC<DvirFooterActionProps> = ({
@@ -16,7 +18,12 @@ export const DvirFooterAction: React.FC<DvirFooterActionProps> = ({
     hasUnselectedMultiAsset,
     isSaved,
     isUnassigned,
+    readingsInvalid = false,
 }) => {
+    const isBlocked =
+        !isSaved &&
+        (isUnassigned || hasUnselectedMultiAsset || readingsInvalid);
+
     const styles = useThemedStyles(createStyles);
     const dvirSharedStyles = useThemedStyles(createDvirSharedStyles);
 
@@ -25,18 +32,13 @@ export const DvirFooterAction: React.FC<DvirFooterActionProps> = ({
             <Pressable
                 accessibilityLabel={isSaved ? 'Saved, back to home' : 'Next'}
                 accessibilityRole="button"
-                accessibilityState={{
-                    disabled: isUnassigned || hasUnselectedMultiAsset,
-                }}
-                disabled={isUnassigned || hasUnselectedMultiAsset}
+                accessibilityState={{ disabled: isBlocked }}
+                disabled={isBlocked}
                 onPress={handleNextOrSubmit}
                 style={({ pressed }) => [
                     styles.nextButton,
-                    (isUnassigned || hasUnselectedMultiAsset) &&
-                        styles.nextButtonDisabled,
-                    pressed &&
-                        !(isUnassigned || hasUnselectedMultiAsset) &&
-                        dvirSharedStyles.pressed,
+                    isBlocked && styles.nextButtonDisabled,
+                    pressed && !isBlocked && dvirSharedStyles.pressed,
                 ]}
                 testID="complete-dvir-button"
             >

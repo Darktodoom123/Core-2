@@ -41,6 +41,7 @@ import { DvirLockoutWarning } from './dvir/dvir-lockout-warning';
 import { DvirMetersRow } from './dvir/dvir-meters-row';
 import { DvirNoticeBanner } from './dvir/dvir-notice-banner';
 import { DvirParkedSecuredChecklist } from './dvir/dvir-parked-secured-checklist';
+import { checkReadings } from './dvir/dvir-readings';
 import {
     buildDvirChecks,
     buildDvirRecord,
@@ -137,6 +138,10 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     const currentAssetCode = activeAssignment?.asset_code || assetCode;
     const currentAssetName = activeAssignment?.asset_name || assetName;
     const currentAssetKind = activeAssignment?.asset_kind || assetKind;
+    const lastEngineHours =
+        typeof activeAssignment?.engine_hours === 'number'
+            ? activeAssignment.engine_hours
+            : null;
 
     const [overriddenAssetCode, setOverriddenAssetCode] = useState<{
         propCode: string;
@@ -173,9 +178,11 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     const [isDefectsModalOpen, setIsDefectsModalOpen] = useState(false);
     const [walkaroundPhotos, setWalkaroundPhotos] =
         useState<WalkaroundPhotosMap>({});
-    const [odometerKm, setOdometerKm] = useState('42150');
-    const [engineHours, setEngineHours] = useState('1842.5');
+    // Readings start empty: the operator reads them off the unit.
+    const [odometerKm, setOdometerKm] = useState('');
+    const [engineHours, setEngineHours] = useState('');
     const [remarks, setRemarks] = useState('');
+    const readings = checkReadings(engineHours, odometerKm, lastEngineHours);
     const [isSaved, setIsSaved] = useState(false);
     const {
         history,
@@ -392,7 +399,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
             return;
         }
 
-        if (isUnassigned || hasUnselectedMultiAsset) {
+        if (isUnassigned || hasUnselectedMultiAsset || !readings.isValid) {
             return;
         }
 
@@ -582,6 +589,9 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                         {/* Inline Meters Input Row (Preserving Test Compatibility) */}
                         <DvirMetersRow
                             engineHours={engineHours}
+                            engineHoursError={readings.engineHoursError}
+                            lastEngineHours={lastEngineHours}
+                            odometerError={readings.odometerError}
                             odometerKm={odometerKm}
                             setEngineHours={setEngineHours}
                             setIsSaved={setIsSaved}
@@ -621,6 +631,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                     hasUnselectedMultiAsset={hasUnselectedMultiAsset}
                     isSaved={isSaved}
                     isUnassigned={isUnassigned}
+                    readingsInvalid={!readings.isValid}
                 />
             ) : null}
             {/* Digital Signature Modal */}

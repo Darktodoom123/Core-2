@@ -7,6 +7,11 @@ import { FieldApiClient } from '../services/apiClient';
 import { ThemeProvider } from '../theme';
 import type { AssetAssignment } from '../types/index';
 
+/** DVIR readings start empty; tests that complete one enter a real reading. */
+const enterEngineHours = async (view: { getByTestId: (id: string) => any }) => {
+    await fireEvent.changeText(view.getByTestId('input-engine-hours'), '1855');
+};
+
 const daysAgo = (days: number) =>
     new Date(Date.now() - days * 86400000).toISOString();
 
@@ -605,6 +610,7 @@ describe('DvirScreen Component & Workflows', () => {
         await fireEvent.press(view.getByTestId('slot-driver-side'));
 
         // Complete DVIR
+        await enterEngineHours(view);
         await fireEvent.press(view.getByTestId('complete-dvir-button'));
 
         await waitFor(() => {
@@ -790,6 +796,7 @@ describe('DvirScreen Component & Workflows', () => {
         await fireEvent.press(view.getByTestId('safety-status-unsafe'));
 
         // Complete DVIR
+        await enterEngineHours(view);
         await fireEvent.press(view.getByTestId('complete-dvir-button'));
 
         // Lockout callback is invoked and modal appears
@@ -841,6 +848,7 @@ describe('DvirScreen Component & Workflows', () => {
 
         // Toggle Unsafe and complete DVIR
         await fireEvent.press(view.getByTestId('safety-status-unsafe'));
+        await enterEngineHours(view);
         await fireEvent.press(view.getByTestId('complete-dvir-button'));
 
         expect(view.getByTestId('pre-trip-defect-fallback-modal')).toBeTruthy();
@@ -865,6 +873,7 @@ describe('DvirScreen Component & Workflows', () => {
         );
 
         // Submit default safe inspection
+        await enterEngineHours(view);
         await fireEvent.press(view.getByTestId('complete-dvir-button'));
 
         expect(onDefectLockout).not.toHaveBeenCalled();
@@ -891,6 +900,7 @@ describe('DvirScreen Component & Workflows', () => {
         );
 
         // First tap: signs & submits inspection
+        await enterEngineHours(view);
         await fireEvent.press(view.getByTestId('complete-dvir-button'));
         expect(onPreTripPassed).toHaveBeenCalledTimes(1);
         expect(view.getByText('Saved · Back to home')).toBeTruthy();
@@ -910,6 +920,7 @@ describe('DvirScreen Component & Workflows', () => {
             />,
         );
 
+        await enterEngineHours(view);
         await fireEvent.press(view.getByTestId('complete-dvir-button'));
         expect(onPreTripPassed).toHaveBeenCalledWith(
             'CRN-101',
@@ -931,6 +942,7 @@ describe('DvirScreen Component & Workflows', () => {
             'Cracked hydraulic outrigger cylinder detected.',
         );
         await fireEvent.press(view.getByTestId('safety-status-unsafe'));
+        await enterEngineHours(view);
         await fireEvent.press(view.getByTestId('complete-dvir-button'));
 
         // Swap unit to CRN-102
@@ -977,6 +989,7 @@ describe('DvirScreen Component & Workflows', () => {
         expect(view.getByTestId('dvir-no-asset-selected-banner')).toBeTruthy();
 
         // Attempting to submit is blocked
+        await enterEngineHours(view);
         await fireEvent.press(view.getByTestId('complete-dvir-button'));
         expect(onPreTripPassed).not.toHaveBeenCalled();
 
@@ -1033,6 +1046,7 @@ describe('DvirScreen Component & Workflows', () => {
         expect(view.queryByTestId('dvir-unassigned-banner')).toBeNull();
         expect(view.getByText('Inspection Checklist')).toBeTruthy();
 
+        await enterEngineHours(view);
         await fireEvent.press(view.getByTestId('complete-dvir-button'));
         expect(onPreTripPassed).toHaveBeenCalledWith(
             'CRN-101',

@@ -48,6 +48,11 @@ const createMockJob = (
     },
 });
 
+/** DVIR readings start empty; tests that complete one enter a real reading. */
+const enterEngineHours = async (view: { getByTestId: (id: string) => any }) => {
+    await fireEvent.changeText(view.getByTestId('input-engine-hours'), '1855');
+};
+
 describe('Mobile Application Audit Resolutions Component Tests', () => {
     afterEach(async () => {
         await cleanup();
@@ -536,6 +541,7 @@ describe('Mobile Application Audit Resolutions Component Tests', () => {
             ).toBeTruthy();
 
             // Complete DVIR
+            await enterEngineHours(view);
             await fireEvent.press(view.getByTestId('complete-dvir-button'));
 
             expect(onSaveRecord).toHaveBeenCalledWith(

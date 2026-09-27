@@ -8,6 +8,7 @@ import type {
 } from '../../types/index';
 import { getDefaultInspectionChecks } from '../../utils/equipmentClassification';
 import type { DesignatedEquipmentType } from '../../utils/equipmentClassification';
+import { parseReading } from './dvir-readings';
 
 type DvirMode = 'pre_trip' | 'post_trip' | 'history';
 
@@ -126,6 +127,13 @@ export function buildWalkaroundPhotosPayload(
         }));
 }
 
+/** A blank or unreadable reading is sent as null, never as 0. */
+const readingOrNull = (value: string): number | null => {
+    const reading = parseReading(value);
+
+    return reading === null || Number.isNaN(reading) ? null : reading;
+};
+
 export function buildDvirRecord({
     checksList,
     currentAssetName,
@@ -163,10 +171,10 @@ export function buildDvirRecord({
         assetName: currentAssetName,
         inspectorName,
         startingOdometerKm:
-            mode === 'pre_trip' ? parseFloat(odometerKm) || 0 : undefined,
+            mode === 'pre_trip' ? readingOrNull(odometerKm) : undefined,
         endingOdometerKm:
-            mode === 'post_trip' ? parseFloat(odometerKm) || 0 : undefined,
-        engineHours: parseFloat(engineHours) || 0,
+            mode === 'post_trip' ? readingOrNull(odometerKm) : undefined,
+        engineHours: readingOrNull(engineHours),
         hasDefects: selectedDefects.length > 0 || isUnsafe,
         criticalDefectsCount: selectedDefects.filter((d) => d.critical).length,
         checks: checksList,
@@ -179,11 +187,8 @@ export function buildDvirRecord({
                   pointCount: dvirSignature.pointCount,
               }
             : null,
-        remarks:
-            remarks.trim() ||
-            (mode === 'pre_trip'
-                ? `Pre-trip walkaround inspection completed. Safety Status: ${isUnsafe ? 'UNSAFE' : 'SAFE TO DRIVE'}.`
-                : `Post-trip shutdown walkaround completed. Machine parked & secured. Safety Status: ${isUnsafe ? 'UNSAFE' : 'SAFE TO DRIVE'}.`),
+        // Only what the operator wrote; nothing is written on their behalf.
+        remarks: remarks.trim() || null,
         completedAt: new Date().toISOString(),
     };
 
