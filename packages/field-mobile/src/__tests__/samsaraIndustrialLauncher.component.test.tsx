@@ -577,17 +577,25 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
 
         it('supports Post-Trip parked & secured shutdown checklists', async () => {
             const view = await render(
-                <DvirScreen assetCode="ALB-CRN-050" initialMode="post_trip" />,
+                <DvirScreen
+                    assetCode="ALB-CRN-050"
+                    assetKind="crane"
+                    initialMode="post_trip"
+                />,
             );
 
             // Switch to Post-Trip tab
             await fireEvent.press(view.getByTestId('tab-post-trip'));
+            expect(view.getByText('PARKED & SECURED')).toBeTruthy();
             expect(
-                view.getByText('PARKED & SECURED SHUTDOWN CHECKLIST'),
+                view.getByTestId('post-trip-check-post-trip-parking-brake'),
             ).toBeTruthy();
-            expect(view.getByTestId('check-parking-brake')).toBeTruthy();
-            expect(view.getByTestId('check-wheel-chocks')).toBeTruthy();
-            expect(view.getByTestId('check-outriggers-stowed')).toBeTruthy();
+            expect(
+                view.getByTestId('post-trip-check-post-trip-wheel-chocks'),
+            ).toBeTruthy();
+            expect(
+                view.getByTestId('post-trip-check-post-trip-outriggers'),
+            ).toBeTruthy();
         });
     });
 

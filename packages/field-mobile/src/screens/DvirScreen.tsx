@@ -50,6 +50,13 @@ import {
 import { DvirRemarksSection } from './dvir/dvir-remarks-section';
 import { DvirSafetyStatusSection } from './dvir/dvir-safety-status-section';
 import { createDvirSharedStyles } from './dvir/dvir-shared-styles';
+import type { PostTripAnswers } from './dvir/post-trip-checks';
+import {
+    failedPostTripChecks,
+    postTripChecksFor,
+    postTripInspectionChecks,
+    unansweredPostTripChecks,
+} from './dvir/post-trip-checks';
 import { useDvirHistory } from './dvir/use-dvir-history';
 
 export interface DvirScreenProps {
@@ -200,6 +207,9 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
         string | null
     >(activeSelectedAssetId ? String(activeSelectedAssetId) : localAssetCode);
 
+    // Parked-and-secured answers; every check starts unanswered.
+    const [postTripAnswers, setPostTripAnswers] = useState<PostTripAnswers>({});
+
     const currentTrackedAssetKey = activeSelectedAssetId
         ? String(activeSelectedAssetId)
         : localAssetCode;
@@ -215,6 +225,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
         setOdometerKm('');
         setAttested(false);
         setChosenUnitType(null);
+        setPostTripAnswers({});
         setIsSaved(false);
     }
 
@@ -224,11 +235,6 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
         setPrevInitialMode(initialMode);
         setMode(initialMode);
     }
-
-    // Post-Trip Specific State
-    const [chocksDeployed, setChocksDeployed] = useState(true);
-    const [parkingBrakeSet, setParkingBrakeSet] = useState(true);
-    const [outriggersStowed, setOutriggersStowed] = useState(true);
 
     // Resolve designated equipment type and presentation attributes
     // The unit's type decides which defects exist. When it can't be
@@ -264,7 +270,22 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
 
     // The server takes the unit out of service for any reported defect, not
     // only critical ones, so every pick counts as a lockout here too.
-    const isUnsafe = safetyStatus === 'unsafe' || selectedDefects.length > 0;
+    const postTripChecks = useMemo(
+        () => postTripChecksFor(designatedEquipment),
+        [designatedEquipment],
+    );
+    const isPostTrip = mode === 'post_trip';
+    const postTripFailed = isPostTrip
+        ? failedPostTripChecks(postTripChecks, postTripAnswers)
+        : [];
+    const postTripUnanswered = isPostTrip
+        ? unansweredPostTripChecks(postTripChecks, postTripAnswers).length > 0
+        : false;
+    // A "no" on a shutdown check is a reported defect, as on the server.
+    const isUnsafe =
+        safetyStatus === 'unsafe' ||
+        selectedDefects.length > 0 ||
+        postTripFailed.length > 0;
     const needsDefectPhotos = isUnsafe;
     // A reported problem needs words: where it is and how bad it is.
     const remarksMissing = needsDefectPhotos && remarks.trim() === '';
@@ -309,12 +330,13 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     const handleCompleteDvir = () => {
         // Construct checks list with tailored default items for equipment + selected defects
         const checksList = buildDvirChecks({
-            chocksDeployed,
             declaredUnsafe: safetyStatus === 'unsafe',
             designatedEquipment,
             mode,
-            outriggersStowed,
-            parkingBrakeSet,
+            postTripChecks: postTripInspectionChecks(
+                postTripChecks,
+                postTripAnswers,
+            ),
             selectedDefects,
         });
 
@@ -416,7 +438,8 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
             hasUnselectedMultiAsset ||
             !readings.isValid ||
             !attested ||
-            remarksMissing
+            remarksMissing ||
+            postTripUnanswered
         ) {
             return;
         }
@@ -635,12 +658,15 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                         {/* Post-Trip Specific: Parked & Secured Verification */}
                         {mode === 'post_trip' ? (
                             <DvirParkedSecuredChecklist
-                                chocksDeployed={chocksDeployed}
-                                outriggersStowed={outriggersStowed}
-                                parkingBrakeSet={parkingBrakeSet}
-                                setChocksDeployed={setChocksDeployed}
-                                setOutriggersStowed={setOutriggersStowed}
-                                setParkingBrakeSet={setParkingBrakeSet}
+                                answers={postTripAnswers}
+                                checks={postTripChecks}
+                                onAnswer={(id, answer) => {
+                                    setPostTripAnswers((current) => ({
+                                        ...current,
+                                        [id]: answer,
+                                    }));
+                                    setIsSaved(false);
+                                }}
                             />
                         ) : null}
                         {/* Inspector Remarks */}
@@ -670,7 +696,10 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                     isSaved={isSaved}
                     isUnassigned={isUnassigned}
                     isIncomplete={
-                        !readings.isValid || !attested || remarksMissing
+                        !readings.isValid ||
+                        !attested ||
+                        remarksMissing ||
+                        postTripUnanswered
                     }
                 />
             ) : null}

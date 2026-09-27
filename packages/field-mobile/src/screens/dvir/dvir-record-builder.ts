@@ -51,21 +51,18 @@ const DECLARED_UNSAFE_CHECK: TechnicianInspectionCheck = {
 
 /** Default equipment checks, reported defects, and post-trip shutdown checks. */
 export function buildDvirChecks({
-    chocksDeployed,
     declaredUnsafe,
     designatedEquipment,
     mode,
-    outriggersStowed,
-    parkingBrakeSet,
+    postTripChecks,
     selectedDefects,
 }: {
-    chocksDeployed: boolean;
     /** The operator chose "Unsafe" on the safety status. */
     declaredUnsafe: boolean;
     designatedEquipment: DesignatedEquipmentType | null;
     mode: DvirMode;
-    outriggersStowed: boolean;
-    parkingBrakeSet: boolean;
+    /** Answered parked-and-secured checks; sent only for a post-trip. */
+    postTripChecks: TechnicianInspectionCheck[];
     selectedDefects: DefectItem[];
 }): TechnicianInspectionCheck[] {
     const defaultChecks = getDefaultInspectionChecks(designatedEquipment);
@@ -86,46 +83,8 @@ export function buildDvirChecks({
         ...(declaredUnsafe && selectedDefects.length === 0
             ? [{ ...DECLARED_UNSAFE_CHECK }]
             : []),
-        ...(mode === 'post_trip'
-            ? [
-                  {
-                      id: 'post-trip-parking-brake',
-                      category: 'hydraulics' as const,
-                      label: 'Air brake & spring emergency brake fully engaged',
-                      status: parkingBrakeSet
-                          ? ('good' as const)
-                          : ('critical' as const),
-                      statusLabel: parkingBrakeSet
-                          ? 'Pass · Engaged'
-                          : 'Critical Defect · Brake not engaged',
-                      icon: '',
-                  },
-                  {
-                      id: 'post-trip-wheel-chocks',
-                      category: 'safety_devices' as const,
-                      label: 'Heavy wheel chocks firmly deployed on drive axles',
-                      status: chocksDeployed
-                          ? ('good' as const)
-                          : ('attention' as const),
-                      statusLabel: chocksDeployed
-                          ? 'Pass · Deployed'
-                          : 'Needs attention · Chocks not deployed',
-                      icon: '',
-                  },
-                  {
-                      id: 'post-trip-outriggers',
-                      category: 'hydraulics' as const,
-                      label: 'Outrigger beams & hydraulic jacks retracted & locked',
-                      status: outriggersStowed
-                          ? ('good' as const)
-                          : ('critical' as const),
-                      statusLabel: outriggersStowed
-                          ? 'Pass · Retracted & locked'
-                          : 'Critical Defect · Outriggers not stowed',
-                      icon: '',
-                  },
-              ]
-            : []),
+        // Only the shutdown checks the operator actually answered.
+        ...(mode === 'post_trip' ? postTripChecks : []),
     ];
 
     return checksList;

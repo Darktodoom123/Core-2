@@ -100,7 +100,11 @@ describe('DvirScreen Component & Workflows', () => {
 
     it('switches between Pre-Trip and Post-Trip inspection types', async () => {
         const view = await render(
-            <DvirScreen assetCode="ALB-CRN-050" initialMode="pre_trip" />,
+            <DvirScreen
+                assetCode="ALB-CRN-050"
+                assetKind="crane"
+                initialMode="pre_trip"
+            />,
         );
 
         // Pre-trip is active by default
@@ -112,18 +116,20 @@ describe('DvirScreen Component & Workflows', () => {
 
         // Switch to post-trip
         await fireEvent.press(postTripBtn);
+        expect(view.getByText('PARKED & SECURED')).toBeTruthy();
         expect(
-            view.getByText('PARKED & SECURED SHUTDOWN CHECKLIST'),
+            view.getByTestId('post-trip-check-post-trip-parking-brake'),
         ).toBeTruthy();
-        expect(view.getByTestId('check-parking-brake')).toBeTruthy();
-        expect(view.getByTestId('check-wheel-chocks')).toBeTruthy();
-        expect(view.getByTestId('check-outriggers-stowed')).toBeTruthy();
+        expect(
+            view.getByTestId('post-trip-check-post-trip-wheel-chocks'),
+        ).toBeTruthy();
+        expect(
+            view.getByTestId('post-trip-check-post-trip-outriggers'),
+        ).toBeTruthy();
 
         // Switch back to pre-trip
         await fireEvent.press(preTripBtn);
-        expect(
-            view.queryByText('PARKED & SECURED SHUTDOWN CHECKLIST'),
-        ).toBeNull();
+        expect(view.queryByText('PARKED & SECURED')).toBeNull();
     });
 
     it('opens the defects modal, searches for defects, selects items, and displays defect chips', async () => {

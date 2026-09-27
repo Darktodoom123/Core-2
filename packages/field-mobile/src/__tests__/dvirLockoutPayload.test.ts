@@ -8,11 +8,9 @@ import {
 } from '../screens/dvir/dvir-record-builder.js';
 
 const baseChecks = {
-    chocksDeployed: true,
     designatedEquipment: 'tower_crane' as const,
     mode: 'pre_trip' as const,
-    outriggersStowed: true,
-    parkingBrakeSet: true,
+    postTripChecks: [],
 };
 
 const submit = (declaredUnsafe: boolean, defectIds: string[]) => {
