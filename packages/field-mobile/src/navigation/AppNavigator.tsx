@@ -1280,17 +1280,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                     breakMinutes: clock.break_minutes ?? null,
                     limitCounterMinutes: clock.limit_counter_minutes ?? null,
                     limitCounterLabel: clock.limit_counter_label ?? null,
-                    cycleRemainingMinutes:
-                        clock.cycle_remaining_minutes ?? null,
-                    cycleAccumulatedMinutes:
-                        clock.cycle_accumulated_minutes ?? null,
-                    cycleLimitMinutes: clock.cycle_limit_minutes ?? null,
-                    driveRemainingMinutes:
-                        clock.drive_remaining_minutes ?? null,
-                    shiftWindowRemainingMinutes:
-                        clock.shift_window_remaining_minutes ?? null,
-                    breakCountdownMinutes:
-                        clock.break_countdown_minutes ?? null,
                     fatigueStatus: clock.fatigue_status ?? null,
                     doleWarning: clock.dole_warning ?? false,
                 });

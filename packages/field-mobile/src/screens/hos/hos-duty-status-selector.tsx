@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Icon } from '../../components/common/Icon';
 import { useTheme, useThemedStyles } from '../../theme';
 import type { ThemeColors } from '../../theme';
 import type { DutyStatus } from '../../types/index';
@@ -10,6 +11,9 @@ export interface HosDutyStatusSelectorProps {
     /** The status the server last accepted. */
     currentStatus: DutyStatus;
     selectedStatus: DutyStatus;
+    /** Statuses the operator can't switch to now, with the reason shown. */
+    blockedStatuses?: DutyStatus[];
+    blockedReason?: string;
     setIsSaved: React.Dispatch<React.SetStateAction<boolean>>;
     setSelectedStatus: (status: DutyStatus) => void;
 }
@@ -17,6 +21,8 @@ export interface HosDutyStatusSelectorProps {
 export const HosDutyStatusSelector: React.FC<HosDutyStatusSelectorProps> = ({
     currentStatus,
     selectedStatus,
+    blockedStatuses = [],
+    blockedReason,
     setIsSaved,
     setSelectedStatus,
 }) => {
@@ -43,13 +49,19 @@ export const HosDutyStatusSelector: React.FC<HosDutyStatusSelectorProps> = ({
                 {DUTY_STATUS_OPTIONS.map((opt) => {
                     const isSelected = selectedStatus === opt.status;
                     const isCurrent = currentStatus === opt.status;
+                    const isBlocked =
+                        blockedStatuses.includes(opt.status) && !isCurrent;
 
                     return (
                         <Pressable
                             key={opt.status}
                             accessibilityLabel={`${opt.title}, ${opt.subtitle}${isCurrent ? ', current status' : ''}`}
                             accessibilityRole="radio"
-                            accessibilityState={{ checked: isSelected }}
+                            accessibilityState={{
+                                checked: isSelected,
+                                disabled: isBlocked,
+                            }}
+                            disabled={isBlocked}
                             onPress={() => {
                                 setSelectedStatus(opt.status);
                                 setIsSaved(false);
@@ -57,6 +69,7 @@ export const HosDutyStatusSelector: React.FC<HosDutyStatusSelectorProps> = ({
                             style={({ pressed }) => [
                                 styles.dutyOptionCard,
                                 isSelected && styles.dutyOptionCardSelected,
+                                isBlocked && styles.dutyOptionCardBlocked,
                                 pressed && styles.dutyOptionCardPressed,
                             ]}
                             testID={`duty-option-${opt.status}`}
@@ -98,6 +111,18 @@ export const HosDutyStatusSelector: React.FC<HosDutyStatusSelectorProps> = ({
                                     <Text style={[styles.optionSubtitle]}>
                                         {opt.subtitle}
                                     </Text>
+                                    {isBlocked && blockedReason ? (
+                                        <View style={styles.blockedRow}>
+                                            <Icon
+                                                color={theme.hazardRedText}
+                                                name="lock"
+                                                size={14}
+                                            />
+                                            <Text style={styles.blockedText}>
+                                                {blockedReason}
+                                            </Text>
+                                        </View>
+                                    ) : null}
                                     {isCurrent ? (
                                         <View
                                             style={styles.currentTag}
@@ -151,6 +176,21 @@ const createStyles = (theme: ThemeColors) =>
             backgroundColor: theme.brandAmberLight,
             borderColor: theme.brandAmber,
             borderWidth: 2,
+        },
+        dutyOptionCardBlocked: {
+            backgroundColor: theme.surfaceHighlight,
+            opacity: 0.7,
+        },
+        blockedRow: {
+            alignItems: 'center',
+            flexDirection: 'row',
+            gap: 4,
+            marginTop: 6,
+        },
+        blockedText: {
+            color: theme.hazardRedText,
+            fontSize: 13,
+            fontWeight: '700',
         },
         dutyOptionsList: {
             gap: 10,

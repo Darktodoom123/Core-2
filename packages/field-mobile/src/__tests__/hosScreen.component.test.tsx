@@ -169,6 +169,33 @@ describe('HosScreen', () => {
         expect(view.queryByTestId('standby-reason-section')).toBeNull();
     });
 
+    it('blocks Operating and Driving at the DOLE 10h limit, leaving Standby, Break and Off Duty', async () => {
+        const view = await render(
+            <HosScreen
+                shiftInfo={{
+                    ...onShift,
+                    dutyStatus: 'standby',
+                    limitCounterMinutes: 600,
+                }}
+            />,
+        );
+
+        for (const blocked of ['operating', 'driving']) {
+            const option = view.getByTestId(`duty-option-${blocked}`);
+            expect(option.props.accessibilityState).toMatchObject({
+                disabled: true,
+            });
+            expect(option).toHaveTextContent(/10h limit reached/);
+        }
+
+        for (const allowed of ['on_break', 'off_duty']) {
+            expect(
+                view.getByTestId(`duty-option-${allowed}`).props
+                    .accessibilityState,
+            ).toMatchObject({ disabled: false });
+        }
+    });
+
     it('calls onBack when back button is pressed', async () => {
         const onBack = jest.fn();
         const view = await render(<HosScreen onBack={onBack} />);

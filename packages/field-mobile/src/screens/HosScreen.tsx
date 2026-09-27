@@ -17,7 +17,11 @@ import type { ThemeColors } from '../theme';
 import type { DutyStatus, ShiftInfo, StandbyReason } from '../types/index';
 import { HosCertifyCard } from './hos/hos-certify-card';
 import { HosClocksCard } from './hos/hos-clocks-card';
-import { DUTY_STATUS_OPTIONS, EMPTY_TIMELINE_DAY } from './hos/hos-constants';
+import {
+    DOLE_CAP_HOURS,
+    DUTY_STATUS_OPTIONS,
+    EMPTY_TIMELINE_DAY,
+} from './hos/hos-constants';
 import { HosContinuousRestBanner } from './hos/hos-continuous-rest-banner';
 import { HosDutyStatusSelector } from './hos/hos-duty-status-selector';
 import { HosShiftLimitBanner } from './hos/hos-shift-limit-banner';
@@ -308,6 +312,14 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                 />
                 {/* 4. Active Duty Status Selector */}
                 <HosDutyStatusSelector
+                    // DOLE-OSHC: the server refuses operating or driving
+                    // past 10 hours, so the picker doesn't offer them.
+                    blockedReason={`${DOLE_CAP_HOURS}h limit reached this shift`}
+                    blockedStatuses={
+                        hosCompliance.isDoleCapExceeded
+                            ? ['operating', 'driving']
+                            : []
+                    }
                     currentStatus={currentStatus}
                     selectedStatus={selectedStatus}
                     setIsSaved={setIsSaved}

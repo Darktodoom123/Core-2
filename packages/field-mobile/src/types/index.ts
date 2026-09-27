@@ -658,12 +658,6 @@ export interface ShiftInfo {
     lastAcceptedDutyAt?: string | null;
     serverTime?: string | null;
     shiftElapsedMinutes?: number | null;
-    cycleRemainingMinutes?: number | null;
-    cycleAccumulatedMinutes?: number | null;
-    cycleLimitMinutes?: number | null;
-    driveRemainingMinutes?: number | null;
-    shiftWindowRemainingMinutes?: number | null;
-    breakCountdownMinutes?: number | null;
     fatigueStatus?: string | null;
     doleWarning?: boolean;
     continuousOperatingMinutes?: number | null;
@@ -963,12 +957,10 @@ export interface HosClocks {
     daily_operating_hours?: number | null;
     limit_counter_minutes?: number | null;
     limit_counter_label?: string | null;
-    drive_remaining_minutes: number;
-    shift_window_remaining_minutes: number;
-    break_countdown_minutes: number;
-    cycle_remaining_minutes: number;
-    cycle_accumulated_minutes: number;
-    cycle_limit_minutes: number;
+    /** DOLE-OSHC limit: minutes of operating + driving left this shift. */
+    limit_remaining_minutes?: number | null;
+    limit_warning_minutes?: number;
+    limit_cap_minutes?: number;
     timeline_segments?: Array<Record<string, unknown>>;
     recent_logs?: Array<Record<string, unknown>>;
     duty_history?: Array<Record<string, unknown>>;

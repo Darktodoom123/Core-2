@@ -630,7 +630,7 @@ describe('FieldApiClient', () => {
                         clocks: {
                             shift_remaining_minutes: 600,
                             driving_remaining_minutes: 480,
-                            cycle_remaining_minutes: 4200,
+                            limit_remaining_minutes: 600,
                             is_grounded: false,
                         },
                     },

@@ -134,12 +134,10 @@ describe('Field Mobile Live Contracts & E2E Workflows', () => {
             current_duty_status: 'operating',
             started_at: '2026-09-06T06:00:00Z',
             hours_elapsed: 4.5,
-            drive_remaining_minutes: 420,
-            shift_window_remaining_minutes: 570,
-            break_countdown_minutes: 210,
-            cycle_remaining_minutes: 3800,
-            cycle_accumulated_minutes: 400,
-            cycle_limit_minutes: 4200,
+            limit_counter_minutes: 180,
+            limit_remaining_minutes: 420,
+            limit_warning_minutes: 540,
+            limit_cap_minutes: 600,
             timeline_segments: [
                 {
                     id: 1,
@@ -214,7 +212,7 @@ describe('Field Mobile Live Contracts & E2E Workflows', () => {
         assert.equal(currentShift.clocks.shift_active, true);
         assert.equal(currentShift.clocks.current_duty_status, 'operating');
         assert.equal(currentShift.clocks.hours_elapsed, 4.5);
-        assert.equal(currentShift.clocks.drive_remaining_minutes, 420);
+        assert.equal(currentShift.clocks.limit_remaining_minutes, 420);
         assert.ok(currentShift.clocks.timeline_segments);
         assert.equal(currentShift.clocks.timeline_segments.length, 1);
 
@@ -525,10 +523,9 @@ describe('Field Mobile Live Contracts & E2E Workflows', () => {
                                 shift_status: 'completed',
                                 current_duty_status: 'off_duty',
                                 hours_elapsed: 0.0,
-                                drive_remaining_minutes: 660,
-                                shift_window_remaining_minutes: 840,
-                                break_countdown_minutes: 480,
-                                cycle_remaining_minutes: 4200,
+                                limit_remaining_minutes: null,
+                                limit_warning_minutes: 540,
+                                limit_cap_minutes: 600,
                                 timeline_segments: [],
                                 recent_logs: [],
                                 active_demurrage: false,
@@ -920,7 +917,7 @@ describe('Field Mobile Live Contracts & E2E Workflows', () => {
                             clocks: {
                                 shift_active: true,
                                 hours_elapsed: 7.5,
-                                drive_remaining_minutes: 240,
+                                limit_remaining_minutes: 240,
                             },
                         },
                     }),

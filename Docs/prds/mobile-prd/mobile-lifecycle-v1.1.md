@@ -52,11 +52,14 @@ Changes from the v1.0 baseline:
    client's shift clock is operating + driving time against the DOLE-OSHC
    10h cap, with the warning at 9h, as in section 5. It no longer shows US
    trucking limits (11h drive, 14h window, 70h/8-day cycle, 30-minute
-   break). The server still calculates those values; they are not a product
-   rule. A duty change counts only once the server accepts it, and a
+   break), and the server no longer calculates them. The server enforces the
+   cap: once a shift reaches 10h of operating + driving it refuses a switch to
+   Operating or Driving, while Standby, Break and Off Duty stay allowed, and
+   the phone greys those two options out. A duty change counts only once the
+   server accepts it, and a
    rejected change is shown with its reason and can be discarded. The
    4.5-hour prompt is a fatigue suggestion, not a legal limit. The +10%
-   night-shift differential is not implemented yet.
+   night-shift differential is out of scope for the field client.
 
 All other requirements are unchanged from v1.0.
 
