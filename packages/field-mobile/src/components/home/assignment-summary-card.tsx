@@ -6,6 +6,8 @@ import {
     Text,
     View,
 } from 'react-native';
+import { splitIntakeJobs } from '../../screens/dispatch/intake-tabs';
+import type { IntakeJobs } from '../../screens/dispatch/intake-tabs';
 import { useTheme, useThemedStyles } from '../../theme';
 import type { ThemeColors } from '../../theme';
 import type { DispatchJob } from '../../types/index';
@@ -14,19 +16,29 @@ import { Icon } from '../common/Icon';
 export interface AssignmentSummaryCardProps {
     jobs: DispatchJob[];
     isLoading: boolean;
-    pendingResponseCount: number;
     onViewOrders: () => void;
     onOpenJob: (job: DispatchJob) => void;
 }
 
-function summaryLine(count: number, pending: number): string {
-    const jobsText = `${count} ${count === 1 ? 'active assignment' : 'active assignments'}`;
-    const pendingText =
-        pending > 0
-            ? ` · ${pending} response${pending === 1 ? '' : 's'} needed`
-            : '';
+/** Counts the same way as the Dispatch tabs, so the two always agree. */
+export function summaryLine({
+    pending,
+    scheduled,
+    active,
+}: IntakeJobs): string {
+    const parts = [`${active.length} active`];
 
-    return jobsText + pendingText;
+    if (scheduled.length > 0) {
+        parts.push(`${scheduled.length} scheduled`);
+    }
+
+    if (pending.length > 0) {
+        parts.push(
+            `${pending.length} response${pending.length === 1 ? '' : 's'} needed`,
+        );
+    }
+
+    return parts.join(' · ');
 }
 
 /**
@@ -36,22 +48,26 @@ function summaryLine(count: number, pending: number): string {
 export const AssignmentSummaryCard: React.FC<AssignmentSummaryCardProps> = ({
     jobs,
     isLoading,
-    pendingResponseCount,
     onViewOrders,
     onOpenJob,
 }) => {
     const { theme } = useTheme();
     const styles = useThemedStyles(createStyles);
-    const firstJob = jobs[0];
+    const intake = splitIntakeJobs(jobs);
+    // Work under way first, then the next scheduled job, then a reply.
+    const firstJob =
+        intake.active[0] ?? intake.scheduled[0] ?? intake.pending[0];
+    const liveCount =
+        intake.active.length + intake.scheduled.length + intake.pending.length;
 
     // With no work there is nothing to summarise: the home NoUnitCard says so,
     // and Dispatch owns the full empty state. Only loading and real work show.
-    if (!isLoading && jobs.length === 0) {
+    if (!isLoading && liveCount === 0) {
         return null;
     }
 
     const renderBody = () => {
-        if (isLoading && jobs.length === 0) {
+        if (isLoading && liveCount === 0) {
             return (
                 <View accessibilityLiveRegion="polite" style={styles.inlineRow}>
                     <ActivityIndicator
@@ -65,9 +81,7 @@ export const AssignmentSummaryCard: React.FC<AssignmentSummaryCardProps> = ({
 
         return (
             <>
-                <Text style={styles.body}>
-                    {summaryLine(jobs.length, pendingResponseCount)}
-                </Text>
+                <Text style={styles.body}>{summaryLine(intake)}</Text>
                 {firstJob ? (
                     <Pressable
                         accessibilityLabel={`Open dispatch assignment ${firstJob.reference || firstJob.id}`}
@@ -109,7 +123,7 @@ export const AssignmentSummaryCard: React.FC<AssignmentSummaryCardProps> = ({
                     />
                     <Text style={styles.title}>Your assignments</Text>
                 </View>
-                {jobs.length > 0 ? (
+                {liveCount > 0 ? (
                     <Pressable
                         accessibilityLabel="View dispatch orders"
                         accessibilityRole="button"
@@ -121,7 +135,7 @@ export const AssignmentSummaryCard: React.FC<AssignmentSummaryCardProps> = ({
                         testID="home-view-orders-btn"
                     >
                         <Text style={styles.viewOrdersText}>
-                            View Orders ({jobs.length})
+                            View Orders ({liveCount})
                         </Text>
                     </Pressable>
                 ) : null}

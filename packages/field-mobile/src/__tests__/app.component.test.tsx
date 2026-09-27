@@ -1352,7 +1352,7 @@ describe('native application component tree', () => {
             await screen.findByText(new RegExp(`^Ref: ${driverJob.reference}`)),
         ).toBeVisible();
         expect(screen.getByText('Your assignments')).toBeVisible();
-        expect(screen.getByText(/1 active assignment/)).toBeVisible();
+        expect(screen.getByText('0 active · 1 scheduled')).toBeVisible();
         expect(screen.getByText('Synced')).toBeVisible();
         expect(screen.getByTestId('bottom-nav-bar')).toBeVisible();
         expect(screen.queryByTestId('bottom-nav-today')).toBeNull();

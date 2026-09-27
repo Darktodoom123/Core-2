@@ -1237,7 +1237,6 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                 setDispatchIntakeOpen(true);
                             }}
                             onViewOrders={() => setDispatchIntakeOpen(true)}
-                            pendingResponseCount={pendingResponseCount}
                         />
 
                         {/* Hidden/accessible outbox container to keep the main Today dashboard clean */}
