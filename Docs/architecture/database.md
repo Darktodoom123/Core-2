@@ -164,7 +164,7 @@ collision behavior.
 - `attachments`: polymorphic owner, private storage metadata, MIME, size, checksum (SHA-256) and retention. Accepted limits are 15 MiB/file, 10 files/owner.
 - `report_exports`: creator, report type, format (CSV/PDF), status, attempts, error, file path, download token, expired_at.
 - `notifications`: recipient, optional dispatch, status/data/read time, with authorized list and mark-read routes.
-- `command_logs`: authenticated user, command UUID, action, payload hash, expected version, response/status, and replayable response payload for idempotent command processing.
+- `command_logs`: authenticated user, command UUID, action, payload hash, expected version, response/status, and replayable response payload for idempotent command processing. A 5xx answer (for example, `503` while the Tracking service is down) is not stored and its writes are rolled back, so a retry under the same command UUID runs again instead of replaying the refusal.
 - `audit_events`: actor, polymorphic subject, action, before/after JSON, reason, request ID, IP and occurrence time.
 
 ### Module 6: Driver Vehicle Inspection Report (DVIR) tables

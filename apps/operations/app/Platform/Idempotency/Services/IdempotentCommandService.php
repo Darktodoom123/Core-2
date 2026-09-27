@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 
 class IdempotentCommandService
 {
@@ -122,15 +123,33 @@ class IdempotentCommandService
         };
 
         if ($wrapInTransaction) {
-            return DB::transaction(function () use ($execution, $recordCommandLog): Response {
+            DB::beginTransaction();
+
+            try {
                 $response = $execution();
+
+                if ($this->isTemporaryRefusal($response)) {
+                    DB::rollBack();
+
+                    return $response;
+                }
+
                 $recordCommandLog($response);
+                DB::commit();
 
                 return $response;
-            });
+            } catch (Throwable $e) {
+                DB::rollBack();
+
+                throw $e;
+            }
         }
 
         $response = $execution();
+        if ($this->isTemporaryRefusal($response)) {
+            return $response;
+        }
+
         try {
             $recordCommandLog($response);
         } catch (QueryException $e) {
@@ -143,6 +162,16 @@ class IdempotentCommandService
         }
 
         return $response;
+    }
+
+    /**
+     * A 5xx answer means "not done, try again" (e.g. the tracking service is
+     * down). It is not kept, so a retry under the same command id runs the
+     * command instead of replaying the refusal forever.
+     */
+    private function isTemporaryRefusal(Response $response): bool
+    {
+        return $response->getStatusCode() >= 500;
     }
 
     private function buildReplayResponse(CommandLog $existing, string $payloadHash, string $actionName, ?int $expectedVersion): Response

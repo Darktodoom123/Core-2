@@ -5,11 +5,13 @@ use App\Modules\Dispatch\Enums\DispatchPriority;
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Platform\Idempotency\Models\CommandLog;
+use App\Platform\Idempotency\Services\IdempotentCommandService;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
 use App\Platform\Tracking\Models\LocationUpdate;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
@@ -163,4 +165,62 @@ it('fails closed for legacy idempotency records without a payload hash', functio
 
     $response->assertStatus(422)->assertJsonValidationErrors(['command_id']);
     expect(LocationUpdate::query()->where('user_id', $driver->id)->count())->toBe(0);
+});
+
+it('does not keep a 5xx answer, and rolls back what the attempt wrote', function (): void {
+    $user = User::factory()->create(['is_active' => true]);
+    $commandId = (string) Str::uuid();
+    $service = app(IdempotentCommandService::class);
+    $attempts = 0;
+    $execute = function () use (&$attempts, $user): JsonResponse {
+        $attempts++;
+        LocationUpdate::query()->create([
+            'user_id' => $user->id,
+            'latitude' => 14.5995,
+            'longitude' => 120.9842,
+            'sharing_enabled' => true,
+            'source' => 'field-mobile',
+            'captured_at' => now(),
+            'received_at' => now(),
+        ]);
+
+        return $attempts === 1
+            ? new JsonResponse(['message' => 'Try again.'], 503)
+            : new JsonResponse(['data' => ['ok' => true]], 201);
+    };
+
+    $first = $service->process($user, $commandId, 'location.store', null, $execute, ['lat' => 1]);
+
+    expect($first->getStatusCode())->toBe(503)
+        ->and(CommandLog::query()->where('command_id', $commandId)->exists())->toBeFalse()
+        ->and(LocationUpdate::query()->where('user_id', $user->id)->count())->toBe(0);
+
+    $retry = $service->process($user, $commandId, 'location.store', null, $execute, ['lat' => 1]);
+
+    expect($retry->getStatusCode())->toBe(201)
+        ->and($attempts)->toBe(2)
+        ->and(CommandLog::query()->where('command_id', $commandId)->value('response_code'))->toBe(201)
+        ->and(LocationUpdate::query()->where('user_id', $user->id)->count())->toBe(1);
+});
+
+it('forgets location retry refusals stored before 5xx answers stopped being kept', function (): void {
+    $user = User::factory()->create(['is_active' => true]);
+    $stored = fn (string $action, int $code): CommandLog => CommandLog::query()->create([
+        'user_id' => $user->id,
+        'command_id' => (string) Str::uuid(),
+        'action_name' => $action,
+        'payload_hash' => hash('sha256', '{}'),
+        'status' => $code >= 400 ? 'failed' : 'completed',
+        'response_code' => $code,
+        'response_payload' => [],
+    ]);
+    $refused = $stored('location.store', 503);
+    $accepted = $stored('location.store', 201);
+    $otherAction = $stored('dispatch.transition', 503);
+
+    (require database_path('migrations/2026_09_28_100000_forget_stored_location_retry_refusals.php'))->up();
+
+    expect(CommandLog::query()->whereKey($refused->id)->exists())->toBeFalse()
+        ->and(CommandLog::query()->whereKey($accepted->id)->exists())->toBeTrue()
+        ->and(CommandLog::query()->whereKey($otherAction->id)->exists())->toBeTrue();
 });
