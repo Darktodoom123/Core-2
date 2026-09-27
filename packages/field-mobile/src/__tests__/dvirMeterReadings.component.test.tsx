@@ -89,6 +89,7 @@ describe('DVIR meter readings are the operator’s, never pre-filled', () => {
             view.getByTestId('input-engine-hours'),
             '4831.5',
         );
+        await fireEvent.press(view.getByTestId('dvir-attestation'));
         await fireEvent.press(view.getByTestId('complete-dvir-button'));
 
         expect(onSave).toHaveBeenCalledWith(
@@ -98,5 +99,36 @@ describe('DVIR meter readings are the operator’s, never pre-filled', () => {
                 remarks: null,
             }),
         );
+    });
+
+    it('clears readings and the confirmation when the operator switches unit', async () => {
+        const truck: AssetAssignment = {
+            id: 2,
+            operational_asset_id: 502,
+            asset_code: 'TRK-502',
+            asset_name: 'Boom Truck',
+            asset_kind: 'boom_truck',
+        };
+        const view = await renderDvir({
+            assetAssignments: [crane, truck],
+            selectedAssetId: null,
+        });
+
+        await fireEvent.press(view.getByTestId('dvir-select-asset-501'));
+        await fireEvent.changeText(
+            view.getByTestId('input-engine-hours'),
+            '4830',
+        );
+        await fireEvent.changeText(view.getByTestId('input-odometer'), '120');
+        await fireEvent.press(view.getByTestId('dvir-attestation'));
+
+        await fireEvent.press(view.getByTestId('dvir-select-asset-502'));
+
+        expect(view.getByTestId('input-engine-hours').props.value).toBe('');
+        expect(view.getByTestId('input-odometer').props.value).toBe('');
+        expect(
+            view.getByTestId('dvir-attestation').props.accessibilityState,
+        ).toMatchObject({ checked: false });
+        expect(view.getByTestId('complete-dvir-button')).toBeDisabled();
     });
 });

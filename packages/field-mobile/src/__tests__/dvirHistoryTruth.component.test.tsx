@@ -116,6 +116,7 @@ describe('DVIR history only shows real inspections', () => {
             view.getByTestId('input-engine-hours'),
             '1855.0',
         );
+        await fireEvent.press(view.getByTestId('dvir-attestation'));
         await fireEvent.press(view.getByTestId('complete-dvir-button'));
 
         // Nothing reached a server, so the screen must not say it synced.

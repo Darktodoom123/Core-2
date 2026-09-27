@@ -562,6 +562,7 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
             );
 
             // Complete DVIR
+            await fireEvent.press(view.getByTestId('dvir-attestation'));
             await fireEvent.press(view.getByTestId('complete-dvir-button'));
             expect(onSave).toHaveBeenCalledWith(
                 expect.objectContaining({

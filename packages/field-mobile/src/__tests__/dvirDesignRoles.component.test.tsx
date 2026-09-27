@@ -144,15 +144,6 @@ describe.each(MODES)('DVIR design roles (%s)', (mode, theme: ThemeColors) => {
         expect(textColor(view, 'Form')).toBe(theme.surfaceDark);
     });
 
-    it('does not use Info Cobalt for the signature action', async () => {
-        const view = await renderDvir(mode);
-        const sign = flat(view, 'dvir-sign-button');
-
-        expect(sign.backgroundColor).toBe(theme.surface);
-        expect(sign.borderColor).toBe(theme.borderStrong);
-        expect(sign.backgroundColor).not.toBe(theme.actionCobaltLight);
-    });
-
     it('draws the screen on the theme canvas', async () => {
         const view = await renderDvir(mode);
 

@@ -1,6 +1,5 @@
 import type { WalkaroundPhotosMap } from '../../components/inspection';
 import type { DefectItem } from '../../components/inspection/DvirDefectsModal';
-import type { DigitalSignatureData } from '../../components/signature/DigitalSignatureModal';
 import type { FieldApiClient } from '../../services/apiClient';
 import type {
     DvirInspectionRecord,
@@ -135,11 +134,10 @@ const readingOrNull = (value: string): number | null => {
 };
 
 export function buildDvirRecord({
+    attested,
     checksList,
     currentAssetName,
-    dvirSignature,
     engineHours,
-    hasSignatureCaptured,
     inspectorName,
     isUnsafe,
     localAssetCode,
@@ -149,11 +147,11 @@ export function buildDvirRecord({
     remarks,
     selectedDefects,
 }: {
+    /** The operator ticked "I inspected this unit". */
+    attested: boolean;
     checksList: TechnicianInspectionCheck[];
     currentAssetName: string;
-    dvirSignature: DigitalSignatureData | null;
     engineHours: string;
-    hasSignatureCaptured: boolean;
     inspectorName: string;
     isUnsafe: boolean;
     localAssetCode: string;
@@ -178,15 +176,8 @@ export function buildDvirRecord({
         hasDefects: selectedDefects.length > 0 || isUnsafe,
         criticalDefectsCount: selectedDefects.filter((d) => d.critical).length,
         checks: checksList,
-        signatureCaptured: hasSignatureCaptured,
-        signatureData: dvirSignature
-            ? {
-                  signerName: dvirSignature.signerName,
-                  signerRole: dvirSignature.signerRole,
-                  signedAt: dvirSignature.signedAt,
-                  pointCount: dvirSignature.pointCount,
-              }
-            : null,
+        signatureCaptured: attested,
+        signatureData: null,
         // Only what the operator wrote; nothing is written on their behalf.
         remarks: remarks.trim() || null,
         completedAt: new Date().toISOString(),
@@ -205,17 +196,15 @@ export function buildDvirRecord({
 }
 
 export function buildDvirSubmitPayload({
+    attested,
     currentAssetName,
-    dvirSignature,
-    hasSignatureCaptured,
     inspectorName,
     localAssetCode,
     photosPayload,
     record,
 }: {
+    attested: boolean;
     currentAssetName: string;
-    dvirSignature: DigitalSignatureData | null;
-    hasSignatureCaptured: boolean;
     inspectorName: string;
     localAssetCode: string;
     photosPayload: WalkaroundPhotoPayload[];
@@ -247,16 +236,7 @@ export function buildDvirSubmitPayload({
                 : null,
         engine_hours: record.engineHours ?? null,
         has_defects: record.hasDefects,
-        signature_captured: hasSignatureCaptured,
-        digital_signature: dvirSignature
-            ? {
-                  signer_name: dvirSignature.signerName,
-                  signer_role: dvirSignature.signerRole,
-                  signed_at: dvirSignature.signedAt,
-                  strokes: dvirSignature.strokes,
-                  point_count: dvirSignature.pointCount,
-              }
-            : undefined,
+        signature_captured: attested,
         remarks: record.remarks,
         checks: checksPayload,
         photos: photosPayload.length > 0 ? photosPayload : undefined,

@@ -17,8 +17,6 @@ import type {
     WalkaroundPhotosMap,
 } from '../components/inspection';
 import { TileScreenHeader } from '../components/layout/tile-screen-header';
-import { DigitalSignatureModal } from '../components/signature/DigitalSignatureModal';
-import type { DigitalSignatureData } from '../components/signature/DigitalSignatureModal';
 import type { FieldApiClient } from '../services/apiClient';
 import type { CommandOutboxManager } from '../services/commandOutbox';
 import { useTheme, useThemedStyles } from '../theme';
@@ -29,6 +27,7 @@ import {
     resolveDesignatedEquipmentType,
 } from '../utils/equipmentClassification';
 import { DvirAssetSelector } from './dvir/dvir-asset-selector';
+import { DvirAttestation } from './dvir/dvir-attestation';
 import { DvirDefectsSection } from './dvir/dvir-defects-section';
 import { DvirFooterAction } from './dvir/dvir-footer-action';
 import { DvirHistoryArchive } from './dvir/dvir-history-archive';
@@ -51,7 +50,6 @@ import {
 import { DvirRemarksSection } from './dvir/dvir-remarks-section';
 import { DvirSafetyStatusSection } from './dvir/dvir-safety-status-section';
 import { createDvirSharedStyles } from './dvir/dvir-shared-styles';
-import { DvirSignatureSection } from './dvir/dvir-signature-section';
 import { useDvirHistory } from './dvir/use-dvir-history';
 
 export interface DvirScreenProps {
@@ -197,9 +195,8 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
         todayRecords,
     } = useDvirHistory(apiClient);
     const [showOlderArchive, setShowOlderArchive] = useState(false);
-    const [dvirSignature, setDvirSignature] =
-        useState<DigitalSignatureData | null>(null);
-    const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
+    // The operator confirms the inspection; it is sent as signature_captured.
+    const [attested, setAttested] = useState(false);
 
     const [prevTrackedAssetKey, setPrevTrackedAssetKey] = useState<
         string | null
@@ -215,7 +212,10 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
         setWalkaroundPhotos({});
         setSafetyStatus('safe');
         setRemarks('');
-        setDvirSignature(null);
+        // Readings and the confirmation belong to the unit they were taken on.
+        setEngineHours('');
+        setOdometerKm('');
+        setAttested(false);
         setIsSaved(false);
     }
 
@@ -308,17 +308,12 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
             selectedDefects,
         });
 
-        const hasSignatureCaptured = Boolean(
-            dvirSignature || !apiClient || inspectorName,
-        );
-
         const photosPayload = buildWalkaroundPhotosPayload(walkaroundPhotos);
         const record = buildDvirRecord({
             checksList,
+            attested,
             currentAssetName,
-            dvirSignature,
             engineHours,
-            hasSignatureCaptured,
             inspectorName,
             isUnsafe,
             localAssetCode,
@@ -345,9 +340,8 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
         }
 
         const dvirPayload = buildDvirSubmitPayload({
+            attested,
             currentAssetName,
-            dvirSignature,
-            hasSignatureCaptured,
             inspectorName,
             localAssetCode,
             photosPayload,
@@ -399,7 +393,12 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
             return;
         }
 
-        if (isUnassigned || hasUnselectedMultiAsset || !readings.isValid) {
+        if (
+            isUnassigned ||
+            hasUnselectedMultiAsset ||
+            !readings.isValid ||
+            !attested
+        ) {
             return;
         }
 
@@ -615,10 +614,12 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                             setIsSaved={setIsSaved}
                             setRemarks={setRemarks}
                         />
-                        {/* Digital Signature Capture Section */}
-                        <DvirSignatureSection
-                            dvirSignature={dvirSignature}
-                            setIsSignatureModalOpen={setIsSignatureModalOpen}
+                        <DvirAttestation
+                            attested={attested}
+                            onToggle={() => {
+                                setAttested((value) => !value);
+                                setIsSaved(false);
+                            }}
                         />
                     </View>
                 )}
@@ -631,23 +632,9 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                     hasUnselectedMultiAsset={hasUnselectedMultiAsset}
                     isSaved={isSaved}
                     isUnassigned={isUnassigned}
-                    readingsInvalid={!readings.isValid}
+                    readingsInvalid={!readings.isValid || !attested}
                 />
             ) : null}
-            {/* Digital Signature Modal */}
-            <DigitalSignatureModal
-                clientName={inspectorName || 'Lead Inspector'}
-                jobReference={activeJobReference || localAssetCode}
-                onClose={() => setIsSignatureModalOpen(false)}
-                onConfirmSignature={(sig) => {
-                    setDvirSignature(sig);
-                    setIsSignatureModalOpen(false);
-                    setIsSaved(false);
-                }}
-                testID="dvir-digital-signature-modal"
-                visible={isSignatureModalOpen}
-            />
-
             {/* Defects Modal (Screenshot 3) */}
             <DvirDefectsModal
                 assetCode={localAssetCode}

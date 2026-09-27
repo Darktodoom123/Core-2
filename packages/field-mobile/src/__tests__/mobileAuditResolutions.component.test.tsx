@@ -9,7 +9,6 @@ import React from 'react';
 import { JobListItemCard } from '../components/cards/JobListItemCard';
 import { FieldSafetySheet } from '../components/sheets/field-safety-sheet';
 import { AssignedJobsListScreen } from '../screens/AssignedJobsListScreen';
-import { DvirScreen } from '../screens/DvirScreen';
 import { ApiClientError } from '../services/apiClient';
 import type { DispatchJob } from '../types/index';
 
@@ -47,11 +46,6 @@ const createMockJob = (
         can_share_location: true,
     },
 });
-
-/** DVIR readings start empty; tests that complete one enter a real reading. */
-const enterEngineHours = async (view: { getByTestId: (id: string) => any }) => {
-    await fireEvent.changeText(view.getByTestId('input-engine-hours'), '1855');
-};
 
 describe('Mobile Application Audit Resolutions Component Tests', () => {
     afterEach(async () => {
@@ -477,81 +471,6 @@ describe('Mobile Application Audit Resolutions Component Tests', () => {
                 999,
                 expect.stringContaining('Declined by mobile operator'),
                 3,
-            );
-        });
-    });
-
-    describe('Issue 6: DvirScreen Digital Signature Integration', () => {
-        it('renders signature section, allows capturing signature, and includes signature in DVIR record', async () => {
-            const onSaveRecord = jest.fn();
-
-            const view = await render(
-                <DvirScreen
-                    assetCode="ALB-CRN-050"
-                    assetName="50T Tadano All-Terrain Crane"
-                    inspectorName="Alex Rivera"
-                    onSaveInspectionRecord={onSaveRecord}
-                />,
-            );
-
-            expect(view.getByTestId('dvir-signature-section')).toBeTruthy();
-            expect(
-                view.getByText('DIGITAL SIGNATURE CERTIFICATION'),
-            ).toBeTruthy();
-
-            const signBtn = view.getByTestId('dvir-sign-button');
-            expect(signBtn).toBeTruthy();
-            expect(
-                view.getByText('Capture Inspector Digital Signature'),
-            ).toBeTruthy();
-
-            // Open signature modal
-            await fireEvent.press(signBtn);
-            expect(
-                view.getByTestId('dvir-digital-signature-modal'),
-            ).toBeTruthy();
-
-            // Enter inspector name in modal and adopt signature mark
-            const nameInput = view.getByTestId(
-                'dvir-digital-signature-modal-name-input',
-            );
-            await fireEvent.changeText(
-                nameInput,
-                'Alex Rivera (Certified Operator)',
-            );
-            await fireEvent.press(
-                view.getByTestId('dvir-digital-signature-modal-adopt-mark'),
-            );
-
-            // Confirm signature
-            await fireEvent.press(
-                view.getByTestId('dvir-digital-signature-modal-submit'),
-            );
-
-            // Verify signature confirmation is rendered
-            await waitFor(() => {
-                expect(
-                    view.getByTestId('dvir-signature-confirmed'),
-                ).toBeTruthy();
-            });
-            expect(
-                view.getByText(
-                    /Certified by Alex Rivera \(Certified Operator\)/,
-                ),
-            ).toBeTruthy();
-
-            // Complete DVIR
-            await enterEngineHours(view);
-            await fireEvent.press(view.getByTestId('complete-dvir-button'));
-
-            expect(onSaveRecord).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    assetCode: 'ALB-CRN-050',
-                    signatureCaptured: true,
-                    signatureData: expect.objectContaining({
-                        signerName: 'Alex Rivera (Certified Operator)',
-                    }),
-                }),
             );
         });
     });

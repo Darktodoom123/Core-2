@@ -7,9 +7,10 @@ import { FieldApiClient } from '../services/apiClient';
 import { ThemeProvider } from '../theme';
 import type { AssetAssignment } from '../types/index';
 
-/** DVIR readings start empty; tests that complete one enter a real reading. */
+/** DVIR readings start empty and must be confirmed; tests that complete one do both. */
 const enterEngineHours = async (view: { getByTestId: (id: string) => any }) => {
     await fireEvent.changeText(view.getByTestId('input-engine-hours'), '1855');
+    await fireEvent.press(view.getByTestId('dvir-attestation'));
 };
 
 const daysAgo = (days: number) =>
@@ -211,6 +212,7 @@ describe('DvirScreen Component & Workflows', () => {
         );
 
         // Press Next/Complete DVIR
+        await fireEvent.press(view.getByTestId('dvir-attestation'));
         await fireEvent.press(view.getByTestId('complete-dvir-button'));
 
         expect(onSave).toHaveBeenCalledWith(
@@ -494,6 +496,7 @@ describe('DvirScreen Component & Workflows', () => {
         );
 
         // Press complete DVIR
+        await fireEvent.press(view.getByTestId('dvir-attestation'));
         await fireEvent.press(view.getByTestId('complete-dvir-button'));
 
         expect(onSave).toHaveBeenCalled();
@@ -999,6 +1002,8 @@ describe('DvirScreen Component & Workflows', () => {
 
         // Banner should disappear and submission should succeed
         expect(view.queryByTestId('dvir-no-asset-selected-banner')).toBeNull();
+        // Switching unit clears readings and the confirmation; enter them for this unit.
+        await enterEngineHours(view);
         await fireEvent.press(view.getByTestId('complete-dvir-button'));
         expect(onPreTripPassed).toHaveBeenCalledWith(
             'CRN-50',
