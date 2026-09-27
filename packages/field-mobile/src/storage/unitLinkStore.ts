@@ -1,4 +1,5 @@
-import type { SQLiteDatabase } from 'expo-sqlite';
+import { SqliteActorJsonStore } from './actorJsonStore';
+import type { ActorStore } from './actorJsonStore';
 
 /** The unit this operator is linked to on this phone, and since when. */
 export interface UnitLink {
@@ -7,15 +8,9 @@ export interface UnitLink {
     linkedAt: string;
 }
 
-export interface UnitLinkStore {
-    read(actorId: number): Promise<UnitLink | null>;
-    write(actorId: number, link: UnitLink): Promise<void>;
-    remove(actorId: number): Promise<void>;
-}
+export type UnitLinkStore = ActorStore<UnitLink>;
 
-function parseUnitLink(json: string): UnitLink | null {
-    const value: unknown = JSON.parse(json);
-
+function parseUnitLink(value: unknown): UnitLink | null {
     if (
         !value ||
         typeof value !== 'object' ||
@@ -32,69 +27,9 @@ function parseUnitLink(json: string): UnitLink | null {
     return { assetCode: value.assetCode, linkedAt: value.linkedAt };
 }
 
-// A single ordered queue keeps a late write from undoing a release.
-export class SqliteUnitLinkStore implements UnitLinkStore {
-    private database: Promise<SQLiteDatabase> | null = null;
-    private queue: Promise<unknown> = Promise.resolve();
-
-    private open() {
-        this.database ??= import('expo-sqlite')
-            .then(async ({ openDatabaseAsync }) => {
-                const db = await openDatabaseAsync('core2-unit-link.db');
-                await db.execAsync(
-                    'CREATE TABLE IF NOT EXISTS unit_links (actor_id INTEGER PRIMARY KEY, link_json TEXT NOT NULL)',
-                );
-
-                return db;
-            })
-            .catch((error: unknown) => {
-                this.database = null;
-
-                throw error;
-            });
-
-        return this.database;
-    }
-
-    private ordered<T>(operation: () => Promise<T>): Promise<T> {
-        const result = this.queue.then(operation, operation);
-        this.queue = result.catch(() => undefined);
-
-        return result;
-    }
-
-    read(actorId: number): Promise<UnitLink | null> {
-        return this.ordered(async () => {
-            const db = await this.open();
-            const row = await db.getFirstAsync<{ link_json: string }>(
-                'SELECT link_json FROM unit_links WHERE actor_id = ?',
-                actorId,
-            );
-
-            return row ? parseUnitLink(row.link_json) : null;
-        });
-    }
-
-    write(actorId: number, link: UnitLink): Promise<void> {
-        return this.ordered(async () => {
-            const db = await this.open();
-            await db.runAsync(
-                'INSERT INTO unit_links (actor_id, link_json) VALUES (?, ?) ON CONFLICT(actor_id) DO UPDATE SET link_json = excluded.link_json',
-                actorId,
-                JSON.stringify(link),
-            );
-        });
-    }
-
-    remove(actorId: number): Promise<void> {
-        return this.ordered(async () => {
-            const db = await this.open();
-            await db.runAsync(
-                'DELETE FROM unit_links WHERE actor_id = ?',
-                actorId,
-            );
-        });
-    }
-}
-
-export const unitLinkStore: UnitLinkStore = new SqliteUnitLinkStore();
+export const unitLinkStore: UnitLinkStore = new SqliteActorJsonStore({
+    databaseName: 'core2-unit-link.db',
+    table: 'unit_links',
+    column: 'link_json',
+    parse: parseUnitLink,
+});

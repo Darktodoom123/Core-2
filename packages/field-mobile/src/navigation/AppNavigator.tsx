@@ -40,6 +40,7 @@ import {
 import type { NetworkMonitor } from '../connectivity/networkMonitor';
 import { useResumeTracking } from '../hooks/useResumeTracking';
 import { useServerPostTrip } from '../hooks/useServerPostTrip';
+import { useTrackingPause } from '../hooks/useTrackingPause';
 import { useUnitLink } from '../hooks/useUnitLink';
 import {
     startBackgroundLocationUpdates,
@@ -95,6 +96,7 @@ import type {
     OutboxRepository,
     PayloadHasher,
 } from '../storage/outboxRepository';
+import type { TrackingPauseStore } from '../storage/trackingPauseStore';
 import type { UnitLinkStore } from '../storage/unitLinkStore';
 import { useTheme } from '../theme';
 import type {
@@ -528,6 +530,7 @@ export interface AppNavigatorProps {
     outboxHasher?: PayloadHasher;
     outboxRepository?: OutboxRepository;
     unitLinkStore?: UnitLinkStore;
+    trackingPauseStore?: TrackingPauseStore;
 }
 
 export const AppNavigator: React.FC<AppNavigatorProps> = ({
@@ -535,6 +538,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     outboxHasher,
     outboxRepository,
     unitLinkStore,
+    trackingPauseStore,
 }) => {
     const {
         user,
@@ -709,6 +713,11 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         unitLinkStore,
     );
     const isUnitLinked = unitLink !== null;
+    const {
+        pausedByOperator,
+        markPaused: markTrackingPaused,
+        clearPause: clearTrackingPause,
+    } = useTrackingPause(user?.id, unitLink, trackingPauseStore);
     const getCurrentLocation = useCallback(
         (isStationary = false) =>
             nativeLocationAdapter.getCurrentLocation(isStationary),
@@ -1783,6 +1792,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         {
             isLinked: isUnitLinked,
             isSharing: locationSharingActive,
+            pausedByOperator,
             // Same rule as LocationSharingService.canShareLocation for a job.
             canShare: Boolean(
                 user?.is_active &&
@@ -1821,23 +1831,36 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         [syncQueue],
     );
 
-    const handleToggleLocationSharing = useCallback(() => {
+    // Stops tracking on the phone and tells dispatch sharing is paused.
+    const stopTracking = useCallback(() => {
+        setLocationSharingActive(false);
         setLocationTrackingError(null);
-        setLocationSharingActive((prev) => {
-            const next = !prev;
+        locationService.stopAutoTracking();
+        void stopBackgroundLocationUpdates().catch(() => undefined);
 
-            if (!next) {
-                locationService.stopAutoTracking();
-                void stopBackgroundLocationUpdates().catch(() => undefined);
-
-                if (user && activeTrackingJob) {
-                    void locationService.pauseSharing(user, activeTrackingJob);
-                }
-            }
-
-            return next;
-        });
+        if (user && activeTrackingJob) {
+            void locationService.pauseSharing(user, activeTrackingJob);
+        }
     }, [activeTrackingJob, locationService, user]);
+
+    // The operator's own pause is kept across a restart.
+    const handleToggleLocationSharing = useCallback(() => {
+        if (locationSharingActive) {
+            stopTracking();
+            markTrackingPaused();
+
+            return;
+        }
+
+        clearTrackingPause();
+        resumeTracking();
+    }, [
+        clearTrackingPause,
+        locationSharingActive,
+        markTrackingPaused,
+        resumeTracking,
+        stopTracking,
+    ]);
 
     const handleAcceptAssignment = useCallback(
         async (jobId: number, assignmentId: number, version: number) => {
@@ -2420,6 +2443,8 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
             (a) => a.asset_code === assetCode,
         );
 
+        // A new link starts with tracking on.
+        clearTrackingPause();
         linkUnit({
             assetCode,
             assetId: assignment?.operational_asset_id ?? null,
@@ -2431,14 +2456,8 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     const releaseUnit = () => {
         unlinkUnit();
         setPostTripDoneFor(null);
-        setLocationSharingActive(false);
-        setLocationTrackingError(null);
-        locationService.stopAutoTracking();
-        void stopBackgroundLocationUpdates().catch(() => undefined);
-
-        if (user && activeTrackingJob) {
-            void locationService.pauseSharing(user, activeTrackingJob);
-        }
+        stopTracking();
+        clearTrackingPause();
     };
 
     const availableAssets = useMemo(() => {
@@ -2814,19 +2833,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                     }
                                 }}
                                 onDefectLockout={() => {
-                                    setLocationSharingActive(false);
-                                    locationService.stopAutoTracking();
-                                    void stopBackgroundLocationUpdates().catch(
-                                        () => undefined,
-                                    );
-
-                                    if (user && activeTrackingJob) {
-                                        void locationService.pauseSharing(
-                                            user,
-                                            activeTrackingJob,
-                                        );
-                                    }
-
+                                    stopTracking();
                                     handleChangeDutyStatus(
                                         'standby',
                                         'inspection_hold',

@@ -6,22 +6,26 @@ export interface ResumeTrackingInput {
     isSharing: boolean;
     /** The job allows location sharing for this operator. */
     canShare: boolean;
+    /** The operator paused tracking on this link; undefined while unknown. */
+    pausedByOperator: boolean | undefined;
     shiftInfo: Pick<ShiftInfo, 'status' | 'hoursElapsed'>;
 }
 
 /**
  * Whether tracking should come back on by itself. A restored link means the
  * operator was working the unit, so tracking resumes (lifecycle v1.1, 4.3:
- * after a reboot, resume without re-linking) unless the server says they are
- * on a break or off shift. Offline the shift is unknown, and tracking resumes.
+ * after a reboot, resume without re-linking) unless the operator paused it
+ * or the server says they are on a break or off shift. Offline the shift is
+ * unknown, and tracking resumes.
  */
 export function shouldResumeTracking({
     isLinked,
     isSharing,
     canShare,
+    pausedByOperator,
     shiftInfo,
 }: ResumeTrackingInput): boolean {
-    if (!isLinked || isSharing || !canShare) {
+    if (!isLinked || isSharing || !canShare || pausedByOperator !== false) {
         return false;
     }
 
