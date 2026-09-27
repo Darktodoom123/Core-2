@@ -2948,10 +2948,16 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                             <>
                                 <ProfileScreen
                                     apiClient={apiClient}
+                                    // The unit the operator is linked to, if any.
                                     assignedAssetLabel={
-                                        liveJobs.flatMap(
-                                            (j) => j.asset_assignments || [],
-                                        )[0]?.asset_name || null
+                                        linkedAssetCode
+                                            ? [
+                                                  linkedAssetCode,
+                                                  linkedAsset?.asset_name,
+                                              ]
+                                                  .filter(Boolean)
+                                                  .join(' · ')
+                                            : null
                                     }
                                     isOnline={isOnline}
                                     onBack={() => setActiveAppView('main')}

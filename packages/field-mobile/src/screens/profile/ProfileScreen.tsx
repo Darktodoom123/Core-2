@@ -15,6 +15,7 @@ import type { FieldApiClient } from '../../services/apiClient';
 import { useTheme } from '../../theme';
 import type { AccountDetailsResponse } from '../../types/account';
 import type { OutboxCommand } from '../../types/index';
+import { AccountUnavailable } from './components/AccountUnavailable';
 import { ActivityTab } from './components/ActivityTab';
 import { ConfirmPasswordModal } from './components/ConfirmPasswordModal';
 import { EmailChangeModal } from './components/EmailChangeModal';
@@ -22,6 +23,10 @@ import { OtpSecurityModal } from './components/OtpSecurityModal';
 import { ProfileInfoTab } from './components/ProfileInfoTab';
 import { SecurityTab } from './components/SecurityTab';
 import { SettingsSyncTab } from './components/SettingsSyncTab';
+
+// Shown instead of the raw network error, which means nothing to an operator.
+const REFRESH_FAILED =
+    "Couldn't refresh your account. Showing the details last loaded.";
 
 export type ProfileTab = 'profile' | 'security' | 'activity' | 'settings';
 
@@ -62,7 +67,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     onBack,
     initialTab = 'profile',
     userName,
-    userRole,
 }) => {
     const { isDarkHud } = useTheme();
     const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab);
@@ -94,8 +98,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         try {
             const data = await apiClient.getAccountDetails();
             setAccountData(data);
-        } catch (err: any) {
-            setError(err.message || 'Failed to load profile details.');
+            setError(null);
+        } catch {
+            setError(REFRESH_FAILED);
         } finally {
             setIsLoading(false);
             setRefreshing(false);
@@ -112,9 +117,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     setAccountData(data);
                 }
             })
-            .catch((err: any) => {
+            .catch(() => {
                 if (isMounted) {
-                    setError(err.message || 'Failed to load profile details.');
+                    setError(REFRESH_FAILED);
                 }
             })
             .finally(() => {
@@ -159,35 +164,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         }
     };
 
-    // Fallback profile data if API call is loading or in offline mode
-    const resolvedProfile = accountData?.profile ?? {
-        name: userName || 'Field Operator',
-        username: userName?.toLowerCase().replace(/\s+/g, '.') || 'operator',
-        email: 'operator@core2.test',
-        email_verified: true,
-        phone: null,
-        role: userRole || 'crane_operator',
-        role_label: userRole?.replaceAll('_', ' ') || 'Crane Operator',
-        account_status: 'active' as const,
-        account_status_label: 'Active',
-        permissions: ['dispatch.read', 'dvir.execute', 'hos.log'],
-    };
-
-    const resolvedSecurity = accountData?.security ?? {
-        email_otp_enabled: false,
-        has_verified_email: true,
-    };
-
-    const resolvedTrustedDevices = accountData?.trusted_devices ?? [];
-    const resolvedSessions = accountData?.sessions ?? [];
-    const resolvedActivity = accountData?.recent_activity ?? {
-        data: [],
-        current_page: 1,
-        last_page: 1,
-        prev_page_url: null,
-        next_page_url: null,
-        total: 0,
-    };
+    // Account tabs show only what the server returned. Without it they say
+    // so; Settings (theme, sync, sign out) works without the account.
+    const needsAccount = activeTab !== 'settings';
+    const signedInAs = accountData?.profile.name || userName;
 
     const handleTabSwitch = (tab: ProfileTab) => {
         if (tab !== activeTab) {
@@ -250,7 +230,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                             isDarkHud && styles.darkScreenSubtitle,
                         ]}
                     >
-                        Core-2 Identity Parity
+                        {signedInAs
+                            ? `Signed in as ${signedInAs}`
+                            : 'Your account'}
                     </Text>
                 </View>
 
@@ -486,7 +468,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             ) : null}
 
             {/* Error Banner with Retry */}
-            {error ? (
+            {/* Without account data the unavailable panel says it instead. */}
+            {error && accountData ? (
                 <View style={styles.errorBanner}>
                     <Text style={styles.errorBannerText}>{error}</Text>
                     <Pressable
@@ -500,7 +483,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             ) : null}
 
             {/* Main Content Area */}
-            {isLoading && !refreshing && !accountData ? (
+            {needsAccount && isLoading && !refreshing && !accountData ? (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator
                         color={isDarkHud ? '#FFBF00' : '#806000'}
@@ -529,7 +512,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     showsVerticalScrollIndicator={false}
                     testID="profile-screen-content"
                 >
-                    {activeTab === 'profile' ? (
+                    {needsAccount && !accountData ? (
+                        <AccountUnavailable
+                            isOnline={isOnline}
+                            onRetry={handleRefresh}
+                        />
+                    ) : null}
+
+                    {activeTab === 'profile' && accountData ? (
                         <ProfileInfoTab
                             apiClient={apiClient}
                             assignedAssetLabel={assignedAssetLabel}
@@ -548,11 +538,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                     });
                                 }
                             }}
-                            profile={resolvedProfile}
+                            profile={accountData.profile}
                         />
                     ) : null}
 
-                    {activeTab === 'security' ? (
+                    {activeTab === 'security' && accountData ? (
                         <SecurityTab
                             apiClient={apiClient}
                             onOpenOtpModal={(action) => {
@@ -560,14 +550,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                 setOtpModalVisible(true);
                             }}
                             onSecurityUpdated={fetchAccountData}
-                            role={resolvedProfile.role}
-                            security={resolvedSecurity}
-                            trustedDevices={resolvedTrustedDevices}
-                            userEmail={resolvedProfile.email}
+                            role={accountData.profile.role}
+                            security={accountData.security}
+                            trustedDevices={accountData.trusted_devices ?? []}
+                            userEmail={accountData.profile.email}
                         />
                     ) : null}
 
-                    {activeTab === 'activity' ? (
+                    {activeTab === 'activity' && accountData ? (
                         <ActivityTab
                             apiClient={apiClient}
                             onRevokeOthersClick={() => {
@@ -575,8 +565,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                 setConfirmModalVisible(true);
                             }}
                             onSessionsUpdated={fetchAccountData}
-                            recentActivity={resolvedActivity}
-                            sessions={resolvedSessions}
+                            recentActivity={accountData.recent_activity}
+                            sessions={accountData.sessions ?? []}
                         />
                     ) : null}
 
@@ -600,7 +590,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             {/* Email Change Re-authentication & Verification Modal */}
             <EmailChangeModal
                 apiClient={apiClient}
-                currentEmail={resolvedProfile.email}
+                currentEmail={accountData?.profile.email ?? ''}
                 onClose={() => setEmailModalVisible(false)}
                 onSuccess={(newEmail) => {
                     showToast('Email updated and verified successfully.');

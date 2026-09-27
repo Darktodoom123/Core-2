@@ -17,6 +17,8 @@ import type {
     TrustedDeviceItem,
 } from '../../../types/account';
 
+const MIN_PASSWORD_LENGTH = 12;
+
 export interface SecurityTabProps {
     security: SecuritySettingsData;
     trustedDevices: TrustedDeviceItem[];
@@ -88,7 +90,8 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
     const [deviceFeedback, setDeviceFeedback] = useState<string | null>(null);
 
     // Real-time password complexity checklist
-    const hasMinLength = newPassword.length >= 8;
+    // Matches the server's production rule (Password::min(12)).
+    const hasMinLength = newPassword.length >= MIN_PASSWORD_LENGTH;
     const hasUppercase = /[A-Z]/.test(newPassword);
     const hasLowercase = /[a-z]/.test(newPassword);
     const hasNumber = /[0-9]/.test(newPassword);
@@ -784,7 +787,7 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
                                         hasMinLength && styles.checkTextDone,
                                     ]}
                                 >
-                                    At least 8 characters
+                                    At least {MIN_PASSWORD_LENGTH} characters
                                 </Text>
                             </View>
 

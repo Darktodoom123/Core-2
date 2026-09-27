@@ -67,7 +67,7 @@ describe('ProfileSheet component tests', () => {
         expect(view.getByText('In-Cab')).toBeTruthy();
         expect(view.getByText('Online')).toBeTruthy();
         expect(view.getByText('✓ All actions synced')).toBeTruthy();
-        expect(view.getByText('v1.0.0 (Core-2 Field Mobile)')).toBeTruthy();
+        expect(view.getByText('v1.0.0')).toBeTruthy();
     });
 
     it('renders in-cab standby unit fallback when no asset is assigned', async () => {

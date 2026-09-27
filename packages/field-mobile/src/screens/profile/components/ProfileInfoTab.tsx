@@ -252,8 +252,7 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({
                                     isDarkHud && styles.darkStationValue,
                                 ]}
                             >
-                                {assignedAssetLabel ||
-                                    'In-Cab Standby (Unassigned)'}
+                                {assignedAssetLabel || 'No unit linked'}
                             </Text>
                         </View>
                     </View>
@@ -282,7 +281,7 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({
                                       : styles.lightStandbyText,
                             ]}
                         >
-                            {assignedAssetLabel ? 'In-Cab' : 'Standby'}
+                            {assignedAssetLabel ? 'In-Cab' : 'Not linked'}
                         </Text>
                     </View>
                 </View>

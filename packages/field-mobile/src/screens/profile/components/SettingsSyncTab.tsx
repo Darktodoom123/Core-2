@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Icon } from '../../../components/common/Icon';
 import { colors } from '../../../components/nativeStyles';
+import { appVersionLabel } from '../../../services/appVersion';
 import { projectOutbox } from '../../../services/outboxProjection';
 import { useTheme } from '../../../theme';
 import type { OutboxCommand } from '../../../types/index';
@@ -60,6 +61,10 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
     const waitingCount = projection ? projection.counts.waiting : queuedCount;
     const submittingCount = projection?.counts.submitting ?? 0;
     const pendingCount = waitingCount + submittingCount;
+    // Only actions that have not reached the server; synced ones are done.
+    const unsyncedCount = projection
+        ? pendingCount + attentionCount
+        : queuedCount;
 
     let outboxStatusText = '✓ All actions synced';
 
@@ -484,7 +489,7 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                                         isDarkHud && styles.darkSyncNowBtnText,
                                     ]}
                                 >
-                                    Sync Outbox Now ({queuedCount})
+                                    Sync Outbox Now ({unsyncedCount})
                                 </Text>
                             </Pressable>
                         </View>
@@ -625,7 +630,7 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                                 isDarkHud && styles.darkHealthValueMuted,
                             ]}
                         >
-                            v1.0.0 (Core-2 Field Mobile)
+                            {appVersionLabel()}
                         </Text>
                     </View>
                 </View>
@@ -730,10 +735,10 @@ export const SettingsSyncTab: React.FC<SettingsSyncTabProps> = ({
                             Sign out of the field app?
                         </Text>
 
-                        {queuedCount > 0 ? (
+                        {unsyncedCount > 0 ? (
                             <View style={styles.warningCallout}>
                                 <Text style={styles.warningCalloutText}>
-                                    You have {queuedCount} unsynced action(s)
+                                    You have {unsyncedCount} unsynced action(s)
                                     stored on this device. Signing out will
                                     pause syncing until you log back in.
                                 </Text>

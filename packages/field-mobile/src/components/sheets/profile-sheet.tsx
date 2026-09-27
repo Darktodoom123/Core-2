@@ -14,6 +14,7 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
+import { appVersionLabel } from '../../services/appVersion';
 import { useTheme } from '../../theme';
 import type { OutboxCommand } from '../../types/index';
 import { Icon } from '../common/Icon';
@@ -727,7 +728,7 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
                                                     styles.darkHealthValueMuted,
                                             ]}
                                         >
-                                            v1.0.0 (Core-2 Field Mobile)
+                                            {appVersionLabel()}
                                         </Text>
                                     </View>
                                     <View style={styles.healthRow}>

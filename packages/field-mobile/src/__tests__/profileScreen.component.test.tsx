@@ -183,7 +183,7 @@ describe('ProfileScreen component tests', () => {
 
         expect(view.getByTestId('profile-screen')).toBeTruthy();
         expect(view.getByText('Account & Security')).toBeTruthy();
-        expect(view.getByText('Core-2 Identity Parity')).toBeTruthy();
+        expect(view.getByText('Signed in as Dev Crane Operator')).toBeTruthy();
         expect(view.getByText('Online')).toBeTruthy();
 
         // 4 segmented tabs present

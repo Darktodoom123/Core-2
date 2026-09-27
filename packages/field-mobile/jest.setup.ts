@@ -192,6 +192,8 @@ jest.mock('expo-constants', () => ({
     __esModule: true,
     default: {
         expoConfig: {
+            // A real build carries the app.json version.
+            version: require('./app.json').expo.version,
             extra: {
                 eas: {
                     projectId: '157849b3-e318-4892-88e6-3f705394d299',
