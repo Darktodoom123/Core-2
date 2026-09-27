@@ -6,7 +6,7 @@ import { Icon } from '../common/Icon';
 import { colors } from '../nativeStyles';
 import { EmergencySosButton } from '../sos/emergency-sos-button';
 
-export type FieldNavItem = 'safety' | 'route' | 'documents' | 'profile';
+export type FieldNavItem = 'safety' | 'documents' | 'profile';
 export type FieldScreen = FieldNavItem | 'today';
 
 export interface FieldBottomNavProps {

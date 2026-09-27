@@ -446,8 +446,7 @@ describe('Mobile Lifecycle Modals & Operational Safeguards', () => {
             expect(onOpenDvir).toHaveBeenCalledTimes(1);
         });
 
-        it('transitions to Operating / Drive Mode and telemetry controls when pre-trip DVIR has passed', async () => {
-            const onOpenRoutes = jest.fn();
+        it('shows the in-service unit with telemetry and release controls, and no Drive Mode, when pre-trip DVIR has passed', async () => {
             const onToggleLocationSharing = jest.fn();
             const onReleaseUnit = jest.fn();
 
@@ -458,7 +457,6 @@ describe('Mobile Lifecycle Modals & Operational Safeguards', () => {
                     isUnitLinked={true}
                     jobs={[mockAcceptedJob]}
                     locationSharingActive={true}
-                    onOpenRoutes={onOpenRoutes}
                     onRefresh={jest.fn()}
                     onReleaseUnit={onReleaseUnit}
                     onSelectJob={jest.fn()}
@@ -476,11 +474,10 @@ describe('Mobile Lifecycle Modals & Operational Safeguards', () => {
             // Operating container and active badge are rendered
             expect(view.getByTestId('operating-mode-container')).toBeTruthy();
             expect(view.getByText('UNIT IN SERVICE · ACTIVE')).toBeTruthy();
-            expect(view.getByTestId('operating-drive-mode-btn')).toBeTruthy();
 
-            // Tap Drive Mode
-            await fireEvent.press(view.getByTestId('operating-drive-mode-btn'));
-            expect(onOpenRoutes).toHaveBeenCalledTimes(1);
+            // Drive Mode was removed: nothing on home leads to it
+            expect(view.queryByTestId('operating-drive-mode-btn')).toBeNull();
+            expect(view.queryByText(/Drive Mode/)).toBeNull();
 
             // Tap Pause Telemetry
             const pauseBtn = view.getByTestId(

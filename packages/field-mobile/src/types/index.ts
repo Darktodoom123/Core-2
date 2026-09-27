@@ -714,38 +714,6 @@ export interface DvirInspectionRecord {
 export type LocationSharingTone = 'active' | 'queued' | 'paused' | 'offline';
 
 // ==========================================
-// Heavy-Crane Route & Drive Mode Types
-// ==========================================
-
-export type HeavyCraneRouteStatus =
-    'available' | 'cached' | 'stale' | 'unavailable';
-
-export interface HeavyRouteInstruction {
-    id: string;
-    stepNumber: number;
-    instruction: string;
-    distanceLabel: string;
-    caution?: string | null;
-    isHazard?: boolean;
-}
-
-export interface HeavyVehicleRouteDetails {
-    status: HeavyCraneRouteStatus;
-    assetLabel: string;
-    currentPosition: string;
-    destination: string;
-    siteEntrance: string;
-    stagingPoint: string;
-    etaLabel: string;
-    distanceLabel: string;
-    bridgeClearanceMetres?: number;
-    axleWeightLimitTonnes?: number;
-    isFresh: boolean;
-    lastSyncedAt?: string | null;
-    instructions: HeavyRouteInstruction[];
-}
-
-// ==========================================
 // Parked-and-Secured Confirmation Types
 // ==========================================
 

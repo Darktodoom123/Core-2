@@ -25,7 +25,6 @@ import type { SyncTone } from '../components/layout/field-header';
 import type { HomeTile } from '../components/layout/home-tile-grid';
 import { HomeTileGrid } from '../components/layout/home-tile-grid';
 import { colors, shadows } from '../components/nativeStyles';
-import { PlannedRoutePanel } from '../components/panels/planned-route-panel';
 import { SyncStatusPanel } from '../components/panels/sync-status-panel';
 import { ChangeUnitModal } from '../components/sheets/ChangeUnitModal';
 import { DispatchIntakeSheet } from '../components/sheets/DispatchIntakeSheet';
@@ -96,7 +95,6 @@ export interface AssignedJobsListScreenProps {
     onOpenHos?: () => void;
     onOpenSafety?: () => void;
     onOpenDocuments?: () => void;
-    onOpenRoutes?: () => void;
     onOpenVehicle?: () => void;
     onOpenFuel?: () => void;
     onOpenForms?: () => void;
@@ -133,14 +131,7 @@ export interface AssignedJobsListScreenProps {
 }
 
 type TileId =
-    | 'hos'
-    | 'dvir'
-    | 'routes'
-    | 'documents'
-    | 'vehicle'
-    | 'fuel'
-    | 'forms'
-    | 'rental';
+    'hos' | 'dvir' | 'documents' | 'vehicle' | 'fuel' | 'forms' | 'rental';
 
 type TileItem = HomeTile<TileId>;
 
@@ -173,7 +164,6 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     onOpenHos,
     onOpenSafety,
     onOpenDocuments,
-    onOpenRoutes,
     onOpenVehicle,
     onOpenFuel,
     onOpenForms,
@@ -472,12 +462,6 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 iconName: 'clipboard',
             },
             {
-                id: 'routes',
-                title: 'Drive\nRoutes',
-                sublabel: 'Heavy Transit',
-                iconName: 'route',
-            },
-            {
                 id: 'documents',
                 title: 'Documents',
                 sublabel: 'Permits & Certs',
@@ -512,7 +496,6 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     );
 
     // Lifecycle actions lead the grid; Fuel is a full-width tile below it.
-    // Drive Routes stays hidden until heavy-transit routing ships.
     const GRID_TILE_IDS: TileId[] = [
         'hos',
         'dvir',
@@ -541,14 +524,6 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 break;
             case 'dvir':
                 onOpenDvir?.('pre_trip');
-                break;
-            case 'routes':
-                if (onOpenRoutes) {
-                    onOpenRoutes();
-                } else {
-                    setActiveNavItem('route');
-                }
-
                 break;
             case 'documents':
                 onOpenDocuments?.();
@@ -1110,22 +1085,6 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                 {effectiveAssetCode}
                             </Text>
                         </View>
-                        <Pressable
-                            accessibilityLabel={`Operating / Drive Mode for ${effectiveAssetCode}`}
-                            accessibilityRole="button"
-                            onPress={onOpenRoutes}
-                            style={({ pressed }) => [
-                                styles.driveModeBtn,
-                                isDarkHud && styles.darkDriveModeBtn,
-                                pressed && styles.pressed,
-                            ]}
-                            testID="operating-drive-mode-btn"
-                        >
-                            <Icon color="#FFFFFF" name="route" size={16} />
-                            <Text style={styles.driveModeBtnText}>
-                                Operating / Drive Mode
-                            </Text>
-                        </Pressable>
                         <View style={styles.quickActionsRow}>
                             <Pressable
                                 accessibilityLabel={
@@ -1312,12 +1271,6 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                     wideTile={fuelTile}
                 />
 
-                {activeNavItem === 'route' ? (
-                    <PlannedRoutePanel
-                        onBackToToday={() => setActiveNavItem('today')}
-                    />
-                ) : null}
-
                 {activeNavItem === 'today' || activeNavItem === 'profile' ? (
                     <>
                         <AssignmentSummaryCard
@@ -1424,7 +1377,6 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 onAcceptAssignment={onAcceptAssignment}
                 onAcceptServerState={onAcceptServerState}
                 onClose={() => setDispatchIntakeOpen(false)}
-                onOpenRoutes={onOpenRoutes}
                 onRejectAssignment={onRejectAssignment}
                 onReportDelay={(jobToDelay) => {
                     setDispatchIntakeOpen(false);
@@ -2100,26 +2052,6 @@ const styles = StyleSheet.create({
     },
     darkOperatingUnitCode: {
         color: '#6EE7B7',
-    },
-    driveModeBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        backgroundColor: '#059669',
-        paddingVertical: 14,
-        paddingHorizontal: 16,
-        borderRadius: 10,
-        marginBottom: 10,
-        ...shadows.sm,
-    },
-    darkDriveModeBtn: {
-        backgroundColor: '#10B981',
-    },
-    driveModeBtnText: {
-        color: '#FFFFFF',
-        fontSize: 15,
-        fontWeight: '800',
     },
     quickActionsRow: {
         flexDirection: 'row',

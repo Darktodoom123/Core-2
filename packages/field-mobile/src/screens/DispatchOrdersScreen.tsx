@@ -34,7 +34,6 @@ export interface DispatchOrdersScreenProps {
         nextStatus: DispatchStatus,
         version: number,
     ) => void;
-    onOpenRoutes?: () => void;
     onOpenDvir?: () => void;
     /** Delegates delay reporting to a parent that owns its own delay form. */
     onReportDelay?: (job: DispatchJob) => void;
@@ -58,7 +57,6 @@ export const DispatchOrdersScreen: React.FC<DispatchOrdersScreenProps> = ({
     onRejectAssignment,
     onSelectJob,
     onTransitionStatus,
-    onOpenRoutes,
     onOpenDvir,
     onReportDelay,
     onSubmitDelay,
@@ -251,7 +249,6 @@ export const DispatchOrdersScreen: React.FC<DispatchOrdersScreenProps> = ({
                                         onAcceptServerState={
                                             onAcceptServerState
                                         }
-                                        onOpenDriveRoutes={onOpenRoutes}
                                         onRejectAssignment={onRejectAssignment}
                                         onReportDelay={handleReportDelay}
                                         queuedDelayCommand={queuedDelayCommand}

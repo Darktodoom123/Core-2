@@ -1,6 +1,5 @@
 import { cleanup, fireEvent, render } from '@testing-library/react-native/pure';
 import React from 'react';
-import { HeavyCraneDriveModeModal } from '../components/cards/HeavyCraneDriveModeModal';
 import { JobListItemCard } from '../components/cards/JobListItemCard';
 import {
     HandoverTab,
@@ -19,71 +18,6 @@ jest.setTimeout(25000);
 describe('Native Field Workflows Component Tests', () => {
     afterEach(async () => {
         await cleanup();
-    });
-
-    describe('HeavyCraneDriveModeModal', () => {
-        it('renders large glanceable metrics, corridor guidance, and arrival confirmation', async () => {
-            const onArrived = jest.fn();
-            const onClose = jest.fn();
-
-            const view = await render(
-                <HeavyCraneDriveModeModal
-                    assetLabel="CRN-07 · 50t Mobile Crane"
-                    destination="North Processing Plant"
-                    distanceLabel="6.2 km"
-                    etaLabel="14 min"
-                    jobReference="DISP-9901"
-                    onArrived={onArrived}
-                    onClose={onClose}
-                    siteEntrance="Gate 3"
-                    stagingPoint="Pad 2"
-                    visible={true}
-                />,
-            );
-
-            expect(view.getByText('HEAVY CRANE DRIVE MODE')).toBeTruthy();
-            expect(view.getByText('14 min')).toBeTruthy();
-            expect(view.getByText('6.2 km')).toBeTruthy();
-            expect(view.getByText('Gate 3')).toBeTruthy();
-            expect(view.getByText('Pad 2')).toBeTruthy();
-            expect(view.getByText(/Bridge clearance/)).toBeTruthy();
-
-            // Trigger delay options
-            await fireEvent.press(view.getByTestId('report-delay-trigger-btn'));
-            await fireEvent.press(
-                view.getByText('Heavy traffic / escort delay'),
-            );
-            expect(
-                view.getByText('✓ Delay reported to Dispatch:'),
-            ).toBeTruthy();
-
-            // Arrival tap (triggers onArrived and automatically closes)
-            await fireEvent.press(view.getByTestId('drive-mode-arrived-btn'));
-            expect(onArrived).toHaveBeenCalledTimes(1);
-            expect(onClose).toHaveBeenCalledTimes(1);
-        });
-
-        it('allows exiting drive mode via close button', async () => {
-            const onClose = jest.fn();
-
-            const view = await render(
-                <HeavyCraneDriveModeModal
-                    assetLabel="CRN-07 · 50t Mobile Crane"
-                    destination="North Processing Plant"
-                    distanceLabel="6.2 km"
-                    etaLabel="14 min"
-                    jobReference="DISP-9901"
-                    onArrived={jest.fn()}
-                    onClose={onClose}
-                    siteEntrance="Gate 3"
-                    stagingPoint="Pad 2"
-                    visible={true}
-                />,
-            );
-
-            await fireEvent.press(view.getByTestId('exit-drive-mode-btn'));
-            expect(onClose).toHaveBeenCalledTimes(1);
-        });
     });
 
     describe('JobListItemCard (Upgraded Dispatch Card)', () => {
@@ -125,7 +59,6 @@ describe('Native Field Workflows Component Tests', () => {
             const view = await render(
                 <JobListItemCard
                     job={mockJob}
-                    onOpenDriveRoutes={jest.fn()}
                     onSelectJob={jest.fn()}
                     onTransitionStatus={jest.fn()}
                 />,

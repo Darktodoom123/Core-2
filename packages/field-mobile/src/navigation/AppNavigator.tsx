@@ -44,7 +44,6 @@ import { DocumentsWalletScreen } from '../screens/DocumentsWalletScreen';
 import { DvirScreen } from '../screens/DvirScreen';
 import { FieldSafetyScreen } from '../screens/FieldSafetyScreen';
 import { FuelScreen } from '../screens/FuelScreen';
-import { HeavyCraneDriveModeScreen } from '../screens/HeavyCraneDriveModeScreen';
 import { HosScreen } from '../screens/HosScreen';
 import type {
     ShiftLogEvent,
@@ -97,7 +96,6 @@ import type {
     ShiftStatus,
     StandbyReason,
     WeatherTelemetry,
-    DelayReasonCode,
     ReportDelayPayload,
     SafetyHazardCommandPayload,
     WorkStoppageCommandPayload,
@@ -559,7 +557,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         | 'inspection'
         | 'fuel'
         | 'hos'
-        | 'routes'
         | 'rental'
         | 'dispatch'
         | 'profile'
@@ -2562,7 +2559,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
             ? sosConfiguration.actions
             : []);
 
-    const statusBar = statusBarAppearance(activeAppView, theme);
+    const statusBar = statusBarAppearance(theme);
 
     return (
         <ErrorBoundary>
@@ -2760,99 +2757,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 onSelectAsset={(id) => setSelectedAssetId(id)}
                                 selectedAssetId={selectedAssetId}
                             />
-                        ) : activeAppView === 'routes' ? (
-                            <HeavyCraneDriveModeScreen
-                                activeJob={activeJob}
-                                assetCode={resolvedAssetCode}
-                                assetName={resolvedAssetName}
-                                jobs={jobs}
-                                onArrived={(jobId, version) => {
-                                    handleTransitionStatus(
-                                        jobId,
-                                        'arrived',
-                                        version,
-                                    );
-                                    setActiveAppView('main');
-                                }}
-                                onBack={() => setActiveAppView('main')}
-                                onReportDelay={(
-                                    delayReason,
-                                    explicitPayload,
-                                ) => {
-                                    const jobToDelay = activeJob;
-
-                                    if (!jobToDelay) {
-                                        return;
-                                    }
-
-                                    if (explicitPayload) {
-                                        void handleReportDelay(jobToDelay.id, {
-                                            ...explicitPayload,
-                                            dispatch_job_id: jobToDelay.id,
-                                            job_version:
-                                                explicitPayload.job_version ??
-                                                jobToDelay.version,
-                                        });
-
-                                        return;
-                                    }
-
-                                    let reasonCode: DelayReasonCode = 'other';
-                                    const lower = delayReason.toLowerCase();
-
-                                    if (lower.includes('clearance')) {
-                                        reasonCode = 'low_clearance';
-                                    } else if (
-                                        lower.includes('traffic') ||
-                                        lower.includes('escort')
-                                    ) {
-                                        reasonCode = 'traffic';
-                                    } else if (
-                                        lower.includes('detour') ||
-                                        lower.includes('road') ||
-                                        lower.includes('closure')
-                                    ) {
-                                        reasonCode = 'road_closure';
-                                    } else if (
-                                        lower.includes('access') ||
-                                        lower.includes('gate')
-                                    ) {
-                                        reasonCode = 'site_access_restricted';
-                                    } else if (
-                                        lower.includes('weather') ||
-                                        lower.includes('rain')
-                                    ) {
-                                        reasonCode = 'weather';
-                                    } else if (
-                                        lower.includes('equipment') ||
-                                        lower.includes('mechanical')
-                                    ) {
-                                        reasonCode = 'equipment_issue';
-                                    }
-
-                                    const payload: ReportDelayPayload = {
-                                        dispatch_job_id: jobToDelay.id,
-                                        context: 'transit',
-                                        reason: reasonCode,
-                                        operational_asset_id:
-                                            jobToDelay.asset_assignments
-                                                ?.length === 1
-                                                ? jobToDelay
-                                                      .asset_assignments[0]
-                                                      .operational_asset_id
-                                                : null,
-                                        estimated_minutes: 30,
-                                        notes: delayReason,
-                                        job_version: jobToDelay.version,
-                                        reported_at: new Date().toISOString(),
-                                    };
-                                    void handleReportDelay(
-                                        jobToDelay.id,
-                                        payload,
-                                    );
-                                }}
-                                operatorName={resolvedOperatorName}
-                            />
                         ) : activeAppView === 'rental' ? (
                             <RentalHandoverScreen
                                 assignedAssets={activeJob?.asset_assignments}
@@ -2898,7 +2802,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                     setDvirInitialMode('pre_trip');
                                     setActiveAppView('dvir');
                                 }}
-                                onOpenRoutes={() => setActiveAppView('routes')}
                                 onRejectAssignment={handleRejectAssignment}
                                 onRetryNewVersion={handleRetryNewVersion}
                                 onSelectJob={handleSelectJob}
@@ -3077,9 +2980,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                     onOpenHos={() => setActiveAppView('hos')}
                                     onOpenRental={() =>
                                         setActiveAppView('rental')
-                                    }
-                                    onOpenRoutes={() =>
-                                        setActiveAppView('routes')
                                     }
                                     onOpenVehicle={() =>
                                         setActiveAppView('inspection')

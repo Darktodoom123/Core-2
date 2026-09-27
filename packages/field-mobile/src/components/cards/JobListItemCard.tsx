@@ -45,7 +45,6 @@ export interface JobListItemCardProps {
         version: number,
         signatureData?: DigitalSignatureData,
     ) => void;
-    onOpenDriveRoutes?: () => void;
     onReportDelay?: (job: DispatchJob) => void;
 }
 

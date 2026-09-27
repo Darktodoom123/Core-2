@@ -4,6 +4,5 @@ export * from './DvirScreen';
 export * from './MachineProfileScreen';
 export * from './HosScreen';
 export * from './RentalHandoverScreen';
-export * from './HeavyCraneDriveModeScreen';
 export * from './DispatchOrdersScreen';
 export * from './profile/ProfileScreen';
