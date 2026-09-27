@@ -14,6 +14,7 @@ import type {
     DispatchJob,
     EquipmentHandoverClaimResponse,
     EquipmentHandoverInitiateResponse,
+    JobHistoryPage,
     HosClocks,
     JobReportCommandPayload,
     LocationSharePayload,
@@ -616,6 +617,31 @@ export class FieldApiClient {
         });
 
         return this.handleResponse<DispatchJob[]>(response);
+    }
+
+    /** The operator's finished jobs from the last `days` days, newest first. */
+    public async fetchJobHistory(page = 1, days = 30): Promise<JobHistoryPage> {
+        const response = await this.fetchFn(
+            `${this.baseUrl}/api/v1/dispatch-jobs?scope=history&days=${days}&page=${page}`,
+            { method: 'GET', headers: this.getHeaders() },
+        );
+
+        if (!response.ok) {
+            return this.handleResponse<JobHistoryPage>(response);
+        }
+
+        const body = (await response.json()) as {
+            data: DispatchJob[];
+            meta: { current_page: number; last_page: number };
+        };
+
+        return {
+            items: body.data,
+            nextPage:
+                body.meta.current_page < body.meta.last_page
+                    ? body.meta.current_page + 1
+                    : null,
+        };
     }
 
     public async fetchLocationWeather(

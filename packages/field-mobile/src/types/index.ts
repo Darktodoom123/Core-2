@@ -160,6 +160,15 @@ export interface DispatchJob {
         reference?: string;
     } | null;
     latest_delay?: DispatchJobDelayInfo | null;
+    /** Set by the server when the job finished; null when it never recorded it. */
+    completed_at?: string | null;
+    cancelled_at?: string | null;
+}
+
+/** One page of the operator's finished jobs, newest first. */
+export interface JobHistoryPage {
+    items: DispatchJob[];
+    nextPage: number | null;
 }
 
 export type SosIncidentCategory =

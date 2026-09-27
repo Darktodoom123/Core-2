@@ -33,6 +33,9 @@ const MIGRATED = [
         .readdirSync(path.join(SRC, 'components', 'sheets', 'report-delay'))
         .map((file) => `components/sheets/report-delay/${file}`),
     'screens/DispatchOrdersScreen.tsx',
+    ...fs
+        .readdirSync(path.join(SRC, 'screens', 'dispatch'))
+        .map((file) => `screens/dispatch/${file}`),
     'screens/DocumentsWalletScreen.tsx',
     'screens/FuelScreen.tsx',
     'screens/MachineProfileScreen.tsx',

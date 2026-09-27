@@ -111,12 +111,12 @@ describe.each(MODES)(
                 mode,
                 <DispatchOrdersScreen jobs={[]} />,
             );
-            const selected = flat(view, 'intake-tab-all');
+            const selected = flat(view, 'intake-tab-active');
             const idle = flat(view, 'intake-tab-pending');
 
             expect(selected.backgroundColor).toBe(theme.brandAmberLight);
             expect(selected.borderColor).toBe(theme.brandAmber);
-            expect(textColor(view, 'All Orders (0)')).toBe(theme.textPrimary);
+            expect(textColor(view, 'Active (0)')).toBe(theme.textPrimary);
             expect(idle.backgroundColor).not.toBe(theme.actionCobalt);
             expect(textColor(view, 'Needs Response (0)')).toBe(
                 theme.textSecondary,

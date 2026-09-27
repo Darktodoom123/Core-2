@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AssignmentResponseCard } from '../components/cards/AssignmentResponseCard';
+import { activeJobs } from '../components/cards/job-card/job-lifecycle';
 import { JobListItemCard } from '../components/cards/JobListItemCard';
 import { Icon } from '../components/common/Icon';
 import { TileScreenHeader } from '../components/layout/tile-screen-header';
 import { ReportDelayModal } from '../components/sheets/ReportDelayModal';
+import type { FieldApiClient } from '../services/apiClient';
 import { useTheme, useThemedStyles } from '../theme';
 import type { ThemeColors } from '../theme';
 import type {
@@ -13,9 +15,15 @@ import type {
     OutboxCommand,
     ReportDelayPayload,
 } from '../types/index';
+import { JobHistoryList } from './dispatch/job-history-list';
+import { useJobHistory } from './dispatch/use-job-history';
+
+type DispatchTab = 'pending' | 'active' | 'history';
 
 export interface DispatchOrdersScreenProps {
     jobs: DispatchJob[];
+    /** Loads the History tab; finished jobs come only from the server. */
+    apiClient?: FieldApiClient;
     onBack?: () => void;
     onAcceptAssignment?: (
         jobId: number,
@@ -51,7 +59,8 @@ export interface DispatchOrdersScreenProps {
 }
 
 export const DispatchOrdersScreen: React.FC<DispatchOrdersScreenProps> = ({
-    jobs,
+    jobs: allJobs,
+    apiClient,
     onBack,
     onAcceptAssignment,
     onRejectAssignment,
@@ -70,17 +79,34 @@ export const DispatchOrdersScreen: React.FC<DispatchOrdersScreenProps> = ({
     const { theme } = useTheme();
     const styles = useThemedStyles(createStyles);
 
+    // Finished jobs never sit among live work; History loads them separately.
+    const jobs = activeJobs(allJobs);
     const pendingJobs = jobs.filter(
         (job) => job.my_assignment?.response_status === 'pending',
     );
-    const [userTab, setUserTab] = useState<'pending' | 'all' | null>(null);
+    const [userTab, setUserTab] = useState<DispatchTab | null>(null);
     const [delayModalJob, setDelayModalJob] = useState<DispatchJob | null>(
         null,
     );
 
     const hasPending = pendingJobs.length > 0;
-    const selectedTab = userTab ?? (pendingJobs.length > 0 ? 'pending' : 'all');
+    const selectedTab: DispatchTab =
+        userTab ?? (pendingJobs.length > 0 ? 'pending' : 'active');
     const displayedJobs = selectedTab === 'pending' ? pendingJobs : jobs;
+    const history = useJobHistory(apiClient);
+    const tabs: Array<{ id: DispatchTab; label: string; a11y: string }> = [
+        {
+            id: 'pending',
+            label: `Needs Response (${pendingJobs.length})`,
+            a11y: `Needs response tab, ${pendingJobs.length} orders`,
+        },
+        {
+            id: 'active',
+            label: `Active (${jobs.length})`,
+            a11y: `Active orders tab, ${jobs.length} orders`,
+        },
+        { id: 'history', label: 'History', a11y: 'Finished jobs history tab' },
+    ];
     const handleReportDelay =
         onReportDelay ?? (onSubmitDelay ? setDelayModalJob : undefined);
 
@@ -126,52 +152,46 @@ export const DispatchOrdersScreen: React.FC<DispatchOrdersScreenProps> = ({
                         </Text>
                     </View>
                 }
-                subtitle={`${pendingJobs.length} needs response · ${jobs.length} total orders`}
+                subtitle={`${pendingJobs.length} needs response · ${jobs.length} active`}
                 title="Dispatch Intake & Orders"
             />
 
             {/* Segmented Filter Tab Rail */}
             <View style={styles.tabRailContainer}>
-                <Pressable
-                    accessibilityLabel={`Pending response tab, ${pendingJobs.length} orders`}
-                    accessibilityRole="button"
-                    onPress={() => setUserTab('pending')}
-                    style={[
-                        styles.tabItem,
-                        selectedTab === 'pending' && styles.tabItemActive,
-                    ]}
-                    testID="intake-tab-pending"
-                >
-                    <Text
-                        style={[
-                            styles.tabItemText,
-                            selectedTab === 'pending' &&
-                                styles.tabItemTextActive,
-                        ]}
-                    >
-                        Needs Response ({pendingJobs.length})
-                    </Text>
-                </Pressable>
+                {tabs.map((tab) => {
+                    const isSelected = selectedTab === tab.id;
 
-                <Pressable
-                    accessibilityLabel={`All orders tab, ${jobs.length} orders`}
-                    accessibilityRole="button"
-                    onPress={() => setUserTab('all')}
-                    style={[
-                        styles.tabItem,
-                        selectedTab === 'all' && styles.tabItemActive,
-                    ]}
-                    testID="intake-tab-all"
-                >
-                    <Text
-                        style={[
-                            styles.tabItemText,
-                            selectedTab === 'all' && styles.tabItemTextActive,
-                        ]}
-                    >
-                        All Orders ({jobs.length})
-                    </Text>
-                </Pressable>
+                    return (
+                        <Pressable
+                            accessibilityLabel={tab.a11y}
+                            accessibilityRole="tab"
+                            accessibilityState={{ selected: isSelected }}
+                            key={tab.id}
+                            onPress={() => {
+                                setUserTab(tab.id);
+
+                                if (tab.id === 'history') {
+                                    history.ensureLoaded();
+                                }
+                            }}
+                            style={[
+                                styles.tabItem,
+                                isSelected && styles.tabItemActive,
+                            ]}
+                            testID={`intake-tab-${tab.id}`}
+                        >
+                            <Text
+                                numberOfLines={2}
+                                style={[
+                                    styles.tabItemText,
+                                    isSelected && styles.tabItemTextActive,
+                                ]}
+                            >
+                                {tab.label}
+                            </Text>
+                        </Pressable>
+                    );
+                })}
             </View>
 
             {/* Scrollable Orders List */}
@@ -182,7 +202,9 @@ export const DispatchOrdersScreen: React.FC<DispatchOrdersScreenProps> = ({
                 style={styles.scrollView}
                 testID="dispatch-orders-list"
             >
-                {displayedJobs.length === 0 ? (
+                {selectedTab === 'history' ? (
+                    <JobHistoryList history={history} />
+                ) : displayedJobs.length === 0 ? (
                     <View
                         style={styles.emptyCard}
                         testID="dispatch-intake-empty"
@@ -347,7 +369,8 @@ const createStyles = (theme: ThemeColors) =>
             flex: 1,
             justifyContent: 'center',
             minHeight: 48,
-            paddingHorizontal: 8,
+            paddingHorizontal: 6,
+            paddingVertical: 4,
         },
         // Selected filter: Signal Gold Soft with ink text (selection, not action).
         tabItemActive: {
@@ -358,6 +381,7 @@ const createStyles = (theme: ThemeColors) =>
             color: theme.textSecondary,
             fontSize: 14,
             fontWeight: '500',
+            textAlign: 'center',
         },
         tabItemTextActive: {
             color: theme.textPrimary,

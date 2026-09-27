@@ -1373,6 +1373,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
 
             {/* Dispatch Focused Assignment Intake Sheet */}
             <DispatchIntakeSheet
+                apiClient={apiClient}
                 conflictedCommands={outboxCommands.filter(
                     (command) => command.state === 'conflict',
                 )}

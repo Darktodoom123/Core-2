@@ -100,9 +100,7 @@ describe('DispatchOrdersScreen', () => {
         expect(view.getByText('Central Dispatch')).toBeTruthy();
         expect(view.getByText('Dispatch Intake & Orders')).toBeTruthy();
         expect(view.getByText('1 PENDING')).toBeTruthy();
-        expect(
-            view.getByText('1 needs response · 2 total orders'),
-        ).toBeTruthy();
+        expect(view.getByText('1 needs response · 2 active')).toBeTruthy();
 
         // Press back button
         await act(async () => {
@@ -111,7 +109,7 @@ describe('DispatchOrdersScreen', () => {
         expect(onBack).toHaveBeenCalledTimes(1);
     });
 
-    it('displays segmented tab rail and allows toggling between Needs Response and All Orders', async () => {
+    it('displays segmented tab rail and allows toggling between Needs Response and Active', async () => {
         const onAccept = jest.fn();
         const onReject = jest.fn();
         const onSelectJob = jest.fn();
@@ -127,18 +125,18 @@ describe('DispatchOrdersScreen', () => {
 
         // By default with pending orders, Needs Response tab is active
         expect(view.getByText('Needs Response (1)')).toBeTruthy();
-        expect(view.getByText('All Orders (2)')).toBeTruthy();
+        expect(view.getByText('Active (2)')).toBeTruthy();
 
         // Pending job item visible with acceptance response actions
         expect(view.getByTestId('dispatch-intake-job-101')).toBeTruthy();
         expect(view.getByTestId('accept-assignment-btn')).toBeTruthy();
 
-        // Switch to All Orders tab
+        // Switch to Active tab
         await act(async () => {
-            fireEvent.press(view.getByTestId('intake-tab-all'));
+            fireEvent.press(view.getByTestId('intake-tab-active'));
         });
 
-        // Both jobs should be rendered in All Orders
+        // Both live jobs are rendered under Active
         expect(view.getByTestId('dispatch-intake-job-101')).toBeTruthy();
         expect(view.getByTestId('dispatch-intake-job-102')).toBeTruthy();
     });

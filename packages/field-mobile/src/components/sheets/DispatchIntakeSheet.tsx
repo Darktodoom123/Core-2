@@ -2,6 +2,7 @@ import React from 'react';
 import { Modal, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DispatchOrdersScreen } from '../../screens/DispatchOrdersScreen';
+import type { FieldApiClient } from '../../services/apiClient';
 import { useTheme } from '../../theme';
 import type {
     DispatchJob,
@@ -13,6 +14,7 @@ export interface DispatchIntakeSheetProps {
     visible: boolean;
     onClose: () => void;
     jobs: DispatchJob[];
+    apiClient?: FieldApiClient;
     onAcceptAssignment?: (
         jobId: number,
         assignmentId: number,
@@ -40,6 +42,7 @@ export const DispatchIntakeSheet: React.FC<DispatchIntakeSheetProps> = ({
     visible,
     onClose,
     jobs,
+    apiClient,
     onAcceptAssignment,
     onRejectAssignment,
     onSelectJob,
@@ -71,6 +74,7 @@ export const DispatchIntakeSheet: React.FC<DispatchIntakeSheetProps> = ({
                     testID="dispatch-intake-sheet"
                 >
                     <DispatchOrdersScreen
+                        apiClient={apiClient}
                         backTestID="close-dispatch-intake-btn"
                         conflictedCommands={conflictedCommands}
                         jobs={jobs}

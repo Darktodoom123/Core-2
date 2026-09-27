@@ -475,7 +475,7 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
             expect(view.queryByTestId('dispatch-intake-sheet')).toBeNull();
         });
 
-        it('auto-selects All Orders tab in DispatchIntakeSheet when opened with zero pending orders and allows selecting a job', async () => {
+        it('auto-selects the Active tab in DispatchIntakeSheet when opened with zero pending orders and allows selecting a job', async () => {
             const onSelectJob = jest.fn();
 
             const acceptedJob: DispatchJob = {
@@ -513,9 +513,9 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
             // Open Dispatch tile
             await fireEvent.press(view.getByTestId('tile-forms'));
 
-            // Sheet should open on All Orders tab since 0 pending orders
+            // Sheet opens on the Active tab since there are 0 pending orders
             expect(view.getByTestId('dispatch-intake-sheet')).toBeTruthy();
-            expect(view.getByText('All Orders (1)')).toBeTruthy();
+            expect(view.getByText('Active (1)')).toBeTruthy();
             expect(view.getByTestId('dispatch-intake-job-404')).toBeTruthy();
 
             // Select job closes sheet and invokes callback

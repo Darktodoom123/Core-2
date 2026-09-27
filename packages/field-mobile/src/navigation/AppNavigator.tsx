@@ -2794,6 +2794,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                             />
                         ) : activeAppView === 'dispatch' ? (
                             <DispatchOrdersScreen
+                                apiClient={apiClient}
                                 conflictedCommands={outboxCommands?.filter(
                                     (command) => command.state === 'conflict',
                                 )}
