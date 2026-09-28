@@ -70,6 +70,16 @@ describe.each(MODES)(
             expect(view.getByTestId('profile-summary')).toBeTruthy();
         });
 
+        it('never shows a made-up name when the profile has none', async () => {
+            const view = await renderHeader(mode, {
+                userName: null,
+                userRole: 'Crane Operator',
+            });
+
+            expect(view.getByText('Crane Operator')).toBeTruthy();
+            expect(view.queryByText('Alex Reyes')).toBeNull();
+        });
+
         it('shows offline in the status pill as a warning', async () => {
             const view = await renderHeader(mode, {
                 isOnline: false,

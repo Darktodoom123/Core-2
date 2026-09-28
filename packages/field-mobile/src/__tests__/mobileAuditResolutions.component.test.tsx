@@ -187,6 +187,20 @@ describe('Mobile Application Audit Resolutions Component Tests', () => {
                 view.getByTestId('digital-signature-modal-canvas'),
             );
 
+            // The server needs the operator's own work summary: no default.
+            expect(
+                view.getByTestId('digital-signature-modal-summary-input').props
+                    .value,
+            ).toBe('');
+            expect(
+                view.getByTestId('digital-signature-modal-submit').props
+                    .accessibilityState?.disabled,
+            ).toBe(true);
+            await fireEvent.changeText(
+                view.getByTestId('digital-signature-modal-summary-input'),
+                'Two tandem lifts of the east trusses.',
+            );
+
             await fireEvent.press(
                 view.getByTestId('digital-signature-modal-submit'),
             );
@@ -197,6 +211,8 @@ describe('Mobile Application Audit Resolutions Component Tests', () => {
                 3,
                 expect.objectContaining({
                     signerName: 'Engr. Roberto Santos',
+                    signerRole: undefined,
+                    workSummary: 'Two tandem lifts of the east trusses.',
                 }),
             );
         });

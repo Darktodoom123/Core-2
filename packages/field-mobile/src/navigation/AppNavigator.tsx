@@ -1917,10 +1917,11 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                 if (nextStatus === 'completed' && signatureData) {
                     await commandOutbox.enqueueSubmitJobReport(jobId, {
                         dispatch_job_id: jobId,
-                        work_summary:
-                            signatureData.workSummary ||
-                            'Dispatched crane and site operational tasks completed in full.',
-                        remarks: `Signed off by: ${signatureData.signerName} (${signatureData.signerRole})`,
+                        // The operator's own summary; the sign-off requires it.
+                        work_summary: signatureData.workSummary ?? '',
+                        remarks: signatureData.signerRole
+                            ? `Signed off by: ${signatureData.signerName} (${signatureData.signerRole})`
+                            : `Signed off by: ${signatureData.signerName}`,
                         ending_meter_value: signatureData.endingMeterValue,
                         meter_type: signatureData.meterType,
                         signer_name: signatureData.signerName,

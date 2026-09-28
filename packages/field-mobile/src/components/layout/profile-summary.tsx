@@ -44,6 +44,7 @@ const initialsFor = (userName?: string | null): string => {
  */
 export const ProfileSummary: React.FC<ProfileSummaryProps> = ({
     userName,
+    userRole,
     onOpenProfile,
     notificationCount = 0,
     onOpenNotifications,
@@ -71,7 +72,7 @@ export const ProfileSummary: React.FC<ProfileSummaryProps> = ({
                 </View>
                 <View style={styles.profileCopy}>
                     <Text selectable style={styles.profileName}>
-                        {userName || 'Alex Reyes'}
+                        {userName || userRole || 'Signed in'}
                     </Text>
                     {/* Hidden test hook kept for existing tests. */}
                     <View

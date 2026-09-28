@@ -21,7 +21,8 @@ export type SignatureStroke = SignaturePoint[];
 
 export interface DigitalSignatureData {
     signerName: string;
-    signerRole: string;
+    /** Only when the signer gave one. */
+    signerRole?: string;
     workSummary?: string;
     endingMeterValue?: number | null;
     meterType?: string;
@@ -36,6 +37,8 @@ export interface DigitalSignatureModalProps {
     clientName?: string;
     onClose: () => void;
     onConfirmSignature: (data: DigitalSignatureData) => void;
+    /** Job completion: the server needs the operator's own summary. */
+    requireWorkSummary?: boolean;
     testID?: string;
 }
 
@@ -45,13 +48,13 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
     clientName = 'Client Representative',
     onClose,
     onConfirmSignature,
+    requireWorkSummary = false,
     testID = 'digital-signature-modal',
 }) => {
     const [signerName, setSignerName] = useState('');
-    const [signerRole, setSignerRole] = useState('Site Supervisor');
-    const [workSummary, setWorkSummary] = useState(
-        'Dispatched operational tasks and crane lifts completed safely per site plan.',
-    );
+    // Written by the signer and operator; never pre-filled.
+    const [signerRole, setSignerRole] = useState('');
+    const [workSummary, setWorkSummary] = useState('');
     const [endingMeterValue, setEndingMeterValue] = useState('');
     const [meterType, setMeterType] = useState('odometer_km');
     const [strokes, setStrokes] = useState<SignatureStroke[]>([]);
@@ -98,7 +101,10 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
 
     const totalPoints = strokes.reduce((acc, s) => acc + s.length, 0);
     const hasSignature = totalPoints >= 4;
-    const canSubmit = signerName.trim().length > 0 && hasSignature;
+    const canSubmit =
+        signerName.trim().length > 0 &&
+        hasSignature &&
+        (!requireWorkSummary || workSummary.trim().length > 0);
 
     const handleSubmit = () => {
         if (!canSubmit) {
@@ -111,7 +117,7 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
 
         onConfirmSignature({
             signerName: signerName.trim(),
-            signerRole: signerRole.trim() || 'Site Representative',
+            signerRole: signerRole.trim() || undefined,
             workSummary: workSummary.trim(),
             endingMeterValue: Number.isNaN(meterNum) ? null : meterNum,
             meterType,
@@ -121,6 +127,8 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
         });
         handleClear();
         setSignerName('');
+        setSignerRole('');
+        setWorkSummary('');
         setEndingMeterValue('');
     };
 
@@ -193,7 +201,11 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
                                 testID={`${testID}-role-input`}
                             />
 
-                            <Text style={styles.label}>Work Summary</Text>
+                            <Text style={styles.label}>
+                                {requireWorkSummary
+                                    ? 'Work Summary (required)'
+                                    : 'Work Summary (optional)'}
+                            </Text>
                             <TextInput
                                 accessibilityLabel="Work summary"
                                 multiline

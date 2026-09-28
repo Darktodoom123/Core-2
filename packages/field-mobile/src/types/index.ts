@@ -760,7 +760,7 @@ export interface DvirInspectionRecord {
     signatureCaptured: boolean;
     signatureData?: {
         signerName: string;
-        signerRole: string;
+        signerRole?: string;
         signedAt: string;
         pointCount: number;
     } | null;

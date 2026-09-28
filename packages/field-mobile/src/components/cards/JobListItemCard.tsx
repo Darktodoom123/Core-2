@@ -114,6 +114,7 @@ export const JobListItemCard: React.FC<JobListItemCardProps> = ({
                     clientName={job.client}
                     jobReference={job.reference}
                     onClose={() => setShowCompletionSignature(false)}
+                    requireWorkSummary
                     onConfirmSignature={(sigData) => {
                         setShowCompletionSignature(false);
                         onTransitionStatus?.(
