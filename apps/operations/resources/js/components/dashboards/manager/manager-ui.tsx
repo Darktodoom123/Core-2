@@ -134,7 +134,7 @@ export function FilterButton({
             aria-label={`${label} (${count})`}
             onClick={onClick}
             className={cn(
-                'inline-flex min-h-9 items-center gap-1.5 rounded-md px-2.5 font-medium transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
+                'inline-flex min-h-11 items-center gap-1.5 rounded-md px-2.5 font-medium transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden md:min-h-9',
                 pressed
                     ? 'bg-surface font-semibold text-ink shadow-xs ring-1 ring-line'
                     : 'text-ink-soft hover:text-ink',

@@ -21,6 +21,7 @@ export type BrowserFixtures = {
     job_id: number;
     gpt_job_id: number;
     assignment_review_job_id: number;
+    advisory_job_id: number;
     assigned_job_id: number;
     approval_job_id?: number;
     approval_request_id?: number;

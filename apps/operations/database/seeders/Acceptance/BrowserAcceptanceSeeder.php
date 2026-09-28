@@ -105,6 +105,20 @@ final class BrowserAcceptanceSeeder extends Seeder
             'requirements' => ['Certified crane operator', '50T mobile crane'],
             'created_by' => $manager->id,
         ]);
+        // GPT advice needs a job no other journey assigns resources to, or the
+        // desk correctly marks the advice stale and hides the proposal.
+        $advisoryJob = DispatchJob::query()->create([
+            'reference' => 'R6-BROWSER-010',
+            'client' => 'Browser Acceptance Client',
+            'title' => 'Independent GPT advisory review lift',
+            'site' => 'Browser advisory fixture site',
+            'scheduled_start' => now()->addDays(3),
+            'scheduled_end' => now()->addDays(3)->addHours(4),
+            'priority' => DispatchPriority::Routine,
+            'status' => DispatchStatus::Draft,
+            'requirements' => ['Certified crane operator', '50T mobile crane'],
+            'created_by' => $manager->id,
+        ]);
         $assignedJob = DispatchJob::query()->create([
             'reference' => 'R6-BROWSER-002',
             'client' => 'Browser Assigned Client',
@@ -363,8 +377,16 @@ final class BrowserAcceptanceSeeder extends Seeder
             'remarks' => 'Accepted standby interval with current GPS snapshot.',
         ]);
 
-        $recommendations['dispatch_desk'] = $this->recommendation(
+        // The assignment review job is mutated by other journeys, so its advice
+        // is seeded stale and always asks for a refresh.
+        $recommendations['assignment_review_stale'] = $this->recommendation(
             $assignmentReviewJob,
+            $manager,
+            GptRecommendationStatus::Stale,
+        );
+
+        $recommendations['dispatch_desk'] = $this->recommendation(
+            $advisoryJob,
             $manager,
             GptRecommendationStatus::PendingReview,
             [
@@ -504,6 +526,7 @@ final class BrowserAcceptanceSeeder extends Seeder
             'job_id' => $job->id,
             'gpt_job_id' => $gptJob->id,
             'assignment_review_job_id' => $assignmentReviewJob->id,
+            'advisory_job_id' => $advisoryJob->id,
             'assigned_job_id' => $assignedJob->id,
             'activation_job_id' => $activationJob->id,
             'approval_job_id' => $approvalJob->id,

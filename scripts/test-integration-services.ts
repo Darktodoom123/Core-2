@@ -715,24 +715,45 @@ async function exerciseMobileBoundary(): Promise<void> {
         '1',
     );
 
+    // With TRACKING_ALLOW_INGEST_FALLBACK=false (the production setting),
+    // Operations refuses a ping during an outage with a retryable 503 and
+    // never writes a second, local copy of the location.
     await compose(['stop', 'tracking']);
     const outageCommand = randomUUID();
-    await client.shareLocation(
-        { ...firstPayload, latitude: 14.555, longitude: 121.025 },
-        outageCommand,
+    const outagePayload = {
+        ...firstPayload,
+        latitude: 14.555,
+        longitude: 121.025,
+    };
+    await assert.rejects(
+        client.shareLocation(outagePayload, outageCommand),
+        (error: unknown) =>
+            error instanceof ApiClientError && error.status === 503,
     );
     assert.equal(
         await queryDatabase(
             'db',
             `SELECT count(*) FROM location_updates WHERE user_id = ${userId} AND operational_asset_id = ${assetId} AND remarks = 'integration boundary sample'`,
         ),
-        '1',
+        '0',
+        'a Tracking outage must not write the Operations fallback table',
     );
 
     await runPlaywright(baseUrl, true);
 
     await compose(['start', 'tracking']);
     await waitForHealthy(['db', 'redis', 'tracking-db', 'tracking', 'app']);
+
+    // The ping refused during the outage goes through when the phone resends
+    // it under the same command id.
+    await client.shareLocation(outagePayload, outageCommand);
+    assert.equal(
+        await queryDatabase(
+            'tracking-db',
+            `SELECT count(*) FROM location_samples WHERE command_id = '${outageCommand}'`,
+        ),
+        '1',
+    );
 
     const recoveryCommand = randomUUID();
     await client.shareLocation(

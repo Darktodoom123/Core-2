@@ -623,14 +623,14 @@ test.describe('R6 deterministic authenticated acceptance', () => {
 
         await signIn(page, fixtures.users.dispatcher, fixtures.password);
         await page.goto('/?view=dispatch&dispatch_workspace=classic');
-        await page.getByRole('button', { name: /R6-BROWSER-006/ }).click();
+        await page.getByRole('button', { name: /R6-BROWSER-010/ }).click();
 
         await expect(
             page.getByText('Dispatch job', { exact: true }),
         ).toBeVisible();
         await expect(
             page.getByRole('heading', {
-                name: 'Independent assignment review lift',
+                name: 'Independent GPT advisory review lift',
             }),
         ).toBeVisible();
         await expect(

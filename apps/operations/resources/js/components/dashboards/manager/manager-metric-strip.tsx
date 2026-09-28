@@ -310,7 +310,7 @@ function MetricCell({
                         onClick={onOpen}
                         aria-label={openLabel}
                         title={openLabel}
-                        className="flex flex-1 items-center justify-between rounded-md text-left text-muted transition-colors group-hover:text-ink after:absolute after:inset-0 after:content-[''] focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
+                        className="flex min-h-11 flex-1 items-center justify-between rounded-md text-left text-muted transition-colors group-hover:text-ink after:absolute after:inset-0 after:content-[''] focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden md:min-h-0"
                     >
                         <span className="text-xs font-medium text-ink-soft">
                             {label}
@@ -419,7 +419,7 @@ function QueueChip({
             onClick={onClick}
             aria-label={`Show ${label} in the action queue`}
             className={cn(
-                'inline-flex min-h-7 items-center gap-1 rounded-md border px-2 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
+                'inline-flex min-h-11 items-center gap-1 rounded-md border px-2 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden md:min-h-7',
                 tone === 'warning' &&
                     'border-warning/30 bg-warning-soft text-warning-strong hover:border-warning/60',
                 tone === 'info' &&
