@@ -718,6 +718,15 @@ jobs:
           CORE2_INTEGRATION_NO_BUILD: 'true'
         run: npm run test:integration:services
 
+      - name: Upload service-stack browser results
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        if: failure()
+        with:
+          name: service-stack-report
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
       - name: Start stack and run bounded smoke checks
         run: |
           set -Eeuo pipefail
