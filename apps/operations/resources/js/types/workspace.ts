@@ -1151,6 +1151,7 @@ export interface GptRecommendationViewModel {
             credential?: string;
             readiness?: string;
             schedule_conflicts?: number;
+            activation_constraints?: string[];
         };
     }> | null;
     proposed_personnel?: Array<{
@@ -1397,6 +1398,7 @@ export interface AssetCandidateViewModel {
     assignment_label: string;
     eligible: boolean;
     reasons: string[];
+    activation_constraints?: string[];
     readiness: StatusViewModel<AssetStatusValue>;
     blocking_maintenance_count: number;
     schedule_conflicts: AssignmentScheduleConflictViewModel[];

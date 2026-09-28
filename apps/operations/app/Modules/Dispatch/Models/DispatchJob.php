@@ -43,6 +43,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $cancellation_reason
  * @property CarbonImmutable|null $completed_at
  * @property CarbonImmutable|null $cancelled_at
+ * @property CarbonImmutable|null $activated_at
  */
 class DispatchJob extends Model
 {
@@ -63,6 +64,12 @@ class DispatchJob extends Model
 
             $status = $job->status;
 
+            if ($status === DispatchStatus::Dispatched) {
+                $job->activated_at = CarbonImmutable::now();
+            } elseif ($status === DispatchStatus::Draft) {
+                $job->activated_at = null;
+            }
+
             $job->completed_at = $status === DispatchStatus::Completed
                 ? ($job->completed_at ?? CarbonImmutable::now())
                 : null;
@@ -82,6 +89,7 @@ class DispatchJob extends Model
             'scheduled_end' => 'datetime',
             'completed_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'activated_at' => 'datetime',
             'priority' => DispatchPriority::class,
             'status' => DispatchStatus::class,
             'requirements' => 'array',

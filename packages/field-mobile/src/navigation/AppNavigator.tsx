@@ -2787,6 +2787,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                         ) : activeAppView === 'dvir' ? (
                             <DvirScreen
                                 activeJobReference={resolvedJobReference}
+                                dispatchJobId={currentJob?.id}
                                 apiClient={apiClient}
                                 assetAssignments={currentJob?.asset_assignments}
                                 // Never a display placeholder: an unknown unit
@@ -2823,6 +2824,9 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 }}
                                 onPreTripPassed={() => {
                                     setDvirStatus('cleared');
+                                }}
+                                onPreTripPending={() => {
+                                    setDvirStatus('pending');
                                 }}
                                 onSelectAsset={(id) => setSelectedAssetId(id)}
                                 canRequestReplacement={Boolean(currentJob)}

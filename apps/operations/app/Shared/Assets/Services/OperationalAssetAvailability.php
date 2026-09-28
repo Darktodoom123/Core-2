@@ -15,7 +15,10 @@ use Illuminate\Validation\ValidationException;
 final class OperationalAssetAvailability
 {
     /** @param iterable<AssetUsageConflictChecker> $checkers */
-    public function __construct(private readonly iterable $checkers) {}
+    public function __construct(
+        private readonly iterable $checkers,
+        private readonly AssetInspectionReadiness $inspectionReadiness,
+    ) {}
 
     public function assess(AssetUsageRequest $request): AssetUsageAssessment
     {
@@ -111,8 +114,23 @@ final class OperationalAssetAvailability
             );
         }
 
-        $latestLegacy = $asset->inspections()->whereNotNull('completed_at')->latest('completed_at')->first();
+        $inspections = $asset->inspections()->whereNotNull('completed_at')->get();
+        $latestLegacy = $inspections->sortByDesc('completed_at')->first();
         $latestDvir = $asset->dvirInspections()->whereNotNull('completed_at')->latest('completed_at')->first();
+
+        if (in_array($request->usageType, [AssetUsageType::DispatchAssign, AssetUsageType::DispatchReassign, AssetUsageType::DispatchActivate], true)) {
+            $inspectionBlocked = $request->usageType === AssetUsageType::DispatchActivate
+                ? $this->inspectionReadiness->lacksPassingClearance($inspections, $latestDvir)
+                : $this->inspectionReadiness->hasUnsafeEvidence($inspections, $latestDvir);
+            if ($inspectionBlocked) {
+                $message = $request->usageType === AssetUsageType::DispatchActivate
+                    ? 'A completed passing workshop inspection is required before activation; a later defect removes clearance.'
+                    : 'Recorded failed inspection or DVIR defects must be cleared before assignment.';
+                $conflicts[] = new AssetUsageConflict('asset.inspection_required', $message);
+            }
+
+            return $conflicts;
+        }
 
         $latestInspectionFailed = false;
         if ($latestLegacy && $latestDvir) {

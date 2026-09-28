@@ -179,15 +179,19 @@ export function buildDvirRecord({
 export function buildDvirSubmitPayload({
     attested,
     currentAssetName,
+    dispatchJobId,
     inspectorName,
     localAssetCode,
+    operationalAssetId,
     photosPayload,
     record,
 }: {
     attested: boolean;
     currentAssetName: string;
+    dispatchJobId?: number | null;
     inspectorName: string;
     localAssetCode: string;
+    operationalAssetId?: number | null;
     photosPayload: WalkaroundPhotoPayload[];
     record: DvirInspectionRecord;
 }): DvirSubmitPayload {
@@ -205,6 +209,8 @@ export function buildDvirSubmitPayload({
             ? 'post_trip'
             : 'pre_trip') as 'pre_trip' | 'post_trip',
         asset_code: localAssetCode,
+        operational_asset_id: operationalAssetId ?? undefined,
+        dispatch_job_id: dispatchJobId ?? undefined,
         asset_name: currentAssetName,
         inspector_name: inspectorName,
         starting_odometer_km:
@@ -218,6 +224,7 @@ export function buildDvirSubmitPayload({
         engine_hours: record.engineHours ?? null,
         has_defects: record.hasDefects,
         signature_captured: attested,
+        completed_at: record.completedAt,
         remarks: record.remarks,
         checks: checksPayload,
         photos: photosPayload.length > 0 ? photosPayload : undefined,

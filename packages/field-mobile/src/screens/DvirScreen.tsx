@@ -67,6 +67,7 @@ export interface DvirScreenProps {
     equipmentType?: DesignatedEquipmentType;
     inspectorName?: string;
     activeJobReference?: string;
+    dispatchJobId?: number | null;
     initialMode?: 'pre_trip' | 'post_trip' | 'history';
     apiClient?: FieldApiClient;
     commandOutbox?: CommandOutboxManager;
@@ -83,6 +84,7 @@ export interface DvirScreenProps {
     canRequestReplacement?: boolean;
     onSwitchToStandby?: () => void;
     onPreTripPassed?: (assetCode: string, record: DvirInspectionRecord) => void;
+    onPreTripPending?: () => void;
     /** Where Back goes after saving; shown on the button. */
     returnLabel?: string;
 }
@@ -94,6 +96,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     equipmentType,
     inspectorName = '',
     activeJobReference,
+    dispatchJobId,
     initialMode = 'pre_trip',
     apiClient,
     commandOutbox,
@@ -108,6 +111,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     canRequestReplacement = false,
     onSwitchToStandby,
     onPreTripPassed,
+    onPreTripPending,
     returnLabel,
 }) => {
     const { theme } = useTheme();
@@ -388,14 +392,16 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
             onDefectLockout?.(localAssetCode, record);
             setDefectFallbackModalOpen(true);
         } else if (mode === 'pre_trip') {
-            onPreTripPassed?.(localAssetCode, record);
+            onPreTripPending?.();
         }
 
         const dvirPayload = buildDvirSubmitPayload({
             attested,
             currentAssetName,
+            dispatchJobId,
             inspectorName,
             localAssetCode,
+            operationalAssetId: activeSelectedAssetId,
             photosPayload,
             record,
         });
@@ -403,12 +409,21 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
         if (commandOutbox) {
             commandOutbox
                 .enqueueSubmitDvir(dvirPayload)
-                .then(async () => {
+                .then(async (command) => {
                     setSyncError(null);
 
                     if (apiClient) {
                         try {
                             await commandOutbox.processQueue(apiClient);
+
+                            if (
+                                mode === 'pre_trip' &&
+                                !isPreTripLockout &&
+                                commandOutbox.getCommand(command.id)?.state ===
+                                    'completed'
+                            ) {
+                                onPreTripPassed?.(localAssetCode, record);
+                            }
                         } catch {
                             // Safely retained in offline outbox
                         }
@@ -429,6 +444,10 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                         ...prev.filter((item) => item !== record),
                     ]);
                     setSyncError(null);
+
+                    if (mode === 'pre_trip' && !isPreTripLockout) {
+                        onPreTripPassed?.(localAssetCode, record);
+                    }
                 })
                 .catch(() => {
                     setSyncError(

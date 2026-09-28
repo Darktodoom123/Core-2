@@ -4,7 +4,7 @@ use App\Modules\Dvir\Models\DvirInspection;
 use App\Shared\Assets\Models\Inspection;
 use App\Shared\Assets\Services\AssetInspectionReadiness;
 
-test('the latest completed inspection across workshop and DVIR evidence governs the failure signal', function (): void {
+test('workshop clearance is required for activation and a clean DVIR cannot replace it', function (): void {
     $readiness = new AssetInspectionReadiness;
     $passing = new Inspection(['result' => 'passed', 'completed_at' => '2026-09-25 08:00:00']);
     $failed = new Inspection(['result' => 'failed', 'completed_at' => '2026-09-26 08:00:00']);
@@ -20,8 +20,12 @@ test('the latest completed inspection across workshop and DVIR evidence governs 
     ]);
 
     expect($readiness->lacksPassingClearance(collect(), null))->toBeTrue()
+        ->and($readiness->lacksPassingClearance(collect(), $cleanDvir))->toBeTrue()
         ->and($readiness->lacksPassingClearance(collect([$passing]), null))->toBeFalse()
         ->and($readiness->lacksPassingClearance(collect([$passing, $failed]), null))->toBeTrue()
-        ->and($readiness->lacksPassingClearance(collect([$passing, $failed]), $cleanDvir))->toBeFalse()
-        ->and($readiness->lacksPassingClearance(collect([$passing]), $defectiveDvir))->toBeTrue();
+        ->and($readiness->lacksPassingClearance(collect([$passing, $failed]), $cleanDvir))->toBeTrue()
+        ->and($readiness->lacksPassingClearance(collect([$passing]), $defectiveDvir))->toBeTrue()
+        ->and($readiness->hasUnsafeEvidence(collect(), null))->toBeFalse()
+        ->and($readiness->hasUnsafeEvidence(collect([$failed]), null))->toBeTrue()
+        ->and($readiness->hasUnsafeEvidence(collect([$passing]), $defectiveDvir))->toBeTrue();
 });

@@ -231,7 +231,11 @@ final class BlockerResolutionContextBuilder
                         'candidate_id' => (int) $asset->id,
                         'resource_kind' => 'asset',
                         'assignment_type' => $assignmentType,
-                        'evidence' => ['readiness' => $assessment['readiness']['value'], 'schedule_conflicts' => 0],
+                        'evidence' => [
+                            'readiness' => $assessment['readiness']['value'],
+                            'schedule_conflicts' => 0,
+                            'activation_constraints' => $assessment['activation_constraints'],
+                        ],
                     ];
                     if (count($options) === 3) {
                         return false;

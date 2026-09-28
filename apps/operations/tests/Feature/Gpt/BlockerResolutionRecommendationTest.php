@@ -18,6 +18,8 @@ use App\Platform\Identity\Models\PersonnelCredential;
 use App\Platform\Identity\Models\PersonnelProfile;
 use App\Platform\Identity\Models\User;
 use App\Platform\Workspace\ViewModels\OperationsWorkspaceViewModel;
+use App\Shared\Assets\Enums\AssetStatus;
+use App\Shared\Assets\Models\OperationalAsset;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -68,6 +70,25 @@ test('blocker advice uses the typed role deficit instead of a hard-coded crane o
     expect($context['context']['blocker']['code'])->toBe('missing_personnel')
         ->and($context['context']['blocker']['assignment_type'])->toBe('driver')
         ->and($context['context']['blocker']['evidence']['required_count'])->toBe(1);
+});
+
+test('available crane can be suggested for planning while workshop clearance remains due', function (): void {
+    $this->job->update(['resource_requirements' => [
+        'personnel' => [],
+        'assets' => ['crane' => 1],
+    ]]);
+    $crane = OperationalAsset::query()->create([
+        'code' => 'CRN-PENDING-WORKSHOP',
+        'name' => '80T mobile crane',
+        'kind' => 'crane',
+        'status' => AssetStatus::Available,
+    ]);
+
+    $context = app(BlockerResolutionContextBuilder::class)->buildForDispatchJob($this->job);
+
+    expect($context['context']['blocker']['resource_kind'])->toBe('asset')
+        ->and($context['context']['options'][0]['candidate_id'])->toBe($crane->id)
+        ->and($context['context']['options'][0]['evidence']['activation_constraints'][0])->toContain('workshop inspection');
 });
 
 test('no eligible option yields useful deterministic advice without a model call or quota use', function (): void {

@@ -4,6 +4,7 @@ namespace App\Modules\Dispatch\Actions;
 
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\DispatchJob;
+use App\Modules\Dispatch\Services\DispatchPreTripGate;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Models\User;
 use App\Platform\Safety\Services\WorkStoppageGate;
@@ -16,6 +17,7 @@ final class TransitionDispatchJob
     public function __construct(
         private RecordAuditEvent $audit,
         private WorkStoppageGate $workStoppageGate,
+        private DispatchPreTripGate $preTripGate,
     ) {}
 
     public function handle(User $actor, DispatchJob $job, DispatchStatus $next, int $version): DispatchJob
@@ -42,6 +44,15 @@ final class TransitionDispatchJob
             }
 
             $this->workStoppageGate->assertDispatchMayProgress($job);
+
+            if ($next === DispatchStatus::EnRoute) {
+                $missing = $this->preTripGate->missingAssetCodes($job);
+                if ($missing !== []) {
+                    throw ValidationException::withMessages([
+                        'dvir' => 'Complete a signed, defect-free pre-trip DVIR for '.implode(', ', $missing).' before starting the route or work.',
+                    ]);
+                }
+            }
 
             $before = $job->only(['status', 'version']);
             $job->update(['status' => $next, 'version' => $job->version + 1]);

@@ -224,7 +224,7 @@ for Core 1 commercial transaction boundaries.
 
 ## Fleet & Equipment Sub-system: Driver Vehicle Inspection Reports (DVIR)
 
-- **BR-110:** Pre-trip inspection must be submitted and certified before any vehicle or crane can transition to `dispatched` or operational use. Post-trip inspection is required upon shift completion.
+- **BR-110:** A passing workshop inspection is required before activation. Once activated, the assigned operator submits a signed, defect-free pre-trip DVIR for each assigned vehicle or crane before the dispatch advances to `en_route` or operational use. Post-trip inspection is required upon shift completion.
 - **BR-111:** If any checklist item is flagged with `is_safety_critical`, the equipment status immediately transitions to `grounded` (or `under_inspection`), barring it from dispatch until maintenance certification.
 - **BR-112:** 360-degree walkaround photo tagging requires photo evidence and defect descriptions for any flagged failure component.
 - **BR-113:** Maintenance mechanics or Operations Managers must inspect defects, link corrective work orders, and mark items as `repaired` or `certified_safe` before equipment status is restored to `available`.

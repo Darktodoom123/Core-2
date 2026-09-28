@@ -185,7 +185,7 @@ Sanctum token handling, CSRF protection, and password hashing are unchanged.
 
 ### Fleet & Equipment Sub-system: Driver Vehicle Inspection Reports (DVIR)
 
-- **FR-080 — Implemented:** The system shall require pre-trip inspection completion before allowing heavy equipment to advance to dispatched or operational status.
+- **FR-080 — Implemented:** The system shall require a passing workshop inspection before dispatch activation and a signed, defect-free, job-specific pre-trip DVIR before assigned equipment advances to route or operational use.
 - **FR-081 — Implemented:** Post-trip inspection shall be required and recorded upon job or shift completion.
 - **FR-082 — Implemented:** Any inspection checklist item marked as safety-critical shall immediately trigger an asset status transition to `grounded` (or `under_inspection`), prohibiting assignment until mechanic certification.
 - **FR-083 — Implemented:** The mobile field app shall support 4-angle walkaround defect capture (`front`, `back`, `driver_side`, `passenger_side`), requiring photographic evidence and descriptive text for failed components.

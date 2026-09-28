@@ -13,7 +13,11 @@ const baseChecks = {
     postTripChecks: [],
 };
 
-const submit = (declaredUnsafe: boolean, defectIds: string[]) => {
+const submit = (
+    declaredUnsafe: boolean,
+    defectIds: string[],
+    completedAt?: string,
+) => {
     const selectedDefects = findDefects(defectIds);
     const checksList = buildDvirChecks({
         ...baseChecks,
@@ -34,12 +38,15 @@ const submit = (declaredUnsafe: boolean, defectIds: string[]) => {
         remarks: 'Grinding from the slew drive',
         selectedDefects,
     });
+    if (completedAt) record.completedAt = completedAt;
 
     return buildDvirSubmitPayload({
         attested: true,
         currentAssetName: 'Potain MDT 219',
+        dispatchJobId: 42,
         inspectorName: 'Operator',
         localAssetCode: 'TWR-12',
+        operationalAssetId: 12,
         photosPayload: [],
         record,
     });
@@ -65,9 +72,12 @@ test('an unsafe declaration with picked defects sends only the defects', () => {
 });
 
 test('a clean pass sends no defect checks and no defects flag', () => {
-    const payload = submit(false, []);
+    const payload = submit(false, [], '2026-09-28T01:30:00.000Z');
 
     assert.equal(payload.has_defects, false);
+    assert.equal(payload.dispatch_job_id, 42);
+    assert.equal(payload.operational_asset_id, 12);
+    assert.equal(payload.completed_at, '2026-09-28T01:30:00.000Z');
     assert.ok(
         payload.checks.every(
             (c) => c.status !== 'critical' && c.status !== 'attention',

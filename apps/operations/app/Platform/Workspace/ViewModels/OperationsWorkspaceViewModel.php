@@ -383,8 +383,8 @@ final class OperationsWorkspaceViewModel
             if ($inspectionBlocked) {
                 $dispatchabilityBlockers[] = [
                     'code' => 'inspection',
-                    'label' => 'Passing inspection required',
-                    'detail' => 'A completed passing inspection or DVIR is required before dispatch; a later failure removes clearance.',
+                    'label' => 'Workshop inspection required before activation',
+                    'detail' => 'A completed passing workshop inspection is required before activation; a later failed inspection or defective DVIR removes clearance.',
                 ];
             }
 

@@ -35,6 +35,7 @@ final class DispatchV2CommandService
         private readonly DispatchEmergencyOverrideCommandService $overrides,
         private readonly DispatchPlanMateriality $materiality,
         private readonly WorkStoppageGate $workStoppageGate,
+        private readonly DispatchPreTripGate $preTripGate,
     ) {}
 
     public function create(
@@ -485,6 +486,15 @@ final class DispatchV2CommandService
                     $legacyJob = DispatchJob::query()->find($lockedAttempt->legacy_dispatch_job_id);
                     if ($legacyJob !== null) {
                         $this->workStoppageGate->assertDispatchMayProgress($legacyJob);
+                        if ($next === DispatchAttemptStatus::EnRoute) {
+                            $missing = $this->preTripGate->missingAssetCodes($legacyJob);
+                            if ($missing !== []) {
+                                throw new DispatchV2CommandException(
+                                    DispatchV2CommandCode::NotReady,
+                                    'Complete a signed, defect-free pre-trip DVIR for '.implode(', ', $missing).' before starting the route or work.',
+                                );
+                            }
+                        }
                     }
                 }
 

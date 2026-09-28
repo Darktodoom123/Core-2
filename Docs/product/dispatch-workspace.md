@@ -52,12 +52,15 @@ date that differs from that job. It
 shows permitted personnel profiles, recorded account/availability state, fleet
 readiness, and commitments found in the currently loaded dispatches for a chosen
 date. Missing commitments are explicitly not treated as proof of availability.
-Asset rows distinguish a maintenance block, missing or failed inspection clearance, and
+Asset rows distinguish a maintenance block, missing or failed workshop inspection clearance, and
 a non-dispatchable operational status. Selecting a dispatch continues to show
 its assigned personnel and assigned equipment as separate groups.
-An Available asset without a completed passing workshop inspection or DVIR
-cannot be assigned or activated; a later failed or defective inspection
-invalidates earlier clearance. The Ready for service transition retains its
+An Available asset awaiting its first workshop inspection can be selected for
+planning, with that inspection shown as an activation constraint. Activation
+requires a completed passing workshop inspection. A clean DVIR cannot replace
+workshop clearance; a later failed inspection or defective DVIR removes it.
+The operator performs the assigned job's signed pre-trip DVIR after activation,
+before advancing to route or work. The Ready for service transition retains its
 separate post-maintenance verification rule.
 
 Each selected non-terminal dispatch also has **AI assistance**. Completed and

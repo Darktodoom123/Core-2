@@ -2,7 +2,10 @@
 
 namespace App\Modules\Dvir\Actions;
 
+use App\Modules\Dispatch\Enums\DispatchStatus;
+use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dvir\Enums\DvirCheckStatus;
+use App\Modules\Dvir\Enums\DvirInspectionType;
 use App\Modules\Dvir\Http\Requests\Api\V1\CreateDvirInspectionRequest;
 use App\Modules\Dvir\Models\DvirInspection;
 use App\Modules\Dvir\Models\DvirInspectionCheck;
@@ -18,10 +21,12 @@ use App\Shared\Assets\Models\MaintenanceWorkOrder;
 use App\Shared\Assets\Models\OperationalAsset;
 use App\Shared\Assets\Services\OperationalAssetStatusGuard;
 use App\Shared\Assets\Services\UnitLinkReleaser;
+use Carbon\CarbonImmutable;
 use finfo;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class CreateDvirInspectionAction
@@ -45,6 +50,8 @@ class CreateDvirInspectionAction
         User $user,
     ): array {
         $validated = $request->validated();
+
+        $this->validateDispatchPreTrip($validated, $user);
 
         $checksPayload = $request->checksPayload();
         $photosPayload = $request->photosPayload();
@@ -178,6 +185,31 @@ class CreateDvirInspectionAction
             'remarks' => $validated['remarks'] ?? null,
             'completed_at' => $validated['completed_at'] ?? now(),
         ];
+    }
+
+    /** @param array<string, mixed> $validated */
+    private function validateDispatchPreTrip(array $validated, User $user): void
+    {
+        if (($validated['inspection_type'] ?? null) !== DvirInspectionType::PRE_TRIP->value || ! isset($validated['dispatch_job_id'])) {
+            return;
+        }
+
+        $job = DispatchJob::query()->findOrFail((int) $validated['dispatch_job_id']);
+        if (! in_array($job->status, [DispatchStatus::Dispatched, DispatchStatus::Accepted, DispatchStatus::EnRoute, DispatchStatus::Arrived, DispatchStatus::Working], true)) {
+            throw ValidationException::withMessages(['dispatch_job_id' => 'Activate the dispatch before submitting its pre-trip DVIR.']);
+        }
+        if ($job->activated_at !== null && isset($validated['completed_at'])
+            && CarbonImmutable::parse((string) $validated['completed_at'])->lessThan($job->activated_at)) {
+            throw ValidationException::withMessages(['completed_at' => 'The pre-trip DVIR must be completed after dispatch activation.']);
+        }
+
+        $assetId = (int) ($validated['operational_asset_id'] ?? 0);
+        if ($assetId < 1 || ! $job->assetAssignments()->whereNull('active_until')->where('operational_asset_id', $assetId)->exists()) {
+            throw ValidationException::withMessages(['operational_asset_id' => 'The inspected asset must be actively assigned to this dispatch.']);
+        }
+        if (! $job->personnelAssignments()->whereNull('active_until')->where('user_id', $user->id)->exists()) {
+            throw ValidationException::withMessages(['dispatch_job_id' => 'Only an assigned field worker may submit this dispatch’s pre-trip DVIR.']);
+        }
     }
 
     /**

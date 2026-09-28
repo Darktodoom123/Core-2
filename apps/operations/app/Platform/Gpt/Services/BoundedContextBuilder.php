@@ -86,6 +86,7 @@ final class BoundedContextBuilder
                 'eligible' => $assessment['eligible'],
                 'reasons' => $assessment['reasons'],
                 'readiness' => $assessment['readiness']['value'],
+                'activation_constraints' => $assessment['activation_constraints'],
             ];
         }
 

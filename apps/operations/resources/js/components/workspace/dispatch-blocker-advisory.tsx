@@ -302,6 +302,18 @@ export function DispatchBlockerAdvisory({
                                                             </dd>
                                                         </div>
                                                     </dl>
+                                                    {evidence?.activation_constraints?.map(
+                                                        (constraint) => (
+                                                            <p
+                                                                key={constraint}
+                                                                className="mt-2 text-xs font-medium text-warning-strong"
+                                                            >
+                                                                Before
+                                                                activation:{' '}
+                                                                {constraint}
+                                                            </p>
+                                                        ),
+                                                    )}
                                                     <p className="mt-2 text-xs text-ink-soft">
                                                         Highlighted check:{' '}
                                                         {option.explanation}

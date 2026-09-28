@@ -1,5 +1,8 @@
 <?php
 
+use App\Modules\Dispatch\Enums\DispatchPriority;
+use App\Modules\Dispatch\Enums\DispatchStatus;
+use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dvir\Models\DvirInspection;
 use App\Modules\Dvir\Models\DvirInspectionPhoto;
 use App\Platform\Identity\Models\User;
@@ -50,6 +53,66 @@ it('rejects inactive users', function (): void {
     $this->withToken($token)
         ->postJson('/api/v1/dvir/inspections', dvirPayload())
         ->assertForbidden();
+});
+
+it('requires an activated assignment for a job-linked pre-trip DVIR', function (): void {
+    $operator = User::factory()->create(['is_active' => true]);
+    $operatorToken = $operator->createToken('Mobile Token')->plainTextToken;
+    $asset = OperationalAsset::query()->create([
+        'code' => 'CRN-DVIR-JOB', 'name' => 'Job crane', 'kind' => 'crane', 'status' => 'available',
+    ]);
+    $otherAsset = OperationalAsset::query()->create([
+        'code' => 'CRN-DVIR-OTHER', 'name' => 'Other crane', 'kind' => 'crane', 'status' => 'available',
+    ]);
+    $job = DispatchJob::query()->create([
+        'reference' => 'DVIR-JOB-001', 'client' => 'Client', 'title' => 'Lift', 'site' => 'Site',
+        'priority' => DispatchPriority::Routine, 'status' => DispatchStatus::Draft,
+        'created_by' => $operator->id, 'version' => 1,
+    ]);
+    $job->personnelAssignments()->create([
+        'user_id' => $operator->id, 'assignment_type' => 'crane_operator', 'assigned_by' => $operator->id,
+    ]);
+    $job->assetAssignments()->create([
+        'operational_asset_id' => $asset->id, 'assignment_type' => 'crane', 'assigned_by' => $operator->id,
+    ]);
+    $payload = dvirPayload([
+        'dispatch_job_id' => $job->id, 'operational_asset_id' => $asset->id,
+    ]);
+
+    $this->withToken($operatorToken)->postJson('/api/v1/dvir/inspections', $payload)
+        ->assertUnprocessable()->assertJsonValidationErrors(['dispatch_job_id']);
+
+    $job->update(['status' => DispatchStatus::Dispatched]);
+    $this->withToken($operatorToken)->postJson('/api/v1/dvir/inspections', [
+        ...$payload, 'completed_at' => now()->subHour()->toIso8601String(),
+    ])->assertUnprocessable()->assertJsonValidationErrors(['completed_at']);
+    $this->withToken($operatorToken)->postJson('/api/v1/dvir/inspections', [
+        ...$payload, 'operational_asset_id' => $otherAsset->id,
+    ])->assertUnprocessable()->assertJsonValidationErrors(['operational_asset_id']);
+    $this->withToken($operatorToken)->postJson('/api/v1/dvir/inspections', $payload)
+        ->assertCreated()->assertJsonPath('data.dispatch_job_id', $job->id)
+        ->assertJsonPath('data.operational_asset_id', $asset->id);
+});
+
+it('rejects a job-linked pre-trip DVIR from a worker outside the dispatch', function (): void {
+    $manager = User::factory()->create(['is_active' => true]);
+    $outsider = User::factory()->create(['is_active' => true]);
+    $token = $outsider->createToken('Mobile Token')->plainTextToken;
+    $asset = OperationalAsset::query()->create([
+        'code' => 'CRN-OTHER-WORKER', 'name' => 'Crane', 'kind' => 'crane', 'status' => 'available',
+    ]);
+    $job = DispatchJob::query()->create([
+        'reference' => 'DVIR-OTHER-WORKER', 'client' => 'Client', 'title' => 'Lift', 'site' => 'Site',
+        'priority' => DispatchPriority::Routine, 'status' => DispatchStatus::Dispatched,
+        'created_by' => $manager->id, 'version' => 1,
+    ]);
+    $job->assetAssignments()->create([
+        'operational_asset_id' => $asset->id, 'assignment_type' => 'crane', 'assigned_by' => $manager->id,
+    ]);
+
+    $this->withToken($token)->postJson('/api/v1/dvir/inspections', dvirPayload([
+        'dispatch_job_id' => $job->id, 'operational_asset_id' => $asset->id,
+    ]))->assertUnprocessable()->assertJsonValidationErrors(['dispatch_job_id']);
 });
 
 it('stores a completed dvir inspection with its checks', function (): void {

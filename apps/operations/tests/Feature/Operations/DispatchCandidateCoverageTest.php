@@ -120,8 +120,8 @@ test('candidate and assignment checks agree after a failed inspection and its pa
         ListDispatchCandidatesRequest::create('/', 'GET', ['resource' => 'assets']),
     )->data)->firstWhere('id', $vehicle->id);
 
-    expect($candidate()['eligible'])->toBeFalse()
-        ->and($candidate()['reasons'][0])->toContain('passing inspection or DVIR');
+    expect($candidate()['eligible'])->toBeTrue()
+        ->and($candidate()['activation_constraints'][0])->toContain('passing workshop inspection');
 
     $vehicle->inspections()->create([
         'technician_id' => $this->dispatcher->id,

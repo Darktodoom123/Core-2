@@ -437,6 +437,14 @@ export function AssetCandidate({
                             Readiness: {candidate.readiness.label} · Maintenance
                             blocks: {candidate.blocking_maintenance_count}
                         </p>
+                        {candidate.activation_constraints?.map((constraint) => (
+                            <p
+                                key={constraint}
+                                className="font-medium text-warning-strong"
+                            >
+                                Before activation: {constraint}
+                            </p>
+                        ))}
                         <ConflictDetails
                             reasons={candidate.reasons}
                             conflicts={candidate.schedule_conflicts}

@@ -189,6 +189,41 @@ describe('candidate type filtering', () => {
         ).toBeInTheDocument();
     });
 
+    it('shows a crane that can be planned while explaining its activation inspection', () => {
+        render(
+            <AssetCandidate
+                candidate={{
+                    id: 13,
+                    code: 'CRN-13',
+                    name: 'Site crane',
+                    subtype: null,
+                    capacity: null,
+                    assignment_type: 'crane',
+                    assignment_label: 'Crane',
+                    eligible: true,
+                    reasons: [],
+                    activation_constraints: [
+                        'A passing workshop inspection is still required.',
+                    ],
+                    readiness: { value: 'available', label: 'Available' },
+                    blocking_maintenance_count: 0,
+                    schedule_conflicts: [],
+                    already_assigned: false,
+                }}
+                selected={false}
+                canAssign
+                onToggle={vi.fn()}
+            />,
+        );
+
+        expect(
+            screen.getByText(
+                'Before activation: A passing workshop inspection is still required.',
+            ),
+        ).toBeInTheDocument();
+        expect(screen.getByRole('checkbox')).toBeEnabled();
+    });
+
     it('only shows the selected personnel category', () => {
         render(
             <PersonnelCandidates

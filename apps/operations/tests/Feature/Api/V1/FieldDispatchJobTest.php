@@ -6,6 +6,7 @@ use App\Modules\Assignment\Models\DispatchPersonnelAssignment;
 use App\Modules\Dispatch\Enums\DispatchPriority;
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\DispatchJob;
+use App\Modules\Dvir\Models\DvirInspection;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
 use App\Shared\Assets\Models\OperationalAsset;
@@ -382,6 +383,58 @@ it('enforces forward-only status progression using API command contract', functi
     $step2->assertOk()
         ->assertJsonPath('data.status.value', 'en_route')
         ->assertJsonPath('data.version', 3);
+});
+
+it('blocks route start until each assigned asset has a signed job-specific pre-trip DVIR', function (): void {
+    $worker = User::factory()->create(['is_active' => true]);
+    $worker->syncRoles([RoleName::CraneOperator->value]);
+    $token = $worker->createToken('Mobile Token')->plainTextToken;
+    $asset = OperationalAsset::query()->create([
+        'code' => 'CRN-FIELD-DVIR', 'name' => 'Field crane', 'kind' => 'crane', 'status' => 'available',
+    ]);
+    $job = DispatchJob::query()->create([
+        'reference' => 'DISP-PRETRIP-001', 'client' => 'Client', 'title' => 'Lift', 'site' => 'Site',
+        'priority' => DispatchPriority::Routine, 'status' => DispatchStatus::Dispatched,
+        'version' => 2, 'created_by' => $worker->id,
+    ]);
+    $job->update(['status' => DispatchStatus::Accepted]);
+    $job->personnelAssignments()->create([
+        'user_id' => $worker->id, 'assignment_type' => 'crane_operator',
+        'assigned_by' => $worker->id, 'response_status' => AssignmentResponse::Accepted,
+    ]);
+    $job->assetAssignments()->create([
+        'operational_asset_id' => $asset->id, 'assignment_type' => 'crane', 'assigned_by' => $worker->id,
+    ]);
+    DvirInspection::query()->create([
+        'user_id' => $worker->id,
+        'dispatch_job_id' => $job->id,
+        'operational_asset_id' => $asset->id,
+        'inspection_type' => 'pre_trip',
+        'has_defects' => false,
+        'critical_defects_count' => 0,
+        'signature_captured' => true,
+        'completed_at' => $job->activated_at->subMinute(),
+        'created_at' => $job->activated_at->subMinute(),
+    ]);
+    $advance = fn () => $this->withToken($token)
+        ->withHeader('Idempotency-Key', (string) Str::uuid())
+        ->postJson("/api/v1/dispatch-jobs/{$job->id}/status", [
+            'status' => 'en_route', 'version' => 2,
+        ]);
+
+    $advance()->assertUnprocessable()->assertJsonValidationErrors(['dvir']);
+    $this->withToken($token)->postJson('/api/v1/dvir/inspections', [
+        'inspection_type' => 'pre_trip', 'operational_asset_id' => $asset->id,
+        'dispatch_job_id' => $job->id, 'has_defects' => false,
+        'signature_captured' => false, 'checks' => [],
+    ])->assertCreated();
+    $advance()->assertUnprocessable()->assertJsonValidationErrors(['dvir']);
+    $this->withToken($token)->postJson('/api/v1/dvir/inspections', [
+        'inspection_type' => 'pre_trip', 'operational_asset_id' => $asset->id,
+        'dispatch_job_id' => $job->id, 'has_defects' => false,
+        'signature_captured' => true, 'checks' => [],
+    ])->assertCreated();
+    $advance()->assertOk()->assertJsonPath('data.status.value', 'en_route');
 });
 
 it('denies status transitions for unassigned workers', function (): void {

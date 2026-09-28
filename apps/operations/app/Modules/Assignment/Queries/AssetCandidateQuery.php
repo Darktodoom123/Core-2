@@ -191,7 +191,7 @@ final class AssetCandidateQuery
 
     /**
      * @param  array<int, array{maintenance: int, inspections: Collection<int, Inspection>, dvir: DvirInspection|null, dispatch: Collection<int, DispatchAssetAssignment>, rentals: Collection<int, object>}>  $evidence
-     * @return array{id: int, code: string, name: string, subtype: string|null, capacity: string|null, assignment_type: string, assignment_label: string, eligible: bool, reasons: list<string>, readiness: array{value: string, label: string}, blocking_maintenance_count: int, schedule_conflicts: list<array{id: int, reference: string, scheduled_start: string|null, scheduled_end: string|null}>, already_assigned: bool}
+     * @return array{id: int, code: string, name: string, subtype: string|null, capacity: string|null, assignment_type: string, assignment_label: string, eligible: bool, reasons: list<string>, activation_constraints: list<string>, readiness: array{value: string, label: string}, blocking_maintenance_count: int, schedule_conflicts: list<array{id: int, reference: string, scheduled_start: string|null, scheduled_end: string|null}>, already_assigned: bool}
      */
     public function assess(OperationalAsset $asset, DispatchJob $job, array $evidence): array
     {
@@ -214,8 +214,8 @@ final class AssetCandidateQuery
                 : "{$facts['maintenance']} open maintenance items block dispatch.";
         }
 
-        if ($this->inspectionReadiness->lacksPassingClearance($facts['inspections'], $facts['dvir'])) {
-            $reasons[] = 'A completed passing inspection or DVIR is required before dispatch; a later failure removes clearance.';
+        if ($this->inspectionReadiness->hasUnsafeEvidence($facts['inspections'], $facts['dvir'])) {
+            $reasons[] = 'Recorded failed inspection or DVIR defects must be cleared before assignment.';
         }
 
         foreach ($facts['dispatch'] as $assignment) {
@@ -255,6 +255,9 @@ final class AssetCandidateQuery
             },
             'eligible' => $reasons === [] && $conflicts === [],
             'reasons' => array_values(array_unique($reasons)),
+            'activation_constraints' => $this->inspectionReadiness->lacksPassingClearance($facts['inspections'], $facts['dvir'])
+                ? ['A passing workshop inspection is still required.']
+                : [],
             'readiness' => [
                 'value' => $asset->status->value,
                 'label' => $asset->status->label(),

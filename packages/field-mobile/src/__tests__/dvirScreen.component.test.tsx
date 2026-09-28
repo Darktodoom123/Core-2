@@ -482,6 +482,8 @@ describe('DvirScreen Component & Workflows', () => {
         });
 
         const onSave = jest.fn();
+        const onPreTripPassed = jest.fn();
+        const onPreTripPending = jest.fn();
 
         const view = await render(
             <DvirScreen
@@ -490,6 +492,8 @@ describe('DvirScreen Component & Workflows', () => {
                 assetName="50T Tadano All-Terrain Crane"
                 inspectorName="Alex Rivera (Certified Crane Operator)"
                 onSaveInspectionRecord={onSave}
+                onPreTripPassed={onPreTripPassed}
+                onPreTripPending={onPreTripPending}
             />,
         );
         await takeWalkaroundPhotos(view);
@@ -506,12 +510,14 @@ describe('DvirScreen Component & Workflows', () => {
         await fireEvent.press(view.getByTestId('complete-dvir-button'));
 
         expect(onSave).toHaveBeenCalled();
+        expect(onPreTripPending).toHaveBeenCalledTimes(1);
 
         await waitFor(() => {
             expect(capturedUrl).toBe(
                 'https://api.example.com/api/v1/dvir/inspections',
             );
             expect(capturedBody).not.toBeNull();
+            expect(onPreTripPassed).toHaveBeenCalledTimes(1);
         });
 
         expect(capturedBody.inspection_type).toBe('pre_trip');
@@ -856,8 +862,9 @@ describe('DvirScreen Component & Workflows', () => {
         expect(onBack).toHaveBeenCalledTimes(1);
     });
 
-    it('calls onPreTripPassed when pre-trip inspection completes cleanly with safe status', async () => {
+    it('keeps server clearance pending when a clean pre-trip is saved only on the device', async () => {
         const onPreTripPassed = jest.fn();
+        const onPreTripPending = jest.fn();
         const onDefectLockout = jest.fn();
 
         const view = await render(
@@ -866,6 +873,7 @@ describe('DvirScreen Component & Workflows', () => {
                 initialMode="pre_trip"
                 onDefectLockout={onDefectLockout}
                 onPreTripPassed={onPreTripPassed}
+                onPreTripPending={onPreTripPending}
             />,
         );
         await takeWalkaroundPhotos(view);
@@ -875,18 +883,14 @@ describe('DvirScreen Component & Workflows', () => {
         await fireEvent.press(view.getByTestId('complete-dvir-button'));
 
         expect(onDefectLockout).not.toHaveBeenCalled();
-        expect(onPreTripPassed).toHaveBeenCalledWith(
-            'CRN-101',
-            expect.objectContaining({
-                hasDefects: false,
-                type: 'pre_trip',
-            }),
-        );
+        expect(onPreTripPending).toHaveBeenCalledTimes(1);
+        expect(onPreTripPassed).not.toHaveBeenCalled();
     });
 
     it('navigates back to dashboard when pressing Saved · Back to home after inspection is saved', async () => {
         const onBack = jest.fn();
         const onPreTripPassed = jest.fn();
+        const onPreTripPending = jest.fn();
 
         const view = await render(
             <DvirScreen
@@ -894,6 +898,7 @@ describe('DvirScreen Component & Workflows', () => {
                 initialMode="pre_trip"
                 onBack={onBack}
                 onPreTripPassed={onPreTripPassed}
+                onPreTripPending={onPreTripPending}
             />,
         );
         await takeWalkaroundPhotos(view);
@@ -901,7 +906,8 @@ describe('DvirScreen Component & Workflows', () => {
         // First tap: signs & submits inspection
         await enterEngineHours(view);
         await fireEvent.press(view.getByTestId('complete-dvir-button'));
-        expect(onPreTripPassed).toHaveBeenCalledTimes(1);
+        expect(onPreTripPending).toHaveBeenCalledTimes(1);
+        expect(onPreTripPassed).not.toHaveBeenCalled();
         expect(view.getByText('Saved · Back to home')).toBeTruthy();
 
         // Second tap on the saved button navigates back to dashboard
@@ -909,31 +915,29 @@ describe('DvirScreen Component & Workflows', () => {
         expect(onBack).toHaveBeenCalledTimes(1);
     });
 
-    it('defaults to pre_trip and calls onPreTripPassed when initialMode is omitted', async () => {
+    it('defaults to pre_trip and leaves clearance pending without server confirmation', async () => {
         const onPreTripPassed = jest.fn();
+        const onPreTripPending = jest.fn();
 
         const view = await render(
             <DvirScreen
                 assetCode="CRN-101"
                 onPreTripPassed={onPreTripPassed}
+                onPreTripPending={onPreTripPending}
             />,
         );
         await takeWalkaroundPhotos(view);
 
         await enterEngineHours(view);
         await fireEvent.press(view.getByTestId('complete-dvir-button'));
-        expect(onPreTripPassed).toHaveBeenCalledWith(
-            'CRN-101',
-            expect.objectContaining({
-                hasDefects: false,
-                type: 'pre_trip',
-            }),
-        );
+        expect(onPreTripPending).toHaveBeenCalledTimes(1);
+        expect(onPreTripPassed).not.toHaveBeenCalled();
     });
 
     it('supports multi-asset selection, blocks submission until an asset is selected, and allows selection', async () => {
         const onSelectAsset = jest.fn();
         const onPreTripPassed = jest.fn();
+        const onPreTripPending = jest.fn();
 
         const assetAssignments = [
             {
@@ -957,6 +961,7 @@ describe('DvirScreen Component & Workflows', () => {
                 assetAssignments={assetAssignments}
                 initialMode="pre_trip"
                 onPreTripPassed={onPreTripPassed}
+                onPreTripPending={onPreTripPending}
                 onSelectAsset={onSelectAsset}
             />,
         );
@@ -981,12 +986,8 @@ describe('DvirScreen Component & Workflows', () => {
         await takeWalkaroundPhotos(view);
         await enterEngineHours(view);
         await fireEvent.press(view.getByTestId('complete-dvir-button'));
-        expect(onPreTripPassed).toHaveBeenCalledWith(
-            'CRN-50',
-            expect.objectContaining({
-                type: 'pre_trip',
-            }),
-        );
+        expect(onPreTripPending).toHaveBeenCalledTimes(1);
+        expect(onPreTripPassed).not.toHaveBeenCalled();
     });
 
     it('renders unassigned banner and blocks submission when operator is unassigned', async () => {
@@ -1014,6 +1015,7 @@ describe('DvirScreen Component & Workflows', () => {
 
     it('allows standalone inspection without dispatch linkage when activeJobReference is NO-DISPATCH', async () => {
         const onPreTripPassed = jest.fn();
+        const onPreTripPending = jest.fn();
 
         const view = await render(
             <DvirScreen
@@ -1021,6 +1023,7 @@ describe('DvirScreen Component & Workflows', () => {
                 assetCode="CRN-101"
                 initialMode="pre_trip"
                 onPreTripPassed={onPreTripPassed}
+                onPreTripPending={onPreTripPending}
             />,
         );
         await takeWalkaroundPhotos(view);
@@ -1030,12 +1033,8 @@ describe('DvirScreen Component & Workflows', () => {
 
         await enterEngineHours(view);
         await fireEvent.press(view.getByTestId('complete-dvir-button'));
-        expect(onPreTripPassed).toHaveBeenCalledWith(
-            'CRN-101',
-            expect.objectContaining({
-                type: 'pre_trip',
-            }),
-        );
+        expect(onPreTripPending).toHaveBeenCalledTimes(1);
+        expect(onPreTripPassed).not.toHaveBeenCalled();
     });
 
     it('resets captured defects and remarks when switching between assigned assets on a multi-asset job', async () => {

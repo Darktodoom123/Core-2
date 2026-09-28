@@ -20,12 +20,16 @@ use App\Shared\Assets\Data\AssetUsageRequest;
 use App\Shared\Assets\Data\AssetUsageSource;
 use App\Shared\Assets\Enums\AssetUsageType;
 use App\Shared\Assets\Models\OperationalAsset;
+use App\Shared\Assets\Services\AssetInspectionReadiness;
 use App\Shared\Assets\Services\OperationalAssetAvailability;
 use Illuminate\Database\Eloquent\Collection;
 
 final class DispatchReadinessResourceEvaluator
 {
-    public function __construct(private readonly OperationalAssetAvailability $availability) {}
+    public function __construct(
+        private readonly OperationalAssetAvailability $availability,
+        private readonly AssetInspectionReadiness $inspectionReadiness,
+    ) {}
 
     /**
      * @param  Collection<int, DispatchAssignmentOffer>  $offers
@@ -296,7 +300,7 @@ final class DispatchReadinessResourceEvaluator
             if ($lock) {
                 $query->lockForUpdate();
             }
-            $assets = $query->with(['maintenanceWorkOrders', 'inspections'])->get()->keyBy('id');
+            $assets = $query->with(['maintenanceWorkOrders', 'inspections', 'latestDvirInspection'])->get()->keyBy('id');
         }
 
         foreach ($requirements as $requirement) {
@@ -327,7 +331,7 @@ final class DispatchReadinessResourceEvaluator
             if ($asset->maintenanceWorkOrders->contains(static fn ($workOrder): bool => (bool) $workOrder->dispatch_blocking && $workOrder->released_at === null)) {
                 $blockers[] = $this->assetBlocker(DispatchReadinessBlockerCode::AssetUnsafe, $requirement, ['asset_id' => $id, 'reason' => 'maintenance_block'], $plan, $attempt);
             }
-            if ($asset->inspections->isNotEmpty() && ! $asset->inspections->contains(static fn ($inspection): bool => $inspection->result === 'passed' && $inspection->completed_at !== null)) {
+            if ($this->inspectionReadiness->lacksPassingClearance($asset->inspections, $asset->latestDvirInspection)) {
                 $blockers[] = $this->assetBlocker(DispatchReadinessBlockerCode::AssetUnsafe, $requirement, ['asset_id' => $id, 'reason' => 'inspection_required'], $plan, $attempt);
             }
         }

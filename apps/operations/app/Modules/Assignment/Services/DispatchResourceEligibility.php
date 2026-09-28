@@ -116,6 +116,7 @@ final class DispatchResourceEligibility
      * @return array{
      *     eligible: bool,
      *     reasons: list<string>,
+     *     activation_constraints: list<string>,
      *     readiness: array{value: string, label: string},
      *     blocking_maintenance_count: int,
      *     schedule_conflicts: list<array{id: int, reference: string, scheduled_start: string|null, scheduled_end: string|null}>,
@@ -172,13 +173,21 @@ final class DispatchResourceEligibility
         }
 
         $asset->loadMissing(['inspections', 'latestDvirInspection']);
-        if ($this->inspectionReadiness->lacksPassingClearance($asset->inspections, $asset->latestDvirInspection)) {
-            $reasons[] = 'A completed passing inspection or DVIR is required before dispatch; a later failure removes clearance.';
+        $inspectionBlocked = $excludeCurrentJob
+            ? $this->inspectionReadiness->lacksPassingClearance($asset->inspections, $asset->latestDvirInspection)
+            : $this->inspectionReadiness->hasUnsafeEvidence($asset->inspections, $asset->latestDvirInspection);
+        if ($inspectionBlocked) {
+            $reasons[] = $excludeCurrentJob
+                ? 'A completed passing workshop inspection is required before activation; a later defect removes clearance.'
+                : 'Recorded failed inspection or DVIR defects must be cleared before assignment.';
         }
 
         return [
             'eligible' => $reasons === [] && $conflicts === [],
             'reasons' => $reasons,
+            'activation_constraints' => $this->inspectionReadiness->lacksPassingClearance($asset->inspections, $asset->latestDvirInspection)
+                ? ['A passing workshop inspection is still required.']
+                : [],
             'readiness' => [
                 'value' => $asset->status->value,
                 'label' => $asset->status->label(),
