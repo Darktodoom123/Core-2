@@ -55,12 +55,14 @@ test('inspection clearance is consistent from candidate selection to desk readin
         .getByRole('button', { name: /Step 2 .*Assign resources/ })
         .click();
 
+    // An asset awaiting its first workshop inspection can be planned; the
+    // inspection is shown as a constraint that blocks activation instead.
     const truck = page.getByRole('checkbox', { name: /Select TRK-01/ });
-    await expect(truck).toBeDisabled();
+    await expect(truck).toBeEnabled();
     await expect(
         page
             .getByText(
-                /A completed passing inspection or DVIR is required before dispatch/,
+                /Before activation: A passing workshop inspection is still required/,
             )
             .first(),
     ).toBeVisible();

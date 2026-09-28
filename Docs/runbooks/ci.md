@@ -26,7 +26,7 @@ Pushes to `main` never skip lanes, so a small commit cannot report green while a
 | Tracking tests | Tracking Pest suite |
 | PostgreSQL security & concurrency | Migrations apply, fully roll back, and re-apply; row-lock concurrency suite; RLS and grant suite |
 | Browser acceptance & accessibility | Playwright accessibility smoke test and acceptance suite |
-| Mobile package & bundling | Mobile typecheck, unit and component tests, Expo Doctor, Android bundle export |
+| Mobile package & bundling | Mobile typecheck, unit and component tests, Expo Doctor (offline, against the SDK pinned in the lockfile), Android bundle export. The nightly run also reports newer Expo patch releases without failing |
 | Docker build & service integration | Dockerfile check, production and Tracking images, frontend build verification, service integration contract, Compose smoke test |
 | `ci-gate` | Passes only when every lane passed or was skipped |
 

@@ -187,6 +187,7 @@ async function writeGeneratedEnvironment(): Promise<void> {
         QUEUE_CONNECTION: 'sync',
         SESSION_DRIVER: 'file',
         BROADCAST_CONNECTION: 'null',
+        MAIL_MAILER: 'log',
         REVERB_APP_ID: reverbAppId,
         REVERB_APP_KEY: reverbAppKey,
         REVERB_APP_SECRET: reverbAppSecret,
@@ -600,8 +601,52 @@ async function exerciseMobileBoundary(): Promise<void> {
             device_name: `core2-it-${suffix}`,
         }),
     });
-    assert.equal(login.status, 200, `login failed with status ${login.status}`);
-    const token = login.body?.data?.token;
+    assert.equal(
+        login.status,
+        200,
+        `login failed with status ${login.status}: ${redact(JSON.stringify(login.body))}`,
+    );
+
+    // A verified user on an untrusted device gets an email code challenge.
+    // The stack mails to the log, so store a known code for that challenge
+    // (same HMAC the service uses) and complete the real verify endpoint.
+    let token = login.body?.data?.token;
+
+    if (login.body?.requires_verification === true) {
+        const challengeId = String(login.body.challenge_id);
+        assert.match(
+            challengeId,
+            /^[0-9a-f-]{36}$/,
+            'Login challenge id must be a UUID',
+        );
+        const knownCode = '246810';
+        const codeHash = createHmac('sha256', appKey)
+            .update(knownCode)
+            .digest('hex');
+        await queryDatabase(
+            'db',
+            `UPDATE email_one_time_codes SET code_hash = '${codeHash}' WHERE challenge_id = '${challengeId}'`,
+        );
+
+        const verify = await fetchJson(
+            `${baseUrl}/api/v1/auth/challenge/verify`,
+            {
+                method: 'POST',
+                body: jsonBody({
+                    challenge_id: challengeId,
+                    code: knownCode,
+                    device_name: `core2-it-${suffix}`,
+                }),
+            },
+        );
+        assert.equal(
+            verify.status,
+            200,
+            `login challenge failed with status ${verify.status}: ${redact(JSON.stringify(verify.body))}`,
+        );
+        token = verify.body?.data?.token;
+    }
+
     assert.equal(typeof token, 'string');
     authToken = token;
 

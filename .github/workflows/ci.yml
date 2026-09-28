@@ -275,6 +275,8 @@ jobs:
         with:
           php: 'true'
           composer-apps: operations
+          # NxTaskConfigurationTest runs `npx nx`.
+          node: 'true'
 
       - name: Download built assets
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -529,8 +531,19 @@ jobs:
         if: success() || failure()
         run: npm run test:mobile
 
+      # Offline so the check compares against the SDK pinned in the lockfile;
+      # online mode fails whenever Expo publishes a newer patch upstream.
       - name: Expo Doctor
         if: success() || failure()
+        working-directory: packages/field-mobile
+        env:
+          EXPO_OFFLINE: '1'
+          NPM_CONFIG_CACHE: ${{ runner.temp }}/npm-cache
+        run: npm run doctor
+
+      - name: Expo SDK patch drift (advisory)
+        if: github.event_name == 'schedule'
+        continue-on-error: true
         working-directory: packages/field-mobile
         env:
           NPM_CONFIG_CACHE: ${{ runner.temp }}/npm-cache

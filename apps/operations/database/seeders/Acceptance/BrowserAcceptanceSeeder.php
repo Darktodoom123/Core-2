@@ -579,7 +579,7 @@ final class BrowserAcceptanceSeeder extends Seeder
             ? hash('sha256', 'r6-stale-'.$job->id)
             : app(BoundedContextBuilder::class)->buildForDispatchJob($job)['context_hash'];
 
-        return GptRecommendation::query()->create(array_merge([
+        $attributes = array_merge([
             'subject_type' => $job->getMorphClass(),
             'subject_id' => $job->id,
             'requested_by' => $requester->id,
@@ -607,6 +607,12 @@ final class BrowserAcceptanceSeeder extends Seeder
                 ? now()->addDay()
                 : ($status === GptRecommendationStatus::Stale ? now()->addDay() : null),
             'purge_at' => now()->addDays(30),
-        ], $overrides));
+        ], $overrides);
+
+        // Generated advice records the job version it was built for; the desk
+        // treats advice for any other version as stale.
+        $attributes['recommendation']['job_version'] ??= $job->fresh()?->version;
+
+        return GptRecommendation::query()->create($attributes);
     }
 }
