@@ -444,12 +444,18 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 
+  # Tests share one seeded database per server, so each shard runs serially
+  # against its own server and database; shards split by spec file.
   browser:
-    name: Browser acceptance & accessibility
+    name: Browser acceptance & accessibility (${{ matrix.shard }}/2)
     needs: [changes, assets]
     if: needs.changes.outputs.browser == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     env:
       APP_URL: http://127.0.0.1:4173
       BROADCAST_CONNECTION: 'null'
@@ -488,22 +494,17 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Accessibility smoke test
+      # The full suite includes accessibility.spec.ts.
+      - name: Acceptance and accessibility suite (shard ${{ matrix.shard }}/${{ strategy.job-total }})
         env:
-          PLAYWRIGHT_JUNIT_OUTPUT: test-results/junit-a11y.xml
-        run: npm run test:a11y
-
-      - name: Acceptance suite
-        if: success() || failure()
-        env:
-          PLAYWRIGHT_JUNIT_OUTPUT: test-results/junit-e2e.xml
-        run: npm run test:e2e
+          PLAYWRIGHT_JUNIT_OUTPUT: test-results/junit-e2e-${{ matrix.shard }}.xml
+        run: npm run test:e2e -- --shard=${{ matrix.shard }}/${{ strategy.job-total }}
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         if: ${{ !cancelled() }}
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.shard }}
           path: |
             playwright-report/
             test-results/

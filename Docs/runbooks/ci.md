@@ -25,7 +25,7 @@ Pushes to `main` never skip lanes, so a small commit cannot report green while a
 | Operations tests | Operations Pest suite on SQLite |
 | Tracking tests | Tracking Pest suite |
 | PostgreSQL security & concurrency | Migrations apply, fully roll back, and re-apply; row-lock concurrency suite; RLS and grant suite |
-| Browser acceptance & accessibility | Playwright accessibility smoke test and acceptance suite |
+| Browser acceptance & accessibility (1/2, 2/2) | The Playwright suite, including the accessibility specs, split by spec file across two runners. Each shard runs serially against its own server and seeded database |
 | Mobile package & bundling | Mobile typecheck, unit and component tests, Expo Doctor (offline, against the SDK pinned in the lockfile), Android bundle export. The nightly run also reports newer Expo patch releases without failing |
 | Docker build & service integration | Dockerfile check, production and Tracking images, frontend build verification, service integration contract, Compose smoke test |
 | `ci-gate` | Passes only when every lane passed or was skipped |
@@ -39,7 +39,7 @@ Run from the repository root:
 | Scope | Command |
 | :--- | :--- |
 | Quality, backend, and mobile lanes | `composer run ci:check` |
-| Browser lane | `npm run build`, then `npm run test:a11y` and `npm run test:e2e` |
+| Browser lane | `npm run build`, then `npm run test:e2e` (includes accessibility; `npm run test:a11y` runs only those specs) |
 | Docker lane | `npm run test:integration:services` |
 
 The PostgreSQL concurrency suite needs the POSIX PCNTL extension, so it only runs on Linux (CI or the Docker `test-runner` image). On Windows, check the migration round trip against a scratch PostgreSQL database:
