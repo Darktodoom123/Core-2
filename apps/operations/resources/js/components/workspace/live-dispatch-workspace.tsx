@@ -35,6 +35,7 @@ import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-ba
 import { DIRECT_DISPATCH_DISCARD_EVENT } from '@/components/workspace/direct-dispatch';
 import { DispatchGptAdvisory } from '@/components/workspace/dispatch-gpt-advisory';
 import { LiveDispatchIntake } from '@/components/workspace/live-dispatch-intake';
+import { getScheduleAwareStatus } from '@/components/workspace/resource-schedule-status';
 import { ScheduleBoardMonthView } from '@/components/workspace/schedule-board-month-view';
 import { ScheduleBoardWeekView } from '@/components/workspace/schedule-board-week-view';
 import {
@@ -2140,16 +2141,22 @@ export function ScheduleBoardTable({
                 continue;
             }
 
+            const assetStatus = getScheduleAwareStatus(
+                asset.status.label,
+                getAssetStatusTone(
+                    asset.status.value,
+                    asset.blocking_work_orders_count,
+                ),
+                assignedJobsForAsset.map((aj) => aj.job),
+            );
+
             resourceRows.push({
                 id: `asset-${asset.id}`,
                 code: asset.code,
                 name: asset.name,
                 category: cat,
-                statusLabel: asset.status.label,
-                statusTone: getAssetStatusTone(
-                    asset.status.value,
-                    asset.blocking_work_orders_count,
-                ),
+                statusLabel: assetStatus.label,
+                statusTone: assetStatus.tone,
                 jobAssignments: assignedJobsForAsset,
                 hasConflict,
             });
@@ -2200,13 +2207,19 @@ export function ScheduleBoardTable({
                     assignedJobsForUser.length > 0 ||
                     category === 'personnel'
                 ) {
+                    const userStatus = getScheduleAwareStatus(
+                        user.is_active ? 'Active' : 'Inactive',
+                        user.is_active ? 'success' : 'error',
+                        assignedJobsForUser.map((uj) => uj.job),
+                    );
+
                     resourceRows.push({
                         id: `user-${user.id}`,
                         code: user.role_label ?? 'Personnel',
                         name: user.name,
                         category: 'personnel',
-                        statusLabel: user.is_active ? 'Active' : 'Inactive',
-                        statusTone: user.is_active ? 'success' : 'error',
+                        statusLabel: userStatus.label,
+                        statusTone: userStatus.tone,
                         jobAssignments: assignedJobsForUser,
                         hasConflict,
                     });

@@ -6,6 +6,37 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <meta name="broadcasting-enabled" content="{{ config('broadcasting.default') === 'reverb' ? 'true' : 'false' }}">
 
+        <script>
+            (() => {
+                const themeKey = 'core2-theme-preference';
+                const root = document.documentElement;
+                let preference = 'light';
+
+                try {
+                    const stored = window.localStorage.getItem(themeKey);
+
+                    if (stored === 'light' || stored === 'dark' || stored === 'system') {
+                        preference = stored;
+                    }
+                } catch {
+                    // Fall back to light mode when browser storage is unavailable.
+                }
+
+                const resolved =
+                    preference === 'system'
+                        ? typeof window.matchMedia === 'function' &&
+                          window.matchMedia('(prefers-color-scheme: dark)')
+                              .matches
+                            ? 'dark'
+                            : 'light'
+                        : preference;
+
+                root.classList.toggle('dark', resolved === 'dark');
+                root.setAttribute('data-theme', resolved);
+                root.setAttribute('data-theme-preference', preference);
+            })();
+        </script>
+
         <link rel="icon" href="/favicon.svg?v=alibaton2" type="image/svg+xml">
         <link rel="icon" href="/favicon.ico?v=alibaton2" sizes="any">
         <link rel="apple-touch-icon" href="/favicon.svg?v=alibaton2">

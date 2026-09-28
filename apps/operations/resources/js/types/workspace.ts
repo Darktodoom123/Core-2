@@ -490,6 +490,20 @@ export interface AssetStatusChangeViewModel {
     } | null;
 }
 
+export interface AssetDispatchOccupancyViewModel {
+    state: 'on_job' | 'dispatched' | 'scheduled' | 'tentative';
+    label: string;
+    open_jobs_count: number;
+    job: {
+        id: number;
+        reference: string;
+        title: string | null;
+        status: StatusViewModel<string>;
+        scheduled_start: string | null;
+        scheduled_end: string | null;
+    };
+}
+
 export interface AssetViewModel {
     id: number;
     code: string;
@@ -518,6 +532,7 @@ export interface AssetViewModel {
     specifications: Record<string, unknown>;
     status: StatusViewModel<AssetStatusValue>;
     blocking_work_orders_count: number;
+    dispatch_occupancy?: AssetDispatchOccupancyViewModel | null;
     is_dispatchable: boolean;
     dispatchability?: AssetDispatchabilityViewModel;
     inspections_count?: number | null;

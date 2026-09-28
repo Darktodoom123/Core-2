@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Assignment\Models\DispatchAssetAssignment;
 use App\Modules\Assignment\Services\DispatchResourceEligibility;
 use App\Modules\Dispatch\Enums\DispatchPriority;
 use App\Modules\Dispatch\Enums\DispatchStatus;
@@ -348,4 +349,54 @@ it('computes is_dispatchable strictly requiring passing inspection, available st
     expect($viewModels['CRN-CERTIFIED']['is_dispatchable'])->toBeTrue();
     expect($viewModels['CRN-BLOCKED']['is_dispatchable'])->toBeFalse();
     expect($viewModels['CRN-UNAVAILABLE']['is_dispatchable'])->toBeFalse();
+});
+
+it('exposes open dispatch commitments as asset occupancy without changing the fleet status', function () {
+    $dispatcher = User::factory()->create();
+
+    $makeAsset = fn (string $code): OperationalAsset => OperationalAsset::query()->create([
+        'code' => $code,
+        'name' => "Crane {$code}",
+        'kind' => 'crane',
+        'status' => AssetStatus::Available,
+    ]);
+    $makeJob = fn (string $reference, DispatchStatus $status, int $startsInHours) => DispatchJob::query()->create([
+        'reference' => $reference,
+        'client' => 'Occupancy Client',
+        'title' => "Job {$reference}",
+        'site' => 'Site A',
+        'scheduled_start' => now()->addHours($startsInHours),
+        'scheduled_end' => now()->addHours($startsInHours + 4),
+        'priority' => DispatchPriority::Routine,
+        'status' => $status,
+        'created_by' => $dispatcher->id,
+    ]);
+    $assign = fn (DispatchJob $job, OperationalAsset $asset, array $attributes = []) => DispatchAssetAssignment::query()->create([
+        'dispatch_job_id' => $job->id,
+        'operational_asset_id' => $asset->id,
+        'assignment_type' => 'primary_crane',
+        'assigned_by' => $dispatcher->id,
+        ...$attributes,
+    ]);
+
+    $draftAsset = $makeAsset('CRN-DRAFT');
+    $assign($makeJob('DSP-OCC-DRAFT', DispatchStatus::Draft, 2), $draftAsset);
+
+    $busyAsset = $makeAsset('CRN-BUSY');
+    $assign($makeJob('DSP-OCC-LATER', DispatchStatus::Scheduled, 1), $busyAsset);
+    $assign($makeJob('DSP-OCC-LIVE', DispatchStatus::Working, -1), $busyAsset);
+
+    $finishedAsset = $makeAsset('CRN-FINISHED');
+    $assign($makeJob('DSP-OCC-DONE', DispatchStatus::Completed, 1), $finishedAsset);
+    $assign($makeJob('DSP-OCC-RELEASED', DispatchStatus::Scheduled, 1), $finishedAsset, ['active_until' => now()->subMinute()]);
+
+    $viewModels = collect(OperationsWorkspaceViewModel::assets(OperationalAsset::query()->get()))->keyBy('code');
+
+    expect($viewModels['CRN-DRAFT']['status']['value'])->toBe('available')
+        ->and($viewModels['CRN-DRAFT']['dispatch_occupancy']['state'])->toBe('tentative')
+        ->and($viewModels['CRN-DRAFT']['dispatch_occupancy']['job']['reference'])->toBe('DSP-OCC-DRAFT')
+        ->and($viewModels['CRN-BUSY']['dispatch_occupancy']['state'])->toBe('on_job')
+        ->and($viewModels['CRN-BUSY']['dispatch_occupancy']['job']['reference'])->toBe('DSP-OCC-LIVE')
+        ->and($viewModels['CRN-BUSY']['dispatch_occupancy']['open_jobs_count'])->toBe(2)
+        ->and($viewModels['CRN-FINISHED']['dispatch_occupancy'])->toBeNull();
 });

@@ -42,6 +42,7 @@ import {
     hasLocationCoordinates,
 } from '@/components/workspace/fleet/fleet-location-labels';
 import { cn } from '@/lib/utils';
+import { useTheme } from '@/lib/use-theme';
 import {
     reverseGeocode,
     usePreciseLocation,
@@ -148,10 +149,13 @@ export function LiveTrackingMap({
     onSectionChange?: (section: 'tracking') => void;
     className?: string;
 }) {
+    const { resolvedTheme } = useTheme();
     const [internalSelectedId, setInternalSelectedId] = useState<number | null>(
         null,
     );
-    const [styleVariant, setStyleVariant] = useState<MapStyleVariant>('light');
+    const [styleVariant, setStyleVariant] = useState<MapStyleVariant>(
+        resolvedTheme,
+    );
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [mobileView, setMobileView] = useState<'map' | 'list'>('map');
@@ -161,6 +165,10 @@ export function LiveTrackingMap({
     const mapActionsRef = useRef<MapActions | null>(null);
     const fullscreenSurfaceRef = useRef<HTMLDivElement>(null);
     const locationListId = useId();
+
+    useEffect(() => {
+        setStyleVariant(resolvedTheme);
+    }, [resolvedTheme]);
 
     useEffect(() => {
         if (!isFullscreen) {

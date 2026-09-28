@@ -2,6 +2,7 @@ import { useForm } from '@inertiajs/react';
 import {
     ArrowLeft,
     AlertTriangle,
+    CalendarClock,
     CheckCircle2,
     ClipboardCheck,
     Clock3,
@@ -38,6 +39,7 @@ import { presentFleetSpecifications } from '@/components/workspace/fleet/fleet-s
 import { FleetStatusForm } from '@/components/workspace/fleet/fleet-status-form';
 import { HosDutyBadge } from '@/components/workspace/fleet/hos-duty-badge';
 import { SafetyLockoutBanner } from '@/components/workspace/fleet/safety-lockout-banner';
+import { resolveAssetDisplayStatus } from '@/components/workspace/resource-schedule-status';
 import { formatDateTime, humanize } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import { usePreciseLocation } from '@/services/reverse-geocoder';
@@ -338,11 +340,32 @@ export function FleetDetailPane({
 
                     <div className="mt-3 flex flex-wrap items-center gap-1.5">
                         <CanonicalStatusBadge
-                            status={asset.status}
+                            status={resolveAssetDisplayStatus(asset)}
                             variant="soft"
                             size="sm"
                             presentation="pill"
                         />
+                        {asset.dispatch_occupancy && (
+                            <FleetPill
+                                tone={
+                                    asset.dispatch_occupancy.state ===
+                                    'tentative'
+                                        ? 'warning'
+                                        : 'brand'
+                                }
+                                icon={CalendarClock}
+                            >
+                                {asset.dispatch_occupancy.job.reference} ·{' '}
+                                {asset.dispatch_occupancy.job.status.label} ·{' '}
+                                {formatDateTime(
+                                    asset.dispatch_occupancy.job
+                                        .scheduled_start,
+                                )}
+                                {asset.dispatch_occupancy.open_jobs_count > 1
+                                    ? ` (+${asset.dispatch_occupancy.open_jobs_count - 1} more)`
+                                    : ''}
+                            </FleetPill>
+                        )}
                         {dispatchabilityState === 'ready' ? (
                             <FleetPill tone="success" icon={ShieldCheck}>
                                 Ready for dispatch

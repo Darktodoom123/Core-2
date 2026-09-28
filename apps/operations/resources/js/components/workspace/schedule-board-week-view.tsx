@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useMemo } from 'react';
 import { EmptyState, Panel } from '@/components/ui';
+import { getScheduleAwareStatus } from '@/components/workspace/resource-schedule-status';
 import {
     dateFromLocalKey,
     isDateOnlyValue,
@@ -387,16 +388,22 @@ export function ScheduleBoardWeekView({
                 ),
             );
 
+            const assetStatus = getScheduleAwareStatus(
+                asset.status.label,
+                getAssetStatusTone(
+                    asset.status.value,
+                    asset.blocking_work_orders_count,
+                ),
+                assignedJobs,
+            );
+
             addResourceRow({
                 id: `asset-${asset.id}`,
                 name: asset.name || asset.code,
                 code: asset.code,
                 category: resourceCategory,
-                statusLabel: asset.status.label,
-                statusTone: getAssetStatusTone(
-                    asset.status.value,
-                    asset.blocking_work_orders_count,
-                ),
+                statusLabel: assetStatus.label,
+                statusTone: assetStatus.tone,
                 jobs: assignedJobs,
                 hasConflict: assignedJobs.some((job) =>
                     jobHasConflict(job, derivedConflicts),
@@ -412,13 +419,19 @@ export function ScheduleBoardWeekView({
                     ),
                 );
 
+                const userStatus = getScheduleAwareStatus(
+                    user.is_active ? 'Active' : 'Inactive',
+                    user.is_active ? 'success' : 'error',
+                    assignedJobs,
+                );
+
                 addResourceRow({
                     id: `user-${user.id}`,
                     name: user.name,
                     code: user.role_label ?? 'Personnel',
                     category: 'personnel',
-                    statusLabel: user.is_active ? 'Active' : 'Inactive',
-                    statusTone: user.is_active ? 'success' : 'error',
+                    statusLabel: userStatus.label,
+                    statusTone: userStatus.tone,
                     jobs: assignedJobs,
                     hasConflict: assignedJobs.some((job) =>
                         jobHasConflict(job, derivedConflicts),

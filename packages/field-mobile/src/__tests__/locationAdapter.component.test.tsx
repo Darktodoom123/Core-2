@@ -9,6 +9,8 @@ jest.mock('expo-location', () => ({
 
 import * as Location from 'expo-location';
 import {
+    CURRENT_FIX_MAX_CACHE_AGE_MS,
+    CURRENT_FIX_MAX_FALLBACK_AGE_MS,
     NativeLocationAdapter,
     TRACKING_MAX_FIX_AGE_MS,
 } from '../native/locationAdapter';
@@ -64,18 +66,100 @@ describe('NativeLocationAdapter duty snapshots', () => {
         );
     });
 
+    it('asks the GPS radio for a high-accuracy live fix', async () => {
+        lastKnownPosition.mockResolvedValue(null);
+        currentPosition.mockResolvedValue({
+            timestamp: Date.now(),
+            coords: { latitude: 14.5995, longitude: 120.9842, accuracy: 5 },
+        });
+
+        await new NativeLocationAdapter().getCurrentLocation(false);
+
+        expect(currentPosition).toHaveBeenCalledWith(
+            expect.objectContaining({ accuracy: Location.Accuracy.High }),
+        );
+    });
+
+    it('reuses a cached fix only when it is fresh and precise', async () => {
+        const liveFix = {
+            timestamp: Date.now(),
+            coords: { latitude: 14.5995, longitude: 120.9842, accuracy: 5 },
+        };
+        currentPosition.mockResolvedValue(liveFix);
+        const adapter = new NativeLocationAdapter();
+
+        lastKnownPosition.mockResolvedValueOnce({
+            timestamp: Date.now() - 10 * 1000,
+            coords: { latitude: 14.6, longitude: 120.98, accuracy: 12 },
+        });
+        await expect(adapter.getCurrentLocation(false)).resolves.toMatchObject(
+            { latitude: 14.6, source: 'last_known' },
+        );
+        expect(currentPosition).not.toHaveBeenCalled();
+
+        lastKnownPosition.mockResolvedValueOnce({
+            timestamp: Date.now() - (CURRENT_FIX_MAX_CACHE_AGE_MS + 1000),
+            coords: { latitude: 14.6, longitude: 120.98, accuracy: 12 },
+        });
+        await expect(adapter.getCurrentLocation(false)).resolves.toMatchObject(
+            { latitude: 14.5995, source: 'gps' },
+        );
+
+        lastKnownPosition.mockResolvedValueOnce({
+            timestamp: Date.now() - 10 * 1000,
+            coords: { latitude: 14.6, longitude: 120.98, accuracy: 800 },
+        });
+        await expect(adapter.getCurrentLocation(false)).resolves.toMatchObject(
+            { latitude: 14.5995, source: 'gps' },
+        );
+    });
+
+    it('rejects mocked fixes from test providers and fake-GPS apps', async () => {
+        const mocked = {
+            timestamp: Date.now(),
+            mocked: true,
+            coords: { latitude: 14.5995, longitude: 120.9842, accuracy: 5 },
+        };
+        lastKnownPosition.mockResolvedValue(mocked);
+        currentPosition.mockResolvedValue(mocked);
+        const adapter = new NativeLocationAdapter();
+
+        await expect(adapter.getCurrentLocation(false)).rejects.toThrow(
+            'unavailable',
+        );
+        await expect(adapter.getTrackingLocation()).rejects.toThrow(
+            'unavailable',
+        );
+        await expect(adapter.getDutyLocationSnapshot()).resolves.toMatchObject(
+            { latitude: null, source: 'unavailable' },
+        );
+    });
+
+    it('never falls back to a last known fix older than the fallback window', async () => {
+        currentPosition.mockRejectedValue(new Error('GPS timeout'));
+        lastKnownPosition.mockResolvedValueOnce(null).mockResolvedValueOnce({
+            timestamp: Date.now() - (CURRENT_FIX_MAX_FALLBACK_AGE_MS + 1000),
+            coords: { latitude: 14.6, longitude: 120.98, accuracy: 25 },
+        });
+
+        await expect(
+            new NativeLocationAdapter().getCurrentLocation(false),
+        ).rejects.toThrow('unavailable');
+        expect(lastKnownPosition).toHaveBeenLastCalledWith({
+            maxAge: CURRENT_FIX_MAX_FALLBACK_AGE_MS,
+        });
+    });
+
     it('labels an older cached observation as last known', async () => {
-        const observedAt = Date.now() - 20 * 60 * 1000;
-        lastKnownPosition
-            .mockResolvedValueOnce({
-                timestamp: observedAt,
-                coords: {
-                    latitude: 14.6,
-                    longitude: 120.98,
-                    accuracy: 25,
-                },
-            })
-            .mockResolvedValueOnce(null);
+        const observedAt = Date.now() - 3 * 60 * 1000;
+        lastKnownPosition.mockResolvedValueOnce(null).mockResolvedValueOnce({
+            timestamp: observedAt,
+            coords: {
+                latitude: 14.6,
+                longitude: 120.98,
+                accuracy: 25,
+            },
+        });
         currentPosition.mockRejectedValue(new Error('GPS timeout'));
 
         await expect(

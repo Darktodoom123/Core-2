@@ -4,8 +4,10 @@ import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&ur
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { useTheme } from '@/lib/use-theme';
 import { cn } from '@/lib/utils';
 import { getMapAttribution, getMapStyleUrl } from './map-config';
+import type { MapStyleVariant } from './map-config';
 
 type MapLibreRuntime = typeof MapLibreModule;
 
@@ -79,25 +81,27 @@ export function useMapLibre(): MapLibreContextValue {
 export function MapLibreMap({
     children,
     className,
-    styleVariant = 'light',
+    styleVariant,
     ariaLabel,
     center,
     zoom,
 }: {
     children?: ReactNode;
     className?: string;
-    styleVariant?: 'light' | 'dark';
+    styleVariant?: MapStyleVariant;
     ariaLabel: string;
     center: [number, number];
     zoom: number;
 }) {
+    const { resolvedTheme } = useTheme();
+    const effectiveStyleVariant = styleVariant ?? resolvedTheme;
     const containerRef = useRef<HTMLDivElement>(null);
     const [mapContext, setMapContext] = useState<ReadyMapContext | null>(null);
     const [status, setStatus] = useState<
         'loading' | 'ready' | 'degraded' | 'error'
-    >(() => (getMapStyleUrl(styleVariant) ? 'loading' : 'error'));
+    >(() => (getMapStyleUrl(effectiveStyleVariant) ? 'loading' : 'error'));
     const [errorMessage, setErrorMessage] = useState<string | null>(() =>
-        getMapStyleUrl(styleVariant)
+        getMapStyleUrl(effectiveStyleVariant)
             ? null
             : 'Map provider configuration is missing.',
     );
@@ -128,11 +132,17 @@ export function MapLibreMap({
         let map: MapLibreInstance | null = null;
         let resizeObserver: ResizeObserver | null = null;
 
-        const styleUrl = getMapStyleUrl(styleVariant);
+        const styleUrl = getMapStyleUrl(effectiveStyleVariant);
 
         if (!styleUrl) {
+            setStatus('error');
+            setErrorMessage('Map provider configuration is missing.');
+
             return () => undefined;
         }
+
+        setStatus('loading');
+        setErrorMessage(null);
 
         void import('maplibre-gl')
             .then((maplibregl) => {
@@ -179,7 +189,7 @@ export function MapLibreMap({
                             addMapAttributionControl(
                                 map,
                                 maplibregl,
-                                styleVariant,
+                                effectiveStyleVariant,
                             );
                         }
                     });
@@ -260,7 +270,7 @@ export function MapLibreMap({
 
             map?.remove();
         };
-    }, [styleVariant, zoom]);
+    }, [effectiveStyleVariant, zoom]);
 
     const context: MapLibreContextValue | null = mapContext
         ? { ...mapContext, prefersReducedMotion }

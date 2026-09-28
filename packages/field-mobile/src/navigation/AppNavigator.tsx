@@ -124,7 +124,7 @@ import { statusBarAppearance } from './status-bar-appearance';
 
 export { isAuthorizedFieldRole } from '../auth/fieldRoles';
 
-const SOS_LOCATION_TIMEOUT_MS = 4000;
+const SOS_LOCATION_TIMEOUT_MS = 10_000;
 
 type HistoryRow = Record<string, unknown>;
 

@@ -5,6 +5,7 @@ namespace App\Platform\Workspace\ViewModels;
 use App\Modules\Assignment\Models\DispatchAssetAssignment;
 use App\Modules\Assignment\Models\DispatchPersonnelAssignment;
 use App\Modules\Dispatch\Enums\DispatchSourceType;
+use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\ApprovalRequest;
 use App\Modules\Dispatch\Models\Client;
 use App\Modules\Dispatch\Models\DispatchJob;
@@ -325,6 +326,79 @@ final class OperationsWorkspaceViewModel
     }
 
     /**
+     * The asset's fleet status only changes when the asset itself is moved (rental
+     * checkout, maintenance), so an "Available" asset can still be committed to
+     * dispatch work. Derive that commitment from open dispatch assignments whose
+     * job has not finished, preferring live field work over future bookings.
+     *
+     * @param  array<int, int|string>  $assetIds
+     * @return array<int, array<string, mixed>>
+     */
+    private static function dispatchOccupancies(array $assetIds): array
+    {
+        if ($assetIds === []) {
+            return [];
+        }
+
+        $rank = static fn (DispatchStatus $status): int => match ($status) {
+            DispatchStatus::Accepted, DispatchStatus::EnRoute, DispatchStatus::Arrived, DispatchStatus::Working => 0,
+            DispatchStatus::Dispatched => 1,
+            DispatchStatus::Scheduled => 2,
+            default => 3,
+        };
+        $now = now();
+
+        return DispatchAssetAssignment::query()
+            ->open()
+            ->whereIn('operational_asset_id', $assetIds)
+            ->whereHas('job', static function ($job) use ($now): void {
+                $job->whereNotIn('status', [DispatchStatus::Completed->value, DispatchStatus::Cancelled->value])
+                    ->where(static function ($window) use ($now): void {
+                        $window->whereNull('scheduled_end')->orWhere('scheduled_end', '>', $now);
+                    });
+            })
+            ->with('job:id,reference,title,status,scheduled_start,scheduled_end')
+            ->get(['id', 'dispatch_job_id', 'operational_asset_id'])
+            ->groupBy('operational_asset_id')
+            ->map(static function (Collection $assignments) use ($rank): array {
+                $jobs = $assignments
+                    ->map(static fn (DispatchAssetAssignment $assignment): DispatchJob => $assignment->job)
+                    ->unique('id')
+                    ->sortBy([
+                        static fn (DispatchJob $a, DispatchJob $b): int => $rank($a->status) <=> $rank($b->status),
+                        static fn (DispatchJob $a, DispatchJob $b): int => ($a->scheduled_start?->getTimestamp() ?? PHP_INT_MAX) <=> ($b->scheduled_start?->getTimestamp() ?? PHP_INT_MAX),
+                    ])
+                    ->values();
+                /** @var DispatchJob $job */
+                $job = $jobs->first();
+                [$state, $label] = match ($rank($job->status)) {
+                    0 => ['on_job', 'On job'],
+                    1 => ['dispatched', 'Dispatched'],
+                    2 => ['scheduled', 'Scheduled'],
+                    default => ['tentative', 'Tentative'],
+                };
+
+                return [
+                    'state' => $state,
+                    'label' => $label,
+                    'open_jobs_count' => $jobs->count(),
+                    'job' => [
+                        'id' => (int) $job->id,
+                        'reference' => (string) $job->reference,
+                        'title' => $job->title,
+                        'status' => [
+                            'value' => $job->status->value,
+                            'label' => $job->status->label(),
+                        ],
+                        'scheduled_start' => $job->scheduled_start?->toIso8601String(),
+                        'scheduled_end' => $job->scheduled_end?->toIso8601String(),
+                    ],
+                ];
+            })
+            ->all();
+    }
+
+    /**
      * @param  Collection<int, OperationalAsset>  $assets
      * @return array<int, array<string, mixed>>
      */
@@ -350,7 +424,9 @@ final class OperationsWorkspaceViewModel
                     ->groupBy('subject_id')
                     ->map(static fn (Collection $events): ?AuditEvent => $events->first()));
 
-        return $assets->map(static function (OperationalAsset $asset) use ($latestStatusChanges): array {
+        $dispatchOccupancies = self::dispatchOccupancies($assetIds->all());
+
+        return $assets->map(static function (OperationalAsset $asset) use ($latestStatusChanges, $dispatchOccupancies): array {
             $blockingCount = (int) $asset->getAttribute('blocking_work_orders_count');
             $inspectionsCount = $asset->getAttribute('inspections_count');
             $dvirInspectionsCount = $asset->getAttribute('dvir_inspections_count');
@@ -543,6 +619,7 @@ final class OperationsWorkspaceViewModel
                     'label' => $asset->status->label(),
                 ],
                 'blocking_work_orders_count' => $blockingCount,
+                'dispatch_occupancy' => $dispatchOccupancies[(int) $asset->getKey()] ?? null,
                 'is_dispatchable' => $isDispatchable,
                 'dispatchability' => [
                     'is_dispatchable' => $isDispatchable,
@@ -1163,7 +1240,11 @@ final class OperationsWorkspaceViewModel
         return $attempts->map(static fn (Model $attempt): array => [
             'channel' => (string) $attempt->getAttribute('channel'),
             'target' => (string) ($attempt->getAttribute('target_type') ?? 'responder'),
-            'status' => (string) ($attempt->getAttribute('attempt_status') ?? $attempt->getAttribute('status') ?? $attempt->getAttribute('state')),
+            'status' => self::sosEnumValue($attempt, match (true) {
+                $attempt->getAttribute('attempt_status') !== null => 'attempt_status',
+                $attempt->getAttribute('status') !== null => 'status',
+                default => 'state',
+            }),
             'attempted_at' => self::sosDate($attempt, 'attempted_at'),
             'delivered_at' => self::sosDate($attempt, 'delivered_at'),
             'failure_code' => $attempt->getAttribute('failure_code'),

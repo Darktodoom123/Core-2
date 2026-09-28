@@ -16,6 +16,67 @@ export const TRACKING_FIX_TIMEOUT_MS = 10_000;
 /** Oldest cached fix tracking may send in place of a live one. */
 export const TRACKING_MAX_FIX_AGE_MS = 30_000;
 
+/** Oldest cached fix a one-off capture may reuse without asking the GPS. */
+export const CURRENT_FIX_MAX_CACHE_AGE_MS = 60_000;
+
+/** A cached fix is reused only when at least this precise. */
+export const CURRENT_FIX_MAX_ACCURACY_METRES = 50;
+
+/** Longest a one-off live fix may take; long enough for a warm GPS lock. */
+export const CURRENT_FIX_TIMEOUT_MS = 8_000;
+
+/** Oldest last-known fix a one-off capture may fall back to. */
+export const CURRENT_FIX_MAX_FALLBACK_AGE_MS = 5 * 60_000;
+
+/** Longest a duty status change waits for its location snapshot. */
+export const DUTY_FIX_TIMEOUT_MS = 5_000;
+
+/**
+ * Android flags fixes from test providers and fake-GPS apps as mocked.
+ * They mark a spot the device is not at, so no capture may use one.
+ */
+const isMockedFix = (position: Location.LocationObject): boolean =>
+    position.mocked === true;
+
+const requireRealFix = (
+    position: Location.LocationObject,
+): Location.LocationObject => {
+    if (isMockedFix(position)) {
+        throw new Error('Mock location rejected');
+    }
+
+    return position;
+};
+
+const fixAgeMs =(position: Location.LocationObject): number =>
+    position.timestamp ? Date.now() - position.timestamp : Infinity;
+
+const isUsableCachedFix = (
+    position: Location.LocationObject | null | undefined,
+    maxAgeMs: number,
+    maxAccuracyMetres: number | null,
+): position is Location.LocationObject => {
+    if (
+        position?.coords?.latitude === undefined ||
+        position?.coords?.longitude === undefined ||
+        isMockedFix(position)
+    ) {
+        return false;
+    }
+
+    if (fixAgeMs(position) > maxAgeMs) {
+        return false;
+    }
+
+    if (maxAccuracyMetres === null) {
+        return true;
+    }
+
+    const accuracy = position.coords.accuracy;
+
+    return typeof accuracy === 'number' && accuracy <= maxAccuracyMetres;
+};
+
 const toCoordinates = (
     position: Location.LocationObject,
     source: 'gps' | 'last_known',
@@ -119,36 +180,37 @@ export class NativeLocationAdapter {
             );
         }
 
-        // 1. Instant cache check if recent fix exists (< 10 minutes)
+        // 1. Reuse a cached fix only when it is both fresh and precise; an
+        // older or network-derived fix would place the worker somewhere
+        // they no longer are.
         try {
             const recentKnown = await Location.getLastKnownPositionAsync({
-                maxAge: 10 * 60 * 1000,
+                maxAge: CURRENT_FIX_MAX_CACHE_AGE_MS,
+                requiredAccuracy: CURRENT_FIX_MAX_ACCURACY_METRES,
             });
 
             if (
-                recentKnown?.coords?.latitude !== undefined &&
-                recentKnown?.coords?.longitude !== undefined
+                isUsableCachedFix(
+                    recentKnown,
+                    CURRENT_FIX_MAX_CACHE_AGE_MS,
+                    CURRENT_FIX_MAX_ACCURACY_METRES,
+                )
             ) {
-                return {
-                    latitude: recentKnown.coords.latitude,
-                    longitude: recentKnown.coords.longitude,
-                    accuracyMetres: recentKnown.coords.accuracy ?? null,
-                    observedAt: recentKnown.timestamp
-                        ? new Date(recentKnown.timestamp).toISOString()
-                        : null,
-                    source: 'last_known',
-                };
+                return toCoordinates(recentKnown, 'last_known');
             }
         } catch {
             // Proceed to live fix
         }
 
-        // 2. Fast live fix with 3.5s timeout; falls back to any last known fix if indoors/slow
+        // 2. Live fix. High accuracy uses the GPS radio; Balanced and Low
+        // settle for Wi-Fi and cell towers, which are often hundreds of
+        // metres off. A stationary unit can take Balanced since it is not
+        // moving away from its last precise fix.
         try {
             const livePromise = Location.getCurrentPositionAsync({
                 accuracy: isStationary
-                    ? Location.Accuracy.Low
-                    : Location.Accuracy.Balanced,
+                    ? Location.Accuracy.Balanced
+                    : Location.Accuracy.High,
                 // GPS capture starts as part of an active work flow. Keep
                 // Android's location-accuracy prompt from stealing the app;
                 // callers surface a clear in-app recovery message instead.
@@ -156,40 +218,31 @@ export class NativeLocationAdapter {
             });
 
             const timeoutPromise = new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error('GPS timeout')), 3500),
+                setTimeout(
+                    () => reject(new Error('GPS timeout')),
+                    CURRENT_FIX_TIMEOUT_MS,
+                ),
             );
 
             const position = await Promise.race([livePromise, timeoutPromise]);
 
-            return {
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-                accuracyMetres: position.coords.accuracy ?? null,
-                observedAt: position.timestamp
-                    ? new Date(position.timestamp).toISOString()
-                    : null,
-                source: 'gps',
-            };
+            return toCoordinates(requireRealFix(position), 'gps');
         } catch {
-            // 3. Fallback to any last known position if live fix fails or times out
+            // 3. Fall back to a last known fix, but never one so old it
+            // shows a place the worker has long left.
             try {
-                const fallbackLast = await Location.getLastKnownPositionAsync(
-                    {},
-                );
+                const fallbackLast = await Location.getLastKnownPositionAsync({
+                    maxAge: CURRENT_FIX_MAX_FALLBACK_AGE_MS,
+                });
 
                 if (
-                    fallbackLast?.coords?.latitude !== undefined &&
-                    fallbackLast?.coords?.longitude !== undefined
+                    isUsableCachedFix(
+                        fallbackLast,
+                        CURRENT_FIX_MAX_FALLBACK_AGE_MS,
+                        null,
+                    )
                 ) {
-                    return {
-                        latitude: fallbackLast.coords.latitude,
-                        longitude: fallbackLast.coords.longitude,
-                        accuracyMetres: fallbackLast.coords.accuracy ?? null,
-                        observedAt: fallbackLast.timestamp
-                            ? new Date(fallbackLast.timestamp).toISOString()
-                            : null,
-                        source: 'last_known',
-                    };
+                    return toCoordinates(fallbackLast, 'last_known');
                 }
             } catch {
                 // Ignore fallback error
@@ -229,13 +282,13 @@ export class NativeLocationAdapter {
                 ),
             ]);
 
-            return toCoordinates(live, 'gps');
+            return toCoordinates(requireRealFix(live), 'gps');
         } catch {
             const recent = await Location.getLastKnownPositionAsync({
                 maxAge: TRACKING_MAX_FIX_AGE_MS,
             }).catch(() => null);
 
-            if (recent?.coords) {
+            if (recent?.coords && !isMockedFix(recent)) {
                 return toCoordinates(recent, 'last_known');
             }
 
@@ -252,7 +305,7 @@ export class NativeLocationAdapter {
         const timeoutPromise = new Promise<never>((_, reject) =>
             setTimeout(
                 () => reject(new Error('Duty location capture timed out')),
-                1500,
+                DUTY_FIX_TIMEOUT_MS,
             ),
         );
 

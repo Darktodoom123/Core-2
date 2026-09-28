@@ -13,6 +13,7 @@ param(
 )
 
 Set-StrictMode -Version Latest
+. (Join-Path $PSScriptRoot 'emulator-host-location.ps1')
 $ErrorActionPreference = 'Stop'
 
 $repositoryRoot = [System.IO.Path]::GetFullPath(
@@ -665,84 +666,13 @@ function Prepare-AndroidDevice {
             )
         }
 
-        # API 36's emulator console geo fix does not update LocationManager's
-        # fused provider. Use Android's test-provider API for an app-visible fix.
-        & $AdbPath -s $Serial shell cmd location providers `
-            remove-test-provider gps *> $null
-        & $AdbPath -s $Serial shell appops set --uid 2000 `
-            android:mock_location allow *> $null
-        Invoke-Checked -FilePath $AdbPath `
-            -Arguments @(
-                '-s',
-                $Serial,
-                'shell',
-                'cmd',
-                'location',
-                'providers',
-                'add-test-provider',
-                'gps'
-            ) `
-            -FailureMessage 'Android emulator GPS test-provider setup failed'
-        Invoke-Checked -FilePath $AdbPath `
-            -Arguments @(
-                '-s',
-                $Serial,
-                'shell',
-                'cmd',
-                'location',
-                'providers',
-                'set-test-provider-enabled',
-                'gps',
-                'true'
-            ) `
-            -FailureMessage 'Android emulator GPS test-provider enable failed'
-        Invoke-Checked -FilePath $AdbPath `
-            -Arguments @(
-                '-s',
-                $Serial,
-                'shell',
-                'cmd',
-                'location',
-                'providers',
-                'set-test-provider-location',
-                'gps',
-                '--location',
-                '14.5995,120.9842',
-                '--accuracy',
-                '5'
-            ) `
-            -FailureMessage 'Android emulator GPS test fix injection failed'
-
-        $locationState = @(
-            & $AdbPath -s $Serial shell dumpsys location |
-                ForEach-Object { $_.Trim() }
+        # Report this PC's real position through the emulated GPS instead
+        # of a fixed test-provider point: the app rejects mock fixes.
+        $hostLocation = Set-EmulatorHostLocation -AdbPath $AdbPath -Serial $Serial
+        Write-Host (
+            "Android emulator GPS set to this PC's location " +
+            "(accuracy about $([math]::Round($hostLocation.AccuracyMetres)) m)."
         )
-        $mockFix = @(
-            $locationState | Where-Object {
-                $_ -match 'Location\[gps 14\.599500,120\.984200.*mock'
-            }
-        )
-
-        if ($mockFix.Count -eq 0) {
-            throw 'Android LocationManager did not expose the deterministic GPS test fix.'
-        }
-
-        $locationEvidence = @(
-            $locationState |
-                Where-Object {
-                    $_ -match '(?i)(location providers|last location|gps|14\.5995|120\.9842)'
-                } |
-                Select-Object -First 18
-        )
-
-        if ($locationEvidence.Count -gt 0) {
-            Write-Host (
-                'Android location providers/fix: ' +
-                ($locationEvidence -join ' | ')
-            )
-        } else {
-            Write-Host 'Android location providers/fix: no location evidence returned.'
-        }
     }
 }
 

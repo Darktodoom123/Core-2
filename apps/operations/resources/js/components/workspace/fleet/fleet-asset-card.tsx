@@ -10,6 +10,7 @@ import {
 } from '@/components/workspace/fleet/fleet-location-labels';
 import { HosDutyBadge } from '@/components/workspace/fleet/hos-duty-badge';
 import { OperatorBindingChip } from '@/components/workspace/fleet/operator-binding-chip';
+import { resolveAssetDisplayStatus } from '@/components/workspace/resource-schedule-status';
 import { humanize } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import type {
@@ -85,7 +86,7 @@ export function FleetAssetCard({
                     )}
                 </div>
                 <CanonicalStatusBadge
-                    status={asset.status}
+                    status={resolveAssetDisplayStatus(asset)}
                     variant="minimal"
                     size={compact ? 'md' : 'sm'}
                     presentation="inline"
