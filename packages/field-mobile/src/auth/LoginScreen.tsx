@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Image,
@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import loginHero from '../../assets/login-hero.png';
+import { Icon } from '../components/common/Icon';
 import { colors } from '../components/nativeStyles';
 import { useAuth } from './AuthContext';
 
@@ -41,6 +42,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isRetryingRevocation, setIsRetryingRevocation] = useState(false);
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+    const passwordRef = useRef<TextInput>(null);
     const [focusedField, setFocusedField] = useState<
         'username' | 'password' | 'code' | null
     >(null);
@@ -190,7 +192,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                             />
                         </View>
 
-                        <View style={styles.content}>
+                        <View
+                            style={[
+                                styles.content,
+                                isMobile && styles.mobileContent,
+                            ]}
+                        >
                             <View style={styles.header}>
                                 <View style={styles.brandLockup}>
                                     <Text style={styles.wordmark}>
@@ -218,12 +225,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                                     accessibilityRole="alert"
                                     accessibilityLiveRegion="assertive"
                                 >
-                                    <Text
+                                    <View
                                         style={styles.errorIcon}
                                         accessibilityLabel="Warning"
                                     >
-                                        !
-                                    </Text>
+                                        <Icon
+                                            name="alert-circle"
+                                            size={20}
+                                            color={colors.redDark}
+                                        />
+                                    </View>
                                     <Text selectable style={styles.errorText}>
                                         {error}
                                     </Text>
@@ -234,9 +245,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                                         accessibilityLabel="Dismiss error"
                                         accessibilityHint="Removes the sign-in error message"
                                     >
-                                        <Text style={styles.iconButtonText}>
-                                            ×
-                                        </Text>
+                                        <Icon
+                                            name="close"
+                                            size={20}
+                                            color={colors.redDark}
+                                        />
                                     </Pressable>
                                 </View>
                             ) : null}
@@ -296,7 +309,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                                     >
                                         {isRetryingRevocation ? (
                                             <ActivityIndicator
-                                                color={colors.white}
+                                                color={colors.text}
                                             />
                                         ) : (
                                             <Text
@@ -426,7 +439,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                                     >
                                         {isVerifyingChallenge ? (
                                             <ActivityIndicator
-                                                color={colors.white}
+                                                color={colors.text}
                                             />
                                         ) : (
                                             <Text
@@ -488,30 +501,57 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                                         <Text style={styles.label}>
                                             Username
                                         </Text>
-                                        <TextInput
-                                            value={username}
-                                            onChangeText={setUsername}
-                                            placeholder="your.username"
-                                            placeholderTextColor={colors.muted}
-                                            keyboardType="default"
-                                            autoCapitalize="none"
-                                            autoCorrect={false}
-                                            textContentType="username"
-                                            editable={!formDisabled}
+                                        <View
                                             style={[
-                                                styles.input,
+                                                styles.inputShell,
                                                 focusedField === 'username' &&
                                                     styles.inputFocused,
+                                                formDisabled &&
+                                                    styles.inputDisabled,
                                             ]}
-                                            onFocus={() =>
-                                                setFocusedField('username')
-                                            }
-                                            onBlur={() => setFocusedField(null)}
-                                            accessibilityLabel="Username"
-                                            accessibilityHint="Enter your work username"
-                                            returnKeyType="next"
-                                            testID="login-username-input"
-                                        />
+                                        >
+                                            <View style={styles.inputIcon}>
+                                                <Icon
+                                                    name="profile"
+                                                    size={20}
+                                                    color={
+                                                        focusedField ===
+                                                        'username'
+                                                            ? colors.amber
+                                                            : colors.muted
+                                                    }
+                                                />
+                                            </View>
+                                            <TextInput
+                                                value={username}
+                                                onChangeText={setUsername}
+                                                placeholder="your.username"
+                                                placeholderTextColor={
+                                                    colors.mutedOnDark
+                                                }
+                                                keyboardType="default"
+                                                autoCapitalize="none"
+                                                autoCorrect={false}
+                                                autoComplete="username"
+                                                textContentType="username"
+                                                editable={!formDisabled}
+                                                style={styles.inputInShell}
+                                                onFocus={() =>
+                                                    setFocusedField('username')
+                                                }
+                                                onBlur={() =>
+                                                    setFocusedField(null)
+                                                }
+                                                accessibilityLabel="Username"
+                                                accessibilityHint="Enter your work username"
+                                                returnKeyType="next"
+                                                submitBehavior="submit"
+                                                onSubmitEditing={() =>
+                                                    passwordRef.current?.focus()
+                                                }
+                                                testID="login-username-input"
+                                            />
+                                        </View>
                                     </View>
 
                                     <View style={styles.fieldGroup}>
@@ -523,20 +563,36 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                                                 styles.inputShell,
                                                 focusedField === 'password' &&
                                                     styles.inputFocused,
+                                                formDisabled &&
+                                                    styles.inputDisabled,
                                             ]}
                                         >
+                                            <View style={styles.inputIcon}>
+                                                <Icon
+                                                    name="lock"
+                                                    size={20}
+                                                    color={
+                                                        focusedField ===
+                                                        'password'
+                                                            ? colors.amber
+                                                            : colors.muted
+                                                    }
+                                                />
+                                            </View>
                                             <TextInput
+                                                ref={passwordRef}
                                                 value={password}
                                                 onChangeText={setPassword}
                                                 placeholder="Your password"
                                                 placeholderTextColor={
-                                                    colors.muted
+                                                    colors.mutedOnDark
                                                 }
                                                 secureTextEntry={
                                                     !isPasswordVisible
                                                 }
                                                 autoCapitalize="none"
                                                 autoCorrect={false}
+                                                autoComplete="current-password"
                                                 textContentType="password"
                                                 editable={!formDisabled}
                                                 style={styles.inputInShell}
@@ -572,15 +628,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                                                 disabled={formDisabled}
                                                 testID="password-visibility-button"
                                             >
-                                                <Text
-                                                    style={
-                                                        styles.passwordToggleText
+                                                <Icon
+                                                    name={
+                                                        isPasswordVisible
+                                                            ? 'eye-off'
+                                                            : 'eye'
                                                     }
-                                                >
-                                                    {isPasswordVisible
-                                                        ? 'Hide'
-                                                        : 'Show'}
-                                                </Text>
+                                                    size={22}
+                                                    color={colors.muted}
+                                                />
                                             </Pressable>
                                         </View>
                                     </View>
@@ -591,6 +647,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                                         style={({ pressed }) => [
                                             styles.submitButton,
                                             pressed && styles.pressed,
+                                            submitDisabled &&
+                                                !formDisabled &&
+                                                styles.submitIdle,
                                             formDisabled &&
                                                 styles.disabledButton,
                                         ]}
@@ -604,7 +663,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                                     >
                                         {isSubmitting ? (
                                             <ActivityIndicator
-                                                color={colors.white}
+                                                color={colors.text}
                                             />
                                         ) : (
                                             <Text
@@ -618,21 +677,22 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                                             </Text>
                                         )}
                                     </Pressable>
-
-                                    <View style={styles.secureRow}>
-                                        <Text style={styles.secureIcon}>✓</Text>
-                                        <View style={styles.secureCopy}>
-                                            <Text style={styles.secureTitle}>
-                                                Secure access
-                                            </Text>
-                                            <Text style={styles.secureText}>
-                                                Built for your field team and
-                                                device.
-                                            </Text>
-                                        </View>
-                                    </View>
                                 </View>
                             )}
+
+                            <View style={styles.secureRow}>
+                                <Icon
+                                    name="shield-check"
+                                    size={16}
+                                    color={colors.greenDark}
+                                />
+                                <Text style={styles.secureText}>
+                                    <Text style={styles.secureTitle}>
+                                        Secure access
+                                    </Text>
+                                    {' · Built for your field team and device.'}
+                                </Text>
+                            </View>
                         </View>
                     </View>
                 </ScrollView>
@@ -650,9 +710,13 @@ const styles = StyleSheet.create({
         padding: 20,
         paddingVertical: 32,
     },
+    // Pin to the top on phones so the hero meets the status bar instead of
+    // floating in a centred column with empty bands above and below.
     mobileScrollContent: {
+        justifyContent: 'flex-start',
         paddingHorizontal: 0,
         paddingTop: 0,
+        paddingBottom: 0,
     },
     card: {
         width: '100%',
@@ -665,6 +729,7 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
     },
     mobileCard: {
+        flexGrow: 1,
         maxWidth: '100%',
         backgroundColor: colors.background,
         borderRadius: 0,
@@ -678,7 +743,17 @@ const styles = StyleSheet.create({
     },
     heroImage: { height: '100%', width: '100%' },
     content: { padding: 24 },
-    header: { marginBottom: 24 },
+    // A rounded sheet that overlaps the hero softens the photo edge.
+    mobileContent: {
+        flexGrow: 1,
+        backgroundColor: colors.background,
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        marginTop: -24,
+        paddingTop: 28,
+        paddingBottom: 20,
+    },
+    header: { marginBottom: 28 },
     brandLockup: {
         marginBottom: 0,
     },
@@ -721,14 +796,6 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     errorIcon: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-        color: colors.white,
-        backgroundColor: colors.red,
-        textAlign: 'center',
-        lineHeight: 24,
-        fontWeight: '800',
         marginRight: 8,
     },
     errorText: {
@@ -744,7 +811,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         marginLeft: 4,
     },
-    iconButtonText: { color: colors.redDark, fontSize: 28, lineHeight: 32 },
     suspendedBanner: {
         backgroundColor: colors.redSoft,
         borderColor: colors.redBorder,
@@ -792,92 +858,85 @@ const styles = StyleSheet.create({
         marginTop: 12,
     },
     retryButtonText: { color: colors.text, fontSize: 15, fontWeight: '700' },
-    form: { gap: 16 },
+    form: { gap: 18 },
     fieldGroup: { gap: 8 },
-    label: { color: colors.text, fontSize: 15, fontWeight: '700' },
+    label: { color: colors.text, fontSize: 14, fontWeight: '700' },
     input: {
-        minHeight: 48,
+        minHeight: 52,
         borderWidth: 1,
         borderColor: colors.borderStrong,
-        borderRadius: 8,
+        borderRadius: 12,
         backgroundColor: colors.surface,
         color: colors.text,
         paddingHorizontal: 14,
         paddingVertical: 12,
         fontSize: 16,
     },
+    // Focus keeps a 1px border and swaps colour plus a soft ring, so the
+    // text inside the field does not shift by a pixel on focus.
     inputFocused: {
         borderColor: colors.primaryBorder,
-        borderWidth: 2,
+        boxShadow: '0 0 0 3px rgba(255, 191, 0, 0.25)',
+    },
+    inputDisabled: {
+        backgroundColor: colors.surfaceMuted,
     },
     inputShell: {
-        minHeight: 48,
+        minHeight: 52,
         borderWidth: 1,
         borderColor: colors.borderStrong,
-        borderRadius: 8,
+        borderRadius: 12,
         backgroundColor: colors.surface,
         flexDirection: 'row',
         alignItems: 'center',
     },
+    inputIcon: {
+        paddingLeft: 14,
+        paddingRight: 2,
+    },
     inputInShell: {
         flex: 1,
-        minHeight: 48,
+        minHeight: 52,
         color: colors.text,
-        paddingLeft: 14,
+        paddingLeft: 10,
         paddingRight: 4,
         paddingVertical: 12,
         fontSize: 16,
     },
     passwordToggle: {
-        minHeight: 48,
-        minWidth: 64,
+        minHeight: 52,
+        minWidth: 52,
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: 8,
     },
-    passwordToggleText: {
-        color: colors.amber,
-        fontSize: 14,
-        fontWeight: '800',
-    },
     submitButton: {
-        minHeight: 48,
-        borderRadius: 8,
+        minHeight: 54,
+        borderRadius: 12,
         backgroundColor: colors.primary,
         alignItems: 'center',
         justifyContent: 'center',
-        marginTop: 4,
+        marginTop: 6,
     },
-    submitButtonText: { color: colors.text, fontSize: 16, fontWeight: '700' },
+    // Still gold, but visibly waiting until both fields are filled.
+    submitIdle: { opacity: 0.45 },
+    submitButtonText: { color: colors.text, fontSize: 16, fontWeight: '800' },
     secureRow: {
         alignItems: 'center',
+        alignSelf: 'center',
         flexDirection: 'row',
-        gap: 10,
-        marginTop: 2,
+        gap: 6,
+        marginTop: 'auto',
+        paddingTop: 28,
     },
-    secureIcon: {
-        alignItems: 'center',
-        backgroundColor: colors.greenSoft,
-        borderRadius: 12,
-        color: colors.greenDark,
-        fontSize: 14,
-        fontWeight: '800',
-        height: 24,
-        lineHeight: 24,
-        textAlign: 'center',
-        width: 24,
-    },
-    secureCopy: { flex: 1 },
     secureTitle: {
         color: colors.text,
-        fontSize: 13,
-        fontWeight: '800',
+        fontWeight: '700',
     },
     secureText: {
         color: colors.muted,
         fontSize: 12,
         lineHeight: 17,
-        marginTop: 2,
     },
     disabledButton: {
         backgroundColor: colors.surfaceMuted,
