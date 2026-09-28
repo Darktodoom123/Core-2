@@ -1,7 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import {
-    Alert,
-    Platform,
     Pressable,
     RefreshControl,
     ScrollView,
@@ -29,6 +27,7 @@ import type { HomeTile } from '../components/layout/home-tile-grid';
 import { HomeTileGrid } from '../components/layout/home-tile-grid';
 import { colors, shadows } from '../components/nativeStyles';
 import { SyncStatusPanel } from '../components/panels/sync-status-panel';
+import { DeclineReasonSheet } from '../components/sheets/DeclineReasonSheet';
 import { DispatchIntakeSheet } from '../components/sheets/DispatchIntakeSheet';
 import { NotificationsSheet } from '../components/sheets/notifications-sheet';
 import { OnSiteConfirmationModal } from '../components/sheets/OnSiteConfirmationModal';
@@ -203,6 +202,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     );
     const [notificationsSheetOpen, setNotificationsSheetOpen] = useState(false);
     const [outboxSheetOpen, setOutboxSheetOpen] = useState(false);
+    const [decliningJob, setDecliningJob] = useState<DispatchJob | null>(null);
     const [dispatchIntakeOpen, setDispatchIntakeOpen] = useState(false);
     const [onSiteConfirmationOpen, setOnSiteConfirmationOpen] = useState(false);
     const [reliefHandoverOpen, setReliefHandoverOpen] = useState(false);
@@ -1271,48 +1271,9 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 onDeclineJob={(jobId) => {
                     const targetJob = allJobs.find((j) => j.id === jobId);
 
+                    // Asks for the reason first; nothing is sent until then.
                     if (targetJob?.my_assignment?.id && onRejectAssignment) {
-                        const defaultReason =
-                            'Declined by mobile operator via notifications';
-
-                        if (
-                            Platform.OS === 'ios' &&
-                            process.env.NODE_ENV !== 'test' &&
-                            typeof Alert !== 'undefined' &&
-                            typeof Alert.prompt === 'function'
-                        ) {
-                            Alert.prompt(
-                                'Decline Assignment',
-                                `Specify reason for declining ${targetJob.reference}:`,
-                                [
-                                    { text: 'Cancel', style: 'cancel' },
-                                    {
-                                        text: 'Decline',
-                                        style: 'destructive',
-                                        onPress: (reason?: string) => {
-                                            onRejectAssignment(
-                                                targetJob.id,
-                                                targetJob.my_assignment!.id,
-                                                reason?.trim() || defaultReason,
-                                                targetJob.version,
-                                            );
-                                            setNotificationsSheetOpen(false);
-                                        },
-                                    },
-                                ],
-                                'plain-text',
-                                defaultReason,
-                            );
-
-                            return;
-                        }
-
-                        onRejectAssignment(
-                            targetJob.id,
-                            targetJob.my_assignment.id,
-                            defaultReason,
-                            targetJob.version,
-                        );
+                        setDecliningJob(targetJob);
                     }
 
                     setNotificationsSheetOpen(false);
@@ -1326,6 +1287,26 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 pendingResponseCount={pendingResponseCount}
                 queuedCount={queuedCount}
                 visible={notificationsSheetOpen}
+            />
+
+            <DeclineReasonSheet
+                jobReference={decliningJob?.reference}
+                onCancel={() => setDecliningJob(null)}
+                onConfirm={(reason) => {
+                    const assignmentId = decliningJob?.my_assignment?.id;
+
+                    if (decliningJob && assignmentId) {
+                        onRejectAssignment?.(
+                            decliningJob.id,
+                            assignmentId,
+                            reason,
+                            decliningJob.version,
+                        );
+                    }
+
+                    setDecliningJob(null);
+                }}
+                visible={decliningJob !== null}
             />
 
             <OutboxStatusSheet

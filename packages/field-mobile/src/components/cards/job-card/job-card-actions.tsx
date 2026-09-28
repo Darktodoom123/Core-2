@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTheme, useThemedStyles } from '../../../theme';
 import type { ThemeColors } from '../../../theme';
@@ -9,6 +9,7 @@ import type {
 } from '../../../types/index';
 import { Icon } from '../../common/Icon';
 import type { IconName } from '../../common/Icon';
+import { DeclineReasonSheet } from '../../sheets/DeclineReasonSheet';
 import { HoldToConfirmTransitButton } from './hold-to-confirm-button';
 import { JobCardDelayBanner } from './job-card-delay-banner';
 import { JobDirectionsButton } from './job-directions-button';
@@ -37,9 +38,27 @@ export const JobCardResponseActions: React.FC<JobCardResponseActionsProps> = ({
     const { theme } = useTheme();
     const styles = useThemedStyles(createStyles);
     const assignmentId = job.my_assignment?.id;
+    const [declining, setDeclining] = useState(false);
 
     return (
         <View style={styles.pendingActionBlock}>
+            <DeclineReasonSheet
+                jobReference={job.reference}
+                onCancel={() => setDeclining(false)}
+                onConfirm={(reason) => {
+                    setDeclining(false);
+
+                    if (assignmentId) {
+                        onRejectAssignment?.(
+                            job.id,
+                            assignmentId,
+                            reason,
+                            job.version,
+                        );
+                    }
+                }}
+                visible={declining}
+            />
             <View
                 style={styles.pendingBanner}
                 testID={`job-pending-banner-${job.id}`}
@@ -81,12 +100,7 @@ export const JobCardResponseActions: React.FC<JobCardResponseActionsProps> = ({
                     accessibilityRole="button"
                     onPress={() => {
                         if (assignmentId) {
-                            onRejectAssignment?.(
-                                job.id,
-                                assignmentId,
-                                'Declined by mobile operator',
-                                job.version,
-                            );
+                            setDeclining(true);
                         }
                     }}
                     style={({ pressed }) => [

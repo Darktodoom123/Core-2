@@ -466,10 +466,17 @@ describe('Mobile Application Audit Resolutions Component Tests', () => {
             const declineBtn = view.getByTestId('notification-decline-job-301');
             await fireEvent.press(declineBtn);
 
+            // Nothing is sent until the operator gives a reason.
+            expect(onReject).not.toHaveBeenCalled();
+            await fireEvent.press(
+                view.getByTestId('decline-reason-Hours conflict'),
+            );
+            await fireEvent.press(view.getByTestId('decline-reason-confirm'));
+
             expect(onReject).toHaveBeenCalledWith(
                 301,
                 999,
-                expect.stringContaining('Declined by mobile operator'),
+                'Hours conflict',
                 3,
             );
         });

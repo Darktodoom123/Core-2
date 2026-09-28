@@ -152,10 +152,24 @@ describe('Native Field Workflows Component Tests', () => {
             await fireEvent.press(
                 view.getByTestId('decline-assignment-btn-101'),
             );
+            expect(onReject).not.toHaveBeenCalled();
+
+            // "Other" needs the operator's own words before it can be sent.
+            await fireEvent.press(view.getByTestId('decline-reason-Other'));
+            expect(
+                view.getByTestId('decline-reason-confirm').props
+                    .accessibilityState?.disabled,
+            ).toBe(true);
+            await fireEvent.changeText(
+                view.getByTestId('decline-reason-note'),
+                'Crane license expired',
+            );
+            await fireEvent.press(view.getByTestId('decline-reason-confirm'));
+
             expect(onReject).toHaveBeenCalledWith(
                 101,
                 99,
-                'Declined by mobile operator',
+                'Crane license expired',
                 2,
             );
         });
