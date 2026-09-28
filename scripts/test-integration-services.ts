@@ -801,6 +801,37 @@ async function exerciseMobileBoundary(): Promise<void> {
     );
 }
 
+// Prints the latest unverified login code for a user from inside the app
+// container, matching tests/Browser/otp-helper.php. Codes are stored as an
+// HMAC keyed by the app key, so the six-digit space is searched.
+const stackOtpPhp = String.raw`
+require '/var/www/html/vendor/autoload.php';
+$app = require '/var/www/html/bootstrap/app.php';
+$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+$user = App\Platform\Identity\Models\User::query()->where('username', $argv[1])->firstOrFail();
+$record = App\Platform\Identity\Models\EmailOneTimeCode::query()
+    ->where('user_id', $user->id)
+    ->where('purpose', App\Platform\Identity\Models\EmailOneTimeCode::PURPOSE_LOGIN)
+    ->whereNull('verified_at')
+    ->latest('id')
+    ->firstOrFail();
+$key = (string) config('app.key');
+for ($i = 100000; $i <= 999999; $i++) {
+    if (hash_hmac('sha256', (string) $i, $key) === $record->code_hash) {
+        echo json_encode([
+            'code' => (string) $i,
+            'challenge_id' => $record->challenge_id,
+            'attempts' => $record->attempts,
+            'resend_count' => $record->resend_count,
+            'expires_at' => (string) $record->expires_at,
+        ]);
+        exit(0);
+    }
+}
+fwrite(STDERR, "No matching login code.\n");
+exit(1);
+`;
+
 async function runPlaywright(baseUrl: string, outage: boolean): Promise<void> {
     const playwrightCli = join(
         workspace,
@@ -824,6 +855,22 @@ async function runPlaywright(baseUrl: string, outage: boolean): Promise<void> {
                     ...hostEnvironment,
                     PLAYWRIGHT_BASE_URL: baseUrl,
                     CORE2_TRACKING_OUTAGE: outage ? 'true' : 'false',
+                    CORE2_E2E_OTP_COMMAND: JSON.stringify([
+                        'docker',
+                        'compose',
+                        '--project-name',
+                        projectName,
+                        '--file',
+                        composeFile,
+                        '--env-file',
+                        envFile,
+                        'exec',
+                        '-T',
+                        'app',
+                        'php',
+                        '-r',
+                        stackOtpPhp,
+                    ]),
                 },
                 windowsHide: true,
                 timeout: 180_000,

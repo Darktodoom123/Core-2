@@ -62,6 +62,19 @@ export interface ActiveOtpDetails {
 }
 
 export function getLatestOtp(identifier = 'browser.manager'): ActiveOtpDetails {
+    // A runner driving another stack (the Docker service integration) supplies
+    // a JSON command array that prints the same JSON for the given user.
+    const stackCommand = process.env.CORE2_E2E_OTP_COMMAND;
+
+    if (stackCommand) {
+        const [command, ...args] = JSON.parse(stackCommand) as string[];
+        const stackOutput = execFileSync(command, [...args, identifier], {
+            encoding: 'utf8',
+        });
+
+        return JSON.parse(stackOutput.trim()) as ActiveOtpDetails;
+    }
+
     const helperScript = resolve(import.meta.dirname, 'otp-helper.php');
     const output = execFileSync('php', [helperScript, 'get', identifier], {
         encoding: 'utf8',
@@ -99,13 +112,15 @@ export function countTrustedDevices(identifier = 'browser.manager'): number {
 }
 
 export async function signIn(page: Page, username?: string, password?: string) {
-    const fixtures = browserFixtures();
+    // Only read the fixture file when a default is needed; stacks without it
+    // (the Docker service integration) pass explicit credentials.
+    const fixtures = username && password ? null : browserFixtures();
     const resolvedUser =
         username ||
-        fixtures.users.manager ||
-        fixtures.users.dispatcher ||
+        fixtures?.users.manager ||
+        fixtures?.users.dispatcher ||
         'manager';
-    const resolvedPass = password || fixtures.password || 'password';
+    const resolvedPass = password || fixtures?.password || 'password';
 
     await page.goto('/login');
     await page.getByLabel('Username').fill(resolvedUser);
