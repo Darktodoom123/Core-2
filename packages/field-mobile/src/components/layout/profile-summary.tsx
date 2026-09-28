@@ -37,9 +37,9 @@ const initialsFor = (userName?: string | null): string => {
 };
 
 /**
- * Who is signed in, plus the bell. Connection and sync state live in the
- * SyncStatusPill above (one status control), and the light/dark setting lives
- * in the Profile screen. The bell counts only items for the operator from
+ * Who is signed in, plus the bell. Sync problems show in the SyncStatusPill
+ * above only when there is one; the all-synced state, connection and the
+ * light/dark setting live in the Profile screen's Settings tab. The bell counts only items for the operator from
  * other people, such as assignments waiting for a response.
  */
 export const ProfileSummary: React.FC<ProfileSummaryProps> = ({

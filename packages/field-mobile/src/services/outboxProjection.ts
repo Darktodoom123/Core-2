@@ -77,6 +77,12 @@ export interface OutboxProjection {
         message: string;
         tone: SyncPillTone;
         accessibilityLabel: string;
+        /**
+         * Whether home should show the pill. Only when the operator has
+         * something to know: offline, signed out, actions waiting or
+         * failing. "Synced" and background pings stay in Settings.
+         */
+        showOnHome: boolean;
     };
     counts: {
         total: number;
@@ -1133,6 +1139,12 @@ export function projectOutbox(
             message: pillMessage,
             tone: pillTone,
             accessibilityLabel,
+            showOnHome:
+                !isAuthenticated ||
+                attentionCount > 0 ||
+                submittingUserActions > 0 ||
+                waitingUserActions > 0 ||
+                isOnline === false,
         },
         counts: {
             total: commands.length,

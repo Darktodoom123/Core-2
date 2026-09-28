@@ -1353,7 +1353,8 @@ describe('native application component tree', () => {
         ).toBeVisible();
         expect(screen.getByText('Your assignments')).toBeVisible();
         expect(screen.getByText('0 active · 1 scheduled')).toBeVisible();
-        expect(screen.getByText('Synced')).toBeVisible();
+        // All synced: home stays quiet; Settings shows the sync state.
+        expect(screen.queryByTestId('sync-status-pill')).toBeNull();
         expect(screen.getByTestId('bottom-nav-bar')).toBeVisible();
         expect(screen.queryByTestId('bottom-nav-today')).toBeNull();
         const navigation = within(screen.getByTestId('bottom-nav-bar'));
@@ -1408,7 +1409,7 @@ describe('native application component tree', () => {
         );
 
         await screen.findByText(new RegExp(`^Ref: ${driverJob.reference}`));
-        expect(screen.getByText('Synced')).toBeVisible();
+        expect(screen.queryByTestId('sync-status-pill')).toBeNull();
         expect(screen.queryByText('Queued: 0')).toBeNull();
         expect(screen.queryByTestId('sync-details-toggle')).toBeNull();
     });

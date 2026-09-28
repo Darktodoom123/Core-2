@@ -154,8 +154,11 @@ Rules for new and touched code:
   it renders nothing and the `NoUnitCard` carries the pull-to-refresh hint.
   The full list and its empty state belong to Dispatch.
 - Home header has one status control. The `SyncStatusPill` carries both
-  connection and sync ("Synced", "Offline", "Syncing", "N need attention",
-  failed); there is no separate online pill. The light/dark setting lives in
+  connection and sync ("Offline", "Syncing", "N waiting", "N need attention",
+  failed); there is no separate online pill. It appears only when the
+  operator has something to know (`headerPill.showOnHome`): while everything
+  is synced, or only background GPS pings are queued, home shows no pill and
+  the Profile screen's Settings tab (System & Sync Health) carries the state. The light/dark setting lives in
   the Profile screen's Settings tab (Display & Lighting), not the header. The bell
   counts only items for the operator from other people (assignments awaiting
   a response); sync problems are counted once, in the pill. The bell's sheet

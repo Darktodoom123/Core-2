@@ -63,6 +63,13 @@ describe.each(MODES)(
             expect(view.queryByTestId('theme-mode-toggle')).toBeNull();
         });
 
+        it('leaves the pill off home while everything is synced', async () => {
+            const view = await renderHeader(mode, { showSyncStatus: false });
+
+            expect(view.queryByTestId('sync-status-pill')).toBeNull();
+            expect(view.getByTestId('profile-summary')).toBeTruthy();
+        });
+
         it('shows offline in the status pill as a warning', async () => {
             const view = await renderHeader(mode, {
                 isOnline: false,

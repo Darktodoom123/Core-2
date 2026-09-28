@@ -542,6 +542,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                     onOpenNotifications={handleOpenNotifications}
                     onOpenProfile={handleOpenProfile}
                     onOpenSyncSheet={() => setOutboxSheetOpen(true)}
+                    showSyncStatus={projection.headerPill.showOnHome}
                     syncStatusLabel={syncStatusLabel}
                     syncStatusMessage={syncStatusMessage}
                     syncTone={syncTone}

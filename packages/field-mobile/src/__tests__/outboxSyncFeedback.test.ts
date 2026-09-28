@@ -58,6 +58,58 @@ describe('Outbox Projection & Synchronization Truthfulness', () => {
         assert.equal(olderProj.headerPill.message, '12m ago');
     });
 
+    test('shows the home pill only when the operator has something to know', () => {
+        const now = Date.now();
+        const ping = createCommandFixture({
+            id: 'ping-1',
+            type: 'share_location',
+            payload: { latitude: 14.5, longitude: 121 },
+        });
+
+        // All synced, or only background pings: Settings shows it instead.
+        assert.equal(
+            projectOutbox([], true, true).headerPill.showOnHome,
+            false,
+        );
+        assert.equal(
+            projectOutbox([], null, true).headerPill.showOnHome,
+            false,
+        );
+        assert.equal(
+            projectOutbox([ping], true, true, now).headerPill.showOnHome,
+            false,
+        );
+
+        // Offline, signed out, waiting or failed actions: home shows it.
+        assert.equal(
+            projectOutbox([], false, true).headerPill.showOnHome,
+            true,
+        );
+        assert.equal(
+            projectOutbox([], true, false).headerPill.showOnHome,
+            true,
+        );
+        assert.equal(
+            projectOutbox([createCommandFixture()], true, true, now).headerPill
+                .showOnHome,
+            true,
+        );
+        assert.equal(
+            projectOutbox(
+                [
+                    createCommandFixture({
+                        state: 'failed',
+                        error: { message: 'Rejected', retryable: false },
+                    }),
+                ],
+                true,
+                true,
+                now,
+            ).headerPill.showOnHome,
+            true,
+        );
+    });
+
     test('projects offline state with connection guidance when offline with no actions', () => {
         const projection = projectOutbox([], false, true);
 

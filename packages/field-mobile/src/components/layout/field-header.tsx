@@ -17,6 +17,8 @@ export interface FieldHeaderProps {
     syncStatusLabel: string;
     syncStatusMessage: string;
     syncTone: SyncTone;
+    /** False hides the pill while everything is synced; Settings shows it. */
+    showSyncStatus?: boolean;
     onOpenProfile: () => void;
     notificationCount?: number;
     onOpenNotifications?: () => void;
@@ -29,18 +31,21 @@ export const FieldHeader: React.FC<FieldHeaderProps> = ({
     syncStatusLabel,
     syncStatusMessage,
     syncTone,
+    showSyncStatus = true,
     onOpenProfile,
     notificationCount,
     onOpenNotifications,
     onOpenSyncSheet,
 }) => (
     <View style={styles.header} testID="field-header">
-        <SyncStatusPill
-            label={syncStatusLabel}
-            message={syncStatusMessage}
-            onPress={onOpenSyncSheet}
-            tone={syncTone}
-        />
+        {showSyncStatus ? (
+            <SyncStatusPill
+                label={syncStatusLabel}
+                message={syncStatusMessage}
+                onPress={onOpenSyncSheet}
+                tone={syncTone}
+            />
+        ) : null}
 
         {userName || userRole ? (
             <ProfileSummary
