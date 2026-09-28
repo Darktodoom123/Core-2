@@ -121,6 +121,7 @@ import type {
     WorkStoppageCommandPayload,
 } from '../types/index';
 import { resolveDesignatedEquipmentType } from '../utils/equipmentClassification';
+import { dutyTarget } from './dutyTarget';
 import { shiftStateFromServer } from './shiftFromServer';
 import { statusBarAppearance } from './status-bar-appearance';
 
@@ -1631,6 +1632,29 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         };
     }, []);
 
+    // The unit actually linked, which may not be the job home shows first.
+    const linkedAssetCode = unitLink?.assetCode ?? null;
+    const { linkedJob, linkedAsset } = useMemo(() => {
+        if (!linkedAssetCode) {
+            return { linkedJob: null, linkedAsset: null };
+        }
+
+        const job =
+            jobs.find((candidate) =>
+                candidate.asset_assignments?.some(
+                    (a) => a.asset_code === linkedAssetCode,
+                ),
+            ) ?? null;
+
+        return {
+            linkedJob: job,
+            linkedAsset:
+                job?.asset_assignments?.find(
+                    (a) => a.asset_code === linkedAssetCode,
+                ) ?? null,
+        };
+    }, [jobs, linkedAssetCode]);
+
     const handleChangeDutyStatus = useCallback(
         async (
             dutyStatus: DutyStatus,
@@ -1642,15 +1666,13 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
             }
 
             try {
-                const targetJob =
-                    liveJobs.find((job) => job.id === selectedJobId) ??
-                    (liveJobs.length === 1 ? liveJobs[0] : null);
-                const operationalAssetId =
-                    selectedAssetId ??
-                    (targetJob?.asset_assignments?.length === 1
-                        ? targetJob.asset_assignments[0].operational_asset_id
-                        : null);
-                const dispatchJobId = targetJob?.id ?? null;
+                const { dispatchJobId, operationalAssetId } = dutyTarget({
+                    linkedJob,
+                    linkedAsset,
+                    liveJobs,
+                    selectedJobId,
+                    selectedAssetId,
+                });
                 const plan = planDutyCommand({
                     dutyStatus,
                     shift: {
@@ -1724,6 +1746,8 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
             commandOutbox,
             captureDutyLocation,
             handleRequestFailure,
+            linkedAsset,
+            linkedJob,
             liveJobs,
             outboxCommands,
             selectedAssetId,
@@ -1736,28 +1760,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
 
     const activeJob = liveJobs.find((job) => job.id === selectedJobId) || null;
     const currentJob = currentJobFor(jobs, selectedJobId);
-    // The unit actually linked, which may not be the job home shows first.
-    const linkedAssetCode = unitLink?.assetCode ?? null;
-    const { linkedJob, linkedAsset } = useMemo(() => {
-        if (!linkedAssetCode) {
-            return { linkedJob: null, linkedAsset: null };
-        }
-
-        const job =
-            jobs.find((candidate) =>
-                candidate.asset_assignments?.some(
-                    (a) => a.asset_code === linkedAssetCode,
-                ),
-            ) ?? null;
-
-        return {
-            linkedJob: job,
-            linkedAsset:
-                job?.asset_assignments?.find(
-                    (a) => a.asset_code === linkedAssetCode,
-                ) ?? null,
-        };
-    }, [jobs, linkedAssetCode]);
     // Tracking reports the linked unit's job, not whichever job home shows.
     const activeTrackingJob = linkedJob ?? currentJob;
     const activeTrackingAssetId =
