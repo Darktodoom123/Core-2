@@ -4,9 +4,9 @@
 # The tags and digests below were verified against the Docker Official Images
 # registry on 2026-08-25. Dependabot owns routine digest refreshes; major PHP,
 # PostgreSQL, and Redis upgrades remain an explicit compatibility decision.
-FROM composer:2.10.2@sha256:4d71c3c2109c61d5415544264b59ad4087e4c5b7244481723664138fd36d5040 AS composer-bin
+FROM composer:2.10.2@sha256:d020706319701a44468968321dccd0fce6620190159a7a9ec195d78e6e971c71 AS composer-bin
 
-FROM php:8.4.24-cli-alpine3.24@sha256:26e3f1de7f6aa3e8ea15584d803c5e088c57df89ff02a3ecf2dc855a4282d8d7 AS php-cli-base
+FROM php:8.5.10-cli-alpine3.24@sha256:4992c6fda82eadfb3b22dca3929188dc5831e9f44a3d42b3c8d36a460b4d5a80 AS php-cli-base
 
 RUN set -eux; \
     apk add --no-cache \
@@ -167,7 +167,7 @@ RUN set -eu; \
     npm run build; \
     rm -f apps/operations/database/database.sqlite
 
-FROM php:8.4.24-fpm-alpine3.24@sha256:5992f8b7433fe7fa96dfbf67746c86d6c41bc91e686eac38fe531c72a02e40e4 AS php-runtime-base
+FROM php:8.5.10-fpm-alpine3.24@sha256:ce1dcc234879feab0f309100e55e89e7cf21b9085e76de2a03a8240cec02751e AS php-runtime-base
 
 RUN set -eux; \
     apk add --no-cache \
