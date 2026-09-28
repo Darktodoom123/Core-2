@@ -1965,14 +1965,14 @@ function CompactMapToolbar({
                             onSearchQueryChange(event.target.value)
                         }
                         placeholder="Search asset code, name, or operator…"
-                        className="h-10 w-full rounded-lg border border-line bg-surface-subtle py-2 pr-3 pl-9 text-sm text-ink placeholder:text-ink-soft focus:border-brand-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-strong/30"
+                        className="h-11 w-full rounded-lg border border-line bg-surface-subtle py-2 pr-3 pl-9 text-sm text-ink placeholder:text-ink-soft focus:border-brand-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-strong/30 md:h-10"
                     />
                 </label>
                 <div className="flex flex-wrap items-center gap-1.5">
                     <Button
                         variant="secondary"
                         size="sm"
-                        className="min-h-10 px-2.5 text-xs"
+                        className="min-h-11 px-2.5 text-xs md:min-h-10"
                         onClick={onFitAll}
                         disabled={fitAllDisabled}
                         aria-label="Fit all assets and yard"
@@ -2006,7 +2006,7 @@ function CompactMapToolbar({
                         ref={triggerRef}
                         variant="secondary"
                         size="sm"
-                        className="min-h-10 px-2.5 text-xs"
+                        className="min-h-11 px-2.5 text-xs md:min-h-10"
                         aria-haspopup="menu"
                         aria-controls={menuId}
                         aria-expanded={isMenuOpen}
@@ -2040,7 +2040,7 @@ function CompactMapToolbar({
                         <Button
                             variant="secondary"
                             size="sm"
-                            className="min-h-10 px-2.5 text-xs"
+                            className="min-h-11 px-2.5 text-xs md:min-h-10"
                             onClick={onCollapse}
                             aria-label="Collapse fleet map"
                         >

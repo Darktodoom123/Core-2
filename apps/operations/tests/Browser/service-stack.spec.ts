@@ -85,8 +85,11 @@ test('manager sees a clear no-GPS state when Tracking has no location samples', 
     await openTelemetryWorkspace(page);
     const craneCard = page.getByRole('listitem').filter({ hasText: 'CRN-01' });
 
-    // The fleet card shows "Location not recorded" until Tracking has a sample.
-    await expect(craneCard.getByText('Location not recorded')).toBeVisible({
+    // With no sample the fleet card reads "No GPS report" when the tracking
+    // layer reports a freshness label, or "Location not recorded" without one.
+    await expect(
+        craneCard.getByText(/No GPS report|Location not recorded/).first(),
+    ).toBeVisible({
         timeout: 30_000,
     });
     await expect(craneCard.getByText('Fresh location')).toHaveCount(0);

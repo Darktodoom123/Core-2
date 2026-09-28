@@ -210,7 +210,7 @@ services:
       - php
       - vendor/bin/pest
       - --configuration=phpunit.concurrency.xml
-      - tests/Concurrency/RentalSalesAssetUsageConcurrencyTest.php
+      - tests/Concurrency/RentalAssetUsageConcurrencyTest.php
       - tests/Concurrency/GptRecommendationRowLockConcurrencyTest.php
       - tests/Concurrency/HosShiftConcurrencyTest.php
     init: true
