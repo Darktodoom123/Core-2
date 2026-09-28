@@ -2,6 +2,7 @@
 
 namespace App\Platform\Tracking\Http\Resources\V1;
 
+use App\Platform\Geocoding\Services\PlaceNameResolver;
 use App\Platform\Tracking\Data\LatestLocationDto;
 use App\Platform\Tracking\Models\LocationUpdate;
 use Illuminate\Http\Request;
@@ -22,6 +23,7 @@ final class LocationUpdateResource extends JsonResource
                 'latitude' => $this->resource->latitude,
                 'longitude' => $this->resource->longitude,
                 'accuracy_metres' => $this->resource->accuracyMetres,
+                'place' => app(PlaceNameResolver::class)->describe($this->resource->latitude, $this->resource->longitude),
                 'sharing_enabled' => $this->resource->sharingEnabled,
                 'source' => $this->resource->source,
                 'reported_via_phone' => in_array($this->resource->source, ['mobile', 'field-mobile'], true),
@@ -48,6 +50,7 @@ final class LocationUpdateResource extends JsonResource
             'latitude' => $this->latitude,
             'longitude' => $this->longitude,
             'accuracy_metres' => $this->accuracy_metres,
+            'place' => app(PlaceNameResolver::class)->describe($this->latitude, $this->longitude),
             'sharing_enabled' => $this->sharing_enabled,
             'source' => $this->source,
             'reported_via_phone' => in_array($this->source, ['mobile', 'field-mobile'], true),

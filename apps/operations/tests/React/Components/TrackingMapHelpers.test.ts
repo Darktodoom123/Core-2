@@ -137,7 +137,7 @@ describe('tracking map popup behavior', () => {
         expect(
             marker.querySelector<HTMLElement>('.maplibre-sos-marker__halo')
                 ?.style.animation,
-        ).toBe('none');
+        ).toContain('maplibre-sos-halo-fade');
     });
 
     it('shows old coordinates as reported positions, distinct timestamps, and unavailable speed', () => {
@@ -157,7 +157,7 @@ describe('tracking map popup behavior', () => {
     it('supports a labeled coordinate copy action', () => {
         const onCopy = vi.fn();
         const popup = createTrackingLocationPopup(location, undefined, onCopy);
-        expect(popup).toHaveTextContent('14.60000, 121.00000');
+        expect(popup).toHaveTextContent('14.600000, 121.000000');
         fireEvent.click(
             within(popup).getByRole('button', { name: 'Copy coordinates' }),
         );
@@ -234,7 +234,7 @@ describe('tracking map popup behavior', () => {
             '.maplibre-popup-card__location-text',
         );
         expect(locationText).toHaveTextContent('Buendia, Makati');
-        expect(popup).toHaveTextContent('14.55470, 121.02440');
+        expect(popup).toHaveTextContent('14.554700, 121.024400');
         expect(popup).toHaveTextContent('Assigned siteNorth Staging Terminal');
     });
 });

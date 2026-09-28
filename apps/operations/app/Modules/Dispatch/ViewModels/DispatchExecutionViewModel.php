@@ -7,6 +7,7 @@ use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Rental\Models\RentalHandoverEvidence;
 use App\Modules\Rental\Models\RentalReservation;
 use App\Platform\Audit\Models\AuditEvent;
+use App\Platform\Geocoding\Services\PlaceNameResolver;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
 use App\Platform\Reporting\Enums\JobReportStatus;
@@ -66,6 +67,7 @@ final class DispatchExecutionViewModel
                 'planned_coordinates' => $job->site_latitude === null || $job->site_longitude === null ? null : [
                     'latitude' => (float) $job->site_latitude,
                     'longitude' => (float) $job->site_longitude,
+                    'place' => app(PlaceNameResolver::class)->describe($job->site_latitude, $job->site_longitude),
                 ],
                 'latest_location' => $location,
             ],
@@ -163,6 +165,7 @@ final class DispatchExecutionViewModel
                 'coordinates' => $report->latitude === null || $report->longitude === null ? null : [
                     'latitude' => (float) $report->latitude,
                     'longitude' => (float) $report->longitude,
+                    'place' => app(PlaceNameResolver::class)->describe($report->latitude, $report->longitude),
                 ],
             ];
         }
@@ -191,6 +194,7 @@ final class DispatchExecutionViewModel
             'latitude' => $latest->latitude,
             'longitude' => $latest->longitude,
             'accuracy_metres' => $latest->accuracyMetres,
+            'place' => app(PlaceNameResolver::class)->describe($latest->latitude, $latest->longitude),
             'source' => $latest->source,
             'user' => $assignedUser === null ? null : [
                 'id' => (int) $assignedUser->id,

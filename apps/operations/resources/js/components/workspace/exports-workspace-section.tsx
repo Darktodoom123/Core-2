@@ -34,9 +34,15 @@ import type {
 export function ExportsSurface({
     exports = [],
     capabilities,
+    embedded = false,
+    defaultStatus = '',
 }: {
     exports?: ReportExportViewModel[];
     capabilities: WorkspaceCapabilities;
+    /** Compact layout for use inside the reports export dialog. */
+    embedded?: boolean;
+    /** Pre-selects the job report status filter on new requests. */
+    defaultStatus?: string;
 }) {
     const [showExportModal, setShowExportModal] = useState(false);
     const [retryingId, setRetryingId] = useState<string | null>(null);
@@ -86,24 +92,43 @@ export function ExportsSurface({
     };
 
     return (
-        <div className="workspace-width-contained mt-8 space-y-6">
+        <div
+            className={cn(
+                embedded
+                    ? 'space-y-4'
+                    : 'workspace-width-contained mt-8 space-y-6',
+            )}
+        >
             {/* Heading & Trigger */}
             <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                    <h3 className="text-lg font-bold text-ink">
-                        Asynchronous Data Exports
+                    <h3
+                        className={cn(
+                            'font-bold text-ink',
+                            embedded ? 'text-sm' : 'text-lg',
+                        )}
+                    >
+                        {embedded
+                            ? 'Background exports'
+                            : 'Asynchronous Data Exports'}
                     </h3>
-                    <p className="text-sm text-ink-soft">
-                        Generate and download background CSV and PDF exports
-                        across dispatches, assets, fuel logs, maintenance, and
-                        audit trails.
+                    <p
+                        className={cn(
+                            'text-ink-soft',
+                            embedded ? 'text-xs' : 'text-sm',
+                        )}
+                    >
+                        {embedded
+                            ? 'Full CSV or PDF exports for any dataset and date range, generated in the background. Files stay downloadable for 24 hours.'
+                            : 'Generate and download background CSV and PDF exports across dispatches, assets, fuel logs, maintenance, and audit trails.'}
                     </p>
                 </div>
                 <Button
                     variant={showExportModal ? 'secondary' : 'primary'}
+                    size={embedded ? 'sm' : 'md'}
                     onClick={() => setShowExportModal(!showExportModal)}
                 >
-                    <DownloadCloud className="mr-2 h-4 w-4" />
+                    <DownloadCloud className="h-4 w-4" />
                     {showExportModal
                         ? 'Close export form'
                         : 'Request data export'}
@@ -111,44 +136,70 @@ export function ExportsSurface({
             </div>
 
             {/* Quick Stats */}
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <div className="rounded-xl border border-line bg-surface p-3 shadow-xs">
-                    <span className="text-xs font-medium text-ink-soft">
-                        Total Export Requests
-                    </span>
-                    <p className="mt-1 text-xl font-bold text-ink">
-                        {stats.total}
-                    </p>
+            {embedded ? (
+                stats.total > 0 && (
+                    <div className="flex flex-wrap gap-2 text-xs">
+                        <span className="rounded-full bg-surface-subtle px-2.5 py-1 text-ink-soft">
+                            {stats.total} requested
+                        </span>
+                        <span className="rounded-full bg-success-soft/50 px-2.5 py-1 font-semibold text-success-strong">
+                            {stats.completed} ready
+                        </span>
+                        {stats.processing > 0 && (
+                            <span className="rounded-full bg-brand-soft/60 px-2.5 py-1 text-brand-strong">
+                                {stats.processing} processing
+                            </span>
+                        )}
+                        {stats.failed > 0 && (
+                            <span className="rounded-full bg-surface-subtle px-2.5 py-1 text-ink-soft">
+                                {stats.failed} failed / expired
+                            </span>
+                        )}
+                    </div>
+                )
+            ) : (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <div className="rounded-xl border border-line bg-surface p-3 shadow-xs">
+                        <span className="text-xs font-medium text-ink-soft">
+                            Total Export Requests
+                        </span>
+                        <p className="mt-1 text-xl font-bold text-ink">
+                            {stats.total}
+                        </p>
+                    </div>
+                    <div className="rounded-xl border border-success/30 bg-success-soft/30 p-3 shadow-xs">
+                        <span className="text-xs font-medium text-success-strong">
+                            Ready for Download
+                        </span>
+                        <p className="mt-1 text-xl font-bold text-success-strong">
+                            {stats.completed}
+                        </p>
+                    </div>
+                    <div className="rounded-xl border border-line bg-surface p-3 shadow-xs">
+                        <span className="text-xs font-medium text-ink-soft">
+                            In-Flight Processing
+                        </span>
+                        <p className="mt-1 text-xl font-bold text-ink">
+                            {stats.processing}
+                        </p>
+                    </div>
+                    <div className="rounded-xl border border-line bg-surface p-3 shadow-xs">
+                        <span className="text-xs font-medium text-ink-soft">
+                            Failed / Expired
+                        </span>
+                        <p className="mt-1 text-xl font-bold text-ink-soft">
+                            {stats.failed}
+                        </p>
+                    </div>
                 </div>
-                <div className="rounded-xl border border-success/30 bg-success-soft/30 p-3 shadow-xs">
-                    <span className="text-xs font-medium text-success-strong">
-                        Ready for Download
-                    </span>
-                    <p className="mt-1 text-xl font-bold text-success-strong">
-                        {stats.completed}
-                    </p>
-                </div>
-                <div className="rounded-xl border border-line bg-surface p-3 shadow-xs">
-                    <span className="text-xs font-medium text-ink-soft">
-                        In-Flight Processing
-                    </span>
-                    <p className="mt-1 text-xl font-bold text-ink">
-                        {stats.processing}
-                    </p>
-                </div>
-                <div className="rounded-xl border border-line bg-surface p-3 shadow-xs">
-                    <span className="text-xs font-medium text-ink-soft">
-                        Failed / Expired
-                    </span>
-                    <p className="mt-1 text-xl font-bold text-ink-soft">
-                        {stats.failed}
-                    </p>
-                </div>
-            </div>
+            )}
 
             {/* Export Request Modal */}
             {showExportModal && (
-                <RequestExportForm onDone={() => setShowExportModal(false)} />
+                <RequestExportForm
+                    defaultStatus={defaultStatus}
+                    onDone={() => setShowExportModal(false)}
+                />
             )}
 
             {/* Exports Table */}
@@ -318,16 +369,80 @@ export function ExportsSurface({
     );
 }
 
-function RequestExportForm({ onDone }: { onDone: () => void }) {
+function isoDate(date: Date): string {
+    const pad = (n: number) => String(n).padStart(2, '0');
+
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+const DATE_PRESETS: Array<{
+    label: string;
+    range: () => { from: string; to: string };
+}> = [
+    {
+        label: 'Today',
+        range: () => ({ from: isoDate(new Date()), to: isoDate(new Date()) }),
+    },
+    {
+        label: 'Last 7 days',
+        range: () => {
+            const from = new Date();
+            from.setDate(from.getDate() - 6);
+
+            return { from: isoDate(from), to: isoDate(new Date()) };
+        },
+    },
+    {
+        label: 'This month',
+        range: () => {
+            const now = new Date();
+
+            return {
+                from: isoDate(new Date(now.getFullYear(), now.getMonth(), 1)),
+                to: isoDate(now),
+            };
+        },
+    },
+    {
+        label: 'Last month',
+        range: () => {
+            const now = new Date();
+
+            return {
+                from: isoDate(
+                    new Date(now.getFullYear(), now.getMonth() - 1, 1),
+                ),
+                to: isoDate(new Date(now.getFullYear(), now.getMonth(), 0)),
+            };
+        },
+    },
+    { label: 'All time', range: () => ({ from: '', to: '' }) },
+];
+
+function RequestExportForm({
+    onDone,
+    defaultStatus = '',
+}: {
+    onDone: () => void;
+    defaultStatus?: string;
+}) {
     const form = useForm({
         export_type: 'job_reports',
         format: 'csv',
+        status: defaultStatus,
         date_from: '',
         date_to: '',
     });
 
     const submit = (e: FormEvent) => {
         e.preventDefault();
+        form.transform((data) => {
+            const { status, ...rest } = data;
+
+            return rest.export_type === 'job_reports' && status
+                ? { ...rest, status }
+                : rest;
+        });
         form.post('/operations/reports/exports', {
             preserveScroll: true,
             onSuccess: () => {
@@ -388,6 +503,9 @@ function RequestExportForm({ onDone }: { onDone: () => void }) {
                                 Location Audit
                             </option>
                             <option value="system_audit">System Audit</option>
+                            <option value="daily_accomplishment">
+                                Daily Accomplishment Report (DAR)
+                            </option>
                         </select>
                         {form.errors.export_type && (
                             <p className="mt-1 text-xs text-danger">
@@ -421,6 +539,75 @@ function RequestExportForm({ onDone }: { onDone: () => void }) {
                             </p>
                         )}
                     </div>
+                </div>
+
+                {form.data.export_type === 'job_reports' && (
+                    <div>
+                        <label
+                            htmlFor="export-status"
+                            className="block text-xs font-semibold text-ink uppercase"
+                        >
+                            Report Status
+                        </label>
+                        <select
+                            id="export-status"
+                            value={form.data.status}
+                            onChange={(e) =>
+                                form.setData('status', e.target.value)
+                            }
+                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand-strong focus:outline-none sm:w-1/2"
+                        >
+                            <option value="">All statuses</option>
+                            <option value="draft">Drafts</option>
+                            <option value="submitted">Pending review</option>
+                            <option value="approved">Approved</option>
+                            <option value="rejected">Needs rework</option>
+                        </select>
+                        {form.errors.status && (
+                            <p className="mt-1 text-xs text-danger">
+                                {form.errors.status}
+                            </p>
+                        )}
+                    </div>
+                )}
+
+                <div
+                    className="flex flex-wrap items-center gap-1.5"
+                    role="group"
+                    aria-label="Date range presets"
+                >
+                    <span className="mr-1 text-xs font-semibold text-ink uppercase">
+                        Date Range
+                    </span>
+                    {DATE_PRESETS.map((preset) => {
+                        const range = preset.range();
+                        const active =
+                            form.data.date_from === range.from &&
+                            form.data.date_to === range.to;
+
+                        return (
+                            <button
+                                key={preset.label}
+                                type="button"
+                                aria-pressed={active}
+                                onClick={() =>
+                                    form.setData((data) => ({
+                                        ...data,
+                                        date_from: range.from,
+                                        date_to: range.to,
+                                    }))
+                                }
+                                className={cn(
+                                    'min-h-9 rounded-full border px-3 text-xs font-medium transition-colors',
+                                    active
+                                        ? 'border-ink bg-ink text-surface'
+                                        : 'border-line text-ink-soft hover:bg-surface-subtle hover:text-ink',
+                                )}
+                            >
+                                {preset.label}
+                            </button>
+                        );
+                    })}
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">

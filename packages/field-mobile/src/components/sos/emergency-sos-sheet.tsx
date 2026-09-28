@@ -8,6 +8,7 @@ import React, {
 } from 'react';
 import {
     AccessibilityInfo,
+    Animated,
     Modal,
     Pressable,
     ScrollView,
@@ -17,6 +18,11 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
+import {
+    formatCoordinates,
+    placeLabel,
+    usePlaceName,
+} from '../../services/placeNames';
 import { useTheme } from '../../theme';
 import type {
     ActivateSosIncidentPayload,
@@ -28,6 +34,7 @@ import type {
     SosLocationSnapshot,
 } from '../../types/index';
 import { Icon } from '../common/Icon';
+import type { IconName } from '../common/Icon';
 import { colors } from '../nativeStyles';
 import { EmergencyContactActions } from './emergency-contact-actions';
 import {
@@ -38,6 +45,139 @@ import {
 
 const HOLD_DURATION_MS = 2_000;
 const HOLD_TICK_MS = 50;
+const LOCATION_REFRESH_MS = 10_000;
+// A newer fix replaces the current one unless it is much coarser; within this
+// window the more accurate of the two wins.
+const LOCATION_PREFER_WINDOW_MS = 30_000;
+
+function preferLocationFix(
+    current: SosLocationSnapshot | null,
+    next: SosLocationSnapshot,
+): SosLocationSnapshot {
+    if (!current) {
+        return next;
+    }
+
+    const ageGap =
+        Date.parse(next.captured_at) - Date.parse(current.captured_at);
+    const currentAccuracy = current.accuracy_metres ?? Number.POSITIVE_INFINITY;
+    const nextAccuracy = next.accuracy_metres ?? Number.POSITIVE_INFINITY;
+
+    if (
+        Number.isFinite(ageGap) &&
+        ageGap < LOCATION_PREFER_WINDOW_MS &&
+        currentAccuracy < nextAccuracy
+    ) {
+        return current;
+    }
+
+    return next;
+}
+
+type BeaconTone = 'critical' | 'pending' | 'success' | 'neutral';
+
+interface BeaconCopy {
+    eyebrow: string;
+    title: string;
+    body: string;
+    tone: BeaconTone;
+    icon: IconName;
+}
+
+// One entry per post-activation delivery state, so every state the server
+// can report has explicit, operator-readable copy.
+const BEACON_COPY: Record<
+    Exclude<SosDeliveryState, 'preparing'>,
+    BeaconCopy
+> = {
+    sending: {
+        eyebrow: 'BROADCASTING EMERGENCY DISTRESS BEACON…',
+        title: 'Transmitting to Operations Manager…',
+        body: 'Sending your location, equipment and job details to the Central Safety Desk.',
+        tone: 'pending',
+        icon: 'sync',
+    },
+    delivered: {
+        eyebrow: 'LIVE EMERGENCY SIGNAL ACTIVE',
+        title: 'Help Dispatch Transmitted',
+        body: 'The Operations Manager and Central Safety Desk have your alert and location. Move somewhere safe if you can.',
+        tone: 'critical',
+        icon: 'check-circle',
+    },
+    acknowledged: {
+        eyebrow: 'EMERGENCY ACKNOWLEDGED BY SAFETY DESK',
+        title: 'Response Team Dispatched',
+        body: 'The Operations Manager and Safety Desk have acknowledged your alert. Help is being coordinated.',
+        tone: 'success',
+        icon: 'shield-check',
+    },
+    escalated: {
+        eyebrow: 'EMERGENCY ESCALATED',
+        title: 'Escalated to Senior Safety Staff',
+        body: 'Your alert was not acknowledged in time, so it has been escalated. Call the desk below if you can.',
+        tone: 'critical',
+        icon: 'alert',
+    },
+    retrying: {
+        eyebrow: 'EMERGENCY ALERT QUEUED · RETRYING',
+        title: 'Retrying Transmission to Operations Manager',
+        body: 'Your alert is queued and retrying in the background. Call the Operations Desk below if you can.',
+        tone: 'pending',
+        icon: 'sync',
+    },
+    not_delivered_offline: {
+        eyebrow: 'EMERGENCY SAVED OFFLINE',
+        title: 'Alert Saved Locally on Device',
+        body: 'It will send automatically when signal returns. Use the phone line below if you can.',
+        tone: 'critical',
+        icon: 'cloud',
+    },
+    expired: {
+        eyebrow: 'EMERGENCY NOT DELIVERED',
+        title: 'Alert Could Not Be Confirmed',
+        body: 'The server did not confirm this alert in time. Call the Operations Desk directly.',
+        tone: 'critical',
+        icon: 'alert',
+    },
+    resolved: {
+        eyebrow: 'INCIDENT RESOLVED',
+        title: 'Emergency Cleared by Safety Desk',
+        body: 'The Central Safety Desk marked this incident resolved. Follow the standard stand-down procedure.',
+        tone: 'success',
+        icon: 'check-circle',
+    },
+    cancelled: {
+        eyebrow: 'INCIDENT CANCELLED',
+        title: 'Emergency Signal Cancelled',
+        body: 'This distress alert has been cancelled.',
+        tone: 'neutral',
+        icon: 'close',
+    },
+};
+
+const BEACON_TONE_COLOR: Record<BeaconTone, string> = {
+    critical: '#B91C1C',
+    pending: '#806000',
+    success: '#047857',
+    neutral: '#334155',
+};
+
+const BEACON_TONE_DARK_COLOR: Record<BeaconTone, string> = {
+    critical: '#EF4444',
+    pending: '#FFBF00',
+    success: '#10B981',
+    neutral: '#64748B',
+};
+
+type PillTone = 'ok' | 'warn' | 'bad' | 'neutral';
+
+const PILL_TONES: Record<PillTone, { bg: string; fg: string; darkFg: string }> =
+    {
+        ok: { bg: '#ECFDF5', fg: '#047857', darkFg: '#34D399' },
+        warn: { bg: '#FFF3C4', fg: '#6B5000', darkFg: '#FFBF00' },
+        bad: { bg: '#FEF2F2', fg: '#B91C1C', darkFg: '#F87171' },
+        neutral: { bg: '#E2E8F0', fg: '#334155', darkFg: '#CBD5E1' },
+    };
 
 export interface EmergencySosSheetProps {
     visible: boolean;
@@ -53,6 +193,7 @@ export interface EmergencySosSheetProps {
         latitude: number;
         longitude: number;
         accuracyMetres?: number | null;
+        observedAt?: string | null;
     } | null>;
 }
 
@@ -61,6 +202,7 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
     jobs,
     activeIncident,
     deliveryState,
+    isOnline,
     actions = [],
     onClose,
     onActivate,
@@ -70,6 +212,7 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
     const { isDarkHud } = useTheme();
     const [cachedLocation, setCachedLocation] =
         useState<SosLocationSnapshot | null>(null);
+    const [locationFailed, setLocationFailed] = useState(false);
     const [selectedJobId, setSelectedJobId] = useState<number | null>(
         jobs[0]?.id ?? null,
     );
@@ -93,17 +236,67 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
     const holdTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const holdCompletedRef = useRef(false);
     const contextInitializedRef = useRef(jobs.length > 0);
+    const [pulse] = useState(() => new Animated.Value(1));
 
     const selectedCategoryConfig = useMemo(
         () =>
             EMERGENCY_CATEGORIES.find((c) => c.value === selectedCategory) ??
-            EMERGENCY_CATEGORIES[0],
+            null,
         [selectedCategory],
     );
+
+    const selectedJob = useMemo(
+        () => jobs.find((job) => job.id === selectedJobId) ?? null,
+        [jobs, selectedJobId],
+    );
+    const selectedAssetCode =
+        selectedJob?.asset_assignments?.find(
+            (assignment) => assignment.operational_asset_id === selectedAssetId,
+        )?.asset_code ?? null;
+    const jobContextLabel = selectedJob
+        ? `${selectedJob.reference}${selectedAssetCode ? ` · ${selectedAssetCode}` : ''}`
+        : null;
+
+    const locationStatus: 'ready' | 'locating' | 'unavailable' = cachedLocation
+        ? 'ready'
+        : onGetLocation && !locationFailed
+          ? 'locating'
+          : 'unavailable';
+    const nearestPlace = usePlaceName(
+        cachedLocation?.latitude,
+        cachedLocation?.longitude,
+    );
+    const accuracyText =
+        cachedLocation?.accuracy_metres != null
+            ? `±${Math.round(cachedLocation.accuracy_metres)} m`
+            : null;
+    const locationLabel =
+        locationStatus === 'ready'
+            ? nearestPlace.status === 'resolved'
+                ? [nearestPlace.primary, accuracyText]
+                      .filter(Boolean)
+                      .join(' · ')
+                : accuracyText
+                  ? `GPS ${accuracyText}`
+                  : 'GPS locked'
+            : locationStatus === 'locating'
+              ? 'Locating…'
+              : 'No GPS fix';
 
     const hasTerminalIncident =
         activeIncident?.status === 'resolved' ||
         activeIncident?.status === 'cancelled';
+    const isPreparing = !activeIncident && deliveryState === 'preparing';
+    const isTerminalState =
+        hasTerminalIncident ||
+        deliveryState === 'resolved' ||
+        deliveryState === 'cancelled';
+    const beacon =
+        deliveryState !== 'preparing' ? BEACON_COPY[deliveryState] : null;
+    const beaconIsLive =
+        beacon !== null &&
+        (beacon.tone === 'critical' || beacon.tone === 'pending') &&
+        !isTerminalState;
 
     useEffect(() => {
         if (activeIncident?.category) {
@@ -134,25 +327,85 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
         }
 
         let isMounted = true;
-        void onGetLocation()
-            .then((loc) => {
-                if (isMounted && loc) {
-                    setCachedLocation({
-                        latitude: loc.latitude,
-                        longitude: loc.longitude,
-                        accuracy_metres: loc.accuracyMetres ?? null,
-                        captured_at: new Date().toISOString(),
-                    });
-                }
-            })
-            .catch(() => {
-                // Pre-warming is opportunistic; errors will not block emergency broadcast
-            });
+        let inFlight = false;
+
+        // Keep the fix current while the operator fills in details, so the
+        // alert carries where they are now, not where they opened the sheet.
+        const refresh = () => {
+            if (inFlight) {
+                return;
+            }
+
+            inFlight = true;
+            void onGetLocation()
+                .then((loc) => {
+                    if (!isMounted) {
+                        return;
+                    }
+
+                    if (loc) {
+                        const next: SosLocationSnapshot = {
+                            latitude: loc.latitude,
+                            longitude: loc.longitude,
+                            accuracy_metres: loc.accuracyMetres ?? null,
+                            captured_at:
+                                loc.observedAt ?? new Date().toISOString(),
+                        };
+                        setCachedLocation((previous) =>
+                            preferLocationFix(previous, next),
+                        );
+                        setLocationFailed(false);
+                    } else {
+                        setLocationFailed(true);
+                    }
+                })
+                .catch(() => {
+                    // Pre-warming is opportunistic; errors will not block emergency broadcast
+                    if (isMounted) {
+                        setLocationFailed(true);
+                    }
+                })
+                .finally(() => {
+                    inFlight = false;
+                });
+        };
+
+        refresh();
+        const timer = setInterval(refresh, LOCATION_REFRESH_MS);
 
         return () => {
             isMounted = false;
+            clearInterval(timer);
         };
     }, [activeIncident, onGetLocation, visible]);
+
+    useEffect(() => {
+        if (!beaconIsLive || reduceMotion) {
+            pulse.setValue(1);
+
+            return;
+        }
+
+        const loop = Animated.loop(
+            Animated.sequence([
+                Animated.timing(pulse, {
+                    duration: 700,
+                    toValue: 0.25,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(pulse, {
+                    duration: 700,
+                    toValue: 1,
+                    useNativeDriver: true,
+                }),
+            ]),
+        );
+        loop.start();
+
+        return () => {
+            loop.stop();
+        };
+    }, [beaconIsLive, pulse, reduceMotion]);
 
     const handleToggleChip = useCallback(
         (chipId: string) => {
@@ -348,6 +601,48 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
 
     const insets = useContext(SafeAreaInsetsContext);
     const topInset = insets?.top ?? 0;
+    const bottomInset = insets?.bottom ?? 0;
+
+    const beaconColor = beacon
+        ? (isDarkHud ? BEACON_TONE_DARK_COLOR : BEACON_TONE_COLOR)[beacon.tone]
+        : null;
+    const secondsLeft = Math.max(1, Math.ceil((1 - holdProgress) * 2));
+
+    const renderPill = (
+        icon: IconName,
+        label: string,
+        tone: PillTone,
+        testID: string,
+    ) => {
+        const palette = PILL_TONES[tone];
+
+        return (
+            <View
+                style={[
+                    styles.pill,
+                    isDarkHud
+                        ? styles.darkPill
+                        : { backgroundColor: palette.bg },
+                ]}
+                testID={testID}
+            >
+                <Icon
+                    color={isDarkHud ? palette.darkFg : palette.fg}
+                    name={icon}
+                    size={13}
+                />
+                <Text
+                    numberOfLines={1}
+                    style={[
+                        styles.pillText,
+                        { color: isDarkHud ? palette.darkFg : palette.fg },
+                    ]}
+                >
+                    {label}
+                </Text>
+            </View>
+        );
+    };
 
     return (
         <Modal
@@ -368,8 +663,17 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
                         { paddingTop: Math.max(topInset, 16) + 6 },
                     ]}
                 >
+                    <View style={styles.headerMark}>
+                        <Icon color="#FFFFFF" name="alert" size={20} />
+                    </View>
                     <View style={styles.headerCopy}>
-                        <Text selectable style={styles.eyebrow}>
+                        <Text
+                            selectable
+                            style={[
+                                styles.eyebrow,
+                                isDarkHud && styles.darkEyebrow,
+                            ]}
+                        >
                             EMERGENCY DISPATCH
                         </Text>
                         <Text
@@ -388,9 +692,10 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
                         accessibilityRole="button"
                         hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                         onPress={onClose}
-                        style={[
+                        style={({ pressed }) => [
                             styles.closeButton,
                             isDarkHud && styles.darkCloseButton,
+                            pressed && styles.pressed,
                         ]}
                     >
                         <Icon
@@ -408,96 +713,119 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
                     keyboardShouldPersistTaps="handled"
                     scrollEnabled={!isHolding}
                 >
-                    {/* Status & Beacon Banner: Unified single source of truth */}
-                    {deliveryState !== 'preparing' &&
-                    (activeIncident ||
-                        deliveryState === 'sending' ||
-                        deliveryState === 'delivered' ||
-                        deliveryState === 'retrying' ||
-                        deliveryState === 'not_delivered_offline' ||
-                        deliveryState === 'acknowledged' ||
-                        deliveryState === 'escalated' ||
-                        deliveryState === 'resolved' ||
-                        deliveryState === 'cancelled') ? (
+                    {/* What the alert will carry, visible before sending */}
+                    {isPreparing ? (
+                        <View
+                            accessibilityLabel={`Alert readiness: ${
+                                isOnline === false
+                                    ? 'offline, alert will queue'
+                                    : isOnline
+                                      ? 'online'
+                                      : 'checking signal'
+                            }, ${locationLabel}${
+                                jobContextLabel ? `, ${jobContextLabel}` : ''
+                            }`}
+                            accessible
+                            style={styles.pillRow}
+                            testID="sos-readiness-strip"
+                        >
+                            {renderPill(
+                                isOnline === false ? 'cloud' : 'sync',
+                                isOnline === false
+                                    ? 'Offline · will queue'
+                                    : isOnline
+                                      ? 'Online'
+                                      : 'Checking signal',
+                                isOnline === false
+                                    ? 'bad'
+                                    : isOnline
+                                      ? 'ok'
+                                      : 'neutral',
+                                'sos-pill-connection',
+                            )}
+                            {renderPill(
+                                'location',
+                                locationLabel,
+                                locationStatus === 'ready' ? 'ok' : 'warn',
+                                'sos-pill-location',
+                            )}
+                            {jobContextLabel
+                                ? renderPill(
+                                      'crane',
+                                      jobContextLabel,
+                                      'neutral',
+                                      'sos-pill-job',
+                                  )
+                                : null}
+                        </View>
+                    ) : null}
+
+                    {/* Status & Beacon Banner: single source of truth after activation */}
+                    {beacon && beaconColor ? (
                         <View
                             accessible
                             accessibilityLiveRegion="assertive"
                             accessibilityRole="summary"
                             style={[
                                 styles.beaconBanner,
-                                isDarkHud && styles.darkBeaconBanner,
-                                deliveryState === 'retrying' &&
-                                    styles.beaconBannerRetrying,
-                                deliveryState === 'not_delivered_offline' &&
-                                    styles.beaconBannerOffline,
-                                deliveryState === 'sending' &&
-                                    styles.beaconBannerSending,
+                                isDarkHud
+                                    ? [
+                                          styles.darkBeaconBanner,
+                                          { borderColor: beaconColor },
+                                      ]
+                                    : { backgroundColor: beaconColor },
                             ]}
                             testID="sos-delivery-status"
                         >
                             <View style={styles.beaconHeader}>
-                                <View
+                                <Animated.View
                                     style={[
                                         styles.pulseDot,
-                                        (deliveryState === 'retrying' ||
-                                            deliveryState === 'sending') &&
-                                            styles.pulseDotAmber,
+                                        {
+                                            backgroundColor: isDarkHud
+                                                ? beaconColor
+                                                : '#FFFFFF',
+                                            opacity: pulse,
+                                        },
                                     ]}
                                 />
-                                <Text style={styles.beaconEyebrow}>
-                                    {deliveryState === 'retrying'
-                                        ? 'EMERGENCY ALERT QUEUED · RETRYING'
-                                        : deliveryState ===
-                                            'not_delivered_offline'
-                                          ? 'EMERGENCY SAVED OFFLINE'
-                                          : deliveryState === 'sending'
-                                            ? 'BROADCASTING EMERGENCY DISTRESS BEACON…'
-                                            : deliveryState === 'acknowledged'
-                                              ? 'EMERGENCY ACKNOWLEDGED BY SAFETY DESK'
-                                              : deliveryState === 'resolved'
-                                                ? 'INCIDENT RESOLVED'
-                                                : deliveryState === 'cancelled'
-                                                  ? 'INCIDENT CANCELLED'
-                                                  : 'LIVE EMERGENCY SIGNAL ACTIVE'}
+                                <Text
+                                    style={[
+                                        styles.beaconEyebrow,
+                                        isDarkHud && { color: beaconColor },
+                                    ]}
+                                >
+                                    {beacon.eyebrow}
                                 </Text>
                             </View>
-                            <Text style={styles.beaconTitle}>
-                                {deliveryState === 'retrying'
-                                    ? 'Retrying Transmission to Operations Manager'
-                                    : deliveryState === 'not_delivered_offline'
-                                      ? 'Alert Saved Locally on Device'
-                                      : deliveryState === 'sending'
-                                        ? 'Transmitting to Operations Manager…'
-                                        : deliveryState === 'acknowledged'
-                                          ? 'Response Team Dispatched'
-                                          : deliveryState === 'resolved'
-                                            ? 'Emergency Cleared by Safety Desk'
-                                            : deliveryState === 'cancelled'
-                                              ? 'Emergency Signal Cancelled'
-                                              : 'Help Dispatch Transmitted'}
-                            </Text>
-                            <Text style={styles.beaconBody}>
-                                {deliveryState === 'retrying'
-                                    ? 'Your emergency signal is queued and retrying in background. Direct hotline to Operations Desk is open below.'
-                                    : deliveryState === 'not_delivered_offline'
-                                      ? 'Saved locally. Transmission will complete once connection returns, or use emergency phone line below.'
-                                      : deliveryState === 'sending'
-                                        ? 'Relaying emergency coordinates, vehicle/crane telemetry, and dispatch context to Central Safety Desk…'
-                                        : deliveryState === 'acknowledged'
-                                          ? 'Operations Manager and Safety Desk have acknowledged your emergency distress beacon.'
-                                          : deliveryState === 'resolved'
-                                            ? 'Central Safety Desk marked this incident resolved. Standby for standard stand-down protocol.'
-                                            : deliveryState === 'cancelled'
-                                              ? 'Distress alert has been cancelled.'
-                                              : 'Your coordinates and emergency signal have been relayed to the Operations Manager & Central Safety Desk.'}
+                            <View style={styles.beaconTitleRow}>
+                                <Icon
+                                    color={isDarkHud ? beaconColor : '#FFFFFF'}
+                                    name={beacon.icon}
+                                    size={22}
+                                />
+                                <Text
+                                    style={[
+                                        styles.beaconTitle,
+                                        isDarkHud && styles.darkTitle,
+                                    ]}
+                                >
+                                    {beacon.title}
+                                </Text>
+                            </View>
+                            <Text
+                                style={[
+                                    styles.beaconBody,
+                                    isDarkHud && styles.darkBeaconBody,
+                                ]}
+                            >
+                                {beacon.body}
                             </Text>
                         </View>
                     ) : null}
 
                     {/* Central Safety Desk Card - only shown for active incident with responder or when configured phone/sms actions exist after broadcast */}
-                    {((activeIncident &&
-                        activeIncident.status !== 'resolved' &&
-                        activeIncident.status !== 'cancelled') ||
+                    {((activeIncident && !hasTerminalIncident) ||
                         ((actions?.length ?? 0) > 0 &&
                             deliveryState !== 'preparing')) && (
                         <View
@@ -558,108 +886,6 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
                         />
                     ) : null}
 
-                    {!activeIncident && deliveryState === 'preparing' ? (
-                        <View
-                            style={[
-                                styles.holdSection,
-                                isDarkHud && styles.darkHoldSection,
-                            ]}
-                        >
-                            <Text
-                                selectable
-                                style={[
-                                    styles.holdInstruction,
-                                    isDarkHud && styles.darkHoldInstruction,
-                                ]}
-                            >
-                                Hold for 2 seconds to broadcast emergency to
-                                Operations Manager:
-                            </Text>
-                            <Pressable
-                                accessibilityActions={[
-                                    {
-                                        label: 'Hold for two seconds to activate Emergency SOS and send to Operations Manager',
-                                        name: 'activate',
-                                    },
-                                ]}
-                                accessibilityHint="Keep this control pressed for two seconds until the progress reaches 100 percent. A normal tap does not activate SOS."
-                                accessibilityLabel="Activate Emergency SOS"
-                                accessibilityRole="button"
-                                accessibilityState={{
-                                    busy: isActivating,
-                                    disabled: isActivating,
-                                }}
-                                accessibilityValue={{
-                                    max: 100,
-                                    min: 0,
-                                    now: Math.round(holdProgress * 100),
-                                    text: `${Math.round(holdProgress * 100)} percent held`,
-                                }}
-                                disabled={isActivating}
-                                hitSlop={{
-                                    top: 8,
-                                    bottom: 8,
-                                    left: 8,
-                                    right: 8,
-                                }}
-                                onAccessibilityAction={
-                                    handleAccessibilityAction
-                                }
-                                onPressIn={startHold}
-                                onPressOut={endHold}
-                                pressRetentionOffset={{
-                                    top: 50,
-                                    bottom: 50,
-                                    left: 50,
-                                    right: 50,
-                                }}
-                                style={styles.holdButton}
-                                testID="activate-emergency-sos"
-                            >
-                                <View
-                                    pointerEvents="none"
-                                    style={[
-                                        styles.holdProgress,
-                                        {
-                                            width: `${holdProgress * 100}%`,
-                                        },
-                                    ]}
-                                />
-                                <Text
-                                    pointerEvents="none"
-                                    style={styles.holdButtonEyebrow}
-                                >
-                                    HOLD 2 SECONDS TO BROADCAST
-                                </Text>
-                                <Text
-                                    pointerEvents="none"
-                                    style={styles.holdButtonText}
-                                >
-                                    {isActivating
-                                        ? 'Broadcasting to Operations Manager…'
-                                        : holdProgress > 0
-                                          ? `Hold ${Math.ceil((1 - holdProgress) * 2)}s to Confirm & Send`
-                                          : 'Send to Operations Manager'}
-                                </Text>
-                            </Pressable>
-                            <View
-                                style={[
-                                    styles.progressTrack,
-                                    isDarkHud && styles.darkProgressTrack,
-                                ]}
-                            >
-                                <View
-                                    style={[
-                                        styles.progressBar,
-                                        {
-                                            width: `${holdProgress * 100}%`,
-                                        },
-                                    ]}
-                                />
-                            </View>
-                        </View>
-                    ) : null}
-
                     {activeIncident?.dispatch ? (
                         <Text
                             selectable
@@ -675,6 +901,148 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
                         </Text>
                     ) : null}
                 </ScrollView>
+
+                {/* Pinned action footer: the send control is always reachable */}
+                {isPreparing ? (
+                    <View
+                        style={[
+                            styles.footer,
+                            isDarkHud && styles.darkFooter,
+                            { paddingBottom: Math.max(bottomInset, 12) + 4 },
+                        ]}
+                    >
+                        <Pressable
+                            accessibilityActions={[
+                                {
+                                    label: 'Hold for two seconds to activate Emergency SOS and send to Operations Manager',
+                                    name: 'activate',
+                                },
+                            ]}
+                            accessibilityHint="Keep this control pressed for two seconds until the progress reaches 100 percent. A normal tap does not activate SOS."
+                            accessibilityLabel="Activate Emergency SOS"
+                            accessibilityRole="button"
+                            accessibilityState={{
+                                busy: isActivating,
+                                disabled: isActivating,
+                            }}
+                            accessibilityValue={{
+                                max: 100,
+                                min: 0,
+                                now: Math.round(holdProgress * 100),
+                                text: `${Math.round(holdProgress * 100)} percent held`,
+                            }}
+                            disabled={isActivating}
+                            hitSlop={{
+                                top: 8,
+                                bottom: 8,
+                                left: 8,
+                                right: 8,
+                            }}
+                            onAccessibilityAction={handleAccessibilityAction}
+                            onPressIn={startHold}
+                            onPressOut={endHold}
+                            pressRetentionOffset={{
+                                top: 50,
+                                bottom: 50,
+                                left: 50,
+                                right: 50,
+                            }}
+                            style={[
+                                styles.holdButton,
+                                isHolding && styles.holdButtonActive,
+                                isActivating && styles.holdButtonBusy,
+                            ]}
+                            testID="activate-emergency-sos"
+                        >
+                            <View
+                                pointerEvents="none"
+                                style={[
+                                    styles.holdProgress,
+                                    {
+                                        width: `${holdProgress * 100}%`,
+                                    },
+                                ]}
+                            />
+                            <View
+                                pointerEvents="none"
+                                style={styles.holdButtonInner}
+                            >
+                                <View style={styles.holdButtonIcon}>
+                                    {isHolding ? (
+                                        <Text style={styles.holdCountdown}>
+                                            {secondsLeft}
+                                        </Text>
+                                    ) : (
+                                        <Icon
+                                            color="#FFFFFF"
+                                            name={
+                                                isActivating ? 'sync' : 'alert'
+                                            }
+                                            size={22}
+                                        />
+                                    )}
+                                </View>
+                                <View style={styles.holdButtonCopy}>
+                                    <Text style={styles.holdButtonEyebrow}>
+                                        {isHolding
+                                            ? 'KEEP HOLDING · RELEASE TO CANCEL'
+                                            : 'HOLD 2 SECONDS TO BROADCAST'}
+                                    </Text>
+                                    <Text style={styles.holdButtonText}>
+                                        {isActivating
+                                            ? 'Broadcasting to Operations Manager…'
+                                            : isHolding
+                                              ? `Sending in ${secondsLeft}s…`
+                                              : 'Send to Operations Manager'}
+                                    </Text>
+                                </View>
+                            </View>
+                        </Pressable>
+                        <Text
+                            style={[
+                                styles.footerHint,
+                                isDarkHud && styles.darkHelper,
+                                isOnline === false && styles.footerHintAlert,
+                                isOnline === false &&
+                                    isDarkHud &&
+                                    styles.darkFooterHintAlert,
+                            ]}
+                        >
+                            {isOnline === false
+                                ? 'No signal. The alert will be saved and sent automatically when you reconnect.'
+                                : "A quick tap won't send. You'll confirm before the alert goes out."}
+                        </Text>
+                    </View>
+                ) : isTerminalState ? (
+                    <View
+                        style={[
+                            styles.footer,
+                            isDarkHud && styles.darkFooter,
+                            { paddingBottom: Math.max(bottomInset, 12) + 4 },
+                        ]}
+                    >
+                        <Pressable
+                            accessibilityLabel="Close Emergency SOS"
+                            accessibilityRole="button"
+                            onPress={onClose}
+                            style={({ pressed }) => [
+                                styles.doneButton,
+                                isDarkHud && styles.darkDoneButton,
+                                pressed && styles.pressed,
+                            ]}
+                            testID="sos-done-btn"
+                        >
+                            <Text
+                                style={[
+                                    styles.doneButtonText,
+                                    isDarkHud && styles.darkDoneButtonText,
+                                ]}
+                            >
+                                Done
+                            </Text>
+                        </Pressable>
+                    </View>
+                ) : null}
 
                 {/* Confirmation Dialog after 2-Second Hold */}
                 <Modal
@@ -694,14 +1062,23 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
                             ]}
                         >
                             <View style={styles.confirmModalHeader}>
-                                <View style={styles.confirmIconCircle}>
+                                <View
+                                    style={[
+                                        styles.confirmIconCircle,
+                                        isDarkHud &&
+                                            styles.darkConfirmIconCircle,
+                                    ]}
+                                >
                                     <Icon
-                                        color="#DC2626"
+                                        color={
+                                            isDarkHud ? '#F87171' : '#DC2626'
+                                        }
                                         name="alert"
-                                        size={24}
+                                        size={26}
                                     />
                                 </View>
                                 <Text
+                                    accessibilityRole="header"
                                     style={[
                                         styles.confirmModalTitle,
                                         isDarkHud && styles.darkTitle,
@@ -729,7 +1106,7 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
                             >
                                 <View style={styles.confirmSummaryRow}>
                                     <Text style={styles.confirmSummaryLabel}>
-                                        CLASSIFICATION:
+                                        TYPE
                                     </Text>
                                     <Text
                                         style={[
@@ -737,7 +1114,8 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
                                             isDarkHud && styles.darkOptionText,
                                         ]}
                                     >
-                                        {selectedCategoryConfig.title}
+                                        {selectedCategoryConfig?.title ??
+                                            'Unclassified emergency'}
                                     </Text>
                                 </View>
 
@@ -746,7 +1124,7 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
                                         <Text
                                             style={styles.confirmSummaryLabel}
                                         >
-                                            HAZARDS:
+                                            HAZARDS
                                         </Text>
                                         <Text
                                             style={[
@@ -773,10 +1151,10 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
                                         <Text
                                             style={styles.confirmSummaryLabel}
                                         >
-                                            NOTES:
+                                            NOTES
                                         </Text>
                                         <Text
-                                            numberOfLines={2}
+                                            numberOfLines={3}
                                             style={[
                                                 styles.confirmSummaryValue,
                                                 isDarkHud &&
@@ -787,6 +1165,59 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
                                         </Text>
                                     </View>
                                 )}
+
+                                <View style={styles.confirmSummaryRow}>
+                                    <Text style={styles.confirmSummaryLabel}>
+                                        LOCATION
+                                    </Text>
+                                    <Text
+                                        style={[
+                                            styles.confirmSummaryValue,
+                                            isDarkHud && styles.darkOptionText,
+                                        ]}
+                                        testID="sos-confirm-location"
+                                    >
+                                        {cachedLocation
+                                            ? nearestPlace.status === 'resolved'
+                                                ? (placeLabel(nearestPlace) ??
+                                                  nearestPlace.primary)
+                                                : nearestPlace.status ===
+                                                    'pending'
+                                                  ? 'Finding address…'
+                                                  : 'Address unavailable'
+                                            : 'No GPS fix yet'}
+                                    </Text>
+                                    {cachedLocation ? (
+                                        <Text
+                                            style={[
+                                                styles.confirmSummaryCoords,
+                                                isDarkHud && styles.darkHelper,
+                                            ]}
+                                        >
+                                            {formatCoordinates(
+                                                cachedLocation.latitude,
+                                                cachedLocation.longitude,
+                                            )}
+                                            {accuracyText
+                                                ? ` · ${accuracyText}`
+                                                : ''}
+                                        </Text>
+                                    ) : null}
+                                </View>
+
+                                <View style={styles.confirmSummaryRow}>
+                                    <Text style={styles.confirmSummaryLabel}>
+                                        JOB
+                                    </Text>
+                                    <Text
+                                        style={[
+                                            styles.confirmSummaryValue,
+                                            isDarkHud && styles.darkOptionText,
+                                        ]}
+                                    >
+                                        {jobContextLabel ?? 'No active job'}
+                                    </Text>
+                                </View>
                             </View>
 
                             <View style={styles.confirmModalActions}>
@@ -800,10 +1231,11 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
                                         right: 6,
                                     }}
                                     onPress={handleCancelConfirmation}
-                                    style={[
+                                    style={({ pressed }) => [
                                         styles.confirmCancelBtn,
                                         isDarkHud &&
                                             styles.darkConfirmCancelBtn,
+                                        pressed && styles.pressed,
                                     ]}
                                     testID="cancel-broadcast-btn"
                                 >
@@ -826,9 +1258,17 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
                                         right: 6,
                                     }}
                                     onPress={handleConfirmedBroadcast}
-                                    style={styles.confirmSendBtn}
+                                    style={({ pressed }) => [
+                                        styles.confirmSendBtn,
+                                        pressed && styles.pressed,
+                                    ]}
                                     testID="confirm-broadcast-btn"
                                 >
+                                    <Icon
+                                        color="#FFFFFF"
+                                        name="alert"
+                                        size={18}
+                                    />
                                     <Text style={styles.confirmSendText}>
                                         Confirm & Broadcast
                                     </Text>
@@ -853,12 +1293,21 @@ const styles = StyleSheet.create({
         borderBottomColor: colors.border,
         borderBottomWidth: 1,
         flexDirection: 'row',
-        justifyContent: 'space-between',
+        gap: 12,
+        paddingBottom: 14,
         paddingHorizontal: 16,
-        paddingVertical: 14,
+    },
+    headerMark: {
+        alignItems: 'center',
+        backgroundColor: '#DC2626',
+        borderRadius: 12,
+        height: 40,
+        justifyContent: 'center',
+        width: 40,
     },
     headerCopy: {
-        gap: 2,
+        flex: 1,
+        gap: 1,
     },
     eyebrow: {
         color: colors.redDark,
@@ -866,111 +1315,92 @@ const styles = StyleSheet.create({
         fontWeight: '800',
         letterSpacing: 1.1,
     },
+    darkEyebrow: {
+        color: '#F87171',
+    },
     title: {
         color: colors.text,
-        fontSize: 24,
+        fontSize: 22,
         fontWeight: '800',
     },
     closeButton: {
         alignItems: 'center',
-        height: 48,
+        backgroundColor: colors.surfaceMuted,
+        borderRadius: 24,
+        height: 44,
         justifyContent: 'center',
-        width: 48,
+        width: 44,
+    },
+    pressed: {
+        opacity: 0.8,
     },
     content: {
         alignSelf: 'center',
         gap: 16,
         maxWidth: 680,
         padding: 16,
-        paddingBottom: 40,
+        paddingBottom: 24,
         width: '100%',
     },
-    intro: {
-        color: colors.text,
-        fontSize: 16,
-        lineHeight: 24,
-    },
-    contextSection: {
+    pillRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
         gap: 8,
     },
-    sectionTitle: {
-        color: colors.text,
-        fontSize: 17,
-        fontWeight: '800',
-    },
-    helper: {
-        color: colors.secondary,
-        fontSize: 13,
-        lineHeight: 19,
-    },
-    contextOptions: {
-        gap: 8,
-    },
-    contextOption: {
-        backgroundColor: colors.surface,
-        borderColor: colors.border,
-        borderRadius: 10,
-        borderWidth: 1,
-        minHeight: 48,
-        justifyContent: 'center',
-        paddingHorizontal: 12,
-    },
-    contextOptionSelected: {
-        backgroundColor: colors.redLight,
-        borderColor: colors.red,
-    },
-    contextText: {
-        color: colors.text,
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    assetOptions: {
-        gap: 8,
-        paddingLeft: 12,
-    },
-    assetLabel: {
-        color: colors.secondary,
-        fontSize: 13,
-        fontWeight: '700',
-    },
-    assetOption: {
-        borderColor: colors.border,
-        borderRadius: 9,
-        borderWidth: 1,
-        minHeight: 44,
-        justifyContent: 'center',
-        paddingHorizontal: 10,
-    },
-    assetOptionSelected: {
-        backgroundColor: colors.redLight,
-        borderColor: colors.red,
-    },
-    holdSection: {
+    pill: {
         alignItems: 'center',
-        gap: 10,
-        marginTop: 6,
-        width: '100%',
+        borderRadius: 999,
+        flexDirection: 'row',
+        gap: 6,
+        maxWidth: '100%',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
     },
-    holdInstruction: {
-        color: '#475569',
-        fontSize: 13,
+    darkPill: {
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
+        borderWidth: 1,
+    },
+    pillText: {
+        flexShrink: 1,
+        fontSize: 12,
+        fontVariant: ['tabular-nums'],
         fontWeight: '700',
-        lineHeight: 18,
-        maxWidth: 320,
+    },
+    footer: {
+        backgroundColor: colors.surface,
+        borderTopColor: colors.border,
+        borderTopWidth: 1,
+        gap: 8,
+        paddingHorizontal: 16,
+        paddingTop: 12,
+    },
+    darkFooter: {
+        backgroundColor: '#0F172A',
+        borderTopColor: '#334155',
+    },
+    footerHint: {
+        color: colors.secondary,
+        fontSize: 12,
+        lineHeight: 17,
         textAlign: 'center',
     },
+    footerHintAlert: {
+        color: colors.redDark,
+        fontWeight: '700',
+    },
+    darkFooterHintAlert: {
+        color: '#FCA5A5',
+    },
     holdButton: {
-        alignItems: 'center',
         backgroundColor: '#DC2626',
         borderColor: '#B91C1C',
         borderRadius: 18,
         borderWidth: 2,
         elevation: 6,
         justifyContent: 'center',
-        minHeight: 66,
+        minHeight: 72,
         overflow: 'hidden',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
         position: 'relative',
         shadowColor: '#DC2626',
         shadowOffset: { width: 0, height: 4 },
@@ -978,44 +1408,73 @@ const styles = StyleSheet.create({
         shadowRadius: 10,
         width: '100%',
     },
-    holdButtonEyebrow: {
-        color: '#FFFFFF',
-        fontSize: 12,
-        fontWeight: '900',
-        letterSpacing: 0.6,
-        marginBottom: 3,
-        opacity: 0.95,
-        textAlign: 'center',
+    holdButtonActive: {
+        borderColor: '#7F1D1D',
+        transform: [{ scale: 0.985 }],
     },
-    holdButtonText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: '900',
-        textAlign: 'center',
-        zIndex: 1,
+    holdButtonBusy: {
+        opacity: 0.85,
     },
     holdProgress: {
-        backgroundColor: '#B91C1C',
+        backgroundColor: '#7F1D1D',
         bottom: 0,
         left: 0,
-        opacity: 0.6,
         position: 'absolute',
         top: 0,
     },
-    progressTrack: {
-        backgroundColor: '#E2E8F0',
-        borderRadius: 999,
-        height: 6,
-        overflow: 'hidden',
-        width: '100%',
+    holdButtonInner: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
     },
-    darkProgressTrack: {
-        backgroundColor: '#334155',
+    holdButtonIcon: {
+        alignItems: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.18)',
+        borderRadius: 20,
+        height: 40,
+        justifyContent: 'center',
+        width: 40,
     },
-    progressBar: {
-        backgroundColor: '#DC2626',
-        borderRadius: 999,
-        height: '100%',
+    holdCountdown: {
+        color: '#FFFFFF',
+        fontSize: 20,
+        fontVariant: ['tabular-nums'],
+        fontWeight: '900',
+    },
+    holdButtonCopy: {
+        flex: 1,
+        gap: 2,
+    },
+    holdButtonEyebrow: {
+        color: '#FEE2E2',
+        fontSize: 12,
+        fontWeight: '900',
+        letterSpacing: 0.6,
+    },
+    holdButtonText: {
+        color: '#FFFFFF',
+        fontSize: 17,
+        fontWeight: '900',
+    },
+    doneButton: {
+        alignItems: 'center',
+        backgroundColor: colors.text,
+        borderRadius: 14,
+        justifyContent: 'center',
+        minHeight: 52,
+    },
+    darkDoneButton: {
+        backgroundColor: '#FFBF00',
+    },
+    doneButtonText: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '800',
+    },
+    darkDoneButtonText: {
+        color: '#0F172A',
     },
     serverContext: {
         color: colors.secondary,
@@ -1034,40 +1493,20 @@ const styles = StyleSheet.create({
     },
     darkCloseButton: {
         backgroundColor: '#334155',
-        borderRadius: 24,
-    },
-    darkIntro: {
-        color: '#94A3B8',
-    },
-    darkSectionTitle: {
-        color: '#F8FAFC',
     },
     darkHelper: {
         color: '#94A3B8',
-    },
-    darkContextOption: {
-        backgroundColor: '#0F172A',
-        borderColor: '#334155',
-    },
-    darkContextOptionSelected: {
-        backgroundColor: 'rgba(220, 38, 38, 0.25)',
-        borderColor: '#EF4444',
-    },
-    darkContextText: {
-        color: '#F8FAFC',
     },
     darkOptionText: {
         color: '#F8FAFC',
     },
     beaconBanner: {
-        backgroundColor: '#DC2626',
-        borderRadius: 14,
-        gap: 6,
+        borderRadius: 16,
+        gap: 8,
         padding: 16,
     },
     darkBeaconBanner: {
         backgroundColor: '#1E293B',
-        borderColor: '#EF4444',
         borderWidth: 2,
     },
     beaconHeader: {
@@ -1076,34 +1515,47 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     pulseDot: {
-        backgroundColor: '#F87171',
-        borderRadius: 4,
-        height: 8,
-        width: 8,
+        borderRadius: 5,
+        height: 10,
+        width: 10,
     },
     beaconEyebrow: {
-        color: '#FEE2E2',
+        color: '#FFFFFF',
+        flexShrink: 1,
         fontSize: 12,
         fontWeight: '900',
-        letterSpacing: 1.1,
+        letterSpacing: 1,
+        opacity: 0.92,
+    },
+    beaconTitleRow: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 10,
     },
     beaconTitle: {
         color: '#FFFFFF',
-        fontSize: 18,
+        flex: 1,
+        fontSize: 19,
         fontWeight: '900',
+        lineHeight: 24,
     },
     beaconBody: {
-        color: '#FEE2E2',
-        fontSize: 13,
-        lineHeight: 18,
+        color: '#FFFFFF',
+        fontSize: 14,
+        lineHeight: 20,
+        opacity: 0.92,
+    },
+    darkBeaconBody: {
+        color: '#CBD5E1',
+        opacity: 1,
     },
     safetyDeskCard: {
         backgroundColor: colors.surface,
         borderColor: colors.border,
-        borderRadius: 14,
+        borderRadius: 16,
         borderWidth: 1,
-        gap: 12,
-        padding: 14,
+        gap: 14,
+        padding: 16,
     },
     darkSafetyDeskCard: {
         backgroundColor: '#1E293B',
@@ -1116,11 +1568,11 @@ const styles = StyleSheet.create({
     },
     safetyDeskBadge: {
         alignItems: 'center',
-        backgroundColor: '#10B981',
+        backgroundColor: '#047857',
         borderRadius: 20,
-        height: 38,
+        height: 40,
         justifyContent: 'center',
-        width: 38,
+        width: 40,
     },
     safetyDeskCopy: {
         flex: 1,
@@ -1128,76 +1580,17 @@ const styles = StyleSheet.create({
     },
     safetyDeskTitle: {
         color: colors.text,
-        fontSize: 15,
+        fontSize: 16,
         fontWeight: '800',
     },
     safetyDeskSub: {
         color: colors.secondary,
-        fontSize: 12,
-    },
-    darkHoldSection: {
-        backgroundColor: 'transparent',
-    },
-    darkHoldInstruction: {
-        color: '#94A3B8',
-    },
-    preparingBanner: {
-        alignItems: 'center',
-        backgroundColor: '#FFF3C4',
-        borderColor: '#FFBF00',
-        borderRadius: 12,
-        borderWidth: 1,
-        flexDirection: 'row',
-        gap: 10,
-        padding: 12,
-    },
-    darkPreparingBanner: {
-        backgroundColor: '#1E293B',
-        borderColor: '#FFBF00',
-    },
-    preparingMark: {
-        alignItems: 'center',
-        backgroundColor: '#FFF3C4',
-        borderRadius: 14,
-        height: 28,
-        justifyContent: 'center',
-        width: 28,
-    },
-    preparingCopy: {
-        flex: 1,
-        gap: 2,
-    },
-    preparingTitle: {
-        color: '#806000',
-        fontSize: 14,
-        fontWeight: '800',
-    },
-    darkPreparingTitle: {
-        color: '#FFBF00',
-    },
-    preparingDetail: {
-        color: '#806000',
-        fontSize: 12,
-        lineHeight: 16,
-    },
-    darkPreparingDetail: {
-        color: '#94A3B8',
-    },
-    beaconBannerSending: {
-        backgroundColor: '#806000',
-    },
-    beaconBannerRetrying: {
-        backgroundColor: '#806000',
-    },
-    beaconBannerOffline: {
-        backgroundColor: '#991B1B',
-    },
-    pulseDotAmber: {
-        backgroundColor: '#FFBF00',
+        fontSize: 13,
+        lineHeight: 18,
     },
     confirmModalOverlay: {
         alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.65)',
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
         flex: 1,
         justifyContent: 'center',
         padding: 20,
@@ -1227,22 +1620,25 @@ const styles = StyleSheet.create({
     confirmIconCircle: {
         alignItems: 'center',
         backgroundColor: '#FEE2E2',
-        borderRadius: 24,
-        height: 48,
+        borderRadius: 28,
+        height: 56,
         justifyContent: 'center',
         marginBottom: 4,
-        width: 48,
+        width: 56,
+    },
+    darkConfirmIconCircle: {
+        backgroundColor: 'rgba(239, 68, 68, 0.18)',
     },
     confirmModalTitle: {
         color: '#0F172A',
-        fontSize: 18,
+        fontSize: 20,
         fontWeight: '900',
         textAlign: 'center',
     },
     confirmModalSubtitle: {
         color: '#64748B',
-        fontSize: 13,
-        lineHeight: 18,
+        fontSize: 14,
+        lineHeight: 20,
         textAlign: 'center',
     },
     confirmSummaryBox: {
@@ -1250,26 +1646,33 @@ const styles = StyleSheet.create({
         borderColor: '#E2E8F0',
         borderRadius: 12,
         borderWidth: 1,
-        gap: 8,
-        padding: 12,
+        gap: 12,
+        padding: 14,
     },
     darkConfirmSummaryBox: {
         backgroundColor: '#0F172A',
         borderColor: '#334155',
     },
     confirmSummaryRow: {
-        gap: 2,
+        gap: 3,
     },
     confirmSummaryLabel: {
-        color: '#94A3B8',
-        fontSize: 12,
+        color: '#64748B',
+        fontSize: 11,
         fontWeight: '900',
-        letterSpacing: 0.6,
+        letterSpacing: 0.8,
     },
     confirmSummaryValue: {
         color: '#0F172A',
-        fontSize: 13,
+        fontSize: 15,
         fontWeight: '700',
+        lineHeight: 20,
+    },
+    confirmSummaryCoords: {
+        color: '#64748B',
+        fontFamily: 'monospace',
+        fontSize: 12,
+        fontVariant: ['tabular-nums'],
     },
     confirmModalActions: {
         flexDirection: 'row',
@@ -1279,32 +1682,34 @@ const styles = StyleSheet.create({
     confirmCancelBtn: {
         alignItems: 'center',
         backgroundColor: '#F1F5F9',
-        borderRadius: 12,
+        borderRadius: 14,
         flex: 1,
         justifyContent: 'center',
-        minHeight: 46,
+        minHeight: 52,
         paddingHorizontal: 12,
     },
     darkConfirmCancelBtn: {
         backgroundColor: '#334155',
     },
     confirmCancelText: {
-        color: '#475569',
-        fontSize: 13,
+        color: '#334155',
+        fontSize: 15,
         fontWeight: '800',
     },
     confirmSendBtn: {
         alignItems: 'center',
         backgroundColor: '#DC2626',
-        borderRadius: 12,
+        borderRadius: 14,
         flex: 1.4,
+        flexDirection: 'row',
+        gap: 8,
         justifyContent: 'center',
-        minHeight: 46,
+        minHeight: 52,
         paddingHorizontal: 12,
     },
     confirmSendText: {
         color: '#FFFFFF',
-        fontSize: 13.5,
+        fontSize: 15,
         fontWeight: '900',
     },
 });

@@ -29,6 +29,8 @@ final class FuelWorkspaceViewModel
         return [
             'id' => (int) $request->getKey(),
             'reference' => $request->reference,
+            // Only the mobile API stamps a client request id, so it marks field-app submissions.
+            'submitted_via' => $request->getAttribute('client_request_id') !== null ? 'field_app' : 'web',
             'requester' => [
                 'id' => (int) $request->requester->getKey(),
                 'name' => $request->requester->name,

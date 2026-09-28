@@ -215,14 +215,14 @@ test.describe('New dispatch direct-intake contract', () => {
             name: 'Incoming work queue',
             exact: true,
         });
-        const fallbackLabel = page.getByText('Direct operational fallback', {
+        const fallbackLabel = page.getByText('Other work', {
             exact: true,
         });
-        const reconciliationLabel = page.getByText('Dispatch review', {
+        const reconciliationLabel = page.getByText('Duplicate check', {
             exact: true,
         });
         const reconciliationButton = page.getByRole('button', {
-            name: /Review unmatched handoffs/i,
+            name: /Check for duplicates/i,
         });
         const headerAddClient = page.getByRole('button', {
             name: 'Add client',
@@ -237,9 +237,7 @@ test.describe('New dispatch direct-intake contract', () => {
         const queue = page.getByRole('list', { name: 'Incoming work queue' });
         const renderedIncomingRows = queue.getByRole('listitem');
         const renderedIncomingCount = await renderedIncomingRows.count();
-        const queueScope = page.getByText(
-            /^Showing \d+ handoffs on page \d+ of \d+;/i,
-        );
+        const queueScope = page.getByText(/^Showing \d+ of \d+ orders/i);
         await expect(queueScope).toBeVisible();
         expect(countFromText(await queueScope.innerText())).toBe(
             renderedIncomingCount,
@@ -249,7 +247,7 @@ test.describe('New dispatch direct-intake contract', () => {
         await reconciliationButton.click();
         await expect(
             page.getByRole('heading', {
-                name: /reconciliation queue/i,
+                name: /duplicate dispatches/i,
             }),
         ).toBeVisible();
         const renderedReconciliationRows = page.locator(
@@ -273,7 +271,7 @@ test.describe('New dispatch direct-intake contract', () => {
             ).toBeVisible();
             await expect(
                 possibleMatches.first().getByRole('button', {
-                    name: /Review handoff to create dispatch/i,
+                    name: /Review and create dispatch/i,
                 }),
             ).toHaveCount(0);
         }
@@ -282,7 +280,7 @@ test.describe('New dispatch direct-intake contract', () => {
             .filter({ hasText: 'Rental Reservation' })
             .filter({
                 has: page.getByRole('button', {
-                    name: /Review handoff to create dispatch/i,
+                    name: /Review and create dispatch/i,
                 }),
             })
             .first();
@@ -290,12 +288,10 @@ test.describe('New dispatch direct-intake contract', () => {
         if ((await reviewableRental.count()) > 0) {
             await reviewableRental
                 .getByRole('button', {
-                    name: /Review handoff to create dispatch/i,
+                    name: /Review and create dispatch/i,
                 })
                 .click();
-            await expect(
-                page.getByText(/Reviewing rental handoff/i),
-            ).toBeVisible();
+            await expect(page.getByText(/Showing rental/i)).toBeVisible();
             await expect(
                 page.getByRole('button', { name: 'Create rental dispatch' }),
             ).toHaveCount(1);
@@ -304,7 +300,7 @@ test.describe('New dispatch direct-intake contract', () => {
                 .click();
         } else {
             await page
-                .getByRole('button', { name: /Close reconciliation queue/i })
+                .getByRole('button', { name: /Close duplicate check/i })
                 .click();
         }
 

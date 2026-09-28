@@ -93,7 +93,10 @@ export const EmergencyContactActions: React.FC<{
                                 styles.action,
                                 action.kind === 'call'
                                     ? styles.callAction
-                                    : styles.textAction,
+                                    : [
+                                          styles.textAction,
+                                          isDarkHud && styles.darkTextAction,
+                                      ],
                                 pressed && styles.pressed,
                             ]}
                         >
@@ -102,7 +105,7 @@ export const EmergencyContactActions: React.FC<{
                                 name={
                                     action.kind === 'call' ? 'phone' : 'message'
                                 }
-                                size={17}
+                                size={20}
                             />
                             <Text
                                 pointerEvents="none"
@@ -140,48 +143,56 @@ export const EmergencyContactActions: React.FC<{
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: colors.redLight,
-        borderColor: colors.redBorder,
-        borderRadius: 12,
-        borderWidth: 1,
+        borderTopColor: colors.border,
+        borderTopWidth: 1,
         gap: 8,
-        padding: 12,
+        paddingTop: 12,
     },
     title: {
         color: colors.redDark,
-        fontSize: 16,
-        fontWeight: '800',
+        fontSize: 13,
+        fontWeight: '900',
+        letterSpacing: 0.6,
+        textTransform: 'uppercase',
     },
     helper: {
         color: colors.secondary,
-        fontSize: 13,
-        lineHeight: 18,
+        fontSize: 12,
+        lineHeight: 17,
     },
     actions: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: 8,
+        marginTop: 2,
     },
     action: {
         alignItems: 'center',
-        borderRadius: 10,
+        borderRadius: 14,
+        flexBasis: '45%',
         flexDirection: 'row',
-        gap: 8,
-        minHeight: 48,
-        paddingHorizontal: 14,
+        flexGrow: 1,
+        gap: 10,
+        justifyContent: 'center',
+        minHeight: 56,
+        paddingHorizontal: 16,
     },
     callAction: {
-        backgroundColor: colors.redDark,
+        backgroundColor: '#DC2626',
     },
     textAction: {
-        backgroundColor: colors.warningDark,
+        backgroundColor: colors.text,
+    },
+    darkTextAction: {
+        backgroundColor: '#334155',
     },
     pressed: {
         opacity: 0.8,
     },
     actionText: {
         color: colors.white,
-        fontSize: 14,
+        flexShrink: 1,
+        fontSize: 16,
         fontWeight: '800',
     },
     unavailable: {
@@ -196,8 +207,7 @@ const styles = StyleSheet.create({
         lineHeight: 18,
     },
     darkContainer: {
-        backgroundColor: 'rgba(220, 38, 38, 0.12)',
-        borderColor: '#7F1D1D',
+        borderTopColor: '#334155',
     },
     darkTitle: {
         color: '#F87171',

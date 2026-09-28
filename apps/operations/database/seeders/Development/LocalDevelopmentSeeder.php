@@ -170,35 +170,14 @@ final class LocalDevelopmentSeeder extends Seeder
                 ],
             ];
 
-            $createdAssets = [];
             foreach ($assets as $assetData) {
-                $createdAssets[$assetData['code']] = OperationalAsset::query()->updateOrCreate(
+                OperationalAsset::query()->updateOrCreate(
                     ['code' => $assetData['code']],
                     $assetData,
                 );
             }
 
-            $operator = $users[RoleName::CraneOperator->value] ?? null;
-
-            // Seed location telemetry for legacy test fixtures.
-            if ($operator !== null) {
-                DB::table('location_updates')->updateOrInsert(
-                    ['user_id' => $operator->id, 'operational_asset_id' => $createdAssets['CRN-101']->id],
-                    [
-                        'latitude' => 14.5995,
-                        'longitude' => 121.0142,
-                        'accuracy_metres' => 3.2,
-                        'speed' => 0.0,
-                        'remarks' => 'Stationary at Central Depot Yard',
-                        'sharing_enabled' => true,
-                        'source' => 'field_mobile',
-                        'captured_at' => now(),
-                        'received_at' => now(),
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ],
-                );
-            }
+            // No location telemetry is seeded: positions come from real devices.
         }
 
         // Seed the Alibaton reference fleet before local scenario seeders select an asset.

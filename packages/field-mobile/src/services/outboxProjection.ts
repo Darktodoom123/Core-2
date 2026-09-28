@@ -5,6 +5,7 @@ import type {
     OutboxCommandType,
 } from '../types/index';
 import { hasLaterDependent } from './outboxDependencies';
+import { formatCoordinates, getCachedPlaceLabel } from './placeNames';
 
 export type SyncPillTone =
     'online' | 'offline' | 'checking' | 'attention' | 'failed' | 'syncing';
@@ -406,18 +407,28 @@ export function getHumanReadableActionType(cmd: OutboxCommand): {
             isTelemetry = true;
             title = 'Location Sharing Ping';
             reference = cmd.jobId ? `Job #${cmd.jobId}` : 'GPS Telemetry';
-            const lat =
-                typeof payload.latitude === 'number'
-                    ? payload.latitude.toFixed(4)
-                    : '';
-            const lon =
+
+            if (
+                typeof payload.latitude === 'number' &&
                 typeof payload.longitude === 'number'
-                    ? payload.longitude.toFixed(4)
-                    : '';
-            subtitle =
-                lat && lon
-                    ? `Coords: ${lat}, ${lon}`
-                    : 'Background GPS broadcast';
+            ) {
+                const address = getCachedPlaceLabel(
+                    payload.latitude,
+                    payload.longitude,
+                );
+                const coordinates = formatCoordinates(
+                    payload.latitude,
+                    payload.longitude,
+                );
+
+                // Nearest address when known; coordinates always shown too.
+                subtitle = address
+                    ? `${address} · ${coordinates}`
+                    : `GPS position ${coordinates}`;
+            } else {
+                subtitle = 'Background GPS broadcast';
+            }
+
             break;
         }
 

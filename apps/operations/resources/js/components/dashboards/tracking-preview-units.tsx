@@ -8,13 +8,13 @@ import {
     X,
 } from 'lucide-react';
 import { useId } from 'react';
+import { LocationLabel } from '@/components/location/location-label';
 import { formatLocationSource } from '@/components/maplibre/tracking-map-popups';
 import { Button } from '@/components/ui';
 import { FleetAssetCategoryIcon } from '@/components/workspace/fleet/fleet-asset-category-icon';
 import { classifyFleetAsset } from '@/components/workspace/fleet/fleet-asset-classification';
 import { getAssetKind, getAssetKindLabel } from '@/lib/asset-kind';
 import { cn } from '@/lib/utils';
-import { usePreciseLocation } from '@/services/reverse-geocoder';
 import type { LocationUpdateViewModel } from '@/types/workspace';
 import {
     assignedJobsite,
@@ -175,7 +175,6 @@ export function TrackingUnitDetails({
     onClose: () => void;
 }) {
     const site = assignedJobsite(location);
-    const locationName = usePreciseLocation(location);
     const availabilityLabel = location.asset?.status_label ?? 'Available';
     const isAssigned =
         location.is_assigned ?? Boolean(location.job || location.user?.name);
@@ -278,23 +277,12 @@ export function TrackingUnitDetails({
                     <dt className="text-ink-soft">Last reported location</dt>
                     <dd className="mt-1 font-medium text-ink">
                         {hasCoordinates(location) ? (
-                            <span
-                                className="flex items-center gap-1.5"
-                                title={
-                                    location.latitude !== null &&
-                                    location.longitude !== null
-                                        ? `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`
-                                        : undefined
-                                }
-                            >
-                                <MapPin
-                                    className="size-3.5 shrink-0 text-brand-strong"
-                                    aria-hidden="true"
-                                />
-                                <span className="break-words">
-                                    {locationName}
-                                </span>
-                            </span>
+                            <LocationLabel
+                                latitude={location.latitude}
+                                longitude={location.longitude}
+                                accuracyMetres={location.accuracy_metres}
+                                place={location.place}
+                            />
                         ) : location.recorded_location ? (
                             <span>
                                 Recorded location: {location.recorded_location}

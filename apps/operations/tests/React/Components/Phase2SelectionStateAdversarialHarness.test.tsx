@@ -618,7 +618,7 @@ describe('Empirical Adversarial Stress Harness: Selection Invariants & State Iso
 
             // CRITICAL INVARIANT: Telemetry coordinates and speed DL are intact
             expect(
-                screen.getByText('Coordinates (Lat, Lng)'),
+                screen.getByText('Location', { selector: 'dt' }),
             ).toBeInTheDocument();
             expect(screen.getByText('Current Speed')).toBeInTheDocument();
             expect(

@@ -529,10 +529,10 @@ describe('Phase 1 Empirical Challenger: Factual and Semantic Verifications', () 
             expect(screen.getByText('FUEL-REQ-004')).toBeInTheDocument();
             expect(screen.queryByText('FUEL-REQ-003')).not.toBeInTheDocument();
 
-            // In request card: Requested quantity is explicitly labeled "Requested: 400 Litres"
+            // In request card: Requested quantity is explicitly labeled "Requested"
             expect(
-                screen.getByText(/Requested: 400 Litres/i),
-            ).toBeInTheDocument();
+                screen.getByText('Requested').parentElement,
+            ).toHaveTextContent('400');
         });
     });
 

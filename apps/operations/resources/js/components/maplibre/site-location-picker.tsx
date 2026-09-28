@@ -13,14 +13,18 @@ import {
 } from 'lucide-react';
 import type { Marker as MapLibreMarker } from 'maplibre-gl';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { LocationLabel } from '@/components/location/location-label';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/utils';
+import { primePlace } from '@/services/reverse-geocoder';
 import type {
     DispatchAssetAssignmentViewModel,
     PlannedCraneSlotViewModel,
+    PlaceViewModel,
 } from '@/types/workspace';
 import type { LngLat } from './geojson';
 import { MapLibreMap, useMapLibre } from './maplibre-map';
+import { FOCHUN_WAREHOUSE } from './warehouse-location';
 
 export interface PinnedSlotData {
     id: string;
@@ -52,59 +56,6 @@ export interface SiteLocationPickerProps {
     ) => void;
     isSaving?: boolean;
     className?: string;
-}
-
-/**
- * Built-in coordinate catalog for key Philippine cities and construction districts
- */
-const PHILIPPINE_SITE_CATALOG: Record<string, { lat: number; lon: number }> = {
-    bgc: { lat: 14.5503, lon: 121.0505 },
-    taguig: { lat: 14.5204, lon: 121.0539 },
-    makati: { lat: 14.5547, lon: 121.0244 },
-    ortigas: { lat: 14.5866, lon: 121.0617 },
-    pasig: { lat: 14.5764, lon: 121.0851 },
-    mandaluyong: { lat: 14.5794, lon: 121.0359 },
-    'quezon city': { lat: 14.676, lon: 121.0437 },
-    qc: { lat: 14.676, lon: 121.0437 },
-    manila: { lat: 14.5995, lon: 120.9842 },
-    pasay: { lat: 14.5378, lon: 120.9996 },
-    paranaque: { lat: 14.4793, lon: 121.0198 },
-    alabang: { lat: 14.4254, lon: 121.0366 },
-    muntinlupa: { lat: 14.4081, lon: 121.0415 },
-    valenzuela: { lat: 14.6853, lon: 120.9785 },
-    caloocan: { lat: 14.6571, lon: 120.9841 },
-    clark: { lat: 15.1783, lon: 120.5361 },
-    pampanga: { lat: 15.0794, lon: 120.62 },
-    bulacan: { lat: 14.7943, lon: 120.8799 },
-    cavite: { lat: 14.3494, lon: 120.8647 },
-    laguna: { lat: 14.2814, lon: 121.2182 },
-    batangas: { lat: 13.7565, lon: 121.0583 },
-    subic: { lat: 14.8219, lon: 120.2833 },
-    cebu: { lat: 10.3157, lon: 123.8854 },
-    mandaue: { lat: 10.3396, lon: 123.9416 },
-    davao: { lat: 7.1907, lon: 125.4553 },
-    iloilo: { lat: 10.7202, lon: 122.5621 },
-    bacolod: { lat: 10.6766, lon: 122.9509 },
-    cagayan: { lat: 8.4542, lon: 124.6319 },
-};
-
-function resolveSiteCoordinates(siteName?: string | null): {
-    lat: number;
-    lon: number;
-} {
-    if (!siteName) {
-        return { lat: 14.5764, lon: 121.0851 };
-    }
-
-    const lower = siteName.toLowerCase();
-
-    for (const [keyword, coords] of Object.entries(PHILIPPINE_SITE_CATALOG)) {
-        if (lower.includes(keyword)) {
-            return coords;
-        }
-    }
-
-    return { lat: 14.5764, lon: 121.0851 };
 }
 
 /**
@@ -695,22 +646,21 @@ export function SiteLocationPicker({
         );
     }, [slotsState]);
 
-    const resolvedSiteCoords = useMemo(
-        () => resolveSiteCoordinates(siteName),
-        [siteName],
-    );
-
+    // Start on a pinned slot when there is one; otherwise on the company yard
+    // (a real, fixed facility). No site position is ever guessed from its name.
+    const hasPinnedSlot =
+        typeof activeSlot?.latitude === 'number' &&
+        typeof activeSlot?.longitude === 'number';
     const defaultCenter: [number, number] = useMemo(() => {
-        if (activeSlot?.longitude && activeSlot?.latitude) {
+        if (
+            typeof activeSlot?.longitude === 'number' &&
+            typeof activeSlot?.latitude === 'number'
+        ) {
             return [activeSlot.longitude, activeSlot.latitude];
         }
 
-        if (resolvedSiteCoords) {
-            return [resolvedSiteCoords.lon, resolvedSiteCoords.lat];
-        }
-
-        return [121.04, 14.6];
-    }, [activeSlot, resolvedSiteCoords]);
+        return FOCHUN_WAREHOUSE.position;
+    }, [activeSlot]);
 
     const handlePinDrop = (lat: number, lon: number) => {
         setError(null);
@@ -754,23 +704,13 @@ export function SiteLocationPicker({
         setSlotsState((prev) => {
             const nextNum = prev.length + 1;
             const newKey = `TC-${nextNum}`;
-            const baseSlot =
-                prev.find(
-                    (s) =>
-                        s.id === selectedSlotId || s.slotKey === selectedSlotId,
-                ) || prev[0];
             const newSlot: PinnedSlotData = {
                 id: newKey,
                 slotKey: newKey,
                 name: `Tower Crane Position ${nextNum}`,
-                latitude:
-                    typeof baseSlot?.latitude === 'number'
-                        ? Number((baseSlot.latitude + 0.0004).toFixed(7))
-                        : (latitude ?? 14.5768),
-                longitude:
-                    typeof baseSlot?.longitude === 'number'
-                        ? Number((baseSlot.longitude + 0.0004).toFixed(7))
-                        : (longitude ?? 121.0856),
+                // Unplaced until the user searches or clicks the map.
+                latitude: null,
+                longitude: null,
                 jibRadiusMeters: 60,
             };
 
@@ -825,36 +765,31 @@ export function SiteLocationPicker({
         setIsSearching(true);
 
         try {
-            const localCoords = resolveSiteCoordinates(query);
-
-            if (localCoords) {
-                setTargetFlyTo({
-                    center: [localCoords.lon, localCoords.lat],
-                    zoom: 16,
-                });
-                handlePinDrop(localCoords.lat, localCoords.lon);
-                setIsSearching(false);
-
-                return;
-            }
-
             const response = await fetch(
-                `https://nominatim.openstreetmap.org/search?format=json&countrycodes=ph&q=${encodeURIComponent(query)}&limit=1`,
+                `/operations/places/search?${new URLSearchParams({ q: query })}`,
                 {
-                    headers: { Accept: 'application/json' },
+                    credentials: 'same-origin',
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
                 },
             );
 
             if (response.ok) {
-                const results = (await response.json()) as Array<{
-                    lat: string;
-                    lon: string;
-                }>;
+                const json = (await response.json()) as {
+                    data?: {
+                        latitude: number;
+                        longitude: number;
+                        place?: PlaceViewModel;
+                    };
+                };
 
-                if (results.length > 0 && results[0]) {
-                    const lat = Number(parseFloat(results[0].lat).toFixed(7));
-                    const lon = Number(parseFloat(results[0].lon).toFixed(7));
+                if (json.data) {
+                    const lat = Number(json.data.latitude.toFixed(7));
+                    const lon = Number(json.data.longitude.toFixed(7));
 
+                    primePlace(lat, lon, json.data.place);
                     setTargetFlyTo({
                         center: [lon, lat],
                         zoom: 16,
@@ -1160,7 +1095,7 @@ export function SiteLocationPicker({
             >
                 <MapLibreMap
                     center={defaultCenter}
-                    zoom={isAllPinned ? 16 : resolvedSiteCoords ? 15 : 12}
+                    zoom={isAllPinned ? 16 : hasPinnedSlot ? 15 : 11}
                     ariaLabel="Interactive project site coordinate picker. Click to place the tower crane anchor."
                 >
                     <MultiSlotMapLayer
@@ -1193,8 +1128,15 @@ export function SiteLocationPicker({
                         data-testid="coordinates-overlay"
                         className="text-content pointer-events-none absolute right-3 bottom-3 z-[2] rounded-md border border-line/80 bg-surface/95 px-3 py-1.5 font-mono text-xs shadow-sm backdrop-blur-xs"
                     >
-                        {activeSlot.slotKey}: {activeSlot.latitude.toFixed(5)}°
-                        N, {activeSlot.longitude.toFixed(5)}° E
+                        <span className="font-semibold">
+                            {activeSlot.slotKey}:
+                        </span>{' '}
+                        <LocationLabel
+                            latitude={activeSlot.latitude}
+                            longitude={activeSlot.longitude}
+                            variant="inline"
+                            showIcon={false}
+                        />
                     </div>
                 )}
             </div>

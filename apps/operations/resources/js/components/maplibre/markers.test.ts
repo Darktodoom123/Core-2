@@ -125,12 +125,12 @@ test('keeps the SOS icon and accessible label while resolved or cancelled has no
     }
 });
 
-test('uses a strong static halo when reduced motion is requested', () => {
+test('uses a strong, motion-free fading halo when reduced motion is requested', () => {
     const marker = createMarker('active', true);
     const halo = findByClass(marker, 'maplibre-sos-marker__halo');
 
     assert.ok(halo);
-    assert.equal(halo?.style.animation, 'none');
+    assert.match(halo?.style.animation ?? '', /^maplibre-sos-halo-fade /);
     assert.match(halo?.style.boxShadow ?? '', /0 0 0 6px/);
 });
 
@@ -367,4 +367,29 @@ test('createPopupCard renders clean location name without copy button or action 
         null,
         'Action button should not render when omitted',
     );
+});
+
+test('radiates two staggered ping rings for a live SOS', () => {
+    for (const status of ['active', 'escalated', 'acknowledged'] as const) {
+        const marker = createMarker(status);
+        const pings = marker.children.filter(
+            (child) => child.className === 'maplibre-sos-marker__ping',
+        );
+
+        assert.equal(pings.length, 2, `${status} SOS should ping`);
+        assert.deepEqual(
+            pings.map((ping) => ping.dataset.pingIndex),
+            ['0', '1'],
+        );
+        assert.ok(pings.every((ping) => ping.dataset.sosStatus === status));
+    }
+});
+
+test('does not ping when reduced motion is requested or the SOS is closed', () => {
+    for (const marker of [
+        createMarker('active', true),
+        createMarker('resolved'),
+    ]) {
+        assert.equal(findByClass(marker, 'maplibre-sos-marker__ping'), null);
+    }
 });

@@ -621,6 +621,46 @@ textarea {
         infinite;
 }
 
+.maplibre-sos-marker__ping {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 0;
+    width: 44px;
+    height: 44px;
+    border: 3px solid #ef4444;
+    border-radius: 9999px;
+    background: rgb(239 68 68 / 22%);
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.6);
+    animation: maplibre-sos-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.maplibre-sos-marker__ping[data-ping-index='1'] {
+    animation-delay: 1s;
+}
+
+/* Unanswered escalations ping faster and wider; owned incidents calm down. */
+.maplibre-sos-marker__ping[data-sos-status='escalated'] {
+    animation-duration: 1.3s;
+    border-color: #dc2626;
+}
+
+.maplibre-sos-marker__ping[data-sos-status='escalated'][data-ping-index='1'] {
+    animation-delay: 0.65s;
+}
+
+.maplibre-sos-marker__ping[data-sos-status='acknowledged'] {
+    animation-duration: 3.2s;
+    border-color: #f87171;
+    background: rgb(248 113 113 / 12%);
+}
+
+.maplibre-sos-marker__ping[data-sos-status='acknowledged'][data-ping-index='1'] {
+    animation-delay: 1.6s;
+}
+
 .maplibre-sos-marker__surface {
     position: relative;
     z-index: 1;
@@ -1005,9 +1045,35 @@ textarea {
     }
 }
 
+@keyframes maplibre-sos-ping {
+    0% {
+        opacity: 0.85;
+        transform: translate(-50%, -50%) scale(0.6);
+    }
+    80%,
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(2.8);
+    }
+}
+
+@keyframes maplibre-sos-halo-fade {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.3;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
+    .maplibre-sos-marker__ping {
+        display: none;
+    }
+
     .maplibre-sos-marker__halo {
-        animation: none !important;
+        animation: maplibre-sos-halo-fade 1.8s ease-in-out infinite !important;
         box-shadow:
             0 0 0 6px rgb(220 38 38 / 38%),
             0 0 20px rgb(220 38 38 / 50%) !important;

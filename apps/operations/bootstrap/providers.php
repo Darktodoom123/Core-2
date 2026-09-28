@@ -8,6 +8,7 @@ use App\Modules\Fleet\FleetServiceProvider;
 use App\Modules\Fuel\FuelServiceProvider;
 use App\Modules\HoursOfService\HoursOfServiceServiceProvider;
 use App\Modules\Rental\RentalServiceProvider;
+use App\Platform\Geocoding\GeocodingServiceProvider;
 use App\Platform\PlatformServiceProvider;
 use App\Platform\Safety\SafetyServiceProvider;
 use App\Platform\Tracking\TrackingServiceProvider;
@@ -28,4 +29,5 @@ return [
     PlatformServiceProvider::class,
     TrackingServiceProvider::class,
     SafetyServiceProvider::class,
+    GeocodingServiceProvider::class,
 ];

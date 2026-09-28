@@ -48,10 +48,10 @@ final class DailyAccomplishmentExportDataset extends AbstractReportExportDataset
 
             yield [
                 $report->id,
-                $report->job->reference,
-                $report->job->site ?? 'Metropolitan Manila',
-                $report->author->name,
-                $hours > 0 ? "{$hours} hrs" : 'Full Shift',
+                $report->job?->reference,
+                $report->job?->site ?: 'Not recorded',
+                $report->author?->name,
+                $hours > 0 ? "{$hours} hrs" : 'Not recorded',
                 $report->work_summary,
                 strtoupper($report->status->value),
                 $report->submitted_at?->toIso8601String() ?? $report->created_at?->toIso8601String(),

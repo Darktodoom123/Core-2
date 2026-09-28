@@ -1,38 +1,126 @@
-import { useCallback, useEffect, useSyncExternalStore } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import type { LocationResolutionInput } from '@/lib/asset-kind';
+import type { PlaceViewModel } from '@/types/workspace';
 
 /**
- * Dynamic reverse geocoding service.
- * Resolves latitude/longitude coordinates to their most precise human-readable location
- * using live reverse-geocoding APIs (Photon/OpenStreetMap and BigDataCloud),
- * with client-side in-memory caching and request deduplication.
- * No hardcoded coordinates or bounding boxes.
+ * Nearest-address lookups for coordinates.
+ *
+ * The browser never calls geocoding providers itself: every lookup goes to
+ * the Operations server (`/operations/places/reverse`), which tries Stadia,
+ * then Photon, then BigDataCloud and caches the answer for everyone. Pages
+ * that already received a `place` from the server prime this cache so no
+ * request is made at all.
+ *
+ * A failed lookup is "unavailable". Coordinates are never passed off as a
+ * place name, and no location is ever invented.
  */
 
-// Cache of resolved location names keyed by rounded coordinates (~11m precision: 4 decimals)
-const locationCache = new Map<string, string>();
+export interface DetailedLocationName {
+    /** Most specific place: landmark, building, or street. */
+    primary: string;
+    /** Surrounding area from neighbourhood up to country, with postcode. */
+    secondary: string | null;
+}
 
-// In-flight promises to deduplicate simultaneous requests for identical coordinates
-const inflightRequests = new Map<string, Promise<string>>();
+export type PlaceState =
+    | { status: 'none' }
+    | { status: 'pending' }
+    | { status: 'unavailable' }
+    | ({ status: 'resolved' } & DetailedLocationName);
 
-// Listener mechanism so mounted DOM popups and React hooks are notified when coordinates resolve
+const LOOKUP_URL = '/operations/places/reverse';
+
+const placeCache = new Map<string, PlaceViewModel>();
+const inflightRequests = new Map<string, Promise<PlaceViewModel>>();
+
 type LocationResolvedListener = (key: string, locationName: string) => void;
 const listeners = new Set<LocationResolvedListener>();
+const storeListeners = new Set<() => void>();
 
+/** Five decimals (~1 m) — the same rounding the server cache uses. */
 export function getCoordinatesCacheKey(lat: number, lon: number): string {
-    return `${lat.toFixed(4)},${lon.toFixed(4)}`;
+    return `${Number(lat).toFixed(5)},${Number(lon).toFixed(5)}`;
+}
+
+/** Short one-line label: headline plus the nearest area. */
+export function placeLabel(
+    place: Pick<PlaceViewModel, 'primary' | 'secondary'>,
+): string | null {
+    if (!place.primary) {
+        return null;
+    }
+
+    const area = place.secondary?.split(', ')[0];
+
+    return area ? `${place.primary}, ${area}` : place.primary;
+}
+
+function isCoordinate(lat: unknown, lon: unknown): lat is number {
+    return (
+        typeof lat === 'number' &&
+        typeof lon === 'number' &&
+        Number.isFinite(lat) &&
+        Number.isFinite(lon)
+    );
+}
+
+function store(key: string, place: PlaceViewModel): void {
+    placeCache.set(key, place);
+    storeListeners.forEach((listener) => listener());
+
+    const label = place.status === 'resolved' ? placeLabel(place) : null;
+
+    if (label) {
+        listeners.forEach((listener) => {
+            try {
+                listener(key, label);
+            } catch {
+                // Listener errors must not break other subscribers.
+            }
+        });
+    }
+}
+
+export function getCachedPlace(lat: number, lon: number): PlaceViewModel | null {
+    return placeCache.get(getCoordinatesCacheKey(lat, lon)) ?? null;
 }
 
 export function getCachedLocationName(lat: number, lon: number): string | null {
-    return locationCache.get(getCoordinatesCacheKey(lat, lon)) ?? null;
+    const place = getCachedPlace(lat, lon);
+
+    return place?.status === 'resolved' ? placeLabel(place) : null;
 }
 
+/** Seed the cache with a known name (tests, optimistic UI). */
 export function setCachedLocationName(
     lat: number,
     lon: number,
     name: string,
 ): void {
-    locationCache.set(getCoordinatesCacheKey(lat, lon), name);
+    store(getCoordinatesCacheKey(lat, lon), {
+        status: 'resolved',
+        primary: name,
+        secondary: null,
+        provider: null,
+    });
+}
+
+/** Use a `place` the server already sent with a location. */
+export function primePlace(
+    lat: number | null | undefined,
+    lon: number | null | undefined,
+    place: PlaceViewModel | null | undefined,
+): void {
+    if (!isCoordinate(lat, lon) || !place || place.status === 'pending') {
+        return;
+    }
+
+    const key = getCoordinatesCacheKey(lat, lon as number);
+    const current = placeCache.get(key);
+
+    if (current?.status !== 'resolved') {
+        store(key, place);
+    }
 }
 
 export function onLocationResolved(
@@ -45,302 +133,214 @@ export function onLocationResolved(
     };
 }
 
-function notifyLocationResolved(key: string, locationName: string): void {
-    listeners.forEach((listener) => {
-        try {
-            listener(key, locationName);
-        } catch {
-            // Ignore listener errors
+function subscribeStore(listener: () => void): () => void {
+    storeListeners.add(listener);
+
+    return () => {
+        storeListeners.delete(listener);
+    };
+}
+
+async function requestPlace(
+    lat: number,
+    lon: number,
+    signal?: AbortSignal,
+): Promise<PlaceViewModel> {
+    const unavailable: PlaceViewModel = {
+        status: 'unavailable',
+        primary: null,
+        secondary: null,
+        provider: null,
+    };
+
+    try {
+        const params = new URLSearchParams({
+            latitude: String(lat),
+            longitude: String(lon),
+        });
+        const response = await fetch(`${LOOKUP_URL}?${params}`, {
+            credentials: 'same-origin',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            signal,
+        });
+
+        if (!response.ok) {
+            return unavailable;
         }
-    });
+
+        const json = (await response.json()) as { data?: PlaceViewModel };
+
+        return json.data?.status === 'resolved' && json.data.primary
+            ? json.data
+            : unavailable;
+    } catch {
+        return unavailable;
+    }
 }
 
-interface PhotonFeature {
-    properties?: {
-        name?: string;
-        street?: string;
-        housenumber?: string;
-        locality?: string;
-        district?: string;
-        city?: string;
-        county?: string;
-        state?: string;
-        country?: string;
-        type?: string;
-    };
+/** Resolve (or reuse) the place for a coordinate. Deduplicates requests. */
+export async function resolvePlace(
+    lat: number,
+    lon: number,
+    signal?: AbortSignal,
+): Promise<PlaceViewModel> {
+    const key = getCoordinatesCacheKey(lat, lon);
+    const cached = placeCache.get(key);
+
+    if (cached && cached.status !== 'pending') {
+        return cached;
+    }
+
+    const existing = inflightRequests.get(key);
+
+    if (existing) {
+        return existing;
+    }
+
+    const request = requestPlace(lat, lon, signal)
+        .then((place) => {
+            // An aborted request says nothing about the place; don't cache it.
+            if (!signal?.aborted) {
+                store(key, place);
+            }
+
+            return place;
+        })
+        .finally(() => {
+            inflightRequests.delete(key);
+        });
+
+    inflightRequests.set(key, request);
+
+    return request;
 }
 
-function formatPhotonLocation(feature: PhotonFeature): string | null {
-    const p = feature.properties;
-
-    if (!p) {
-        return null;
-    }
-
-    const parts: string[] = [];
-    const name = p.name?.trim();
-    const street = p.street?.trim();
-    const housenumber = p.housenumber?.trim();
-    const locality = p.locality?.trim();
-    const district = p.district?.trim();
-    const city = p.city?.trim() || p.county?.trim();
-
-    // 1. Street address with house number
-    const streetAddress = [housenumber, street].filter(Boolean).join(' ');
-
-    // 2. Specific POI / building / facility name
-    if (
-        name &&
-        name.toLowerCase() !== city?.toLowerCase() &&
-        name.toLowerCase() !== street?.toLowerCase()
-    ) {
-        parts.push(name);
-    }
-
-    // 3. Street name if distinct from POI name
-    if (streetAddress && !parts.includes(streetAddress)) {
-        parts.push(streetAddress);
-    } else if (
-        street &&
-        !parts.includes(street) &&
-        street.toLowerCase() !== city?.toLowerCase()
-    ) {
-        parts.push(street);
-    }
-
-    // 4. Neighborhood / Suburb / Quarter (exclude generic district numbers)
-    const subArea =
-        locality ||
-        (district && !/^district\s+[ivxlcdm0-9]+/i.test(district)
-            ? district
-            : null);
-
-    if (
-        subArea &&
-        !parts.includes(subArea) &&
-        subArea.toLowerCase() !== city?.toLowerCase()
-    ) {
-        parts.push(subArea);
-    }
-
-    // 5. City / Municipality
-    if (city && !parts.includes(city)) {
-        parts.push(city);
-    } else if (parts.length === 0 && p.state) {
-        parts.push(p.state.trim());
-    }
-
-    return parts.length > 0 ? parts.join(', ') : null;
-}
-
-interface BigDataCloudResponse {
-    locality?: string;
-    city?: string;
-    principalSubdivision?: string;
-    countryName?: string;
-    localityInfo?: {
-        informative?: Array<{ name: string; description?: string }>;
-    };
-}
-
-function formatBigDataCloudLocation(data: BigDataCloudResponse): string | null {
-    const parts: string[] = [];
-
-    // Optional landmark name
-    const landmark = data.localityInfo?.informative
-        ?.find(
-            (item) =>
-                item.name &&
-                !item.name.toLowerCase().includes('archdiocese') &&
-                !item.name.toLowerCase().includes('district') &&
-                !item.name.toLowerCase().includes('diocese'),
-        )
-        ?.name?.trim();
-
-    const locality = data.locality?.trim();
-    const city = data.city?.trim();
-
-    if (landmark) {
-        parts.push(landmark);
-    }
-
-    const cleanLocality = locality?.replace(/^City of\s+/i, '');
-    const cleanCity = city?.replace(/^City of\s+/i, '');
-
-    if (cleanLocality && !parts.includes(cleanLocality)) {
-        parts.push(cleanLocality);
-    } else if (cleanCity && !parts.includes(cleanCity)) {
-        parts.push(cleanCity);
-    }
-
-    return parts.length > 0 ? parts.join(', ') : null;
-}
-
-/**
- * Dynamically reverse geocodes latitude/longitude coordinates to a human-readable location name.
- */
+/** One-line nearest address, or null when no provider could name it. */
 export async function reverseGeocode(
     latitude: number,
     longitude: number,
     signal?: AbortSignal,
-): Promise<string> {
-    const cacheKey = getCoordinatesCacheKey(latitude, longitude);
-    const cached = locationCache.get(cacheKey);
+): Promise<string | null> {
+    const place = await resolvePlace(latitude, longitude, signal);
 
-    if (cached) {
-        return cached;
-    }
+    return place.status === 'resolved' ? placeLabel(place) : null;
+}
 
-    const existingInflight = inflightRequests.get(cacheKey);
+/** Headline + surrounding area, or null when unavailable. */
+export async function reverseGeocodeDetailed(
+    latitude: number,
+    longitude: number,
+    signal?: AbortSignal,
+): Promise<DetailedLocationName | null> {
+    const place = await resolvePlace(latitude, longitude, signal);
 
-    if (existingInflight) {
-        return existingInflight;
-    }
-
-    const fetchPromise = (async () => {
-        // Strategy 1: Photon (OSM-powered, street/neighborhood/city precision, open CORS)
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 3000);
-
-            if (signal) {
-                signal.addEventListener('abort', () => controller.abort(), {
-                    once: true,
-                });
-            }
-
-            const photonUrl = `https://photon.komoot.io/reverse?lat=${latitude}&lon=${longitude}`;
-            const res = await fetch(photonUrl, { signal: controller.signal });
-            clearTimeout(timeoutId);
-
-            if (res.ok) {
-                const json = (await res.json()) as {
-                    features?: PhotonFeature[];
-                };
-                const features = json.features ?? [];
-
-                if (features.length > 0 && features[0]) {
-                    const formatted = formatPhotonLocation(features[0]);
-
-                    if (formatted) {
-                        locationCache.set(cacheKey, formatted);
-                        notifyLocationResolved(cacheKey, formatted);
-
-                        return formatted;
-                    }
-                }
-            }
-        } catch {
-            // Photon failed or timed out; proceed to Strategy 2
-        }
-
-        // Strategy 2: BigDataCloud (administrative locality/city fallback)
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 3000);
-
-            if (signal) {
-                signal.addEventListener('abort', () => controller.abort(), {
-                    once: true,
-                });
-            }
-
-            const bdcUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`;
-            const res = await fetch(bdcUrl, { signal: controller.signal });
-            clearTimeout(timeoutId);
-
-            if (res.ok) {
-                const json = (await res.json()) as BigDataCloudResponse;
-                const formatted = formatBigDataCloudLocation(json);
-
-                if (formatted) {
-                    locationCache.set(cacheKey, formatted);
-                    notifyLocationResolved(cacheKey, formatted);
-
-                    return formatted;
-                }
-            }
-        } catch {
-            // BigDataCloud failed or timed out
-        }
-
-        // Strategy 3: Graceful fallback when network is completely offline
-        const fallback = `GPS ${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`;
-        locationCache.set(cacheKey, fallback);
-        notifyLocationResolved(cacheKey, fallback);
-
-        return fallback;
-    })().finally(() => {
-        inflightRequests.delete(cacheKey);
-    });
-
-    inflightRequests.set(cacheKey, fetchPromise);
-
-    return fetchPromise;
+    return place.status === 'resolved' && place.primary
+        ? { primary: place.primary, secondary: place.secondary }
+        : null;
 }
 
 /**
- * React hook to resolve a location's most precise name dynamically without hardcoding.
- * Prioritizes actual physical coordinates to reflect the current real-time location,
- * falling back to assigned job site or asset base location when GPS is absent.
+ * Nearest address for a coordinate as React state. Uses the server-sent
+ * `place` when given; otherwise looks it up once and shares the result.
  */
-export function usePreciseLocation(
-    location?: LocationResolutionInput | null,
-): string {
-    const jobSite = location?.job?.site?.trim();
-    const assetLoc = location?.asset?.location?.trim();
-    const lat = location?.latitude;
-    const lon = location?.longitude;
-    const hasCoords =
-        lat !== null && lat !== undefined && lon !== null && lon !== undefined;
+export function usePlace(
+    latitude: number | null | undefined,
+    longitude: number | null | undefined,
+    serverPlace?: PlaceViewModel | null,
+): PlaceState {
+    const hasFix = isCoordinate(latitude, longitude);
+    const key = hasFix
+        ? getCoordinatesCacheKey(latitude, longitude as number)
+        : null;
 
-    const cacheKey = hasCoords ? getCoordinatesCacheKey(lat, lon) : null;
+    if (hasFix) {
+        primePlace(latitude, longitude, serverPlace);
+    }
 
-    const resolvedGeoName = useSyncExternalStore(
-        useCallback(
-            (notify) => {
-                if (!cacheKey) {
-                    return () => {};
-                }
-
-                return onLocationResolved((key) => {
-                    if (key === cacheKey) {
-                        notify();
-                    }
-                });
-            },
-            [cacheKey],
-        ),
-        () => (cacheKey ? (locationCache.get(cacheKey) ?? null) : null),
+    const cached = useSyncExternalStore(
+        subscribeStore,
+        () => (key ? (placeCache.get(key) ?? null) : null),
         () => null,
     );
 
     useEffect(() => {
-        if (!hasCoords || !cacheKey) {
+        if (!hasFix || !key || placeCache.get(key)?.status === 'resolved') {
             return;
         }
 
-        if (!locationCache.has(cacheKey)) {
-            const controller = new AbortController();
-            void reverseGeocode(lat, lon, controller.signal);
+        const controller = new AbortController();
+        void resolvePlace(latitude, longitude as number, controller.signal);
 
-            return () => {
-                controller.abort();
-            };
-        }
-    }, [hasCoords, cacheKey, lat, lon]);
+        return () => controller.abort();
+    }, [hasFix, key, latitude, longitude]);
 
-    if (hasCoords) {
-        return resolvedGeoName ?? 'Locating…';
+    if (!hasFix) {
+        return { status: 'none' };
     }
+
+    if (!cached || cached.status === 'pending') {
+        return { status: 'pending' };
+    }
+
+    return cached.status === 'resolved' && cached.primary
+        ? {
+              status: 'resolved',
+              primary: cached.primary,
+              secondary: cached.secondary,
+          }
+        : { status: 'unavailable' };
+}
+
+export const ADDRESS_PENDING_LABEL = 'Finding address…';
+export const ADDRESS_UNAVAILABLE_LABEL = 'Address unavailable';
+
+/**
+ * One-line location for lists and cards. With a GPS fix: the nearest
+ * address. Without one: the assigned job site or asset base, labelled so it
+ * is never mistaken for a live position.
+ */
+export function usePreciseLocation(
+    location?: (LocationResolutionInput & { place?: PlaceViewModel | null }) | null,
+): string {
+    const place = usePlace(
+        location?.latitude,
+        location?.longitude,
+        location?.place,
+    );
+
+    if (place.status === 'resolved') {
+        return placeLabel(place) ?? place.primary;
+    }
+
+    if (place.status === 'pending') {
+        return ADDRESS_PENDING_LABEL;
+    }
+
+    if (place.status === 'unavailable') {
+        return ADDRESS_UNAVAILABLE_LABEL;
+    }
+
+    const jobSite = location?.job?.site?.trim();
 
     if (jobSite) {
-        return jobSite;
+        return `Job site: ${jobSite} (no live GPS)`;
     }
 
-    if (assetLoc) {
-        return assetLoc;
+    const assetBase = location?.asset?.location?.trim();
+
+    if (assetBase) {
+        return `Base: ${assetBase} (no live GPS)`;
     }
 
-    return 'Location unavailable';
+    return 'No GPS fix';
+}
+
+/** Test helper: forget every cached place. */
+export function clearPlaceCache(): void {
+    placeCache.clear();
+    inflightRequests.clear();
+    storeListeners.forEach((listener) => listener());
 }

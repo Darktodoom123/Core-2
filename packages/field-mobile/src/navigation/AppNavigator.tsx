@@ -93,6 +93,11 @@ import {
     revokeDevicePushToken,
     setupNotificationListeners,
 } from '../services/notificationService';
+import {
+    configurePlaceLookup,
+    placeLabel,
+    resolvePlace,
+} from '../services/placeNames';
 import { createDefaultOutboxRepository } from '../storage/outboxRepository';
 import type {
     OutboxRepository,
@@ -107,6 +112,7 @@ import type {
     DispatchStatus,
     DutyStatus,
     OutboxCommand,
+    PlaceName,
     ActivateSosIncidentPayload,
     SosConfiguration,
     SosDeliveryState,
@@ -125,6 +131,8 @@ import { statusBarAppearance } from './status-bar-appearance';
 export { isAuthorizedFieldRole } from '../auth/fieldRoles';
 
 const SOS_LOCATION_TIMEOUT_MS = 10_000;
+// How long the SOS sheet waits for a live GPS fix before using a recent one.
+const SOS_LIVE_FIX_WAIT_MS = 3_000;
 
 type HistoryRow = Record<string, unknown>;
 
@@ -261,10 +269,19 @@ function mapHosCycleHistory(data: {
                 const observedAt = historyString(row, 'location_observed_at');
                 const acceptedAt = historyString(row, 'accepted_at');
                 const freshness = historyString(row, 'location_freshness');
-                const locationName = historyString(row, 'location_name');
+                const serverPlace = (row as { place?: PlaceName | null })
+                    .place;
+                // Nearest address from the server, else the name the device
+                // stored when the status was logged.
+                const locationName =
+                    (serverPlace?.status === 'resolved'
+                        ? placeLabel(serverPlace)
+                        : null) ?? historyString(row, 'location_name');
                 const location =
                     freshness === 'last_known'
-                        ? 'Last known location'
+                        ? locationName
+                            ? `Last known: ${locationName}`
+                            : 'Last known location'
                         : freshness === 'unavailable'
                           ? 'Location unavailable'
                           : (locationName ?? 'GPS position');
@@ -424,6 +441,7 @@ async function captureBoundedEmergencyLocation(
         latitude: number;
         longitude: number;
         accuracyMetres?: number | null;
+        observedAt?: string | null;
     }>,
 ): Promise<{
     latitude: number;
@@ -452,7 +470,7 @@ async function captureBoundedEmergencyLocation(
             latitude: location.latitude,
             longitude: location.longitude,
             accuracy_metres: location.accuracyMetres ?? null,
-            captured_at: new Date().toISOString(),
+            captured_at: location.observedAt ?? new Date().toISOString(),
         };
     } catch {
         return null;
@@ -571,6 +589,11 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     const [sosSheetOpen, setSosSheetOpen] = useState(false);
     const [activeSosIncident, setActiveSosIncident] =
         useState<SosIncident | null>(null);
+    // Id of the last completed SOS command the server has confirmed is no
+    // longer active (resolved/cancelled), so a new SOS can be raised.
+    const [sosClearedCommandId, setSosClearedCommandId] = useState<
+        string | null
+    >(null);
     const [sosConfiguration, setSosConfiguration] = useState<SosConfiguration>({
         automatic_retry_window_minutes: 15,
         actions: [],
@@ -757,6 +780,36 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         () => nativeLocationAdapter.getTrackingLocation(),
         [],
     );
+    // SOS wants the most precise fix available: a live high-accuracy GPS
+    // reading first, then the general fallback chain (fresh cache, last known).
+    const getSosLocation = useCallback(async () => {
+        const live = nativeLocationAdapter.getTrackingLocation();
+        live.catch(() => undefined);
+
+        // Wait briefly for a live high-accuracy fix; if the radio is slow,
+        // answer with the fresh-cache/fallback chain so the operator sees a
+        // position within seconds. The SOS sheet refreshes every 10 s and
+        // keeps the more accurate fix, so a later live reading still wins.
+        const quick = await Promise.race([
+            live.catch(() => null),
+            new Promise<null>((resolve) =>
+                setTimeout(() => resolve(null), SOS_LIVE_FIX_WAIT_MS),
+            ),
+        ]);
+
+        return quick ?? nativeLocationAdapter.getCurrentLocation(false);
+    }, []);
+
+    useEffect(() => {
+        configurePlaceLookup({
+            server:
+                status === 'authenticated'
+                    ? (lat, lon) => apiClient.fetchPlace(lat, lon)
+                    : null,
+            device: (lat, lon) =>
+                nativeLocationAdapter.reverseGeocodeAddress(lat, lon),
+        });
+    }, [apiClient, status]);
 
     const refreshActiveSosIncident = useCallback(async () => {
         if (status !== 'authenticated') {
@@ -862,6 +915,58 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
 
         return () => clearInterval(interval);
     }, [activeSosIncident, isOnline, refreshActiveSosIncident, status]);
+
+    const newestSosCommand = outboxCommands
+        .filter((command) => command.type === 'activate_sos')
+        .sort((left, right) =>
+            right.createdAt.localeCompare(left.createdAt),
+        )[0];
+    const completedSosCommandId =
+        newestSosCommand?.state === 'completed' ? newestSosCommand.id : null;
+
+    useEffect(() => {
+        // A completed SOS with no active incident is either still being
+        // fetched or already closed on the server. Ask once; only a confirmed
+        // "no active incident" re-arms the sheet for a new SOS.
+        if (
+            status !== 'authenticated' ||
+            isOnline !== true ||
+            activeSosIncident ||
+            !completedSosCommandId ||
+            sosClearedCommandId === completedSosCommandId
+        ) {
+            return;
+        }
+
+        let cancelled = false;
+        void apiClient
+            .fetchActiveSosIncident()
+            .then((incident) => {
+                if (cancelled) {
+                    return;
+                }
+
+                if (incident) {
+                    setActiveSosIncident(incident);
+                } else {
+                    setSosClearedCommandId(completedSosCommandId);
+                }
+            })
+            .catch(() => {
+                // Stay on the truthful "delivered" state until reachable.
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        activeSosIncident,
+        apiClient,
+        completedSosCommandId,
+        isOnline,
+        sosClearedCommandId,
+        status,
+    ]);
 
     useEffect(() => {
         const reconnected =
@@ -1269,8 +1374,8 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
             }
 
             try {
-                const [cityResult, weatherResult] = await Promise.allSettled([
-                    nativeLocationAdapter.reverseGeocodeCity(lat, lon),
+                const [placeResult, weatherResult] = await Promise.allSettled([
+                    resolvePlace(lat, lon),
                     apiClient.fetchLocationWeather(lat, lon),
                 ]);
 
@@ -1279,17 +1384,14 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                 }
 
                 const data = weatherResult.value;
-                const localCity =
-                    cityResult.status === 'fulfilled' ? cityResult.value : null;
+                const nearest =
+                    placeResult.status === 'fulfilled'
+                        ? placeLabel(placeResult.value)
+                        : null;
 
-                if (localCity && localCity.trim() !== '') {
-                    data.location_name = localCity.trim();
-                } else if (
-                    !data.location_name ||
-                    data.location_name.trim() === ''
-                ) {
-                    data.location_name = `${lat.toFixed(2)}°, ${lon.toFixed(2)}°`;
-                }
+                // Nearest address only; never coordinates dressed as a name.
+                data.location_name =
+                    nearest ?? (data.location_name?.trim() || null);
 
                 setWeather(data);
                 setWeatherError(null);
@@ -1383,7 +1485,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                         ? commandOutbox.processQueue(apiClient)
                         : Promise.resolve(null);
                 const locationPromise =
-                    captureBoundedEmergencyLocation(getCurrentLocation);
+                    captureBoundedEmergencyLocation(getSosLocation);
                 const result = await processPromise;
 
                 if (result?.requiresAuthentication) {
@@ -1427,7 +1529,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         [
             apiClient,
             commandOutbox,
-            getCurrentLocation,
+            getSosLocation,
             handleLogout,
             handleRequestFailure,
             isOnline,
@@ -1608,15 +1710,13 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
 
         if (snapshot.latitude !== null && snapshot.longitude !== null) {
             try {
-                locationName = await Promise.race([
-                    nativeLocationAdapter.reverseGeocodeCity(
-                        snapshot.latitude,
-                        snapshot.longitude,
-                    ),
+                const place = await Promise.race([
+                    resolvePlace(snapshot.latitude, snapshot.longitude),
                     new Promise<null>((resolve) =>
-                        setTimeout(() => resolve(null), 800),
+                        setTimeout(() => resolve(null), 1500),
                     ),
                 ]);
+                locationName = place ? placeLabel(place) : null;
             } catch {
                 locationName = null;
             }
@@ -2625,7 +2725,9 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         : isSosActivating
           ? 'sending'
           : latestSosCommand?.state === 'completed'
-            ? 'delivered'
+            ? sosClearedCommandId === latestSosCommand.id
+                ? 'preparing'
+                : 'delivered'
             : latestSosCommand?.state === 'expired' ||
                 latestSosCommand?.error?.code === 'SOS_EXPIRED'
               ? 'expired'
@@ -3129,7 +3231,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                     onActivate={handleActivateSos}
                     onClassify={handleClassifySos}
                     onClose={() => setSosSheetOpen(false)}
-                    onGetLocation={getCurrentLocation}
+                    onGetLocation={getSosLocation}
                     visible={sosSheetOpen}
                 />
             </SafeAreaView>

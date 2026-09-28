@@ -23,6 +23,7 @@ use App\Modules\Rental\Models\RentalReservation;
 use App\Modules\Rental\ViewModels\RentalHandoffViewModel;
 use App\Platform\Attachments\Models\Attachment;
 use App\Platform\Audit\Models\AuditEvent;
+use App\Platform\Geocoding\Services\PlaceNameResolver;
 use App\Platform\Gpt\Enums\GptRecommendationStatus;
 use App\Platform\Gpt\Models\GptRecommendation;
 use App\Platform\Identity\Enums\PermissionName;
@@ -885,6 +886,37 @@ final class OperationsWorkspaceViewModel
      */
     public static function locations(Collection $locations): array
     {
+        // Nearest addresses for every unit in one cache query; misses are
+        // looked up in the background and arrive on the next refresh.
+        $places = app(PlaceNameResolver::class)->describeMany(
+            $locations->map(static fn ($location): array => [data_get($location, 'latitude'), data_get($location, 'longitude')]),
+        );
+
+        return array_map(
+            static fn (array $row): array => $row + ['place' => self::placeFrom($places, $row['latitude'] ?? null, $row['longitude'] ?? null)],
+            self::locationRows($locations),
+        );
+    }
+
+    /**
+     * @param  array<string, array<string, mixed>>  $places
+     * @return array<string, mixed>|null
+     */
+    private static function placeFrom(array $places, mixed $latitude, mixed $longitude): ?array
+    {
+        if (! is_numeric($latitude) || ! is_numeric($longitude)) {
+            return null;
+        }
+
+        return $places[PlaceNameResolver::key((float) $latitude, (float) $longitude)] ?? null;
+    }
+
+    /**
+     * @param  Collection<int, LatestLocationDto>|Collection<int, LocationUpdate>|Collection<int, mixed>  $locations
+     * @return array<int, array<string, mixed>>
+     */
+    private static function locationRows(Collection $locations): array
+    {
         return $locations->map(static function ($location): array {
             if ($location instanceof LatestLocationDto) {
                 return $location->toViewModel();
@@ -1220,6 +1252,7 @@ final class OperationsWorkspaceViewModel
             'captured_at' => $capturedAt,
             'freshness_status' => $age === null || $age > 1800 ? 'offline' : ($age >= 900 ? 'stale' : ($age > 180 ? 'delayed' : 'fresh')),
             'context' => $model->getAttribute('location_context'),
+            'place' => app(PlaceNameResolver::class)->describe($latitude, $longitude),
         ];
     }
 
@@ -1595,7 +1628,11 @@ final class OperationsWorkspaceViewModel
             }
         }
 
-        return $reports->map(static function (JobReport $report) use ($delayLogsByJob, $dvirsByJob, $fuelByJob): array {
+        $places = app(PlaceNameResolver::class)->describeMany(
+            $reports->map(static fn (JobReport $report): array => [$report->latitude, $report->longitude]),
+        );
+
+        return $reports->map(static function (JobReport $report) use ($delayLogsByJob, $dvirsByJob, $fuelByJob, $places): array {
             $dvirsList = $report->relationLoaded('job') && $report->job->relationLoaded('dvirInspections')
                 ? $report->job->dvirInspections->map(static fn ($d): array => [
                     'id' => (int) $d->id,
@@ -1636,6 +1673,7 @@ final class OperationsWorkspaceViewModel
                 'meter_type' => $report->meter_type,
                 'latitude' => $report->latitude !== null ? (float) $report->latitude : null,
                 'longitude' => $report->longitude !== null ? (float) $report->longitude : null,
+                'place' => self::placeFrom($places, $report->latitude, $report->longitude),
                 'resubmitted_count' => (int) $report->resubmitted_count,
                 'can_be_resubmitted' => $report->canBeResubmitted(),
                 'started_at' => $report->started_at?->toIso8601String(),

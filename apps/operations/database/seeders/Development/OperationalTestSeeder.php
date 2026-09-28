@@ -19,7 +19,6 @@ use App\Shared\Assets\Enums\AssetStatus;
 use App\Shared\Assets\Models\OperationalAsset;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 
@@ -101,8 +100,8 @@ final class OperationalTestSeeder extends Seeder
                 'site_notes' => $usingAlibatonFleet
                     ? 'XCMG XCT25L5_S1 truck-crane lift. Outrigger ground compaction verified. Radio channel 4.'
                     : 'Tandem lift with secondary 80T crane. Outrigger ground compaction verified. Radio channel 4.',
-                'site_latitude' => 14.5547000,
-                'site_longitude' => 121.0244000,
+                'site_latitude' => null,
+                'site_longitude' => null,
                 'priority' => DispatchPriority::Priority,
                 'status' => DispatchStatus::Working,
                 'version' => 1,
@@ -138,8 +137,8 @@ final class OperationalTestSeeder extends Seeder
                 'assigned_by' => $creator->id,
                 'active_from' => $now->copy()->subHours(4)->subMinutes(30),
                 'active_until' => null,
-                'site_latitude' => 14.5547000,
-                'site_longitude' => 121.0244000,
+                'site_latitude' => null,
+                'site_longitude' => null,
             ]
         );
 
@@ -172,8 +171,6 @@ final class OperationalTestSeeder extends Seeder
                 'started_at' => $now->copy()->subHours(4)->subMinutes(30),
                 'ended_at' => $now->copy()->subHours(4),
                 'duration_minutes' => 30,
-                'latitude' => 14.5995000,
-                'longitude' => 121.0142000,
                 'location_name' => 'Central Depot Yard to Site',
                 'remarks' => 'Transit to Pier 4 site',
             ]
@@ -189,8 +186,6 @@ final class OperationalTestSeeder extends Seeder
             [
                 'duty_status' => DutyStatus::OPERATING,
                 'started_at' => $now->copy()->subHours(4),
-                'latitude' => 14.5547000,
-                'longitude' => 121.0244000,
                 'location_name' => 'North Staging Terminal - Pier 4',
                 'remarks' => $usingAlibatonFleet
                     ? 'Operating XCMG XCT25L5_S1 truck crane for structural steel erection'
@@ -198,25 +193,6 @@ final class OperationalTestSeeder extends Seeder
             ]
         );
 
-        // 9. Fleet Telemetry Location Update
-        DB::table('location_updates')->updateOrInsert(
-            ['user_id' => $operator->id, 'operational_asset_id' => $crane->id],
-            [
-                'dispatch_job_id' => $job->id,
-                'latitude' => 14.5547000,
-                'longitude' => 121.0244000,
-                'accuracy_metres' => 2.5,
-                'speed' => 0.0,
-                'remarks' => $usingAlibatonFleet
-                    ? 'Active XCMG XCT25L5_S1 truck-crane operations at Pier 4'
-                    : 'Active tandem lift operations at Pier 4',
-                'sharing_enabled' => true,
-                'source' => 'field_mobile',
-                'captured_at' => $now,
-                'received_at' => $now,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ]
-        );
+        // Live fleet positions come only from real devices; none are seeded.
     }
 }

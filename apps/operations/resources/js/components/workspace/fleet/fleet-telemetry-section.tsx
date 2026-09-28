@@ -1,5 +1,6 @@
 import { Compass, MapPin, Navigation } from 'lucide-react';
 import React, { lazy, Suspense } from 'react';
+import { LocationLabel } from '@/components/location/location-label';
 import { Button } from '@/components/ui';
 import { WeatherSafetyTelemetry } from '@/components/weather/weather-safety-telemetry';
 import {
@@ -104,11 +105,15 @@ export function FleetTelemetrySection({
             <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="rounded-lg bg-surface-subtle p-3">
                     <dt className="text-xs font-medium text-ink-soft">
-                        Coordinates (Lat, Lng)
+                        Location
                     </dt>
-                    <dd className="mt-1 font-mono text-sm font-semibold text-ink tabular-nums">
-                        {location.latitude?.toFixed(5)},{' '}
-                        {location.longitude?.toFixed(5)}
+                    <dd className="mt-1 text-sm">
+                        <LocationLabel
+                            latitude={location.latitude}
+                            longitude={location.longitude}
+                            accuracyMetres={location.accuracy_metres}
+                            place={location.place}
+                        />
                     </dd>
                 </div>
                 <div className="rounded-lg bg-surface-subtle p-3">

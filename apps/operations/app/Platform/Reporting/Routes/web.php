@@ -1,6 +1,8 @@
 <?php
 
+use App\Platform\Reporting\Http\Controllers\AssetWeeklyReportController;
 use App\Platform\Reporting\Http\Controllers\JobReportController;
+use App\Platform\Reporting\Http\Controllers\JobReportDocumentController;
 use App\Platform\Reporting\Http\Controllers\OperationsSummaryController;
 use App\Platform\Reporting\Http\Controllers\ReportExportController;
 use Illuminate\Support\Facades\Route;
@@ -16,6 +18,12 @@ Route::middleware(['auth', 'active', 'verified', 'throttle:120,1'])->group(funct
     Route::prefix('operations')->group(function (): void {
         Route::get('/job-reports', [JobReportController::class, 'index']);
         Route::post('/job-reports', [JobReportController::class, 'store']);
+        Route::middleware('throttle:exports')->group(function (): void {
+            Route::get('/job-reports/packet.pdf', [JobReportDocumentController::class, 'packet'])->name('operations.job-reports.packet');
+            Route::get('/job-reports/{jobReport}/pdf', [JobReportDocumentController::class, 'pdf'])->name('operations.job-reports.pdf');
+            Route::get('/reports/asset-weekly/{asset}/download', [AssetWeeklyReportController::class, 'download'])->name('operations.reports.asset-weekly.download');
+        });
+        Route::get('/reports/asset-weekly', [AssetWeeklyReportController::class, 'show'])->name('operations.reports.asset-weekly');
         Route::get('/job-reports/{jobReport}', [JobReportController::class, 'show']);
         Route::post('/job-reports/{jobReport}/resubmit', [JobReportController::class, 'resubmit']);
         Route::put('/job-reports/{jobReport}', [JobReportController::class, 'resubmit']);

@@ -3,6 +3,7 @@
 namespace App\Modules\HoursOfService\Http\Resources\V1;
 
 use App\Modules\HoursOfService\Models\OperatorDutyLog;
+use App\Platform\Geocoding\Services\PlaceNameResolver;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -58,6 +59,7 @@ class DutyLogResource extends JsonResource
             'location_freshness' => $freshness,
             'location_label' => $locationLabel,
             'location_name' => $this->location_name,
+            'place' => app(PlaceNameResolver::class)->describe($this->latitude, $this->longitude),
             'remarks' => $this->remarks,
         ];
     }

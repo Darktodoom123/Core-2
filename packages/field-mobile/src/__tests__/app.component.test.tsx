@@ -1416,7 +1416,7 @@ describe('native application component tree', () => {
         expect(screen.queryByTestId('bottom-nav-today')).toBeNull();
         const navigation = within(screen.getByTestId('bottom-nav-bar'));
         expect(navigation.getAllByRole('tab')).toHaveLength(2);
-        expect(navigation.getByLabelText('Documents')).toBeVisible();
+        expect(navigation.getByLabelText('Home')).toBeVisible();
         expect(navigation.getByLabelText('Profile')).toBeVisible();
         expect(navigation.getAllByRole('button')).toHaveLength(1);
         expect(
@@ -1425,12 +1425,12 @@ describe('native application component tree', () => {
         expect(navigation.getByTestId('bottom-nav-sos-slot')).toBeVisible();
         expect(screen.getAllByTestId('open-emergency-sos')).toHaveLength(1);
         expect(screen.queryByTestId('bottom-nav-route')).toBeNull();
-        expect(screen.getByTestId('bottom-nav-documents')).toBeVisible();
+        expect(screen.getByTestId('bottom-nav-home')).toBeVisible();
         expect(screen.queryByText(/synced 2 min ago/i)).toBeNull();
         expect(screen.queryByText('Inspection')).toBeNull();
     });
 
-    it('keeps the field navigation focused on documents, SOS, and profile', async () => {
+    it('keeps the field navigation focused on home, SOS, and profile', async () => {
         const { fetchFn } = createApi({ assignedJobs: [driverJob] });
 
         await renderScreen(
@@ -1443,7 +1443,8 @@ describe('native application component tree', () => {
 
         await screen.findByText(new RegExp(`^Ref: ${driverJob.reference}`));
         expect(screen.queryByTestId('bottom-nav-safety')).toBeNull();
-        expect(screen.getByTestId('bottom-nav-documents')).toBeVisible();
+        expect(screen.getByTestId('bottom-nav-home')).toBeVisible();
+        expect(screen.queryByTestId('bottom-nav-documents')).toBeNull();
         expect(screen.getByTestId('bottom-nav-sos-slot')).toBeVisible();
     });
 

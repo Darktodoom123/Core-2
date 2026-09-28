@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
     Pressable,
     RefreshControl,
@@ -221,6 +221,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
         boolean | null
     >(null);
     const [activeNavItem, setActiveNavItem] = useState<FieldScreen>('today');
+    const scrollViewRef = useRef<ScrollView>(null);
 
     const [prevProps, setPrevProps] = useState({
         isUnitLinked,
@@ -508,18 +509,15 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
             return;
         }
 
-        if (item === 'documents') {
-            onOpenDocuments?.();
-
-            return;
-        }
-
+        // Already on Home, so the tab returns to the top.
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
         setActiveNavItem(item);
     };
 
     return (
         <View style={[styles.screenRoot, isDarkHud && styles.darkScreenRoot]}>
             <ScrollView
+                ref={scrollViewRef}
                 contentInsetAdjustmentBehavior="automatic"
                 contentContainerStyle={styles.content}
                 refreshControl={

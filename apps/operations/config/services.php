@@ -48,6 +48,17 @@ return [
         'proactive_cooldown_minutes' => 5,
     ],
 
+    // Reverse geocoding (coordinates -> nearest address). Providers are tried
+    // in order; Stadia needs STADIA_MAPS_API_KEY for server-side calls.
+    'geocoding' => [
+        'providers' => array_values(array_filter(array_map('trim', explode(',', (string) env('GEOCODING_PROVIDERS', 'stadia,photon,bigdatacloud'))))),
+        'timeout' => (float) env('GEOCODING_TIMEOUT', 4.0),
+        'retry_after_minutes' => (int) env('GEOCODING_RETRY_AFTER_MINUTES', 15),
+        'stadia_key' => env('STADIA_MAPS_API_KEY') ?: env('VITE_STADIA_MAPS_API_KEY'),
+        // Address search (site pins) is limited to this ISO country code.
+        'search_country' => env('GEOCODING_SEARCH_COUNTRY', 'PH'),
+    ],
+
     'tracking' => [
         'driver' => env('TRACKING_SERVICE_DRIVER', 'database'),
         'url' => env('TRACKING_SERVICE_URL', 'http://localhost:8001'),

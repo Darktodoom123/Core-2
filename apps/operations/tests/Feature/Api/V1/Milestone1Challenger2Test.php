@@ -27,6 +27,13 @@ describe('Milestone 1 Challenger 2: Data Binding & Asset Serialization', functio
     it('verifies GET /api/v1/dispatch-jobs returns complete asset metadata for seeded operator user_id: 4', function (): void {
         $this->seed(OperationalTestSeeder::class);
 
+        // The dev seeder leaves site pins unplaced (no invented coordinates);
+        // pin the assignment here so serialization of real values is tested.
+        DispatchAssetAssignment::query()->update([
+            'site_latitude' => 14.5547,
+            'site_longitude' => 121.0244,
+        ]);
+
         /** @var User $operator */
         $operator = User::query()->where('email', 'operator@example.com')->firstOrFail();
         $token = $operator->createToken('Mobile Token')->plainTextToken;

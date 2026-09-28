@@ -1,12 +1,33 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resolveLocationName } from '@/lib/asset-kind';
 import {
+    clearPlaceCache,
     getCachedLocationName,
     getCoordinatesCacheKey,
     onLocationResolved,
+    primePlace,
     reverseGeocode,
+    reverseGeocodeDetailed,
     setCachedLocationName,
 } from '@/services/reverse-geocoder';
+
+function serverPlace(primary: string, secondary: string | null = null) {
+    return {
+        ok: true,
+        json: async () => ({
+            data: { status: 'resolved', primary, secondary, provider: 'stadia' },
+        }),
+    } as Response;
+}
+
+beforeEach(() => {
+    clearPlaceCache();
+    vi.restoreAllMocks();
+});
+
+afterEach(() => {
+    vi.restoreAllMocks();
+});
 
 describe('Location Resolution Hierarchy', () => {
     it('prioritizes live coordinates over assigned job site to show current physical location', () => {
@@ -21,168 +42,152 @@ describe('Location Resolution Hierarchy', () => {
         expect(result).toBe('Ayala Avenue, Makati');
     });
 
-    it('falls back to assigned job site when coordinates are absent', () => {
+    it('labels the assigned job site so it is never mistaken for a live position', () => {
         const result = resolveLocationName({
             job: { site: 'Pier 4 Expansion Project' },
             asset: { location: 'Central Yard Depot' },
             latitude: null,
             longitude: null,
         });
-        expect(result).toBe('Pier 4 Expansion Project');
+        expect(result).toBe('Job site: Pier 4 Expansion Project (no live GPS)');
     });
 
-    it('falls back to asset base location when job site and coordinates are absent', () => {
+    it('labels the asset base when job site and coordinates are absent', () => {
         const result = resolveLocationName({
             job: null,
             asset: { location: 'North Warehouse Berth 2' },
             latitude: null,
             longitude: null,
         });
-        expect(result).toBe('North Warehouse Berth 2');
+        expect(result).toBe('Base: North Warehouse Berth 2 (no live GPS)');
     });
 
-    it('returns cached reverse-geocoded location when available', () => {
-        setCachedLocationName(14.5547, 121.0244, 'Ayala Avenue, Makati');
+    it('uses the place the server already sent without a request', () => {
+        const fetchSpy = vi.spyOn(globalThis, 'fetch');
 
         const result = resolveLocationName({
-            job: null,
-            asset: null,
-            latitude: 14.5547,
-            longitude: 121.0244,
+            latitude: 14.762045,
+            longitude: 121.07749,
+            place: {
+                status: 'resolved',
+                primary: 'Purificacion Street',
+                secondary: 'Bernabe Heights, Caloocan',
+                provider: 'stadia',
+            },
         });
-        expect(result).toBe('Ayala Avenue, Makati');
+
+        expect(result).toBe('Purificacion Street, Bernabe Heights');
+        expect(fetchSpy).not.toHaveBeenCalled();
     });
 
-    it('returns Locating… and initiates geocoding when uncached coordinates are provided', () => {
+    it('shows Finding address… and asks the server when uncached coordinates are provided', () => {
+        const fetchSpy = vi
+            .spyOn(globalThis, 'fetch')
+            .mockResolvedValue(serverPlace('Somewhere'));
+
         const result = resolveLocationName({
-            job: null,
-            asset: null,
             latitude: 14.9999,
             longitude: 120.8888,
         });
-        expect(result).toBe('Locating…');
+
+        expect(result).toBe('Finding address…');
+        expect(String(fetchSpy.mock.calls[0]?.[0])).toContain(
+            '/operations/places/reverse?latitude=14.9999&longitude=120.8888',
+        );
     });
 
-    it('returns Location Unavailable when no job, asset, or coordinates are provided', () => {
-        const result = resolveLocationName({
-            job: null,
-            asset: null,
-            latitude: null,
-            longitude: null,
-        });
-        expect(result).toBe('Location Unavailable');
+    it('says there is no GPS fix when nothing is known', () => {
+        expect(resolveLocationName({ latitude: null, longitude: null })).toBe(
+            'No GPS fix',
+        );
     });
 });
 
 describe('Reverse Geocoder Service', () => {
-    beforeEach(() => {
-        vi.restoreAllMocks();
-    });
-
-    afterEach(() => {
-        vi.restoreAllMocks();
-    });
-
-    it('generates consistent cache keys rounded to 4 decimals (~11m precision)', () => {
+    it('keys the cache at five decimals (~1 m), matching the server', () => {
         expect(getCoordinatesCacheKey(14.554712, 121.024409)).toBe(
-            '14.5547,121.0244',
+            '14.55471,121.02441',
         );
         expect(getCoordinatesCacheKey(14.554749, 121.024401)).toBe(
-            '14.5547,121.0244',
+            '14.55475,121.02440',
         );
     });
 
-    it('resolves location name via Photon API and caches result', async () => {
-        const mockPhotonResponse = {
-            features: [
-                {
-                    properties: {
-                        name: 'Ayala Triangle Gardens',
-                        locality: 'Bel-Air',
-                        city: 'Makati',
-                        country: 'Philippines',
-                    },
-                },
-            ],
-        };
+    it('resolves through the Operations server, never a third party, and caches the result', async () => {
+        const fetchSpy = vi
+            .spyOn(globalThis, 'fetch')
+            .mockResolvedValue(
+                serverPlace('Ayala Triangle Gardens', 'Bel-Air, Makati'),
+            );
 
-        const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
-            ok: true,
-            json: async () => mockPhotonResponse,
-        } as Response);
-
-        const name = await reverseGeocode(14.557, 121.023);
-        expect(name).toBe('Ayala Triangle Gardens, Bel-Air, Makati');
+        expect(await reverseGeocode(14.557, 121.023)).toBe(
+            'Ayala Triangle Gardens, Bel-Air',
+        );
         expect(getCachedLocationName(14.557, 121.023)).toBe(
-            'Ayala Triangle Gardens, Bel-Air, Makati',
+            'Ayala Triangle Gardens, Bel-Air',
         );
-        expect(fetchSpy).toHaveBeenCalledOnce();
+        expect(await reverseGeocode(14.557, 121.023)).toBe(
+            'Ayala Triangle Gardens, Bel-Air',
+        );
 
-        // Second call should hit the cache without calling fetch again
-        const cachedName = await reverseGeocode(14.557, 121.023);
-        expect(cachedName).toBe('Ayala Triangle Gardens, Bel-Air, Makati');
         expect(fetchSpy).toHaveBeenCalledOnce();
+        const url = String(fetchSpy.mock.calls[0]?.[0]);
+        expect(url.startsWith('/operations/places/reverse?')).toBe(true);
+        expect(url).not.toMatch(/photon|bigdatacloud|stadiamaps/);
     });
 
-    it('formats POI name, street address, and house number with maximum precision', async () => {
-        vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
-            ok: true,
-            json: async () => ({
-                features: [
-                    {
-                        properties: {
-                            name: 'PBCom Tower',
-                            street: 'Ayala Avenue',
-                            housenumber: '6795',
-                            locality: 'San Antonio',
-                            city: 'Makati',
-                        },
-                    },
-                ],
-            }),
-        } as Response);
-
-        const name = await reverseGeocode(14.5588, 121.0189);
-        expect(name).toBe(
-            'PBCom Tower, 6795 Ayala Avenue, San Antonio, Makati',
+    it('returns the headline and area for detail panels', async () => {
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+            serverPlace(
+                'Purificacion Street',
+                'Bernabe Heights, Caloocan, Metro Manila 1427, Philippines',
+            ),
         );
+
+        await expect(
+            reverseGeocodeDetailed(14.762045, 121.07749),
+        ).resolves.toEqual({
+            primary: 'Purificacion Street',
+            secondary:
+                'Bernabe Heights, Caloocan, Metro Manila 1427, Philippines',
+        });
     });
 
     it('notifies registered listeners when a location is resolved', async () => {
         const listener = vi.fn();
         const unsubscribe = onLocationResolved(listener);
-
-        vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
-            ok: true,
-            json: async () => ({
-                features: [
-                    {
-                        properties: {
-                            name: 'Roxas Boulevard',
-                            city: 'Manila',
-                        },
-                    },
-                ],
-            }),
-        } as Response);
-
-        await reverseGeocode(14.58, 120.98);
-        const expectedKey = getCoordinatesCacheKey(14.58, 120.98);
-
-        expect(listener).toHaveBeenCalledWith(
-            expectedKey,
-            'Roxas Boulevard, Manila',
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+            serverPlace('Roxas Boulevard', 'Manila'),
         );
 
+        await reverseGeocode(14.58, 120.98);
+
+        expect(listener).toHaveBeenCalledWith(
+            getCoordinatesCacheKey(14.58, 120.98),
+            'Roxas Boulevard, Manila',
+        );
         unsubscribe();
     });
 
-    it('falls back gracefully to GPS coordinates string when APIs are unreachable', async () => {
+    it('never passes coordinates off as a place name when the lookup fails', async () => {
         vi.spyOn(globalThis, 'fetch').mockRejectedValue(
             new Error('Network offline'),
         );
 
-        const fallback = await reverseGeocode(14.1234, 121.5678);
-        expect(fallback).toBe('GPS 14.1234°, 121.5678°');
+        expect(await reverseGeocode(14.1234, 121.5678)).toBeNull();
+        expect(
+            resolveLocationName({ latitude: 14.1234, longitude: 121.5678 }),
+        ).toBe('Address unavailable');
+    });
+
+    it('ignores pending server places so the lookup still runs', () => {
+        primePlace(10, 20, {
+            status: 'pending',
+            primary: null,
+            secondary: null,
+            provider: null,
+        });
+
+        expect(getCachedLocationName(10, 20)).toBeNull();
     });
 });

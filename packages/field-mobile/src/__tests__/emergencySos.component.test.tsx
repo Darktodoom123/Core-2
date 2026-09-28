@@ -514,4 +514,98 @@ describe('Emergency SOS sheet', () => {
         jest.clearAllTimers();
         jest.useRealTimers();
     });
+
+    it('shows offline readiness, pins the send control, and hides the no-op note button before activation', async () => {
+        const view = await render(
+            <EmergencySosSheet
+                actions={[]}
+                deliveryState="preparing"
+                isOnline={false}
+                jobs={[job]}
+                onActivate={jest.fn().mockResolvedValue(undefined)}
+                onClassify={jest.fn().mockResolvedValue(undefined)}
+                onClose={jest.fn()}
+                visible
+            />,
+        );
+
+        expect(view.getByText('Offline · will queue')).toBeVisible();
+        expect(view.getByText('No GPS fix')).toBeVisible();
+        expect(view.getByText('DISP-007 · CRANE-9')).toBeVisible();
+        expect(
+            view.getByText(
+                'No signal. The alert will be saved and sent automatically when you reconnect.',
+            ),
+        ).toBeVisible();
+        expect(view.queryByTestId('sos-send-notes-btn')).toBeNull();
+        expect(
+            view.getByText('Notes and hazard tags are sent with the alert.'),
+        ).toBeVisible();
+    });
+
+    it('summarises an unclassified alert honestly in the confirmation dialog', async () => {
+        jest.useFakeTimers();
+
+        const view = await render(
+            <EmergencySosSheet
+                actions={[]}
+                deliveryState="preparing"
+                isOnline={true}
+                jobs={[job]}
+                onActivate={jest.fn().mockResolvedValue(undefined)}
+                onClassify={jest.fn().mockResolvedValue(undefined)}
+                onClose={jest.fn()}
+                visible
+            />,
+        );
+
+        await act(async () => {
+            fireEvent(view.getByTestId('activate-emergency-sos'), 'pressIn');
+        });
+        await act(async () => {
+            jest.advanceTimersByTime(2_000);
+        });
+
+        expect(view.getByText('Unclassified emergency')).toBeVisible();
+
+        jest.clearAllTimers();
+        jest.useRealTimers();
+    });
+
+    it('renders explicit copy for an expired alert and a Done action once resolved', async () => {
+        const onClose = jest.fn();
+        const view = await render(
+            <EmergencySosSheet
+                actions={[]}
+                deliveryState="expired"
+                isOnline={true}
+                jobs={[job]}
+                onActivate={jest.fn().mockResolvedValue(undefined)}
+                onClassify={jest.fn().mockResolvedValue(undefined)}
+                onClose={onClose}
+                visible
+            />,
+        );
+
+        expect(view.getByText('EMERGENCY NOT DELIVERED')).toBeVisible();
+
+        await view.rerender(
+            <EmergencySosSheet
+                actions={[]}
+                deliveryState="resolved"
+                isOnline={true}
+                jobs={[job]}
+                onActivate={jest.fn().mockResolvedValue(undefined)}
+                onClassify={jest.fn().mockResolvedValue(undefined)}
+                onClose={onClose}
+                visible
+            />,
+        );
+
+        expect(view.getByText('INCIDENT RESOLVED')).toBeVisible();
+        await act(async () => {
+            fireEvent.press(view.getByTestId('sos-done-btn'));
+        });
+        expect(onClose).toHaveBeenCalledTimes(1);
+    });
 });

@@ -26,6 +26,7 @@ import type {
     SosIncidentCategory,
     SosLocationSnapshot,
     User,
+    PlaceName,
     WeatherTelemetry,
     AccountDetailsResponse,
     OtpChallengeResponse,
@@ -795,6 +796,20 @@ export class FieldApiClient {
         return this.handleResponse<JobHistoryDetail>(response);
     }
 
+    /** Nearest mapped address for a coordinate (server-side geocoding). */
+    public async fetchPlace(
+        latitude: number,
+        longitude: number,
+    ): Promise<PlaceName> {
+        const url = `${this.baseUrl}/api/v1/places/reverse?latitude=${latitude}&longitude=${longitude}`;
+        const response = await this.fetchFn(url, {
+            method: 'GET',
+            headers: this.getHeaders(),
+        });
+
+        return this.handleResponse<PlaceName>(response);
+    }
+
     public async fetchLocationWeather(
         latitude: number,
         longitude: number,
@@ -877,19 +892,24 @@ export class FieldApiClient {
 
             const current = json.current;
 
-            if (!current) {
-                throw new Error('No weather telemetry found for coordinates.');
+            // A reading without wind or temperature is incomplete. Never fill
+            // gaps with defaults: missing wind would read as calm and safe.
+            if (
+                !current ||
+                typeof current.wind_speed_10m !== 'number' ||
+                typeof current.temperature_2m !== 'number' ||
+                typeof current.relative_humidity_2m !== 'number'
+            ) {
+                throw new Error('Weather observation is incomplete.');
             }
 
-            const windSpeedKmh =
-                Math.round((current.wind_speed_10m ?? 0) * 10) / 10;
+            const windSpeedKmh = Math.round(current.wind_speed_10m * 10) / 10;
             const windGustsKmh =
                 Math.round((current.wind_gusts_10m ?? windSpeedKmh) * 10) / 10;
-            const temperature =
-                Math.round((current.temperature_2m ?? 28) * 10) / 10;
+            const temperature = Math.round(current.temperature_2m * 10) / 10;
             const rainMm = Math.round((current.precipitation ?? 0) * 10) / 10;
-            const humidity = Math.round(current.relative_humidity_2m ?? 75);
-            const weatherCode = current.weather_code ?? 0;
+            const humidity = Math.round(current.relative_humidity_2m);
+            const weatherCode = current.weather_code ?? -1;
 
             const safety = this.evaluateCraneWeatherSafety(
                 windSpeedKmh,
@@ -900,7 +920,7 @@ export class FieldApiClient {
             return {
                 latitude,
                 longitude,
-                location_name: '',
+                location_name: null,
                 temperature_celsius: temperature,
                 wind_speed_kmh: windSpeedKmh,
                 wind_gusts_kmh: windGustsKmh,
@@ -980,7 +1000,7 @@ export class FieldApiClient {
             return 'Thunderstorm';
         }
 
-        return 'Clear Sky';
+        return 'Conditions not reported';
     }
 
     public async fetchJobDetail(jobId: number): Promise<DispatchJob> {

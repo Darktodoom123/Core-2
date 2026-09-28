@@ -2,17 +2,21 @@ import { router } from '@inertiajs/react';
 import {
     AlertTriangle,
     ArrowLeft,
+    CheckCircle2,
     Clock,
     Droplets,
     Fuel,
     Gauge,
+    Info,
     Plus,
     ReceiptText,
     Search,
     SearchX,
+    Smartphone,
     Truck,
     User,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Button, EmptyState, PageHeading, Panel } from '@/components/ui';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
@@ -33,6 +37,15 @@ import type { FuelReviewDecision } from './fuel-request-card';
 import { FuelVarianceBadge } from './fuel-variance-badge';
 
 type FuelQueueSort = 'newest' | 'priority';
+type FuelQueueFilter =
+    | 'all'
+    | 'pending'
+    | 'approved'
+    | 'verified'
+    | 'logged'
+    | 'anomalies'
+    | 'receipt_review';
+type FilterTone = 'ink' | 'warning' | 'brand' | 'success' | 'danger';
 
 const urgencyRank = { critical: 0, urgent: 1, normal: 2 } as const;
 const queueNextStep: Record<FuelRequestViewModel['status']['value'], string> = {
@@ -45,6 +58,21 @@ const queueNextStep: Record<FuelRequestViewModel['status']['value'], string> = {
     withdrawn: 'Request withdrawn',
 };
 
+const activeFilterClasses: Record<FilterTone, string> = {
+    ink: 'border-ink bg-ink text-canvas',
+    warning: 'border-warning/50 bg-warning-soft text-warning-strong',
+    brand: 'border-brand-strong/50 bg-brand-soft text-brand-strong',
+    success: 'border-success/50 bg-success-soft text-success-strong',
+    danger: 'border-danger/50 bg-danger-soft text-danger-strong',
+};
+
+// Exception filters stay tinted while they hold items so they read as alerts.
+const alertFilterClasses: Partial<Record<FilterTone, string>> = {
+    warning:
+        'border-warning/30 bg-warning-soft/50 text-warning-strong hover:bg-warning-soft',
+    danger: 'border-danger/30 bg-danger-soft/60 text-danger-strong hover:bg-danger-soft',
+};
+
 function formatNeededBy(value: string): string {
     return new Date(value).toLocaleString(undefined, {
         month: 'short',
@@ -52,6 +80,233 @@ function formatNeededBy(value: string): string {
         hour: '2-digit',
         minute: '2-digit',
     });
+}
+
+function FilterPill({
+    label,
+    count,
+    tone,
+    active,
+    alert = false,
+    icon: Icon,
+    onClick,
+}: {
+    label: string;
+    count: number;
+    tone: FilterTone;
+    active: boolean;
+    alert?: boolean;
+    icon?: LucideIcon;
+    onClick: () => void;
+}) {
+    return (
+        <button
+            type="button"
+            aria-pressed={active}
+            aria-label={`${label} (${count})`}
+            onClick={onClick}
+            className={cn(
+                'inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
+                active
+                    ? cn('font-semibold', activeFilterClasses[tone])
+                    : alert && count > 0 && alertFilterClasses[tone]
+                      ? alertFilterClasses[tone]
+                      : 'border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
+            )}
+        >
+            {Icon && <Icon className="h-3.5 w-3.5 shrink-0" />}
+            <span>{label}</span>
+            <span
+                className={cn(
+                    'min-w-5 rounded-md px-1 text-center text-[11px] font-semibold tabular-nums',
+                    active ? 'bg-canvas/20' : 'bg-surface-subtle text-ink-soft',
+                )}
+            >
+                {count}
+            </span>
+        </button>
+    );
+}
+
+function FuelQueueRow({
+    request,
+    selected,
+    onSelect,
+}: {
+    request: FuelRequestViewModel;
+    selected: boolean;
+    onSelect: () => void;
+}) {
+    const primaryLog = request.logs?.[0] ?? null;
+    const hasAnomaly = request.logs?.some((log) => log.is_anomaly);
+    const needsReceiptReview = request.logs?.some(
+        (log) => log.requires_receipt_review,
+    );
+    const urgency = request.urgency?.value ?? 'normal';
+    const hasTankLevel =
+        request.current_fuel_level_percent !== null &&
+        request.current_fuel_level_percent !== undefined;
+    const isOpen = !['logged', 'rejected', 'withdrawn'].includes(
+        request.status.value,
+    );
+
+    return (
+        <li>
+            <button
+                type="button"
+                onClick={onSelect}
+                aria-current={selected ? 'true' : undefined}
+                className={cn(
+                    'relative w-full py-3 pr-3 pl-4 text-left transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden focus-visible:ring-inset',
+                    selected
+                        ? 'bg-brand-soft/40'
+                        : hasAnomaly
+                          ? 'bg-danger-soft/10 hover:bg-danger-soft/20'
+                          : 'bg-surface hover:bg-surface-subtle',
+                )}
+            >
+                {/* Left rail: selection wins, otherwise urgency for open requests. */}
+                <span
+                    aria-hidden="true"
+                    className={cn(
+                        'absolute inset-y-0 left-0 w-1',
+                        selected
+                            ? 'bg-brand-strong'
+                            : isOpen && urgency === 'critical'
+                              ? 'bg-danger'
+                              : isOpen && urgency === 'urgent'
+                                ? 'bg-warning'
+                                : 'bg-transparent',
+                    )}
+                />
+
+                <div className="flex items-start justify-between gap-2">
+                    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                        <span className="font-mono text-xs font-semibold text-ink-soft tabular-nums">
+                            {request.reference}
+                        </span>
+                        {urgency !== 'normal' && (
+                            <span
+                                className={cn(
+                                    'rounded-md border px-1.5 py-px text-[10px] font-semibold tracking-wide uppercase',
+                                    urgency === 'critical'
+                                        ? 'border-danger/50 bg-danger-soft text-danger-strong'
+                                        : 'border-warning/50 bg-warning-soft text-warning-strong',
+                                )}
+                            >
+                                {urgency}
+                            </span>
+                        )}
+                        {request.submitted_via === 'field_app' && (
+                            <span
+                                className="inline-flex items-center gap-1 rounded-md border border-line bg-surface-subtle px-1.5 py-px text-[10px] font-medium text-ink-soft"
+                                title="Submitted from the field app"
+                            >
+                                <Smartphone
+                                    className="h-3 w-3"
+                                    aria-hidden="true"
+                                />
+                                Field app
+                            </span>
+                        )}
+                    </div>
+                    <CanonicalStatusBadge status={request.status} size="sm" />
+                </div>
+
+                <p className="mt-1.5 flex min-w-0 items-center gap-1.5 text-sm font-semibold text-ink">
+                    <Truck
+                        className="h-3.5 w-3.5 shrink-0 text-brand-strong"
+                        aria-hidden="true"
+                    />
+                    <span className="truncate">
+                        {request.asset
+                            ? request.asset.name
+                                ? `${request.asset.code} · ${request.asset.name}`
+                                : request.asset.code
+                            : 'No asset linked'}
+                    </span>
+                </p>
+
+                <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-ink-soft">
+                    <span className="inline-flex items-center gap-1">
+                        <User className="h-3 w-3" aria-hidden="true" />
+                        {request.requester.name}
+                    </span>
+                    {request.job && (
+                        <>
+                            <span aria-hidden="true">·</span>
+                            <span>Job {request.job.reference}</span>
+                        </>
+                    )}
+                </p>
+
+                <div className="mt-2.5 flex items-end justify-between gap-3">
+                    <p className="text-ink">
+                        <span className="text-base font-semibold tabular-nums">
+                            {request.quantity_litres} L
+                        </span>{' '}
+                        <span className="text-xs text-ink-soft">
+                            {humanize(request.fuel_type)} requested
+                        </span>
+                    </p>
+                    {primaryLog ? (
+                        <div className="flex shrink-0 flex-col items-end gap-1">
+                            <span className="text-xs font-semibold text-success-strong tabular-nums">
+                                Dispensed {primaryLog.quantity_litres} L
+                            </span>
+                            <FuelVarianceBadge
+                                variancePercentage={
+                                    primaryLog.variance_percentage
+                                }
+                                varianceLitres={primaryLog.variance_litres}
+                                isAnomaly={primaryLog.is_anomaly}
+                                compact
+                            />
+                        </div>
+                    ) : (
+                        <span
+                            className={cn(
+                                'shrink-0 text-xs',
+                                request.status.value === 'verified'
+                                    ? 'font-semibold text-success-strong'
+                                    : 'text-ink-soft',
+                            )}
+                        >
+                            {queueNextStep[request.status.value]}
+                        </span>
+                    )}
+                </div>
+
+                {((request.needed_by && isOpen) ||
+                    hasTankLevel ||
+                    needsReceiptReview) && (
+                    <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] text-ink-soft">
+                        {request.needed_by && isOpen && (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-surface-subtle px-1.5 py-0.5 tabular-nums">
+                                <Clock className="h-3 w-3" aria-hidden="true" />
+                                Needed by {formatNeededBy(request.needed_by)}
+                            </span>
+                        )}
+                        {hasTankLevel && (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-surface-subtle px-1.5 py-0.5 tabular-nums">
+                                <Gauge className="h-3 w-3" aria-hidden="true" />
+                                Tank {request.current_fuel_level_percent}%
+                            </span>
+                        )}
+                        {needsReceiptReview && (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-warning-soft px-1.5 py-0.5 font-medium text-warning-strong">
+                                <ReceiptText
+                                    className="h-3 w-3"
+                                    aria-hidden="true"
+                                />
+                                Receipt review needed
+                            </span>
+                        )}
+                    </div>
+                )}
+            </button>
+        </li>
+    );
 }
 
 interface FuelSurfaceProps {
@@ -78,15 +333,7 @@ export function FuelSurface({
     const [logModalRequest, setLogModalRequest] =
         useState<FuelRequestViewModel | null>(null);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [filterStatus, setFilterStatus] = useState<
-        | 'all'
-        | 'pending'
-        | 'approved'
-        | 'verified'
-        | 'logged'
-        | 'anomalies'
-        | 'receipt_review'
-    >('all');
+    const [filterStatus, setFilterStatus] = useState<FuelQueueFilter>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [sortMode, setSortMode] = useState<FuelQueueSort>('newest');
     const [selectedRequestId, setSelectedRequestId] = useState<number | null>(
@@ -217,6 +464,57 @@ export function FuelSurface({
             totalDispensedLitres,
         };
     }, [requests]);
+
+    const filters: {
+        value: FuelQueueFilter;
+        label: string;
+        count: number;
+        tone: FilterTone;
+        alert?: boolean;
+        icon?: LucideIcon;
+    }[] = [
+        { value: 'all', label: 'All', count: kpis.total, tone: 'ink' },
+        {
+            value: 'pending',
+            label: 'Pending Review',
+            count: kpis.pending,
+            tone: 'warning',
+        },
+        {
+            value: 'approved',
+            label: 'Approved',
+            count: kpis.approved,
+            tone: 'brand',
+        },
+        {
+            value: 'verified',
+            label: 'Verified',
+            count: kpis.verified,
+            tone: 'brand',
+        },
+        {
+            value: 'logged',
+            label: 'Logged',
+            count: kpis.logged,
+            tone: 'success',
+        },
+        {
+            value: 'anomalies',
+            label: 'Anomalies',
+            count: kpis.anomalies,
+            tone: 'danger',
+            alert: true,
+            icon: AlertTriangle,
+        },
+        {
+            value: 'receipt_review',
+            label: 'Receipt review',
+            count: kpis.receiptReview,
+            tone: 'warning',
+            alert: true,
+            icon: ReceiptText,
+        },
+    ];
 
     const filteredRequests = useMemo(() => {
         const q = searchQuery.trim().toLowerCase();
@@ -349,7 +647,7 @@ export function FuelSurface({
                     <div
                         role="group"
                         aria-label="Fuel Management sections"
-                        className="flex w-max gap-4"
+                        className="flex w-max gap-5"
                     >
                         {(
                             [
@@ -382,16 +680,40 @@ export function FuelSurface({
                         ))}
                     </div>
                 </div>
-                <p className="text-xs leading-5 text-ink-soft tabular-nums">
-                    Showing {requests.length} of{' '}
-                    {pagination?.total ?? requests.length} requests
-                    {pagination &&
-                        ` · Page ${pagination.current_page} of ${pagination.last_page}`}
-                    <span className="block">
-                        Filters, search, sorting, log records, and consumption
-                        summaries cover this page only.
-                    </span>
-                </p>
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <p className="flex items-start gap-1.5 text-xs leading-5 text-ink-soft tabular-nums">
+                        <Info
+                            className="mt-0.5 h-3.5 w-3.5 shrink-0"
+                            aria-hidden="true"
+                        />
+                        <span>
+                            Showing {requests.length} of{' '}
+                            {pagination?.total ?? requests.length} requests
+                            {pagination &&
+                                ` · Page ${pagination.current_page} of ${pagination.last_page}`}
+                            {' · '}
+                            <span>
+                                Filters, search, sorting, log records, and
+                                consumption summaries cover this page only.
+                            </span>
+                        </span>
+                    </p>
+                    {section === 'requests' && (
+                        <label className="relative block shrink-0 md:w-72">
+                            <span className="sr-only">
+                                Search fuel requests on this page
+                            </span>
+                            <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ink-soft" />
+                            <input
+                                type="search"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Search reference, asset, requester…"
+                                className="h-9 w-full rounded-lg border border-line bg-surface pr-3 pl-9 text-sm text-ink transition-colors placeholder:text-ink-soft focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong/30 focus-visible:outline-hidden"
+                            />
+                        </label>
+                    )}
+                </div>
                 {section !== 'requests' && (
                     <FuelRecordsPanel
                         requests={requests}
@@ -407,211 +729,106 @@ export function FuelSurface({
                 )}
                 {section === 'requests' && (
                     <>
-                        {/* Compact Toolbar: Counted Stage Filters & Search */}
-                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                            {/* Counted Filter Pills */}
+                        {/* Stage filters stay on one line and scroll when narrow. */}
+                        <div
+                            role="region"
+                            aria-label="Fuel request filters"
+                            tabIndex={0}
+                            className="workspace-scroll-region pb-1"
+                        >
                             <div
-                                className="flex flex-wrap items-center gap-1.5"
+                                className="flex w-max items-center gap-1.5"
                                 role="group"
                                 aria-label="Filter fuel requests by stage"
                             >
-                                <button
-                                    type="button"
-                                    aria-pressed={filterStatus === 'all'}
-                                    onClick={() => setFilterStatus('all')}
-                                    className={cn(
-                                        'inline-flex min-h-8 items-center rounded-lg px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
-                                        filterStatus === 'all'
-                                            ? 'bg-ink font-semibold text-canvas'
-                                            : 'border border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
-                                    )}
-                                >
-                                    <span>All</span>{' '}
-                                    <span className="ml-1 tabular-nums opacity-80">
-                                        ({kpis.total})
-                                    </span>
-                                </button>
-                                <button
-                                    type="button"
-                                    aria-pressed={filterStatus === 'pending'}
-                                    onClick={() => setFilterStatus('pending')}
-                                    className={cn(
-                                        'inline-flex min-h-8 items-center rounded-lg px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
-                                        filterStatus === 'pending'
-                                            ? 'border border-warning/50 bg-warning-soft font-semibold text-warning-strong'
-                                            : 'border border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
-                                    )}
-                                >
-                                    <span>Pending Review</span>{' '}
-                                    <span className="ml-1 tabular-nums opacity-80">
-                                        ({kpis.pending})
-                                    </span>
-                                </button>
-                                <button
-                                    type="button"
-                                    aria-pressed={filterStatus === 'approved'}
-                                    onClick={() => setFilterStatus('approved')}
-                                    className={cn(
-                                        'inline-flex min-h-8 items-center rounded-lg px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
-                                        filterStatus === 'approved'
-                                            ? 'border border-brand-strong/50 bg-brand-soft font-semibold text-brand-strong'
-                                            : 'border border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
-                                    )}
-                                >
-                                    <span>Approved</span>{' '}
-                                    <span className="ml-1 tabular-nums opacity-80">
-                                        ({kpis.approved})
-                                    </span>
-                                </button>
-                                <button
-                                    type="button"
-                                    aria-pressed={filterStatus === 'verified'}
-                                    onClick={() => setFilterStatus('verified')}
-                                    className={cn(
-                                        'inline-flex min-h-8 items-center rounded-lg px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
-                                        filterStatus === 'verified'
-                                            ? 'border border-brand-strong/50 bg-brand-soft font-semibold text-brand-strong'
-                                            : 'border border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
-                                    )}
-                                >
-                                    <span>Verified</span>{' '}
-                                    <span className="ml-1 tabular-nums opacity-80">
-                                        ({kpis.verified})
-                                    </span>
-                                </button>
-                                <button
-                                    type="button"
-                                    aria-pressed={filterStatus === 'logged'}
-                                    onClick={() => setFilterStatus('logged')}
-                                    className={cn(
-                                        'inline-flex min-h-8 items-center rounded-lg px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
-                                        filterStatus === 'logged'
-                                            ? 'border border-success/50 bg-success-soft font-semibold text-success-strong'
-                                            : 'border border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
-                                    )}
-                                >
-                                    <span>Logged</span>{' '}
-                                    <span className="ml-1 tabular-nums opacity-80">
-                                        ({kpis.logged})
-                                    </span>
-                                </button>
-                                <button
-                                    type="button"
-                                    aria-pressed={filterStatus === 'anomalies'}
-                                    onClick={() => setFilterStatus('anomalies')}
-                                    className={cn(
-                                        'inline-flex min-h-8 items-center rounded-lg px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
-                                        filterStatus === 'anomalies'
-                                            ? 'border border-danger/50 bg-danger-soft font-semibold text-danger-strong'
-                                            : kpis.anomalies > 0
-                                              ? 'border border-danger/30 bg-danger-soft/60 text-danger-strong hover:bg-danger-soft'
-                                              : 'border border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
-                                    )}
-                                >
-                                    <AlertTriangle className="mr-1.5 h-3.5 w-3.5 shrink-0" />
-                                    <span>Anomalies</span>{' '}
-                                    <span className="ml-1 tabular-nums opacity-80">
-                                        ({kpis.anomalies})
-                                    </span>
-                                </button>
-                                <button
-                                    type="button"
-                                    aria-pressed={
-                                        filterStatus === 'receipt_review'
-                                    }
-                                    onClick={() =>
-                                        setFilterStatus('receipt_review')
-                                    }
-                                    className={cn(
-                                        'inline-flex min-h-8 items-center rounded-lg px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
-                                        filterStatus === 'receipt_review'
-                                            ? 'border border-warning/50 bg-warning-soft font-semibold text-warning-strong'
-                                            : kpis.receiptReview > 0
-                                              ? 'border border-warning/30 bg-warning-soft/50 text-warning-strong hover:bg-warning-soft'
-                                              : 'border border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
-                                    )}
-                                >
-                                    <ReceiptText className="mr-1.5 h-3.5 w-3.5 shrink-0" />
-                                    <span>Receipt review</span>{' '}
-                                    <span className="ml-1 tabular-nums opacity-80">
-                                        ({kpis.receiptReview})
-                                    </span>
-                                </button>
+                                {filters.map((filter) => (
+                                    <FilterPill
+                                        key={filter.value}
+                                        label={filter.label}
+                                        count={filter.count}
+                                        tone={filter.tone}
+                                        alert={filter.alert}
+                                        icon={filter.icon}
+                                        active={filterStatus === filter.value}
+                                        onClick={() =>
+                                            setFilterStatus(filter.value)
+                                        }
+                                    />
+                                ))}
                             </div>
-
-                            {/* Search Field */}
-                            <label className="relative block sm:w-72">
-                                <span className="sr-only">
-                                    Search fuel requests on this page
-                                </span>
-                                <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ink-soft" />
-                                <input
-                                    type="search"
-                                    value={searchQuery}
-                                    onChange={(e) =>
-                                        setSearchQuery(e.target.value)
-                                    }
-                                    placeholder="Search reference, asset, requester, purpose…"
-                                    className="h-9 w-full rounded-lg border border-line bg-surface pr-3 pl-9 text-xs text-ink transition-colors placeholder:text-ink-soft focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand-strong/30 focus-visible:outline-hidden"
-                                />
-                            </label>
                         </div>
 
-                        {/* Truthful Accounting & Burn-Rate Anomaly Summary Strip */}
-                        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-surface-subtle px-4 py-2.5 text-xs">
-                            <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
-                                <div className="flex items-center gap-1.5">
-                                    <Droplets className="h-3.5 w-3.5 text-brand-strong" />
-                                    <span className="text-ink-soft">
-                                        <span>Requested Litres</span>:
-                                    </span>
-                                    <span className="font-semibold text-ink tabular-nums">
-                                        {kpis.totalRequestedLitres.toLocaleString()}
-                                    </span>
-                                    <span className="text-ink-soft">
-                                        Litres
-                                    </span>
-                                </div>
-                                <span className="hidden text-line sm:inline">
-                                    ·
+                        {/* Requested vs dispensed litres on this page, plus burn-rate health. */}
+                        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line text-xs sm:grid-cols-3">
+                            <div className="flex items-center gap-2.5 bg-surface px-3 py-3 sm:gap-3 sm:px-4">
+                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-strong">
+                                    <Droplets className="h-4 w-4" />
                                 </span>
-                                <div className="flex items-center gap-1.5">
-                                    <Fuel className="h-3.5 w-3.5 text-success" />
-                                    <span className="text-ink-soft">
-                                        Dispensed Logs:
-                                    </span>
-                                    <span className="font-semibold text-ink tabular-nums">
-                                        {kpis.totalDispensedLitres.toLocaleString()}
-                                    </span>
-                                    <span className="text-ink-soft">
-                                        Litres
-                                    </span>
+                                <div>
+                                    <p className="text-ink-soft">
+                                        Requested Litres
+                                    </p>
+                                    <p className="text-ink">
+                                        <span className="text-base font-semibold tabular-nums">
+                                            {kpis.totalRequestedLitres.toLocaleString()}
+                                        </span>{' '}
+                                        <span className="text-ink-soft">L</span>
+                                    </p>
                                 </div>
                             </div>
-
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2.5 bg-surface px-3 py-3 sm:gap-3 sm:px-4">
+                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-success-soft text-success-strong">
+                                    <Fuel className="h-4 w-4" />
+                                </span>
+                                <div>
+                                    <p className="text-ink-soft">
+                                        Dispensed Litres
+                                    </p>
+                                    <p className="text-ink">
+                                        <span className="text-base font-semibold tabular-nums">
+                                            {kpis.totalDispensedLitres.toLocaleString()}
+                                        </span>{' '}
+                                        <span className="text-ink-soft">L</span>
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="col-span-2 flex items-center gap-2.5 bg-surface px-3 py-2.5 sm:col-span-1 sm:gap-3 sm:px-4 sm:py-3">
                                 {kpis.anomalies > 0 ? (
-                                    <span className="inline-flex items-center gap-1.5 font-semibold text-danger tabular-nums">
-                                        <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                                        {kpis.anomalies} burn-rate{' '}
-                                        {kpis.anomalies === 1
-                                            ? 'anomaly'
-                                            : 'anomalies'}
-                                    </span>
+                                    <>
+                                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-danger-soft text-danger-strong">
+                                            <AlertTriangle className="h-4 w-4" />
+                                        </span>
+                                        <p className="font-semibold text-danger-strong tabular-nums">
+                                            {kpis.anomalies} burn-rate{' '}
+                                            {kpis.anomalies === 1
+                                                ? 'anomaly'
+                                                : 'anomalies'}
+                                        </p>
+                                    </>
                                 ) : kpis.evaluatedLogsCount > 0 ? (
-                                    <span className="font-medium text-success-strong">
-                                        All evaluated logs within baseline burn
-                                        rate
-                                    </span>
+                                    <>
+                                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-success-soft text-success-strong">
+                                            <CheckCircle2 className="h-4 w-4" />
+                                        </span>
+                                        <p className="font-medium text-success-strong">
+                                            All evaluated logs within baseline
+                                            burn rate
+                                        </p>
+                                    </>
                                 ) : (
-                                    <span className="text-ink-soft">
-                                        Not enough data to assess consumption
-                                    </span>
+                                    <>
+                                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-subtle text-ink-soft">
+                                            <Gauge className="h-4 w-4" />
+                                        </span>
+                                        <p className="text-ink-soft">
+                                            Not enough data to assess
+                                            consumption
+                                        </p>
+                                    </>
                                 )}
                             </div>
                         </div>
 
-                        {/* Main Operate-Mode Content Area */}
                         {requests.length === 0 ? (
                             <Panel className="p-8 text-center sm:p-12">
                                 <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg border border-line bg-surface-subtle text-ink-soft">
@@ -621,9 +838,10 @@ export function FuelSurface({
                                     No fuel requests yet
                                 </h3>
                                 <p className="mx-auto mt-1 max-w-md text-xs text-ink-soft">
-                                    Submit a fuel request to begin approval.
-                                    Once verified, record the actual fuel
-                                    received and its supporting receipt.
+                                    Requests from the field app and this
+                                    workspace appear here for review. Once
+                                    verified, the operator records the actual
+                                    fuel received and its receipt.
                                 </p>
                                 {capabilities.request_fuel && (
                                     <div className="mt-4">
@@ -662,9 +880,8 @@ export function FuelSurface({
                                 />
                             </Panel>
                         ) : (
-                            /* 2-Column Responsive Operate-Mode Queue & Detail Hierarchy */
+                            /* Queue beside the selected detail on desktop; one at a time on phones. */
                             <div className="grid gap-6 lg:grid-cols-12">
-                                {/* Queue Panel (Left Column: 5 Cols on Desktop) */}
                                 <div
                                     className={cn(
                                         'lg:col-span-5',
@@ -673,7 +890,7 @@ export function FuelSurface({
                                             : 'block',
                                     )}
                                 >
-                                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
+                                    <div className="mb-3 flex flex-wrap items-end justify-between gap-2 px-1">
                                         <div>
                                             <h2 className="text-base font-semibold text-ink">
                                                 Fuel requests (
@@ -684,7 +901,7 @@ export function FuelSurface({
                                             </p>
                                         </div>
                                         <label className="flex items-center gap-2 text-xs text-ink-soft">
-                                            <span>Sort page</span>
+                                            <span>Sort</span>
                                             <select
                                                 aria-label="Sort requests on this page"
                                                 value={sortMode}
@@ -711,216 +928,22 @@ export function FuelSurface({
                                         role="list"
                                         aria-label="Fuel request queue"
                                     >
-                                        {filteredRequests.map((req) => {
-                                            const isSelected =
-                                                selectedRequest?.id === req.id;
-                                            const primaryLog =
-                                                req.logs && req.logs.length > 0
-                                                    ? req.logs[0]
-                                                    : null;
-                                            const hasAnomaly = req.logs?.some(
-                                                (l) => l.is_anomaly,
-                                            );
-
-                                            return (
-                                                <li key={req.id}>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            handleSelectRequest(
-                                                                req.id,
-                                                            )
-                                                        }
-                                                        className={cn(
-                                                            'min-h-16 w-full p-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden focus-visible:ring-inset',
-                                                            isSelected
-                                                                ? 'bg-brand-soft/30 ring-1 ring-brand-strong ring-inset'
-                                                                : hasAnomaly
-                                                                  ? 'bg-danger-soft/10 hover:bg-danger-soft/20'
-                                                                  : 'bg-surface hover:bg-surface-subtle',
-                                                        )}
-                                                    >
-                                                        {/* Top Row: Reference, Badges */}
-                                                        <div className="flex items-center justify-between gap-2">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="font-mono text-xs font-semibold text-ink tabular-nums">
-                                                                    {
-                                                                        req.reference
-                                                                    }
-                                                                </span>
-                                                                <CanonicalStatusBadge
-                                                                    status={
-                                                                        req.status
-                                                                    }
-                                                                />
-                                                                {req.urgency &&
-                                                                    req.urgency
-                                                                        .value !==
-                                                                        'normal' && (
-                                                                        <span
-                                                                            className={cn(
-                                                                                'rounded-md border px-1.5 py-0.5 text-[10px] font-semibold uppercase',
-                                                                                req
-                                                                                    .urgency
-                                                                                    .value ===
-                                                                                    'critical'
-                                                                                    ? 'border-danger/50 bg-danger-soft text-danger-strong'
-                                                                                    : 'border-warning/50 bg-warning-soft text-warning-strong',
-                                                                            )}
-                                                                        >
-                                                                            {
-                                                                                req
-                                                                                    .urgency
-                                                                                    .value
-                                                                            }
-                                                                        </span>
-                                                                    )}
-                                                            </div>
-
-                                                            {primaryLog && (
-                                                                <FuelVarianceBadge
-                                                                    variancePercentage={
-                                                                        primaryLog.variance_percentage
-                                                                    }
-                                                                    varianceLitres={
-                                                                        primaryLog.variance_litres
-                                                                    }
-                                                                    isAnomaly={
-                                                                        primaryLog.is_anomaly
-                                                                    }
-                                                                    compact
-                                                                />
-                                                            )}
-                                                        </div>
-
-                                                        {/* Asset, job, and requester context */}
-                                                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-                                                            <div className="flex items-center gap-1 font-medium text-ink">
-                                                                <Truck className="h-3 w-3 text-brand-strong" />
-                                                                <span>
-                                                                    {req.asset
-                                                                        ? req
-                                                                              .asset
-                                                                              .name
-                                                                            ? `${req.asset.code} · ${req.asset.name}`
-                                                                            : req
-                                                                                  .asset
-                                                                                  .code
-                                                                        : 'No asset linked'}
-                                                                </span>
-                                                            </div>
-                                                            {req.job && (
-                                                                <span className="text-ink-soft">
-                                                                    Job{' '}
-                                                                    {
-                                                                        req.job
-                                                                            .reference
-                                                                    }
-                                                                </span>
-                                                            )}
-                                                            <div className="flex items-center gap-1 text-ink-soft">
-                                                                <User className="h-3 w-3 text-ink-soft" />
-                                                                <span>
-                                                                    {
-                                                                        req
-                                                                            .requester
-                                                                            .name
-                                                                    }
-                                                                </span>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Requested quantity and decision context */}
-                                                        <div className="mt-2.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-line/50 pt-2 text-xs">
-                                                            <span className="text-ink-soft">
-                                                                Requested:{' '}
-                                                                <strong className="font-mono font-semibold text-ink tabular-nums">
-                                                                    {
-                                                                        req.quantity_litres
-                                                                    }{' '}
-                                                                    L
-                                                                </strong>{' '}
-                                                                (
-                                                                {humanize(
-                                                                    req.fuel_type,
-                                                                )}
-                                                                )
-                                                            </span>
-
-                                                            {primaryLog ? (
-                                                                <span className="font-medium text-success-strong tabular-nums">
-                                                                    Dispensed:{' '}
-                                                                    {
-                                                                        primaryLog.quantity_litres
-                                                                    }{' '}
-                                                                    L
-                                                                </span>
-                                                            ) : (
-                                                                <span className="text-ink-soft">
-                                                                    {
-                                                                        queueNextStep[
-                                                                            req
-                                                                                .status
-                                                                                .value
-                                                                        ]
-                                                                    }
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        {(req.needed_by ||
-                                                            (req.current_fuel_level_percent !==
-                                                                null &&
-                                                                req.current_fuel_level_percent !==
-                                                                    undefined) ||
-                                                            req.logs?.some(
-                                                                (log) =>
-                                                                    log.requires_receipt_review,
-                                                            )) && (
-                                                            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-soft">
-                                                                {req.needed_by && (
-                                                                    <span className="inline-flex items-center gap-1">
-                                                                        <Clock className="h-3.5 w-3.5" />
-                                                                        Needed
-                                                                        by{' '}
-                                                                        {formatNeededBy(
-                                                                            req.needed_by,
-                                                                        )}
-                                                                    </span>
-                                                                )}
-                                                                {req.current_fuel_level_percent !==
-                                                                    null &&
-                                                                    req.current_fuel_level_percent !==
-                                                                        undefined && (
-                                                                        <span className="inline-flex items-center gap-1 tabular-nums">
-                                                                            <Gauge className="h-3.5 w-3.5" />
-                                                                            Tank{' '}
-                                                                            {
-                                                                                req.current_fuel_level_percent
-                                                                            }
-                                                                            %
-                                                                        </span>
-                                                                    )}
-                                                                {req.logs?.some(
-                                                                    (log) =>
-                                                                        log.requires_receipt_review,
-                                                                ) && (
-                                                                    <span className="inline-flex items-center gap-1 font-medium text-warning-strong">
-                                                                        <ReceiptText className="h-3.5 w-3.5" />
-                                                                        Receipt
-                                                                        review
-                                                                        needed
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                    </button>
-                                                </li>
-                                            );
-                                        })}
+                                        {filteredRequests.map((req) => (
+                                            <FuelQueueRow
+                                                key={req.id}
+                                                request={req}
+                                                selected={
+                                                    selectedRequest?.id ===
+                                                    req.id
+                                                }
+                                                onSelect={() =>
+                                                    handleSelectRequest(req.id)
+                                                }
+                                            />
+                                        ))}
                                     </ul>
                                 </div>
 
-                                {/* Detail Panel (Right Column: 7 Cols on Desktop) */}
                                 <div
                                     className={cn(
                                         'lg:col-span-7',

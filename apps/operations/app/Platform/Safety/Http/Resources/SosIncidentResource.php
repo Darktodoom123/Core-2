@@ -2,6 +2,7 @@
 
 namespace App\Platform\Safety\Http\Resources;
 
+use App\Platform\Geocoding\Services\PlaceNameResolver;
 use App\Platform\Safety\Models\SosIncident;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -65,6 +66,7 @@ final class SosIncidentResource extends JsonResource
                 'longitude' => $this->longitude,
                 'accuracy_metres' => $this->accuracy_metres,
                 'captured_at' => $this->location_captured_at?->toIso8601String(),
+                'place' => app(PlaceNameResolver::class)->describe($this->latitude, $this->longitude),
             ]),
             'location_pruned_at' => $this->location_pruned_at?->toIso8601String(),
             'version' => $this->version,

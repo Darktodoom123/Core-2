@@ -1,8 +1,15 @@
 import {
-    getCachedLocationName,
-    reverseGeocode,
+    ADDRESS_PENDING_LABEL,
+    ADDRESS_UNAVAILABLE_LABEL,
+    getCachedPlace,
+    placeLabel,
+    primePlace,
+    resolvePlace,
 } from '@/services/reverse-geocoder';
-import type { LocationUpdateViewModel } from '@/types/workspace';
+import type {
+    LocationUpdateViewModel,
+    PlaceViewModel,
+} from '@/types/workspace';
 
 export type AssetKind =
     | 'truck'
@@ -123,47 +130,49 @@ export interface LocationResolutionInput {
         location?: string | null;
     } | null;
     remarks?: string | null;
+    place?: PlaceViewModel | null;
 }
 
 /**
- * Resolves a human-readable current location name for a tracking update.
- * Prioritizes actual physical coordinates to reflect where the unit currently is,
- * falling back to assigned job site or asset base location when GPS coordinates are unavailable.
- * No hardcoded coordinates.
+ * One-line location for a tracking update (non-React callers such as map
+ * popups). With GPS: the nearest mapped address, looked up via the server.
+ * Without GPS: the assigned job site or asset base, labelled as such so it
+ * is never mistaken for a live position.
  */
 export function resolveLocationName(location: LocationResolutionInput): string {
-    // 1. Dynamic reverse-geocoded current location from live coordinates
-    if (
-        location.latitude !== null &&
-        location.latitude !== undefined &&
-        location.longitude !== null &&
-        location.longitude !== undefined
-    ) {
-        const cached = getCachedLocationName(
-            location.latitude,
-            location.longitude,
-        );
+    const { latitude, longitude } = location;
 
-        if (cached) {
-            return cached;
+    if (
+        typeof latitude === 'number' &&
+        typeof longitude === 'number' &&
+        Number.isFinite(latitude) &&
+        Number.isFinite(longitude)
+    ) {
+        primePlace(latitude, longitude, location.place);
+        const place = getCachedPlace(latitude, longitude);
+
+        if (place?.status === 'resolved') {
+            return placeLabel(place) ?? ADDRESS_UNAVAILABLE_LABEL;
+        }
+
+        if (place?.status === 'unavailable') {
+            return ADDRESS_UNAVAILABLE_LABEL;
         }
 
         if (typeof window !== 'undefined' && typeof fetch === 'function') {
-            void reverseGeocode(location.latitude, location.longitude);
+            void resolvePlace(latitude, longitude);
         }
 
-        return 'Locating…';
+        return ADDRESS_PENDING_LABEL;
     }
 
-    // 2. Fallback to assigned site if coordinates are unavailable
     if (location.job?.site?.trim()) {
-        return location.job.site.trim();
+        return `Job site: ${location.job.site.trim()} (no live GPS)`;
     }
 
-    // 3. Fallback to asset base depot if coordinates are unavailable
     if (location.asset?.location?.trim()) {
-        return location.asset.location.trim();
+        return `Base: ${location.asset.location.trim()} (no live GPS)`;
     }
 
-    return 'Location Unavailable';
+    return 'No GPS fix';
 }

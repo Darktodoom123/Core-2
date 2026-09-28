@@ -422,7 +422,7 @@ describe('Phase 2 Factual Truth & 5-Stage Machine Challenger', () => {
             expect(screen.getByText('800')).toBeInTheDocument();
 
             // Total dispensed: 290
-            expect(screen.getByText('Dispensed Logs:')).toBeInTheDocument();
+            expect(screen.getByText('Dispensed Litres')).toBeInTheDocument();
             expect(screen.getByText('290')).toBeInTheDocument();
 
             // Missing consumption baseline -> "Not enough data to assess consumption"

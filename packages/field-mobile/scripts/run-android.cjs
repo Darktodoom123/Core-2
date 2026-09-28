@@ -196,8 +196,12 @@ function resolveSafeGpuMode() {
             );
             const output = String(check.stdout ?? '').toLowerCase();
 
-            if (output.includes('amd') || output.includes('radeon')) {
-                // AMD host Vulkan ICD exhibits crashes inside Android Emulator host GPU translation
+            // AMD host Vulkan ICD exhibits crashes inside Android Emulator host GPU translation.
+            // A laptop with AMD integrated graphics beside an NVIDIA GPU renders on the NVIDIA one.
+            if (
+                (output.includes('amd') || output.includes('radeon')) &&
+                !output.includes('nvidia')
+            ) {
                 return 'swiftshader';
             }
         } catch {

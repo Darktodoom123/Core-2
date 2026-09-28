@@ -228,11 +228,24 @@ export type SosDeliveryState =
     | 'resolved'
     | 'cancelled';
 
+/**
+ * Nearest mapped address for a coordinate, resolved by the Operations server
+ * (Stadia, then Photon, then BigDataCloud) or the device geocoder offline.
+ * Never invented: `unavailable` when nothing could name the point.
+ */
+export interface PlaceName {
+    status: 'resolved' | 'pending' | 'unavailable';
+    primary: string | null;
+    secondary: string | null;
+    provider: string | null;
+}
+
 export interface SosLocationSnapshot {
     latitude: number;
     longitude: number;
     accuracy_metres?: number | null;
     captured_at: string;
+    place?: PlaceName | null;
 }
 
 export interface SosContextSelection {
@@ -888,7 +901,8 @@ export interface FieldNotificationItem {
 export interface WeatherTelemetry {
     latitude: number;
     longitude: number;
-    location_name: string;
+    /** Nearest address; null when it could not be resolved. */
+    location_name: string | null;
     temperature_celsius: number;
     wind_speed_kmh: number;
     wind_gusts_kmh: number;

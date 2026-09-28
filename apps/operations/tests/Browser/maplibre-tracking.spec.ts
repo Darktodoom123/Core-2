@@ -142,7 +142,8 @@ test('exposes the SOS marker DOM contract without blocking marker interaction', 
     ).toContainText('SOS');
     await expect(halo).toHaveAttribute('data-sos-status', 'acknowledged');
     await expect(halo).toHaveCSS('pointer-events', 'none');
-    await expect(halo).toHaveCSS('animation-name', 'none');
+    // Reduced motion keeps the halo alive with an opacity-only fade.
+    await expect(halo).toHaveCSS('animation-name', 'maplibre-sos-halo-fade');
 
     await marker.evaluate((element) => {
         element.addEventListener('click', () =>

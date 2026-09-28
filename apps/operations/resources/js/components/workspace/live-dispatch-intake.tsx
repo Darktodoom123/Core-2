@@ -158,8 +158,8 @@ export function LiveDispatchIntake({
                 if (!controller.signal.aborted) {
                     setQueueError(
                         lastLoadedQueuePage.current === queuePage
-                            ? 'Queue refresh failed. The last loaded page remains visible and may be stale; retry to refresh it.'
-                            : 'The requested queue page could not load. Retry it or return to the last loaded page.',
+                            ? "Couldn't refresh the list. You're seeing the last loaded page, which may be out of date."
+                            : "This page couldn't load. Try again, or go back to the last page.",
                     );
                 }
             } finally {
@@ -294,7 +294,7 @@ export function LiveDispatchIntake({
                                     className="flex items-center gap-1.5 rounded-md bg-surface px-3 py-1.5 text-xs font-semibold text-ink shadow-xs"
                                 >
                                     <Truck className="h-3.5 w-3.5 text-brand-strong" />
-                                    Direct Dispatch
+                                    Direct dispatch
                                 </button>
                                 <button
                                     type="button"
@@ -308,7 +308,7 @@ export function LiveDispatchIntake({
                                     className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-ink-soft hover:bg-surface hover:text-ink"
                                 >
                                     <Package className="h-3.5 w-3.5" />
-                                    Incoming Orders ({incomingTotalCount})
+                                    Incoming orders ({incomingTotalCount})
                                 </button>
                             </div>
                         </div>
@@ -376,9 +376,8 @@ export function LiveDispatchIntake({
                             New dispatch
                         </h2>
                         <p className="mt-1 max-w-3xl text-sm leading-6 text-ink-soft">
-                            Review incoming customer orders ready for
-                            operational staging, or create an ad-hoc direct
-                            dispatch.
+                            Turn a customer order from Core 1 into a dispatch,
+                            or create one directly for other work.
                         </p>
                     </div>
 
@@ -429,20 +428,20 @@ export function LiveDispatchIntake({
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                             <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
-                                Incoming customer orders
+                                From Core 1
                             </p>
                             <h3 className="mt-1 text-base font-semibold text-ink">
                                 Incoming work queue
                             </h3>
                             <p className="mt-1 max-w-2xl text-sm text-ink-soft">
-                                Select an incoming handoff to verify site
-                                details, assign equipment, and dispatch.
+                                Open an order to check the site details, then
+                                assign a crane and crew.
                             </p>
                         </div>
                         <span className="inline-flex w-fit items-center rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-ink">
                             {incomingTotalCount > 0
-                                ? `${incomingTotalCount} permitted handoffs`
-                                : 'No permitted handoffs'}
+                                ? `${incomingTotalCount} waiting`
+                                : 'Nothing waiting'}
                         </span>
                     </div>
 
@@ -451,7 +450,7 @@ export function LiveDispatchIntake({
                             className="mt-2 text-xs text-info-strong"
                             role="status"
                         >
-                            Loading the complete handoff queue…
+                            Loading orders…
                         </p>
                     )}
                     {queueError && (
@@ -467,7 +466,7 @@ export function LiveDispatchIntake({
                                     setQueueRetry((value) => value + 1)
                                 }
                             >
-                                Retry queue
+                                Try again
                             </Button>
                             {sourceDataPending && queueResult && (
                                 <Button
@@ -477,8 +476,7 @@ export function LiveDispatchIntake({
                                         setQueuePage(queueResult.current_page)
                                     }
                                 >
-                                    Return to loaded page{' '}
-                                    {queueResult.current_page}
+                                    Back to page {queueResult.current_page}
                                 </Button>
                             )}
                         </div>
@@ -506,46 +504,39 @@ export function LiveDispatchIntake({
                                 <div className="h-4 w-2/3 animate-pulse rounded bg-surface-subtle" />
                                 <div className="h-4 w-1/2 animate-pulse rounded bg-surface-subtle" />
                                 <p className="text-xs text-ink-soft">
-                                    Loading permitted handoffs for page{' '}
-                                    {queuePage} of {queueLastPage}.
+                                    Loading page {queuePage} of {queueLastPage}…
                                 </p>
                             </div>
                         ) : incomingTotalCount === 0 ? (
                             <div className="p-6 text-center">
                                 <Package className="mx-auto h-8 w-8 text-ink-soft" />
                                 <h4 className="mt-2 text-sm font-semibold text-ink">
-                                    No incoming handoffs need dispatch
+                                    No orders waiting
                                 </h4>
                                 <p className="mt-1 text-xs text-ink-soft">
-                                    No dispatch handoffs are available in the
-                                    permitted queue. Use Direct operational
-                                    fallback for work that has not arrived from
-                                    upstream.
+                                    New customer orders from Core 1 appear here.
+                                    For other work, use Create direct dispatch
+                                    below.
                                 </p>
                             </div>
                         ) : queueError ? (
                             <div className="p-6 text-center text-sm text-ink-soft">
-                                No rows are available for this page until the
-                                queue can be refreshed.
+                                This page is unavailable until the list
+                                refreshes.
                             </div>
                         ) : (
                             <div className="p-6 text-center text-sm text-ink-soft">
-                                No handoffs were returned for this page. Retry
-                                the queue before proceeding.
+                                Nothing came back for this page. Try again.
                             </div>
                         )}
                     </div>
-                    <p className="mt-2 text-xs text-ink-soft">
-                        {currentQueuePage
-                            ? queueError
-                                ? `Showing the last loaded page (${incomingItems.length} handoffs); the queue may be stale.`
-                                : `Showing ${incomingItems.length} handoffs on page ${currentQueuePage.current_page} of ${currentQueuePage.last_page}; the total covers records you are permitted to review.`
-                            : queueResult
-                              ? `Page ${queueResult.current_page} is the last successfully loaded server page. Page ${queuePage} is not available yet; the total reflects the last successful queue response.`
-                              : queueError
-                                ? `The workspace snapshot shows ${incomingItems.length} handoffs. The server reports ${incomingTotalCount} permitted handoffs; page coverage is unavailable until the queue loads.`
-                                : `The workspace snapshot shows ${incomingItems.length} handoffs. The server reports ${incomingTotalCount} permitted handoffs; page coverage is unavailable until the queue loads.`}
-                    </p>
+                    {currentQueuePage && (
+                        <p className="mt-2 text-xs text-ink-soft">
+                            {queueError
+                                ? 'Showing the last loaded page. It may be out of date.'
+                                : `Showing ${incomingItems.length} of ${currentQueuePage.total} orders`}
+                        </p>
+                    )}
                     {currentQueuePage && currentQueuePage.last_page > 1 && (
                         <nav
                             className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3"
@@ -562,7 +553,7 @@ export function LiveDispatchIntake({
                             <span className="text-xs text-ink-soft">
                                 Page {currentQueuePage.current_page} of{' '}
                                 {currentQueuePage.last_page} ·{' '}
-                                {currentQueuePage.total} permitted handoffs
+                                {currentQueuePage.total} orders
                             </span>
                             <Button
                                 size="sm"
@@ -582,11 +573,11 @@ export function LiveDispatchIntake({
                 <div className="mt-4 flex flex-col gap-3 border-t border-line pt-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
-                            Direct operational fallback
+                            Other work
                         </p>
                         <p className="mt-1 text-sm text-ink-soft">
-                            For work without a Core 1 request or commercial
-                            handoff.
+                            For jobs that did not come through Core 1, such as
+                            phone-in or internal work.
                         </p>
                     </div>
                     {canCreateManual && (
@@ -610,11 +601,11 @@ export function LiveDispatchIntake({
                     <div className="mt-4 flex flex-col gap-3 border-t border-line pt-4 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
-                                Dispatch review
+                                Duplicate check
                             </p>
                             <p className="mt-1 text-sm text-ink-soft">
-                                Review unmatched records before they can create
-                                a duplicate execution.
+                                Make sure an order was not already dispatched by
+                                hand before you convert it.
                             </p>
                         </div>
                         <button
@@ -631,7 +622,7 @@ export function LiveDispatchIntake({
                                     : 'border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
                             )}
                         >
-                            <span>Review unmatched handoffs</span>
+                            <span>Check for duplicates</span>
                             <span className="rounded-full bg-info px-2 py-0.5 text-[10px] font-bold text-white">
                                 {unlinkedCount} to review
                             </span>
@@ -730,14 +721,14 @@ function IncomingWorkRow({
                                 className="size-3"
                                 aria-hidden="true"
                             />
-                            Evidence Recorded
+                            Evidence recorded
                         </span>
                     )}
                     <span className="rounded-md border border-line bg-surface-subtle px-2 py-0.5 text-xs font-medium text-ink-soft">
                         {item.status}
                     </span>
                     <span className="text-xs font-semibold text-brand-strong">
-                        {selected ? 'Open workflow' : 'Review'}
+                        {selected ? 'Opened' : 'Review'}
                     </span>
                 </div>
             </button>
@@ -774,16 +765,16 @@ function ServiceIntakeSection({
                 <div>
                     <div className="flex flex-wrap items-center gap-2">
                         <span className="rounded-full bg-brand-soft px-2.5 py-0.5 text-xs font-semibold text-brand-strong">
-                            Service Request Workflow
+                            Service request
                         </span>
                     </div>
                     <h3 className="mt-2 text-lg font-semibold text-ink">
-                        Service demand intake &amp; conversion
+                        Service requests
                     </h3>
                     <p className="mt-1 max-w-3xl text-sm leading-6 text-ink-soft">
-                        Record demand once as a Service Request, then create as
-                        many distinct linked draft dispatches as staged or
-                        multi-phase work requires.
+                        Save the customer's request, then turn it into a draft
+                        dispatch. Work done in stages can have more than one
+                        dispatch from the same request.
                     </p>
                 </div>
                 <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto">
@@ -815,7 +806,7 @@ function ServiceIntakeSection({
                                         : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
                                 )}
                             >
-                                Convert to draft ({serviceRequests.length})
+                                Create dispatch ({serviceRequests.length})
                             </button>
                         )}
                     </div>
@@ -923,7 +914,7 @@ function ServiceRequestIntakeForm({
                 value={form.data.project_name}
                 error={form.errors.project_name}
                 onChange={(value) => form.setData('project_name', value)}
-                placeholder="e.g. Tuas Port Phase 2 Substation"
+                placeholder="e.g. Tower B façade panel erection"
                 required
             />
             <IntakeInput
@@ -932,16 +923,16 @@ function ServiceRequestIntakeForm({
                 value={form.data.service_type}
                 error={form.errors.service_type}
                 onChange={(value) => form.setData('service_type', value)}
-                placeholder="e.g. Heavy Crane & Transport"
+                placeholder="e.g. Mobile crane lift"
                 required
             />
             <IntakeInput
                 id="request-location"
-                label="Service site location"
+                label="Site address"
                 value={form.data.location}
                 error={form.errors.location}
                 onChange={(value) => form.setData('location', value)}
-                placeholder="e.g. 10 Tuas South Ave 5"
+                placeholder="e.g. Roxas Blvd., Pasay City"
                 required
             />
             <DateTimePicker
@@ -966,8 +957,8 @@ function ServiceRequestIntakeForm({
             <div className="hidden xl:block" aria-hidden="true" />
             <TextAreaField
                 id="request-requirements"
-                label="Technical requirements"
-                hint="One requirement per line"
+                label="Requirements"
+                hint="One per line, e.g. 25T mobile crane"
                 value={requirementsText}
                 error={form.errors.requirements}
                 onChange={setRequirementsText}
@@ -988,8 +979,8 @@ function ServiceRequestIntakeForm({
                     disabled={form.processing || !complete}
                 >
                     {form.processing
-                        ? 'Recording request…'
-                        : 'Record service request'}
+                        ? 'Saving request…'
+                        : 'Save service request'}
                 </Button>
             </div>
         </form>
@@ -1073,12 +1064,11 @@ function DispatchConversion({
             <div className="rounded-lg border border-line bg-surface p-4">
                 <div>
                     <h4 className="font-semibold text-ink">
-                        Convert request to linked draft
+                        Create a draft dispatch
                     </h4>
                     <p className="mt-1 text-sm text-ink-soft">
-                        Request details are copied as a durable snapshot into
-                        the draft dispatch. Multiple dispatches can link to the
-                        same request for staged execution.
+                        The request details are copied into the draft. Next,
+                        assign the crane and crew on the dispatch page.
                     </p>
                 </div>
 
@@ -1111,7 +1101,7 @@ function DispatchConversion({
                                 value={selectedRequest.location}
                             />
                             <DataPair
-                                label="Existing drafts"
+                                label="Dispatches already created"
                                 value={String(
                                     selectedRequest.dispatch_jobs_count,
                                 )}
@@ -1120,7 +1110,7 @@ function DispatchConversion({
                         {selectedRequest.requirements.length > 0 && (
                             <div className="mt-3 border-t border-line pt-2">
                                 <p className="text-[11px] font-semibold text-ink-soft uppercase">
-                                    Requirements snapshot:
+                                    Requirements
                                 </p>
                                 <ul className="mt-1 list-disc space-y-0.5 pl-4 text-xs text-ink-soft">
                                     {selectedRequest.requirements.map(
@@ -1134,8 +1124,7 @@ function DispatchConversion({
                     </div>
                 ) : (
                     <p className="mt-4 rounded-lg bg-surface-subtle p-3 text-xs text-ink-soft">
-                        Select a submitted or dispatching service request on the
-                        right to review context before drafting.
+                        Choose a service request to see its details here.
                     </p>
                 )}
             </div>
@@ -1144,8 +1133,8 @@ function DispatchConversion({
                 <EmptyState
                     compact
                     icon={CalendarDays}
-                    title="No service requests ready"
-                    message="Record a service request first before creating a linked draft."
+                    title="No requests waiting"
+                    message="Save a service request first, then create its dispatch here."
                 />
             ) : (
                 <form
@@ -1177,7 +1166,7 @@ function DispatchConversion({
                         value={form.data.reference}
                         error={form.errors.reference}
                         onChange={(value) => form.setData('reference', value)}
-                        placeholder="e.g. DSP-SR-2026-001"
+                        placeholder="e.g. DSP-2026-0102"
                         required
                     />
                     <div className="hidden sm:block" aria-hidden="true" />
@@ -1208,8 +1197,8 @@ function DispatchConversion({
                             disabled={!complete || form.processing}
                         >
                             {form.processing
-                                ? 'Creating linked draft…'
-                                : 'Create linked dispatch draft'}
+                                ? 'Creating draft…'
+                                : 'Create draft dispatch'}
                         </Button>
                     </div>
                 </form>
@@ -1262,17 +1251,16 @@ function RentalIntakeSection({
                 <div>
                     <div className="flex flex-wrap items-center gap-2">
                         <span className="rounded-full bg-warning-soft px-2.5 py-0.5 text-xs font-semibold text-warning-strong">
-                            Rental Reservation Workflow
+                            Rental
                         </span>
                     </div>
                     <h3 className="mt-2 text-lg font-semibold text-ink">
-                        Rental delivery dispatches awaiting handoff
+                        Rentals waiting for delivery
                     </h3>
                     <p className="mt-1 max-w-3xl text-sm leading-6 text-ink-soft">
-                        Reserved rental items requiring delivery fulfillment.
-                        Converting creates a linked operational dispatch
-                        containing the reservation dates, equipment condition
-                        requirements, and operator context.
+                        Reserved equipment that needs to be delivered. Creating
+                        a dispatch copies the rental dates, equipment and
+                        operator needs.
                     </p>
                 </div>
                 <Button
@@ -1289,11 +1277,11 @@ function RentalIntakeSection({
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-info-strong/30 bg-info-soft p-3 text-sm text-ink">
                     <span>
                         {focusedHandoff
-                            ? `Reviewing rental handoff ${focusedHandoff.reference}`
-                            : 'This rental handoff is no longer in the loaded records. Refresh before creating a dispatch.'}
+                            ? `Showing rental ${focusedHandoff.reference}`
+                            : 'This rental is no longer in the list. Refresh the page first.'}
                     </span>
                     <Button size="sm" variant="secondary" onClick={onShowAll}>
-                        Show all rental handoffs
+                        Show all rentals
                     </Button>
                 </div>
             )}
@@ -1304,13 +1292,13 @@ function RentalIntakeSection({
                     icon={CalendarDays}
                     title={
                         focusedHandoffId === null
-                            ? 'No reserved rental handoffs pending'
-                            : 'Selected rental handoff is unavailable'
+                            ? 'No rentals waiting for delivery'
+                            : 'This rental is unavailable'
                     }
                     message={
                         focusedHandoffId === null
-                            ? 'All current rental reservations with delivery fulfillment are already dispatched or fulfilled.'
-                            : 'Refresh the workspace or show all loaded rental handoffs before creating a dispatch.'
+                            ? 'Every rental that needs delivery already has a dispatch.'
+                            : 'Refresh the page or show all rentals.'
                     }
                 />
             ) : (
@@ -1330,7 +1318,7 @@ function RentalIntakeSection({
                                                 {handoff.reference}
                                             </span>
                                             <span className="rounded-full bg-warning-soft px-2 py-0.5 text-[10px] font-semibold text-warning-strong">
-                                                Rental Delivery
+                                                Rental delivery
                                             </span>
                                         </div>
                                         <p className="mt-0.5 text-xs text-ink-soft">
@@ -1344,7 +1332,7 @@ function RentalIntakeSection({
                                                     className="size-3"
                                                     aria-hidden="true"
                                                 />
-                                                Evidence Recorded
+                                                Evidence recorded
                                             </span>
                                         )}
                                         <span className="inline-flex items-center rounded-full bg-surface-subtle px-2 py-0.5 text-xs font-medium text-ink-soft">
@@ -1355,7 +1343,7 @@ function RentalIntakeSection({
 
                                 <dl className="mt-3 divide-y divide-line text-xs">
                                     <DataPair
-                                        label="Reservation window"
+                                        label="Rental period"
                                         value={`${handoff.start_date || 'TBD'} → ${handoff.end_date || 'TBD'}`}
                                     />
                                     <DataPair
@@ -1366,7 +1354,7 @@ function RentalIntakeSection({
                                         }
                                     />
                                     <DataPair
-                                        label="Fulfillment mode"
+                                        label="Delivery type"
                                         value={humanize(
                                             handoff.fulfillment_mode,
                                         )}
@@ -1375,16 +1363,12 @@ function RentalIntakeSection({
 
                                 <div className="mt-3 rounded-lg border border-line bg-surface-subtle p-2.5 text-xs">
                                     <p className="text-[10px] font-semibold text-ink-soft uppercase">
-                                        Rental Condition Checklist:
+                                        Before release
                                     </p>
                                     <ul className="mt-1 list-disc space-y-1 pl-4 text-ink-soft">
+                                        <li>Pre-operation inspection passed</li>
                                         <li>
-                                            Pre-operation inspection &amp; safe
-                                            release certified
-                                        </li>
-                                        <li>
-                                            Operator assignment context:
-                                            Dedicated crane operator required
+                                            Needs a dedicated crane operator
                                         </li>
                                     </ul>
                                 </div>
@@ -1465,7 +1449,7 @@ function ReconciliationQueueSection({
                     matched_draft_job_id: matchedJob?.id ?? null,
                     matched_draft_reference: matchedJob?.reference ?? null,
                     match_reason: matchedJob
-                        ? `Client name resembles manual draft ${matchedJob.reference}; verify the site and work before creating another dispatch.`
+                        ? `Same client as manual draft ${matchedJob.reference}. Check the site and work before creating another dispatch.`
                         : null,
                     reconciliation_status: matchedJob
                         ? 'matching_draft_found'
@@ -1504,7 +1488,7 @@ function ReconciliationQueueSection({
                     matched_draft_job_id: matchedJob?.id ?? null,
                     matched_draft_reference: matchedJob?.reference ?? null,
                     match_reason: matchedJob
-                        ? `Client name resembles manual draft ${matchedJob.reference}; verify the site and work before creating another dispatch.`
+                        ? `Same client as manual draft ${matchedJob.reference}. Check the site and work before creating another dispatch.`
                         : null,
                     reconciliation_status: matchedJob
                         ? 'matching_draft_found'
@@ -1522,28 +1506,26 @@ function ReconciliationQueueSection({
                 <div>
                     <div className="flex flex-wrap items-center gap-2">
                         <span className="rounded-full bg-info-soft px-2.5 py-0.5 text-xs font-semibold text-info-strong">
-                            Core 1 &harr; Core 2 Reconciliation
+                            Duplicate check
                         </span>
                         <span className="rounded bg-black/5 px-2 py-0.5 text-xs font-semibold text-ink">
-                            {unlinkedItems.length} unlinked handoff
-                            {unlinkedItems.length === 1 ? '' : 's'}
+                            {unlinkedItems.length} to check
                         </span>
                     </div>
                     <h3 className="mt-2 text-lg font-semibold text-ink">
-                        Commercial handoff reconciliation queue
+                        Check for duplicate dispatches
                     </h3>
                     <p className="mt-1 max-w-3xl text-sm leading-6 text-ink-soft">
-                        Reconcile incoming Core 1 commercial transactions
-                        against existing Core 2 operational drafts. Linking or
-                        converting ensures zero duplicate dispatches and
-                        maintains auditable lineage.
+                        Before converting a Core 1 order, make sure nobody
+                        already created a dispatch for it by hand. Orders that
+                        look like an existing draft are highlighted.
                     </p>
                 </div>
                 <Button
                     size="icon"
                     variant="quiet"
                     onClick={onClose}
-                    aria-label="Close reconciliation queue"
+                    aria-label="Close duplicate check"
                 >
                     <X className="h-4 w-4" aria-hidden="true" />
                 </Button>
@@ -1553,8 +1535,8 @@ function ReconciliationQueueSection({
                 <EmptyState
                     compact
                     icon={CheckCircle2}
-                    title="All handoffs reconciled"
-                    message="There are no unlinked Core 1 commercial transactions pending dispatch conversion or draft matching."
+                    title="Nothing to check"
+                    message="Every incoming order already has a dispatch."
                 />
             ) : (
                 <div className="mt-4 space-y-3">
@@ -1611,13 +1593,12 @@ function ReconciliationQueueSection({
                                             <strong className="text-ink">
                                                 {item.matched_draft_reference}
                                             </strong>{' '}
-                                            appears to match this incoming
-                                            handoff.
+                                            may be the same job as this order.
                                         </p>
                                     </div>
                                 ) : (
                                     <span className="rounded bg-surface-subtle px-2.5 py-1 text-xs font-medium text-ink-soft">
-                                        Unlinked Draft
+                                        No match found
                                     </span>
                                 )}
                             </div>
@@ -1625,7 +1606,7 @@ function ReconciliationQueueSection({
                             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
                                 <span className="text-xs text-ink-soft">
                                     {item.match_reason ||
-                                        'Available for fresh draft conversion'}
+                                        'Ready to create a dispatch'}
                                 </span>
                                 <div className="flex flex-wrap gap-2">
                                     {item.matched_draft_job_id && (
@@ -1665,7 +1646,7 @@ function ReconciliationQueueSection({
                                                 }
                                             }}
                                         >
-                                            Review handoff to create dispatch
+                                            Review and create dispatch
                                         </Button>
                                     )}
                                 </div>
@@ -1704,11 +1685,11 @@ function ClientIntakeForm({ onClose }: { onClose: () => void }) {
             <div className="flex items-start justify-between gap-3 border-b border-line pb-4">
                 <div>
                     <h3 className="text-lg font-semibold text-ink">
-                        New client record
+                        New client
                     </h3>
                     <p className="mt-1 text-sm text-ink-soft">
-                        Create an active client record for operational
-                        dispatches and service requests.
+                        Add a client so you can record their requests and
+                        dispatches.
                     </p>
                 </div>
                 <Button
@@ -1732,7 +1713,7 @@ function ClientIntakeForm({ onClose }: { onClose: () => void }) {
                     value={form.data.code}
                     error={form.errors.code}
                     onChange={(value) => form.setData('code', value)}
-                    placeholder="e.g. CLI-894"
+                    placeholder="e.g. C1-CL-0012"
                     required
                 />
                 <IntakeInput
@@ -1741,7 +1722,7 @@ function ClientIntakeForm({ onClose }: { onClose: () => void }) {
                     value={form.data.company_name}
                     error={form.errors.company_name}
                     onChange={(value) => form.setData('company_name', value)}
-                    placeholder="e.g. Keppel Offshore & Marine"
+                    placeholder="e.g. Bayview Towers Development Corp."
                     required
                 />
                 <IntakeInput
@@ -1780,9 +1761,7 @@ function ClientIntakeForm({ onClose }: { onClose: () => void }) {
                         variant="primary"
                         disabled={form.processing}
                     >
-                        {form.processing
-                            ? 'Creating client…'
-                            : 'Create client record'}
+                        {form.processing ? 'Saving client…' : 'Save client'}
                     </Button>
                 </div>
             </form>

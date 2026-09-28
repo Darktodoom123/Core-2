@@ -20,6 +20,7 @@ use App\Shared\Assets\Models\OperationalAsset;
 use Carbon\CarbonImmutable;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 
 uses(RefreshDatabase::class);
@@ -201,6 +202,10 @@ it('OperationsWorkspaceViewModel formats LatestLocationDto and LocationUpdate id
 });
 
 it('serves weather telemetry through Operations Platform/Weather endpoint with DOLE safety evaluation', function (): void {
+    Http::fake(['api.open-meteo.com/*' => Http::response(['current' => [
+        'temperature_2m' => 30.1, 'relative_humidity_2m' => 70, 'precipitation' => 0,
+        'weather_code' => 1, 'wind_speed_10m' => 12.0, 'wind_gusts_10m' => 18.0,
+    ]])]);
     $operator = User::factory()->create(['is_active' => true]);
     $operator->syncRoles([RoleName::CraneOperator->value]);
     $token = $operator->createToken('Field Mobile')->plainTextToken;

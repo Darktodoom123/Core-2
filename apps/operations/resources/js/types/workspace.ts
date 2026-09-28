@@ -617,6 +617,8 @@ export interface FuelLogViewModel {
 export interface FuelRequestViewModel {
     id: number;
     reference: string;
+    /** `field_app` when the request arrived through the mobile API. */
+    submitted_via?: 'field_app' | 'web';
     requester: {
         id: number;
         name: string;
@@ -796,6 +798,18 @@ export interface AuditEventViewModel {
     request_id?: string | null;
 }
 
+/**
+ * Nearest mapped address for a coordinate, resolved server-side (Stadia,
+ * then Photon, then BigDataCloud). `pending` while the lookup runs;
+ * `unavailable` when no provider could name the point. Never invented.
+ */
+export interface PlaceViewModel {
+    status: 'resolved' | 'pending' | 'unavailable';
+    primary: string | null;
+    secondary: string | null;
+    provider: string | null;
+}
+
 export interface LocationUpdateViewModel {
     id: number;
     user: {
@@ -837,6 +851,7 @@ export interface LocationUpdateViewModel {
     latitude: number | null;
     longitude: number | null;
     accuracy_metres: number | null;
+    place?: PlaceViewModel | null;
     speed: number | null;
     remarks: string | null;
     source: string;
@@ -882,6 +897,7 @@ export interface JobReportViewModel {
     meter_type?: string | null;
     latitude?: number | null;
     longitude?: number | null;
+    place?: PlaceViewModel | null;
     resubmitted_count?: number;
     can_be_resubmitted?: boolean;
     started_at: string | null;
@@ -1041,6 +1057,7 @@ export interface SosIncidentLocationViewModel {
     captured_at: string | null;
     freshness_status: SosLocationFreshness;
     context: string | null;
+    place?: PlaceViewModel | null;
 }
 
 export interface SosDeliveryAttemptViewModel {
@@ -1439,6 +1456,7 @@ export interface DispatchExecutionLocationViewModel {
     latitude: number;
     longitude: number;
     accuracy_metres: number | null;
+    place?: PlaceViewModel | null;
     source: string;
     user: { id: number; name: string } | null;
     asset: { id: number; code: string; name: string } | null;
@@ -1454,7 +1472,11 @@ export interface DispatchExecutionReportViewModel {
     submitted_at: string | null;
     work_summary: string;
     remarks: string | null;
-    coordinates: { latitude: number; longitude: number } | null;
+    coordinates: {
+        latitude: number;
+        longitude: number;
+        place?: PlaceViewModel | null;
+    } | null;
 }
 
 export interface DispatchHandoffEvidenceViewModel {
@@ -1525,7 +1547,11 @@ export interface DispatchExecutionViewModel {
     site: {
         name: string;
         notes: string | null;
-        planned_coordinates: { latitude: number; longitude: number } | null;
+        planned_coordinates: {
+            latitude: number;
+            longitude: number;
+            place?: PlaceViewModel | null;
+        } | null;
         latest_location: DispatchExecutionLocationViewModel | null;
     };
     reports: DispatchExecutionReportViewModel[];

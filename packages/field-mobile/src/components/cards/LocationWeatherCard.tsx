@@ -309,7 +309,7 @@ export const LocationWeatherCard: React.FC<LocationWeatherCardProps> = ({
 
     return (
         <View
-            accessibilityLabel={`Location weather: ${data.location_name}, Wind ${Math.round(data.wind_speed_kmh)} km/h, Gusts ${Math.round(data.wind_gusts_kmh)} km/h, ${Math.round(data.temperature_celsius)}°C, ${safetyTheme.label}`}
+            accessibilityLabel={`Location weather: ${data.location_name ?? 'Address unavailable'}, Wind ${Math.round(data.wind_speed_kmh)} km/h, Gusts ${Math.round(data.wind_gusts_kmh)} km/h, ${Math.round(data.temperature_celsius)}°C, ${safetyTheme.label}`}
             style={[styles.cardRoot, isDarkHud && styles.darkCardRoot]}
             testID="location-weather-card"
         >
@@ -328,7 +328,7 @@ export const LocationWeatherCard: React.FC<LocationWeatherCardProps> = ({
                             isDarkHud && styles.darkLocationText,
                         ]}
                     >
-                        {data.location_name}
+                        {data.location_name ?? 'Address unavailable'}
                     </Text>
                 </View>
 

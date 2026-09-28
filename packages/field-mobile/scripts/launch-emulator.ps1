@@ -316,8 +316,10 @@ if (-not $GpuMode -or $GpuMode -eq "auto") {
     if ($env:CORE2_EMULATOR_GPU) {
         $GpuMode = $env:CORE2_EMULATOR_GPU
     } else {
-        $isAmd = (Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue | Where-Object { $_.Name -match "AMD|Radeon" })
-        if ($isAmd) {
+        # AMD integrated graphics beside an NVIDIA GPU renders on the NVIDIA one.
+        $gpuNames = @(Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue | ForEach-Object { $_.Name })
+        $amdOnly = ($gpuNames -match "AMD|Radeon") -and -not ($gpuNames -match "NVIDIA")
+        if ($amdOnly) {
             $GpuMode = "swiftshader"
         } else {
             $GpuMode = "auto"

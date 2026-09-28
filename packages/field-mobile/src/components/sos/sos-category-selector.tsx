@@ -13,6 +13,8 @@ import { Icon } from '../common/Icon';
 import type { IconName } from '../common/Icon';
 import { colors } from '../nativeStyles';
 
+const NOTE_MAX_LENGTH = 200;
+
 export interface EmergencyCategoryConfig {
     value: SosIncidentCategory;
     label: string;
@@ -20,8 +22,13 @@ export interface EmergencyCategoryConfig {
     subtitle: string;
     badge: string;
     icon: IconName;
+    /** Light-mode accent; dark enough to carry white icons and borders. */
     color: string;
+    /** Light-mode selected card background. */
+    tint: string;
     darkColor: string;
+    /** Icon color on a filled dark-mode accent. */
+    darkOnColor: string;
 }
 
 export const EMERGENCY_CATEGORIES: EmergencyCategoryConfig[] = [
@@ -33,7 +40,9 @@ export const EMERGENCY_CATEGORIES: EmergencyCategoryConfig[] = [
         badge: 'TRANSIT',
         icon: 'truck',
         color: '#DC2626',
+        tint: '#FEF2F2',
         darkColor: '#EF4444',
+        darkOnColor: '#FFFFFF',
     },
     {
         value: 'critical_asset_malfunction',
@@ -42,8 +51,10 @@ export const EMERGENCY_CATEGORIES: EmergencyCategoryConfig[] = [
         subtitle: 'Boom failure, hydraulic burst, brake loss, runaway load',
         badge: 'MACHINERY',
         icon: 'crane',
-        color: '#FFBF00',
+        color: '#B38A00',
+        tint: '#FFFBEB',
         darkColor: '#FFBF00',
+        darkOnColor: '#0F172A',
     },
     {
         value: 'site_accident',
@@ -53,7 +64,9 @@ export const EMERGENCY_CATEGORIES: EmergencyCategoryConfig[] = [
         badge: 'CASUALTY',
         icon: 'alert-circle',
         color: '#B91C1C',
+        tint: '#FEF2F2',
         darkColor: '#F87171',
+        darkOnColor: '#0F172A',
     },
     {
         value: 'other_immediate_danger',
@@ -62,8 +75,10 @@ export const EMERGENCY_CATEGORIES: EmergencyCategoryConfig[] = [
         subtitle: 'Power line contact, gas leak, fire/smoke, sinkhole',
         badge: 'DANGER',
         icon: 'flash',
-        color: '#FFBF00',
+        color: '#B38A00',
+        tint: '#FFFBEB',
         darkColor: '#FFBF00',
+        darkOnColor: '#0F172A',
     },
 ];
 
@@ -121,6 +136,7 @@ export const SosCategorySelector: React.FC<SosCategorySelectorProps> = ({
     showNotes = true,
 }) => {
     const { isDarkHud } = useTheme();
+    const [noteFocused, setNoteFocused] = useState(false);
 
     // Support uncontrolled fallback if parent doesn't provide note/chips
     const [localNote, setLocalNote] = useState('');
@@ -130,6 +146,7 @@ export const SosCategorySelector: React.FC<SosCategorySelectorProps> = ({
         controlledNote !== undefined ? controlledNote : localNote;
     const activeChips =
         controlledChips !== undefined ? controlledChips : localChips;
+    const nearNoteLimit = activeNote.length >= NOTE_MAX_LENGTH - 20;
 
     const handleNoteChange = (text: string) => {
         if (onNoteChange) {
@@ -153,12 +170,29 @@ export const SosCategorySelector: React.FC<SosCategorySelectorProps> = ({
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <Text
-                    selectable
-                    style={[styles.title, isDarkHud && styles.darkTitle]}
-                >
-                    Emergency Classification
-                </Text>
+                <View style={styles.titleRow}>
+                    <Text
+                        selectable
+                        style={[styles.title, isDarkHud && styles.darkTitle]}
+                    >
+                        Emergency Classification
+                    </Text>
+                    <View
+                        style={[
+                            styles.optionalTag,
+                            isDarkHud && styles.darkOptionalTag,
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.optionalTagText,
+                                isDarkHud && styles.darkHelper,
+                            ]}
+                        >
+                            OPTIONAL
+                        </Text>
+                    </View>
+                </View>
                 <Text
                     selectable
                     style={[styles.helper, isDarkHud && styles.darkHelper]}
@@ -168,13 +202,16 @@ export const SosCategorySelector: React.FC<SosCategorySelectorProps> = ({
                 </Text>
             </View>
 
-            {/* 4 Humanized Emergency Category Cards */}
+            {/* Emergency category cards */}
             <View accessibilityRole="radiogroup" style={styles.options}>
                 {EMERGENCY_CATEGORIES.map((category) => {
                     const selected = value === category.value;
                     const accent = isDarkHud
                         ? category.darkColor
                         : category.color;
+                    const onAccent = isDarkHud
+                        ? category.darkOnColor
+                        : '#FFFFFF';
 
                     return (
                         <Pressable
@@ -188,119 +225,87 @@ export const SosCategorySelector: React.FC<SosCategorySelectorProps> = ({
                             style={({ pressed }) => [
                                 styles.option,
                                 isDarkHud && styles.darkOption,
-                                selected &&
-                                    (isDarkHud
-                                        ? {
-                                              borderColor: accent,
-                                              backgroundColor: '#1E293B',
-                                              borderWidth: 2,
-                                          }
-                                        : {
-                                              borderColor: accent,
-                                              backgroundColor: '#FEF2F2',
-                                              borderWidth: 2,
-                                          }),
+                                selected && {
+                                    backgroundColor: isDarkHud
+                                        ? '#1E293B'
+                                        : category.tint,
+                                    borderColor: accent,
+                                },
                                 pressed && styles.optionPressed,
                             ]}
                             testID={`sos-category-${category.value}`}
                         >
                             <View
                                 pointerEvents="none"
-                                style={styles.cardHeaderRow}
+                                style={[
+                                    styles.iconCircle,
+                                    {
+                                        backgroundColor: selected
+                                            ? accent
+                                            : isDarkHud
+                                              ? '#334155'
+                                              : category.tint,
+                                    },
+                                ]}
                             >
-                                <View style={styles.leadingGroup}>
-                                    <View
-                                        style={[
-                                            styles.iconCircle,
-                                            {
-                                                backgroundColor: selected
-                                                    ? accent
-                                                    : isDarkHud
-                                                      ? '#334155'
-                                                      : category.value ===
-                                                          'critical_asset_malfunction'
-                                                        ? '#FFF3C4'
-                                                        : category.value ===
-                                                            'site_accident'
-                                                          ? '#FEE2E2'
-                                                          : category.value ===
-                                                              'other_immediate_danger'
-                                                            ? '#FFF3C4'
-                                                            : '#FEE2E2',
-                                            },
-                                        ]}
-                                    >
-                                        <Icon
-                                            color={
-                                                selected
-                                                    ? '#FFFFFF'
-                                                    : isDarkHud
-                                                      ? '#CBD5E1'
-                                                      : accent
-                                            }
-                                            name={category.icon}
-                                            size={18}
-                                        />
-                                    </View>
-                                    <View
-                                        style={[
-                                            styles.badgeWrap,
-                                            isDarkHud && styles.darkBadgeWrap,
-                                        ]}
-                                    >
-                                        <Text
-                                            style={[
-                                                styles.badgeText,
-                                                {
-                                                    color: selected
-                                                        ? accent
-                                                        : isDarkHud
-                                                          ? '#94A3B8'
-                                                          : '#475569',
-                                                },
-                                            ]}
-                                        >
-                                            {category.badge}
-                                        </Text>
-                                    </View>
-                                    <Text
-                                        numberOfLines={1}
-                                        style={[
-                                            styles.optionTitle,
-                                            isDarkHud && styles.darkOptionText,
-                                            selected && { color: accent },
-                                        ]}
-                                    >
-                                        {category.title}
-                                    </Text>
-                                </View>
-                                <View
-                                    style={[
-                                        styles.radio,
-                                        isDarkHud && styles.darkRadio,
-                                        selected && {
-                                            backgroundColor: accent,
-                                            borderColor: accent,
-                                        },
-                                    ]}
+                                <Icon
+                                    color={
+                                        selected
+                                            ? onAccent
+                                            : isDarkHud
+                                              ? '#CBD5E1'
+                                              : accent
+                                    }
+                                    name={category.icon}
+                                    size={20}
                                 />
                             </View>
 
-                            <Text
+                            <View pointerEvents="none" style={styles.optionCopy}>
+                                <Text
+                                    numberOfLines={2}
+                                    style={[
+                                        styles.optionTitle,
+                                        isDarkHud && styles.darkOptionText,
+                                    ]}
+                                >
+                                    {category.title}
+                                </Text>
+                                <Text
+                                    style={[
+                                        styles.optionSubtitle,
+                                        isDarkHud && styles.darkSubtitle,
+                                    ]}
+                                >
+                                    {category.subtitle}
+                                </Text>
+                            </View>
+
+                            <View
                                 pointerEvents="none"
                                 style={[
-                                    styles.optionSubtitle,
-                                    isDarkHud && styles.darkSubtitle,
+                                    styles.radio,
+                                    isDarkHud && styles.darkRadio,
+                                    selected && {
+                                        backgroundColor: accent,
+                                        borderColor: accent,
+                                    },
                                 ]}
                             >
-                                {category.subtitle}
-                            </Text>
+                                {selected ? (
+                                    <Icon
+                                        color={onAccent}
+                                        name="check"
+                                        size={14}
+                                    />
+                                ) : null}
+                            </View>
                         </Pressable>
                     );
                 })}
             </View>
 
-            {/* Situational Quick Chips */}
+            {/* Situational quick chips */}
             <View style={styles.chipsSection}>
                 <Text
                     selectable
@@ -348,14 +353,14 @@ export const SosCategorySelector: React.FC<SosCategorySelectorProps> = ({
                                     color={
                                         isChipActive
                                             ? isDarkHud
-                                                ? '#FFBF00'
-                                                : colors.amberDark
+                                                ? '#FCA5A5'
+                                                : colors.redDark
                                             : isDarkHud
                                               ? colors.hudTextDim
                                               : colors.muted
                                     }
-                                    name={chip.icon}
-                                    size={14}
+                                    name={isChipActive ? 'check' : chip.icon}
+                                    size={16}
                                 />
                                 <Text
                                     pointerEvents="none"
@@ -376,7 +381,7 @@ export const SosCategorySelector: React.FC<SosCategorySelectorProps> = ({
                 </View>
             </View>
 
-            {/* Situational Notes Area */}
+            {/* Situational notes */}
             {showNotes && (
                 <View style={styles.notesSection}>
                     <View style={styles.notesHeaderRow}>
@@ -393,56 +398,91 @@ export const SosCategorySelector: React.FC<SosCategorySelectorProps> = ({
                             style={[
                                 styles.charCount,
                                 isDarkHud && styles.darkHelper,
+                                nearNoteLimit && styles.charCountWarn,
                             ]}
                         >
-                            {activeNote.length}/200 characters
+                            {`${activeNote.length}/${NOTE_MAX_LENGTH} characters`}
                         </Text>
                     </View>
                     <TextInput
                         accessibilityLabel="Emergency situation notes"
                         editable={!isUpdatingNote}
-                        maxLength={200}
+                        maxLength={NOTE_MAX_LENGTH}
                         multiline
                         numberOfLines={3}
+                        onBlur={() => setNoteFocused(false)}
                         onChangeText={handleNoteChange}
+                        onFocus={() => setNoteFocused(true)}
                         placeholder="Add details (e.g. outrigger sank, operator trapped in cab, 13.8kV power line)..."
                         placeholderTextColor={isDarkHud ? '#64748B' : '#94A3B8'}
                         style={[
                             styles.noteInput,
                             isDarkHud && styles.darkNoteInput,
+                            noteFocused &&
+                                (isDarkHud
+                                    ? styles.darkNoteInputFocused
+                                    : styles.noteInputFocused),
                         ]}
                         testID="sos-notes-input"
                         value={activeNote}
                     />
-                    <Pressable
-                        accessibilityLabel="Transmit note update to dispatch"
-                        accessibilityRole="button"
-                        disabled={isUpdatingNote || !activeNote.trim()}
-                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                        onPress={onTransmitNotes || (() => {})}
-                        style={({ pressed }) => [
-                            styles.transmitBtn,
-                            isDarkHud && styles.darkTransmitBtn,
-                            (!activeNote.trim() || isUpdatingNote) &&
-                                styles.btnDisabled,
-                            pressed && styles.optionPressed,
-                        ]}
-                        testID="sos-send-notes-btn"
-                    >
-                        {isUpdatingNote ? (
-                            <ActivityIndicator color="#FFFFFF" size="small" />
-                        ) : (
-                            <Text
-                                pointerEvents="none"
-                                style={[
-                                    styles.transmitBtnText,
-                                    isDarkHud && styles.darkTransmitBtnText,
-                                ]}
-                            >
-                                Update Dispatch Notes
-                            </Text>
-                        )}
-                    </Pressable>
+                    {onTransmitNotes ? (
+                        <Pressable
+                            accessibilityLabel="Transmit note update to dispatch"
+                            accessibilityRole="button"
+                            accessibilityState={{
+                                busy: isUpdatingNote,
+                                disabled: isUpdatingNote || !activeNote.trim(),
+                            }}
+                            disabled={isUpdatingNote || !activeNote.trim()}
+                            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                            onPress={onTransmitNotes}
+                            style={({ pressed }) => [
+                                styles.transmitBtn,
+                                isDarkHud && styles.darkTransmitBtn,
+                                (!activeNote.trim() || isUpdatingNote) &&
+                                    styles.btnDisabled,
+                                pressed && styles.optionPressed,
+                            ]}
+                            testID="sos-send-notes-btn"
+                        >
+                            {isUpdatingNote ? (
+                                <ActivityIndicator
+                                    color={isDarkHud ? '#0F172A' : '#FFFFFF'}
+                                    size="small"
+                                />
+                            ) : (
+                                <>
+                                    <Icon
+                                        color={
+                                            isDarkHud ? '#0F172A' : '#FFFFFF'
+                                        }
+                                        name="message"
+                                        size={16}
+                                    />
+                                    <Text
+                                        pointerEvents="none"
+                                        style={[
+                                            styles.transmitBtnText,
+                                            isDarkHud &&
+                                                styles.darkTransmitBtnText,
+                                        ]}
+                                    >
+                                        Update Dispatch Notes
+                                    </Text>
+                                </>
+                            )}
+                        </Pressable>
+                    ) : (
+                        <Text
+                            style={[
+                                styles.notesHint,
+                                isDarkHud && styles.darkHelper,
+                            ]}
+                        >
+                            Notes and hazard tags are sent with the alert.
+                        </Text>
+                    )}
                 </View>
             )}
         </View>
@@ -451,21 +491,38 @@ export const SosCategorySelector: React.FC<SosCategorySelectorProps> = ({
 
 const styles = StyleSheet.create({
     container: {
-        gap: 12,
+        gap: 14,
     },
     header: {
         gap: 4,
     },
+    titleRow: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 8,
+    },
     title: {
         color: colors.text,
-        fontSize: 16,
+        fontSize: 17,
         fontWeight: '800',
     },
-    subSectionTitle: {
-        color: colors.text,
-        fontSize: 15,
+    optionalTag: {
+        backgroundColor: colors.surfaceMuted,
+        borderColor: colors.border,
+        borderRadius: 6,
+        borderWidth: 1,
+        paddingHorizontal: 6,
+        paddingVertical: 1,
+    },
+    darkOptionalTag: {
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
+    },
+    optionalTagText: {
+        color: colors.secondary,
+        fontSize: 11,
         fontWeight: '800',
-        marginBottom: 2,
+        letterSpacing: 0.6,
     },
     helper: {
         color: colors.secondary,
@@ -476,73 +533,54 @@ const styles = StyleSheet.create({
         gap: 10,
     },
     option: {
+        alignItems: 'center',
         backgroundColor: colors.surface,
         borderColor: colors.border,
         borderRadius: 14,
-        borderWidth: 1.5,
-        gap: 6,
-        minHeight: 88,
-        padding: 14,
+        borderWidth: 2,
+        flexDirection: 'row',
+        gap: 12,
+        minHeight: 76,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
     },
     optionPressed: {
         opacity: 0.85,
     },
-    cardHeaderRow: {
-        alignItems: 'center',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 2,
-    },
-    leadingGroup: {
-        alignItems: 'center',
-        flex: 1,
-        flexDirection: 'row',
-        gap: 8,
-        marginRight: 6,
-    },
     iconCircle: {
         alignItems: 'center',
-        borderRadius: 15,
-        height: 30,
+        borderRadius: 20,
+        height: 40,
         justifyContent: 'center',
-        width: 30,
+        width: 40,
     },
-    badgeWrap: {
-        alignSelf: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.05)',
-        borderRadius: 5,
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-    },
-    darkBadgeWrap: {
-        backgroundColor: 'rgba(255, 255, 255, 0.07)',
-    },
-    badgeText: {
-        fontSize: 12,
-        fontWeight: '900',
-        letterSpacing: 0.5,
+    optionCopy: {
+        flex: 1,
+        gap: 3,
     },
     radio: {
+        alignItems: 'center',
         borderColor: colors.borderStrong,
-        borderRadius: 10,
+        borderRadius: 12,
         borderWidth: 2,
-        height: 20,
-        width: 20,
+        height: 24,
+        justifyContent: 'center',
+        width: 24,
     },
     optionTitle: {
         color: colors.text,
-        flexShrink: 1,
-        fontSize: 13.5,
+        fontSize: 15,
         fontWeight: '800',
+        lineHeight: 20,
     },
     optionSubtitle: {
         color: colors.secondary,
-        fontSize: 12,
-        lineHeight: 16,
-        paddingLeft: 38,
+        fontSize: 13,
+        lineHeight: 18,
     },
     sectionHeaderTitle: {
         color: '#0F172A',
+        flexShrink: 1,
         fontSize: 12,
         fontWeight: '900',
         letterSpacing: 0.5,
@@ -558,18 +596,17 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: 8,
-        marginTop: 2,
     },
     chip: {
         alignItems: 'center',
         backgroundColor: '#FFFFFF',
-        borderColor: '#E2E8F0',
-        borderRadius: 10,
-        borderWidth: 1,
+        borderColor: '#CBD5E1',
+        borderRadius: 999,
+        borderWidth: 1.5,
         flexDirection: 'row',
         gap: 6,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
+        minHeight: 44,
+        paddingHorizontal: 14,
     },
     darkChip: {
         backgroundColor: '#1E293B',
@@ -578,19 +615,14 @@ const styles = StyleSheet.create({
     chipActive: {
         backgroundColor: '#FEF2F2',
         borderColor: '#DC2626',
-        borderWidth: 1.5,
     },
     darkChipActive: {
         backgroundColor: 'rgba(239, 68, 68, 0.2)',
         borderColor: '#EF4444',
-        borderWidth: 1.5,
-    },
-    chipEmoji: {
-        fontSize: 14,
     },
     chipText: {
         color: '#334155',
-        fontSize: 12,
+        fontSize: 14,
         fontWeight: '600',
     },
     darkChipText: {
@@ -611,36 +643,54 @@ const styles = StyleSheet.create({
     notesHeaderRow: {
         alignItems: 'center',
         flexDirection: 'row',
+        gap: 8,
         justifyContent: 'space-between',
     },
     noteInput: {
-        backgroundColor: '#F8FAFC',
-        borderColor: '#E2E8F0',
+        backgroundColor: '#FFFFFF',
+        borderColor: '#CBD5E1',
         borderRadius: 12,
-        borderWidth: 1,
+        borderWidth: 1.5,
         color: colors.text,
-        fontSize: 12.5,
-        lineHeight: 18,
-        minHeight: 70,
-        padding: 10,
+        fontSize: 15,
+        lineHeight: 21,
+        minHeight: 96,
+        padding: 12,
         textAlignVertical: 'top',
+    },
+    noteInputFocused: {
+        borderColor: '#DC2626',
     },
     darkNoteInput: {
         backgroundColor: '#1E293B',
         borderColor: '#334155',
         color: '#F8FAFC',
     },
+    darkNoteInputFocused: {
+        borderColor: '#EF4444',
+    },
     charCount: {
-        color: '#94A3B8',
+        color: '#64748B',
         fontSize: 12,
         fontVariant: ['tabular-nums'],
+    },
+    charCountWarn: {
+        color: colors.redDark,
+        fontWeight: '700',
+    },
+    notesHint: {
+        color: colors.secondary,
+        fontSize: 12,
+        lineHeight: 17,
     },
     transmitBtn: {
         alignItems: 'center',
         backgroundColor: '#0F172A',
         borderRadius: 12,
+        flexDirection: 'row',
+        gap: 8,
         justifyContent: 'center',
-        minHeight: 42,
+        minHeight: 48,
         width: '100%',
     },
     darkTransmitBtn: {
@@ -648,13 +698,11 @@ const styles = StyleSheet.create({
     },
     transmitBtnText: {
         color: '#FFFFFF',
-        fontSize: 13,
+        fontSize: 15,
         fontWeight: '800',
     },
     darkTransmitBtnText: {
         color: '#0F172A',
-        fontSize: 13,
-        fontWeight: '800',
     },
     btnDisabled: {
         opacity: 0.5,

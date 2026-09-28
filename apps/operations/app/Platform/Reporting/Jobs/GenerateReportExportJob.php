@@ -220,7 +220,8 @@ class GenerateReportExportJob implements ShouldQueue
 
         $pdf = new Mpdf([
             'mode' => 'utf-8',
-            'format' => 'A4',
+            // Wide datasets read better in landscape.
+            'format' => count($headers) > 8 ? 'A4-L' : 'A4',
             'tempDir' => $tempDir,
             'fontDir' => $defaultConfig['fontDir'],
             'fontdata' => $fontConfig['fontdata'],
@@ -254,10 +255,13 @@ class GenerateReportExportJob implements ShouldQueue
         }, $rows));
 
         $html = '<!doctype html><html><head><meta charset="utf-8"><style>'
-            .'body{font-family:sans-serif;font-size:9pt}table{border-collapse:collapse;width:100%}'
-            .'th,td{border:1px solid #555;padding:4px;text-align:left}th{background:#eee}</style></head><body>'
+            .'body{font-family:sans-serif;font-size:8pt;color:#16181d}h1{font-size:15pt;margin:0 0 2pt}'
+            .'.meta{color:#5b6170;margin:0 0 8pt}table{border-collapse:collapse;width:100%}'
+            .'th,td{border-bottom:0.5pt solid #d0d3d9;padding:3pt 4pt;text-align:left;vertical-align:top}'
+            .'th{background:#16181d;color:#fff;font-size:7pt;text-transform:uppercase}'
+            .'tr:nth-child(even) td{background:#f5f6f8}</style></head><body>'
             .'<h1>'.$this->escapeHtml($export->export_type->label()).'</h1>'
-            .'<p>Generated '.now()->toIso8601String().'</p>'
+            .'<p class="meta">Generated '.$this->escapeHtml(now()->toIso8601String()).' · '.count($rows).' rows</p>'
             .'<table><thead><tr>'.$headerHtml.'</tr></thead><tbody>'.$rowHtml.'</tbody></table>'
             .'</body></html>';
 

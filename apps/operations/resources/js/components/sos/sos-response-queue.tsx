@@ -1,13 +1,10 @@
-import { RefreshCw, ShieldCheck, Siren } from 'lucide-react';
-import { useState } from 'react';
+import { MapPin, RefreshCw, ShieldCheck, Siren } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Button, PageHeading, Panel, StatusBadge } from '@/components/ui';
-import type { SosIncidentViewModel } from '@/types/workspace';
-import {
-    formatSosAge,
-    formatSosTimestamp,
-    humanizeSosValue,
-} from './sos-helpers';
+import type { PlaceViewModel, SosIncidentViewModel } from '@/types/workspace';
+import { formatSosAge, humanizeSosValue } from './sos-helpers';
 import { SosIncidentDetail } from './sos-incident-detail';
+import { useSosPlaceName } from './use-sos-place-name';
 
 interface SosResponseQueueProps {
     incidents: SosIncidentViewModel[];
@@ -23,6 +20,14 @@ export function SosResponseQueue({
     const [selectedId, setSelectedId] = useState<string | null>(
         incidents[0]?.id ?? null,
     );
+
+    const [now, setNow] = useState(() => Date.now());
+
+    useEffect(() => {
+        const timer = setInterval(() => setNow(Date.now()), 15_000);
+
+        return () => clearInterval(timer);
+    }, []);
 
     const effectiveSelectedId =
         selectedId && incidents.some((incident) => incident.id === selectedId)
@@ -91,8 +96,8 @@ export function SosResponseQueue({
                     </div>
                 </Panel>
             ) : (
-                <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(16rem,0.42fr)_minmax(0,1fr)]">
-                    <Panel className="min-w-0 overflow-hidden">
+                <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(16rem,0.42fr)_minmax(0,1fr)] lg:items-start">
+                    <Panel className="min-w-0 overflow-hidden lg:sticky lg:top-4">
                         <div className="flex items-center justify-between border-b border-line px-4 py-3">
                             <div>
                                 <h2 className="font-semibold text-ink">
@@ -115,11 +120,16 @@ export function SosResponseQueue({
                                 const selected =
                                     incident.id === effectiveSelectedId;
 
+                                const awaitingAck = !incident.acknowledged_at;
+                                const hasFix =
+                                    incident.location?.latitude != null &&
+                                    incident.location?.longitude != null;
+
                                 return (
                                     <li key={incident.id}>
                                         <button
                                             type="button"
-                                            className={`min-h-11 w-full px-4 py-3 text-left transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none focus-visible:ring-inset ${selected ? 'bg-danger-soft/60' : ''}`}
+                                            className={`min-h-11 w-full border-l-4 px-4 py-3 text-left transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none focus-visible:ring-inset ${awaitingAck ? 'border-danger' : 'border-success'} ${selected ? 'bg-danger-soft/60' : ''}`}
                                             onClick={() =>
                                                 setSelectedId(incident.id)
                                             }
@@ -139,16 +149,56 @@ export function SosResponseQueue({
                                                 {humanizeSosValue(
                                                     incident.category.value,
                                                 )}
+                                                {incident.dispatch
+                                                    ? ` · ${incident.dispatch.reference}`
+                                                    : ''}
                                             </p>
-                                            <p className="mt-1 text-xs text-ink-soft">
-                                                {formatSosAge(
-                                                    incident.received_at,
-                                                )}{' '}
-                                                ·{' '}
-                                                {formatSosTimestamp(
-                                                    incident.received_at,
-                                                )}
-                                            </p>
+                                            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                                                <span
+                                                    className={
+                                                        awaitingAck
+                                                            ? 'font-semibold text-danger-strong'
+                                                            : 'font-medium text-success-strong'
+                                                    }
+                                                >
+                                                    {awaitingAck
+                                                        ? 'Awaiting acknowledgement'
+                                                        : 'Acknowledged'}
+                                                </span>
+                                                <span className="inline-flex items-center gap-1 text-ink-soft">
+                                                    <MapPin
+                                                        className="h-3 w-3"
+                                                        aria-hidden="true"
+                                                    />
+                                                    {hasFix ? (
+                                                        <QueuePlace
+                                                            latitude={
+                                                                incident
+                                                                    .location
+                                                                    ?.latitude
+                                                            }
+                                                            longitude={
+                                                                incident
+                                                                    .location
+                                                                    ?.longitude
+                                                            }
+                                                            place={
+                                                                incident
+                                                                    .location
+                                                                    ?.place
+                                                            }
+                                                        />
+                                                    ) : (
+                                                        'No GPS fix'
+                                                    )}
+                                                </span>
+                                                <span className="text-ink-soft">
+                                                    {formatSosAge(
+                                                        incident.received_at,
+                                                        now,
+                                                    )}
+                                                </span>
+                                            </div>
                                         </button>
                                     </li>
                                 );
@@ -159,5 +209,23 @@ export function SosResponseQueue({
                 </div>
             )}
         </section>
+    );
+}
+
+function QueuePlace({
+    latitude,
+    longitude,
+    place: serverPlace,
+}: {
+    latitude: number | null | undefined;
+    longitude: number | null | undefined;
+    place?: PlaceViewModel | null;
+}) {
+    const place = useSosPlaceName(latitude, longitude, serverPlace);
+
+    return (
+        <span className="max-w-48 truncate">
+            {place.status === 'ready' ? place.primary : 'GPS fix'}
+        </span>
     );
 }

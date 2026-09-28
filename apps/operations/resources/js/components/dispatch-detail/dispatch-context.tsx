@@ -1,6 +1,7 @@
 import { router } from '@inertiajs/react';
 import { CalendarDays, ChevronDown, ChevronUp, MapPin } from 'lucide-react';
 import React, { useState } from 'react';
+import { LocationLabel } from '@/components/location/location-label';
 import { SiteLocationPicker } from '@/components/maplibre/site-location-picker';
 import { Button, DataPair, Panel } from '@/components/ui';
 import { WeatherSafetyTelemetry } from '@/components/weather/weather-safety-telemetry';
@@ -199,17 +200,12 @@ export function DispatchContext({
                                 </Button>
                             </div>
                             {isPinned && !isPickerOpen && (
-                                <p className="flex items-center font-mono text-[11px] text-ink-soft">
-                                    <MapPin
-                                        className="mr-1 h-3 w-3 shrink-0 text-brand-strong"
-                                        aria-hidden="true"
-                                    />
-                                    <span>
-                                        {currentLat?.toFixed(5)}° N,{' '}
-                                        {currentLon?.toFixed(5)}° E (Hyper-local
-                                        Wind Active)
-                                    </span>
-                                </p>
+                                <LocationLabel
+                                    latitude={currentLat}
+                                    longitude={currentLon}
+                                    variant="inline"
+                                    className="text-xs"
+                                />
                             )}
                         </div>
                     }

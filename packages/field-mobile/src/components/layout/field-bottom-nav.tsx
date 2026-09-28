@@ -6,8 +6,8 @@ import { Icon } from '../common/Icon';
 import { colors } from '../nativeStyles';
 import { EmergencySosButton } from '../sos/emergency-sos-button';
 
-export type FieldNavItem = 'documents' | 'profile';
-export type FieldScreen = FieldNavItem | 'today';
+export type FieldNavItem = 'today' | 'profile';
+export type FieldScreen = FieldNavItem;
 
 export interface FieldBottomNavProps {
     activeItem: FieldScreen;
@@ -40,47 +40,47 @@ export const FieldBottomNav: React.FC<FieldBottomNavProps> = ({
                 style={[styles.container, isDarkHud && styles.darkContainer]}
                 testID="bottom-nav-bar"
             >
-                {/* Documents stay one tap from every field screen. */}
+                {/* Home: Documents already has a tile on the Home grid. */}
                 <Pressable
-                    accessibilityLabel="Documents"
+                    accessibilityLabel="Home"
                     accessibilityRole="tab"
                     accessibilityState={{
-                        selected: activeItem === 'documents',
+                        selected: activeItem === 'today',
                     }}
-                    onPress={() => onSelect('documents')}
+                    onPress={() => onSelect('today')}
                     style={({ pressed }) => [
                         styles.item,
-                        activeItem === 'documents' && styles.itemSelected,
+                        activeItem === 'today' && styles.itemSelected,
                         pressed && styles.pressed,
                     ]}
-                    testID="bottom-nav-documents"
+                    testID="bottom-nav-home"
                 >
                     <View style={styles.indicator}>
                         <Icon
                             color={
-                                activeItem === 'documents'
+                                activeItem === 'today'
                                     ? theme.brandAmberText
                                     : isDarkHud
                                       ? '#94A3B8'
                                       : '#64748B'
                             }
-                            name="document"
+                            name="home"
                             size={20}
                         />
                     </View>
                     <Text
                         style={[
                             styles.label,
-                            activeItem === 'documents' && {
+                            activeItem === 'today' && {
                                 color: theme.brandAmberText,
                                 fontWeight: '700',
                             },
                             isDarkHud &&
-                                activeItem !== 'documents' &&
+                                activeItem !== 'today' &&
                                 styles.darkLabel,
                         ]}
                     >
-                        Documents
+                        Home
                     </Text>
                 </Pressable>
 

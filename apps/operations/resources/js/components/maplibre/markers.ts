@@ -187,10 +187,27 @@ function appendSosMarkerTreatment(
         halo.dataset.sosStatus = sos.status;
         halo.setAttribute('aria-hidden', 'true');
 
-        if (sos.prefersReducedMotion ?? detectReducedMotionPreference()) {
-            halo.style.animation = 'none';
+        const reducedMotion =
+            sos.prefersReducedMotion ?? detectReducedMotionPreference();
+
+        if (reducedMotion) {
+            // No scaling or travel: only a slow opacity fade, which stays
+            // motion-safe while still signalling a live emergency.
+            halo.style.animation =
+                'maplibre-sos-halo-fade 1.8s ease-in-out infinite';
             halo.style.boxShadow =
                 '0 0 0 6px rgba(220, 38, 38, 0.38), 0 0 20px rgba(220, 38, 38, 0.5)';
+        } else {
+            // Two staggered radar rings radiate from the pin so an active
+            // emergency reads as live even at a glance.
+            for (let index = 0; index < 2; index += 1) {
+                const ping = document.createElement('span');
+                ping.className = 'maplibre-sos-marker__ping';
+                ping.dataset.sosStatus = sos.status;
+                ping.dataset.pingIndex = String(index);
+                ping.setAttribute('aria-hidden', 'true');
+                marker.appendChild(ping);
+            }
         }
 
         marker.appendChild(halo);

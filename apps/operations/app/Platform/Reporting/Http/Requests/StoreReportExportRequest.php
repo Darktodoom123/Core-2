@@ -2,6 +2,7 @@
 
 namespace App\Platform\Reporting\Http\Requests;
 
+use App\Platform\Reporting\Enums\JobReportStatus;
 use App\Platform\Reporting\Enums\ReportExportType;
 use App\Platform\Reporting\Models\ReportExport;
 use Illuminate\Foundation\Http\FormRequest;
@@ -20,6 +21,7 @@ class StoreReportExportRequest extends FormRequest
         return [
             'export_type' => ['required', 'string', Rule::in(ReportExportType::requestableValues())],
             'format' => ['required', 'string', Rule::in(['csv', 'pdf'])],
+            'status' => ['nullable', 'string', Rule::enum(JobReportStatus::class)],
             'date_from' => ['nullable', 'date'],
             'date_to' => [
                 'nullable',

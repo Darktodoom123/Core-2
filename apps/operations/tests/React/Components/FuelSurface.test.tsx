@@ -319,7 +319,7 @@ describe('FuelSurface & 5-Stage Workflow Verifications', () => {
             // Total requested: 150 + 220 + 300 + 250 + 400 = 1,320
             expect(screen.getByText('Requested Litres')).toBeInTheDocument();
             expect(screen.getByText('1,320')).toBeInTheDocument();
-            expect(screen.getByText('Dispensed Logs:')).toBeInTheDocument();
+            expect(screen.getByText('Dispensed Litres')).toBeInTheDocument();
             expect(screen.getByText('395')).toBeInTheDocument();
             const queue = screen.getByRole('list', {
                 name: 'Fuel request queue',
@@ -1208,7 +1208,7 @@ describe('Fuel Management sections', () => {
         const rejectionCallout = screen.getByTestId('rejection-callout');
         expect(rejectionCallout).toBeInTheDocument();
         expect(
-            screen.getByText('Fuel Request Rejected by Operations'),
+            screen.getByText('Declined by the office'),
         ).toBeInTheDocument();
         expect(rejectionCallout).toHaveTextContent(
             'Exceeds authorized weekly allocation quota',
@@ -1231,7 +1231,7 @@ describe('Fuel Management sections', () => {
         // Detail pane should show unlinked asset warning because asset is null
         expect(
             screen.getByText(
-                'Unlinked General Request (No Equipment Assigned)',
+                'No equipment linked',
             ),
         ).toBeInTheDocument();
     });

@@ -76,6 +76,7 @@ final class FuelRequestResource extends JsonResource
                 'no_receipt_note' => $log->no_receipt_note,
                 'requires_receipt_review' => $log->requiresReceiptReview(),
                 'receipt_reviewed_at' => $log->receipt_reviewed_at?->toISOString(),
+                'receipt_review_note' => $log->receipt_review_note,
                 'fuel_station' => $log->fuel_station,
                 'recorded_at' => $log->recorded_at?->toISOString(),
             ])->values()->all()),

@@ -26,8 +26,18 @@ if exist "%USERPROFILE%\.android\avd\core2_api_36.avd\hardware-qemu.ini.lock" (
     rd /s /q "%USERPROFILE%\.android\avd\core2_api_36.avd\hardware-qemu.ini.lock" >nul 2>&1
 )
 
-echo [1/3] Starting Android emulator window...
-start "" "%EMULATOR%" -avd core2_api_36 -gpu swiftshader -no-snapshot -no-audio -crash-report-mode never
+:: Same rule as scripts/run-android.cjs: CORE2_EMULATOR_GPU wins, AMD-only
+:: hosts fall back to SwiftShader (their Vulkan driver crashes the emulator),
+:: everything else renders on the host GPU. SwiftShader draws on the CPU and
+:: leaves the emulator slow enough to trip "app isn't responding".
+set "GPU_MODE=%CORE2_EMULATOR_GPU%"
+if not defined GPU_MODE (
+    powershell -NoProfile -Command "$n = @(Get-CimInstance Win32_VideoController | ForEach-Object { $_.Name }); if (($n -match 'AMD|Radeon') -and -not ($n -match 'NVIDIA')) { exit 1 }" >nul 2>&1
+    if errorlevel 1 (set "GPU_MODE=swiftshader") else (set "GPU_MODE=host")
+)
+
+echo [1/3] Starting Android emulator window (GPU: %GPU_MODE%)...
+start "" "%EMULATOR%" -avd core2_api_36 -gpu %GPU_MODE% -no-snapshot -no-audio -crash-report-mode never
 
 echo [2/3] Waiting for emulator to boot up...
 "%ADB%" wait-for-device

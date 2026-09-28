@@ -2,6 +2,7 @@
 
 namespace App\Platform\Weather\Services;
 
+use App\Platform\Geocoding\Services\PlaceNameResolver;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -12,46 +13,52 @@ class LocationWeatherService
      * @return array{
      *     latitude: float,
      *     longitude: float,
-     *     location_name: string,
-     *     temperature_celsius: float,
+     *     location_name: string|null,
+     *     temperature_celsius: float|null,
      *     wind_speed_kmh: float,
      *     wind_gusts_kmh: float,
      *     rain_intensity_mmh: float,
-     *     humidity_percent: int,
+     *     humidity_percent: int|null,
      *     weather_description: string,
      *     safety_level: 'safe_normal'|'warning_caution'|'critical_stop_work',
      *     safety_message: string,
      *     source: string,
      *     fetched_at: string
-     * }
+     * }|null  Null when live weather cannot be fetched.
      */
-    public function getWeatherForCoordinates(float $latitude, float $longitude): array
+    public function getWeatherForCoordinates(float $latitude, float $longitude): ?array
     {
         $roundedLat = round($latitude, 2);
         $roundedLon = round($longitude, 2);
         $cacheKey = "weather_telemetry_{$roundedLat}_{$roundedLon}";
 
-        return Cache::remember($cacheKey, now()->addMinutes(5), function () use ($latitude, $longitude): array {
-            $data = $this->fetchFromOpenMeteo($latitude, $longitude);
+        $cached = Cache::get($cacheKey);
 
-            if ($data !== null) {
-                return $data;
-            }
+        if (is_array($cached)) {
+            return $cached;
+        }
 
-            return $this->fallbackDefaults($latitude, $longitude);
-        });
+        // No fallback values: when the provider is unreachable the caller must
+        // say weather is unknown, never report invented "safe" conditions.
+        $data = $this->fetchFromOpenMeteo($latitude, $longitude);
+
+        if ($data !== null) {
+            Cache::put($cacheKey, $data, now()->addMinutes(5));
+        }
+
+        return $data;
     }
 
     /**
      * @return array{
      *     latitude: float,
      *     longitude: float,
-     *     location_name: string,
-     *     temperature_celsius: float,
+     *     location_name: string|null,
+     *     temperature_celsius: float|null,
      *     wind_speed_kmh: float,
      *     wind_gusts_kmh: float,
      *     rain_intensity_mmh: float,
-     *     humidity_percent: int,
+     *     humidity_percent: int|null,
      *     weather_description: string,
      *     safety_level: 'safe_normal'|'warning_caution'|'critical_stop_work',
      *     safety_message: string,
@@ -79,16 +86,16 @@ class LocationWeatherService
             $json = $response->json() ?? [];
             $current = $json['current'] ?? [];
 
-            if (empty($current)) {
+            if (empty($current) || ! isset($current['wind_speed_10m'])) {
                 return null;
             }
 
             $windSpeedKmh = round((float) ($current['wind_speed_10m'] ?? 0.0), 1);
             $windGustsKmh = round((float) ($current['wind_gusts_10m'] ?? $windSpeedKmh), 1);
-            $temperature = round((float) ($current['temperature_2m'] ?? 28.0), 1);
+            $temperature = isset($current['temperature_2m']) ? round((float) $current['temperature_2m'], 1) : null;
             $rainIntensity = round((float) ($current['precipitation'] ?? 0.0), 2);
-            $humidity = (int) ($current['relative_humidity_2m'] ?? 75);
-            $weatherCode = (int) ($current['weather_code'] ?? 0);
+            $humidity = isset($current['relative_humidity_2m']) ? (int) $current['relative_humidity_2m'] : null;
+            $weatherCode = isset($current['weather_code']) ? (int) $current['weather_code'] : null;
 
             $safety = $this->evaluateSafety($windSpeedKmh, $windGustsKmh, $rainIntensity);
 
@@ -108,7 +115,7 @@ class LocationWeatherService
                 'fetched_at' => now()->toIso8601String(),
             ];
         } catch (\Throwable $e) {
-            Log::info('Open-Meteo fetch failed, using fallback telemetry', ['error' => $e->getMessage()]);
+            Log::info('Open-Meteo fetch failed; weather reported as unavailable', ['error' => $e->getMessage()]);
 
             return null;
         }
@@ -141,152 +148,37 @@ class LocationWeatherService
         ];
     }
 
-    private function mapWmoCode(int $code): string
+    private function mapWmoCode(?int $code): string
     {
         return match ($code) {
+            null => 'Conditions not reported',
             0 => 'Clear Sky',
             1, 2, 3 => 'Mainly Clear / Overcast',
             45, 48 => 'Fog',
             51, 53, 55 => 'Drizzle',
             61, 63, 65 => 'Rain',
             80, 81, 82 => 'Rain Showers',
+            56, 57, 66, 67 => 'Freezing Rain',
+            71, 73, 75, 77, 85, 86 => 'Snow',
             95, 96, 99 => 'Thunderstorm',
-            default => 'Clear Sky',
+            default => 'Conditions not reported',
         };
     }
 
-    private function resolveLocationLabel(float $latitude, float $longitude): string
-    {
-        try {
-            $response = Http::timeout(1.5)
-                ->get('https://api.bigdatacloud.net/data/reverse-geocode-client', [
-                    'latitude' => $latitude,
-                    'longitude' => $longitude,
-                    'localityLanguage' => 'en',
-                ]);
-
-            if ($response->successful()) {
-                /** @var array{city?: string, locality?: string, principalSubdivision?: string} $json */
-                $json = $response->json() ?? [];
-                $locality = ! empty($json['locality']) ? trim((string) $json['locality']) : '';
-                $city = ! empty($json['city']) ? trim((string) $json['city']) : '';
-
-                $manilaDistricts = [
-                    'quiapo', 'intramuros', 'ermita', 'malate', 'binondo',
-                    'san nicolas', 'santa cruz', 'sampaloc', 'san miguel',
-                    'san andres', 'pandacan', 'paco', 'santa ana', 'tondo', 'port area',
-                ];
-
-                if ($locality !== '' && ! in_array(strtolower($locality), $manilaDistricts, true)) {
-                    $cleaned = preg_replace('/^City of\s+/i', '', $locality);
-
-                    return $cleaned !== null && $cleaned !== '' ? $cleaned : $locality;
-                }
-
-                if ($city !== '') {
-                    $cleaned = preg_replace('/^City of\s+/i', '', $city);
-
-                    return $cleaned !== null && $cleaned !== '' ? $cleaned : $city;
-                }
-            }
-        } catch (\Throwable) {
-            // Best effort reverse geocode
-        }
-
-        return $this->fallbackCityName($latitude, $longitude);
-    }
-
-    private function fallbackCityName(float $latitude, float $longitude): string
-    {
-        // Quezon City coordinates
-        if ($latitude >= 14.60 && $latitude <= 14.75 && $longitude >= 121.00 && $longitude <= 121.15) {
-            return 'Quezon City';
-        }
-        // Makati City
-        if ($latitude >= 14.53 && $latitude <= 14.58 && $longitude >= 121.00 && $longitude <= 121.05) {
-            return 'Makati City';
-        }
-        // Taguig / BGC
-        if ($latitude >= 14.51 && $latitude <= 14.56 && $longitude >= 121.04 && $longitude <= 121.08) {
-            return 'Taguig';
-        }
-        // Pasig
-        if ($latitude >= 14.56 && $latitude <= 14.60 && $longitude >= 121.06 && $longitude <= 121.12) {
-            return 'Pasig';
-        }
-        // Mandaluyong / San Juan
-        if ($latitude >= 14.57 && $latitude <= 14.61 && $longitude >= 121.02 && $longitude <= 121.05) {
-            return 'Mandaluyong';
-        }
-        // Pasay / Paranaque
-        if ($latitude >= 14.48 && $latitude <= 14.54 && $longitude >= 120.98 && $longitude <= 121.04) {
-            return 'Pasay / Parañaque';
-        }
-        // Muntinlupa / Alabang
-        if ($latitude >= 14.37 && $latitude <= 14.44 && $longitude >= 121.02 && $longitude <= 121.07) {
-            return 'Muntinlupa';
-        }
-        // Caloocan / Valenzuela / Malabon
-        if ($latitude >= 14.65 && $latitude <= 14.74 && $longitude >= 120.95 && $longitude <= 121.02) {
-            return 'Caloocan';
-        }
-        // Manila proper
-        if ($latitude >= 14.55 && $latitude <= 14.63 && $longitude >= 120.95 && $longitude <= 121.02) {
-            return 'Manila';
-        }
-        // Subic Bay / Olongapo
-        if ($latitude >= 14.7 && $latitude <= 15.1 && $longitude >= 120.1 && $longitude <= 120.5) {
-            return 'Subic Bay';
-        }
-        // Batangas City / Port
-        if ($latitude >= 13.6 && $latitude <= 14.0 && $longitude >= 120.9 && $longitude <= 121.3) {
-            return 'Batangas City';
-        }
-        // Cebu City
-        if ($latitude >= 10.2 && $latitude <= 10.5 && $longitude >= 123.8 && $longitude <= 124.1) {
-            return 'Cebu City';
-        }
-        // Davao City
-        if ($latitude >= 7.0 && $latitude <= 7.3 && $longitude >= 125.4 && $longitude <= 125.8) {
-            return 'Davao City';
-        }
-
-        return round($latitude, 2).'°, '.round($longitude, 2).'°';
-    }
-
     /**
-     * @return array{
-     *     latitude: float,
-     *     longitude: float,
-     *     location_name: string,
-     *     temperature_celsius: float,
-     *     wind_speed_kmh: float,
-     *     wind_gusts_kmh: float,
-     *     rain_intensity_mmh: float,
-     *     humidity_percent: int,
-     *     weather_description: string,
-     *     safety_level: 'safe_normal',
-     *     safety_message: string,
-     *     source: string,
-     *     fetched_at: string
-     * }
+     * Nearest mapped address from the shared geocoding service (Stadia, then
+     * Photon, then BigDataCloud). Null when no provider can name the point.
      */
-    private function fallbackDefaults(float $latitude, float $longitude): array
+    private function resolveLocationLabel(float $latitude, float $longitude): ?string
     {
-        return [
-            'latitude' => $latitude,
-            'longitude' => $longitude,
-            'location_name' => $this->resolveLocationLabel($latitude, $longitude),
-            'temperature_celsius' => 28.5,
-            'wind_speed_kmh' => 14.0,
-            'wind_gusts_kmh' => 20.0,
-            'rain_intensity_mmh' => 0.0,
-            'humidity_percent' => 72,
-            'weather_description' => 'Clear Sky',
-            'safety_level' => 'safe_normal',
-            'safety_message' => 'Normal Wind: Standard hoisting permitted (< 36 km/h).',
-            'source' => 'station_baseline',
-            'fetched_at' => now()->toIso8601String(),
-        ];
+        $place = app(PlaceNameResolver::class)->resolveNow($latitude, $longitude);
+
+        if ($place['status'] !== 'resolved' || $place['primary'] === null) {
+            return null;
+        }
+
+        $area = $place['secondary'] !== null ? explode(', ', $place['secondary'])[0] : null;
+
+        return $area !== null ? "{$place['primary']}, {$area}" : $place['primary'];
     }
 }

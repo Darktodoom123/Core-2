@@ -41,9 +41,11 @@ import {
     getFleetLocationFreshnessLabel,
     hasLocationCoordinates,
 } from '@/components/workspace/fleet/fleet-location-labels';
+import { formatCoordinates } from '@/lib/coordinates';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/lib/use-theme';
 import {
+    primePlace,
     reverseGeocode,
     usePreciseLocation,
 } from '@/services/reverse-geocoder';
@@ -86,7 +88,6 @@ export {
     resolveLocationName,
 } from '@/lib/asset-kind';
 
-const DEFAULT_CENTER: LngLat = [121.04, 14.64];
 const DEFAULT_ZOOM = 11;
 const HTML_MARKER_THRESHOLD = 250;
 function PreciseLocationDisplay({
@@ -105,7 +106,7 @@ function PreciseLocationDisplay({
                 isMapped &&
                 location.latitude !== null &&
                 location.longitude !== null
-                    ? `${getFleetLocationFreshnessDescription(location)} · ${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`
+                    ? `${getFleetLocationFreshnessDescription(location)} · ${formatCoordinates(location.latitude, location.longitude)}`
                     : undefined
             }
         >
@@ -267,6 +268,8 @@ export function LiveTrackingMap({
     useEffect(() => {
         for (const location of mappedLocations) {
             if (location.latitude !== null && location.longitude !== null) {
+                // Server-sent places need no request; misses resolve once.
+                primePlace(location.latitude, location.longitude, location.place);
                 void reverseGeocode(location.latitude, location.longitude);
             }
         }
@@ -812,7 +815,10 @@ function TrackingMapContent({
                         { label: 'Address', value: FOCHUN_WAREHOUSE.address },
                     ],
                     locationName: FOCHUN_WAREHOUSE.address,
-                    coordinateText: `${FOCHUN_WAREHOUSE.position[1].toFixed(5)}, ${FOCHUN_WAREHOUSE.position[0].toFixed(5)}`,
+                    coordinateText: formatCoordinates(
+                        FOCHUN_WAREHOUSE.position[1],
+                        FOCHUN_WAREHOUSE.position[0],
+                    ),
                     onCopyCoordinates: (button) => {
                         void navigator.clipboard?.writeText(
                             `${FOCHUN_WAREHOUSE.position[1]}, ${FOCHUN_WAREHOUSE.position[0]}`,
@@ -1541,7 +1547,7 @@ function TrackingMapContent({
         previousSelectedAssetKeyRef.current = selectedAssetKey;
         hasInitializedSelectionRef.current = true;
 
-        if (!shouldCenter) {
+        if (!shouldCenter || !hasLocationCoordinates(selected)) {
             return;
         }
 
@@ -2254,11 +2260,12 @@ function MapKeyContent() {
     );
 }
 
+/**
+ * Map position of a unit. Callers pass only units with a real fix (see
+ * hasLocationCoordinates); a unit without GPS is never drawn anywhere.
+ */
 function toLngLat(location: LocationUpdateViewModel): LngLat {
-    return [
-        location.longitude ?? DEFAULT_CENTER[0],
-        location.latitude ?? DEFAULT_CENTER[1],
-    ];
+    return [location.longitude as number, location.latitude as number];
 }
 
 function findSosIncidentForLocation(
@@ -2305,8 +2312,9 @@ function averageSosPosition(
 }
 
 function averagePosition(locations: LocationUpdateViewModel[]): LngLat {
+    // Nothing to show yet: start on the company yard, a real fixed facility.
     if (locations.length === 0) {
-        return DEFAULT_CENTER;
+        return FOCHUN_WAREHOUSE.position;
     }
 
     return [

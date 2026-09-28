@@ -7,6 +7,7 @@ use App\Modules\HoursOfService\Enums\ShiftStatus;
 use App\Modules\HoursOfService\Models\OperatorDutyLog;
 use App\Modules\HoursOfService\Models\OperatorShift;
 use App\Modules\HoursOfService\Support\DoleOperatingLimit;
+use App\Platform\Geocoding\Services\PlaceNameResolver;
 use App\Platform\Identity\Models\User;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
@@ -300,6 +301,7 @@ class CalculateHosClocksQuery
                     'accuracy_metres' => $log->accuracy_metres,
                     'location_observed_at' => $log->location_observed_at?->toIso8601String(),
                     'location_source' => $log->location_source,
+                    'place' => app(PlaceNameResolver::class)->describe($log->latitude, $log->longitude),
                     'location_freshness' => $freshness,
                     'location_label' => match ($freshness) {
                         'fresh' => $log->location_name ?? 'GPS position',
@@ -428,6 +430,7 @@ class CalculateHosClocksQuery
                 'location_freshness' => $log->location_freshness
                     ?? ($log->latitude !== null && $log->longitude !== null ? 'last_known' : 'unavailable'),
                 'location_name' => $log->location_name,
+                'place' => app(PlaceNameResolver::class)->describe($log->latitude, $log->longitude),
                 'remarks' => $log->remarks,
             ];
         }

@@ -48,7 +48,7 @@ const requireRealFix = (
     return position;
 };
 
-const fixAgeMs =(position: Location.LocationObject): number =>
+const fixAgeMs = (position: Location.LocationObject): number =>
     position.timestamp ? Date.now() - position.timestamp : Infinity;
 
 const isUsableCachedFix = (
@@ -343,6 +343,78 @@ export class NativeLocationAdapter {
                         ? 'permission_denied'
                         : 'unavailable',
             };
+        }
+    }
+
+    /**
+     * Full nearest address from the device geocoder, split into a headline
+     * and the surrounding area. The offline fallback for server lookups.
+     */
+    public async reverseGeocodeAddress(
+        latitude: number,
+        longitude: number,
+    ): Promise<{ primary: string; secondary: string | null } | null> {
+        try {
+            if (typeof Location.reverseGeocodeAsync !== 'function') {
+                return null;
+            }
+
+            const addresses = await Promise.race([
+                Location.reverseGeocodeAsync({ latitude, longitude }),
+                new Promise<null>((resolve) =>
+                    setTimeout(() => resolve(null), 3000),
+                ),
+            ]);
+            const addr = addresses?.[0];
+
+            if (!addr) {
+                return null;
+            }
+
+            const seen = new Set<string>();
+            const distinct = (parts: Array<string | null | undefined>) =>
+                parts
+                    .map((part) => part?.trim() ?? '')
+                    .filter((part) => {
+                        const key = part.toLowerCase();
+
+                        if (!part || seen.has(key)) {
+                            return false;
+                        }
+
+                        seen.add(key);
+
+                        return true;
+                    });
+            const street = [addr.streetNumber, addr.street]
+                .filter(Boolean)
+                .join(' ');
+            const primary = distinct([
+                addr.name && addr.name !== addr.streetNumber ? addr.name : null,
+                street || null,
+            ]);
+            const area = distinct([
+                addr.district,
+                addr.city,
+                addr.subregion,
+                [addr.region, addr.postalCode].filter(Boolean).join(' ') ||
+                    null,
+                addr.country,
+            ]);
+
+            if (primary.length === 0 && area.length === 0) {
+                return null;
+            }
+
+            const headline =
+                primary.length > 0 ? primary : [area.shift() as string];
+
+            return {
+                primary: headline.join(', '),
+                secondary: area.length > 0 ? area.join(', ') : null,
+            };
+        } catch {
+            return null;
         }
     }
 

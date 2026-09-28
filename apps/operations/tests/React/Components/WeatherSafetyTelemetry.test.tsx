@@ -15,7 +15,7 @@ it('does not request or invent site weather without pinned coordinates', () => {
     );
 
     expect(screen.getByText(/Site weather unavailable/)).toBeInTheDocument();
-    expect(screen.getByText(/coordinates not recorded/)).toBeInTheDocument();
+    expect(screen.getByText(/coordinates not recorded/i)).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
     expect(
         screen.queryByText(

@@ -525,10 +525,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                                             <TextInput
                                                 value={username}
                                                 onChangeText={setUsername}
-                                                placeholder="your.username"
-                                                placeholderTextColor={
-                                                    colors.mutedOnDark
-                                                }
                                                 keyboardType="default"
                                                 autoCapitalize="none"
                                                 autoCorrect={false}
@@ -583,10 +579,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                                                 ref={passwordRef}
                                                 value={password}
                                                 onChangeText={setPassword}
-                                                placeholder="Your password"
-                                                placeholderTextColor={
-                                                    colors.mutedOnDark
-                                                }
                                                 secureTextEntry={
                                                     !isPasswordVisible
                                                 }

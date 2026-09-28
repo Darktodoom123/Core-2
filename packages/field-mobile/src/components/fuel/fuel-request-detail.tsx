@@ -259,6 +259,66 @@ function FuelTimeline({ request }: { request: MobileFuelRequest }) {
     );
 }
 
+/** A label/value row inside a detail card, divided from the row above it. */
+function DetailRow({
+    icon,
+    label,
+    value,
+    valueColor,
+    first = false,
+    stacked = false,
+}: {
+    icon: IconName;
+    label: string;
+    value: string;
+    valueColor?: string;
+    first?: boolean;
+    stacked?: boolean;
+}) {
+    const { theme } = useTheme();
+
+    return (
+        <View
+            accessible
+            accessibilityLabel={`${label}: ${value}`}
+            style={{
+                flexDirection: stacked ? 'column' : 'row',
+                alignItems: stacked ? 'stretch' : 'center',
+                gap: stacked ? 4 : 12,
+                paddingTop: first ? 0 : 10,
+                borderTopWidth: first ? 0 : 1,
+                borderTopColor: theme.border,
+            }}
+        >
+            <View style={[fuelStyles.inlineRow, { flexShrink: 0 }]}>
+                <Icon name={icon} size={16} color={theme.textSecondary} />
+                <Text style={{ color: theme.textSecondary, fontSize: 13 }}>
+                    {label}
+                </Text>
+            </View>
+            <Text
+                style={{
+                    flex: stacked ? undefined : 1,
+                    textAlign: stacked ? 'left' : 'right',
+                    color: valueColor ?? theme.textPrimary,
+                    fontSize: 15,
+                    fontWeight: stacked ? '500' : '600',
+                    lineHeight: 21,
+                }}
+            >
+                {value}
+            </Text>
+        </View>
+    );
+}
+
+function formatPeso(value: string | null): string {
+    return `PHP ${Number(value).toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    })}`;
+}
+
 export function FuelRequestListItem({
     request,
     onPress,
@@ -305,17 +365,57 @@ export function FuelRequestListItem({
             </Text>
             <Text style={{ color: theme.textSecondary, fontSize: 13 }}>
                 {request.reference} · {formatFuelDate(request.created_at)}
+                {request.job?.reference ? ` · ${request.job.reference}` : ''}
             </Text>
-            {request.status === 'verified' && (
-                <Text
-                    style={{
-                        color: theme.successEmerald,
-                        fontWeight: '700',
-                        fontSize: 14,
-                    }}
-                >
-                    Ready — refuel, then capture the receipt
+            {request.logs[0] ? (
+                <Text style={{ color: theme.textSecondary, fontSize: 13 }}>
+                    {request.logs[0].quantity_litres} L received
+                    {request.logs[0].requires_receipt_review
+                        ? ' · receipt awaiting office review'
+                        : ''}
                 </Text>
+            ) : request.needed_by &&
+              !['rejected', 'withdrawn'].includes(request.status) ? (
+                <View style={fuelStyles.inlineRow}>
+                    <Icon name="clock" size={14} color={theme.textSecondary} />
+                    <Text style={{ color: theme.textSecondary, fontSize: 13 }}>
+                        Needed by {formatFuelDate(request.needed_by)}
+                    </Text>
+                </View>
+            ) : null}
+            {request.status === 'verified' && (
+                <View
+                    style={[
+                        fuelStyles.inlineRow,
+                        {
+                            backgroundColor: theme.successEmeraldLight,
+                            borderRadius: 8,
+                            paddingHorizontal: 10,
+                            paddingVertical: 8,
+                        },
+                    ]}
+                >
+                    <Icon
+                        name="fuel"
+                        size={16}
+                        color={theme.successEmeraldText}
+                    />
+                    <Text
+                        style={{
+                            color: theme.successEmeraldText,
+                            fontWeight: '700',
+                            fontSize: 14,
+                            flex: 1,
+                        }}
+                    >
+                        Ready — refuel, then capture the receipt
+                    </Text>
+                    <Icon
+                        name="chevron-right"
+                        size={16}
+                        color={theme.successEmeraldText}
+                    />
+                </View>
             )}
         </Pressable>
     );
@@ -409,7 +509,6 @@ export function FuelRequestDetail({
     const { theme } = useTheme();
     const [confirmWithdraw, setConfirmWithdraw] = useState(false);
     const [withdrawReason, setWithdrawReason] = useState('');
-    const textStyle = [fuelStyles.body, { color: theme.textPrimary }];
 
     return (
         <View style={fuelStyles.section} testID="fuel-request-detail">
@@ -438,28 +537,44 @@ export function FuelRequestDetail({
                     },
                 ]}
             >
-                <Text style={textStyle}>
-                    Equipment:{' '}
-                    {request.asset
-                        ? `${request.asset.code} · ${request.asset.name}`
-                        : 'General use'}
-                </Text>
+                <DetailRow
+                    first
+                    icon="truck"
+                    label="Equipment"
+                    value={
+                        request.asset
+                            ? `${request.asset.code} · ${request.asset.name}`
+                            : 'General use'
+                    }
+                />
                 {request.job?.reference && (
-                    <Text style={textStyle}>Job: {request.job.reference}</Text>
+                    <DetailRow
+                        icon="clipboard"
+                        label="Job"
+                        value={request.job.reference}
+                    />
                 )}
                 {request.current_fuel_level_percent !== null &&
                     request.current_fuel_level_percent !== undefined && (
-                        <Text style={textStyle}>
-                            Tank when requested:{' '}
-                            {request.current_fuel_level_percent}%
-                        </Text>
+                        <DetailRow
+                            icon="speed"
+                            label="Tank when requested"
+                            value={`${request.current_fuel_level_percent}%`}
+                        />
                     )}
                 {request.needed_by && (
-                    <Text style={textStyle}>
-                        Needed by: {formatFuelDate(request.needed_by)}
-                    </Text>
+                    <DetailRow
+                        icon="clock"
+                        label="Needed by"
+                        value={formatFuelDate(request.needed_by)}
+                    />
                 )}
-                <Text style={textStyle}>Purpose: {request.purpose}</Text>
+                <DetailRow
+                    icon="file-text"
+                    label="Purpose"
+                    value={request.purpose}
+                    stacked
+                />
             </View>
 
             {request.status === 'rejected' && (
@@ -580,76 +695,134 @@ export function FuelRequestDetail({
                 ))
             )}
 
-            {request.logs.map((log) => (
-                <View
-                    key={log.id}
-                    style={[
-                        fuelStyles.card,
-                        {
-                            backgroundColor: theme.surface,
-                            borderColor: theme.border,
-                        },
-                    ]}
-                >
-                    <Text
-                        style={{
-                            color: theme.textPrimary,
-                            fontWeight: '700',
-                            fontSize: 17,
-                        }}
+            {request.logs.map((log) => {
+                const receiptValue = log.has_receipt
+                    ? `Attached${log.receipt_number ? ` · No. ${log.receipt_number}` : ''}`
+                    : `None${log.no_receipt_reason_label ? ` · ${log.no_receipt_reason_label}` : ''}`;
+                const receiptColor = log.has_receipt
+                    ? theme.successEmeraldText
+                    : log.requires_receipt_review
+                      ? theme.warningOrangeText
+                      : undefined;
+
+                return (
+                    <View
+                        key={log.id}
+                        style={[
+                            fuelStyles.card,
+                            {
+                                backgroundColor: theme.surface,
+                                borderColor: theme.border,
+                            },
+                        ]}
+                        testID={`fuel-log-${log.id}`}
                     >
-                        {log.quantity_litres} L received
-                    </Text>
-                    <Text style={textStyle}>
-                        {formatFuelDate(log.recorded_at)}
-                    </Text>
-                    {log.total_cost !== null && (
-                        <Text style={textStyle}>
-                            PHP {Number(log.total_cost).toFixed(2)}
-                        </Text>
-                    )}
-                    {log.odometer_km !== null && (
-                        <Text style={textStyle}>
-                            Odometer: {log.odometer_km} km
-                        </Text>
-                    )}
-                    {log.hour_meter !== null && (
-                        <Text style={textStyle}>
-                            Engine hours: {log.hour_meter}
-                        </Text>
-                    )}
-                    {log.fuel_station && (
-                        <Text style={textStyle}>{log.fuel_station}</Text>
-                    )}
-                    {log.has_receipt ? (
-                        <Text style={textStyle}>
-                            Receipt attached
-                            {log.receipt_number
-                                ? ` · No. ${log.receipt_number}`
-                                : ''}
-                        </Text>
-                    ) : (
-                        <Text style={textStyle}>
-                            No receipt
-                            {log.no_receipt_reason_label
-                                ? `: ${log.no_receipt_reason_label}`
-                                : ''}
-                            {log.requires_receipt_review
-                                ? ' · waiting for office review'
-                                : log.receipt_reviewed_at
-                                  ? ' · reviewed by office'
-                                  : ''}
-                        </Text>
-                    )}
-                    {log.is_anomaly && (
-                        <Text style={[textStyle, { color: theme.hazardRed }]}>
-                            Needs review:{' '}
-                            {log.anomaly_reason ??
-                                'Consumption variance flagged.'}
-                        </Text>
-                    )}
-                </View>
-            ))}
+                        <View style={fuelStyles.inlineRow}>
+                            <Icon
+                                name="check-circle"
+                                size={18}
+                                color={theme.successEmerald}
+                            />
+                            <Text
+                                style={{
+                                    color: theme.textSecondary,
+                                    fontSize: 13,
+                                    fontWeight: '600',
+                                }}
+                            >
+                                Refuel recorded ·{' '}
+                                {formatFuelDate(log.recorded_at)}
+                            </Text>
+                        </View>
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'baseline',
+                                flexWrap: 'wrap',
+                                gap: 6,
+                            }}
+                        >
+                            <Text
+                                style={{
+                                    color: theme.textPrimary,
+                                    fontWeight: '700',
+                                    fontSize: 22,
+                                }}
+                            >
+                                {log.quantity_litres} L received
+                            </Text>
+                            <Text
+                                style={{
+                                    color: theme.textSecondary,
+                                    fontSize: 14,
+                                }}
+                            >
+                                of {request.quantity_litres} L requested
+                            </Text>
+                        </View>
+                        {log.total_cost !== null && (
+                            <DetailRow
+                                icon="file-text"
+                                label="Total cost"
+                                value={formatPeso(log.total_cost)}
+                            />
+                        )}
+                        {log.odometer_km !== null && (
+                            <DetailRow
+                                icon="speed"
+                                label="Odometer"
+                                value={`${log.odometer_km.toLocaleString()} km`}
+                            />
+                        )}
+                        {log.hour_meter !== null && (
+                            <DetailRow
+                                icon="engine"
+                                label="Engine hours"
+                                value={log.hour_meter}
+                            />
+                        )}
+                        {log.fuel_station && (
+                            <DetailRow
+                                icon="location"
+                                label="Source"
+                                value={log.fuel_station}
+                            />
+                        )}
+                        <DetailRow
+                            icon="camera"
+                            label="Receipt"
+                            value={receiptValue}
+                            valueColor={receiptColor}
+                        />
+                        {!log.has_receipt &&
+                            (log.requires_receipt_review ||
+                                log.receipt_reviewed_at) && (
+                                <FuelBanner
+                                    tone={
+                                        log.requires_receipt_review
+                                            ? 'warning'
+                                            : 'success'
+                                    }
+                                    message={
+                                        log.requires_receipt_review
+                                            ? 'The office will review why there is no receipt.'
+                                            : `Reviewed by the office${log.receipt_review_note ? `: ${log.receipt_review_note}` : '.'}`
+                                    }
+                                />
+                            )}
+                        {log.is_anomaly && (
+                            <FuelBanner
+                                tone="danger"
+                                title="Needs review"
+                                message={
+                                    log.anomaly_reason ??
+                                    'Consumption variance flagged.'
+                                }
+                            />
+                        )}
+                    </View>
+                );
+            })}
 
             <FuelButton
                 title="Back to requests"

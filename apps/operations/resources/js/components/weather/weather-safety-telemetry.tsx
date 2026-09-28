@@ -1,5 +1,7 @@
-import { AlertTriangle, Cloud, MapPin, RefreshCw, Wind } from 'lucide-react';
+import { AlertTriangle, Cloud, RefreshCw, Wind } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { LocationLabel } from '@/components/location/location-label';
+import { FOCHUN_WAREHOUSE } from '@/components/maplibre/warehouse-location';
 import { Panel } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import type { LocationUpdateViewModel } from '@/types/workspace';
@@ -102,9 +104,11 @@ export function WeatherSafetyTelemetry({
 }) {
     const isSite = variant === 'site';
     const hasSiteCoordinates = latitude != null && longitude != null;
-    // The regional fleet view explicitly uses the base yard when no asset is selected.
-    const targetLat = isSite ? latitude : (latitude ?? 14.5995);
-    const targetLon = isSite ? longitude : (longitude ?? 120.9842);
+    // With no unit selected, the fleet view reports weather at the company
+    // yard (a real, fixed facility) and says so.
+    const usesYard = !isSite && (latitude == null || longitude == null);
+    const targetLat = usesYard ? FOCHUN_WAREHOUSE.position[1] : latitude;
+    const targetLon = usesYard ? FOCHUN_WAREHOUSE.position[0] : longitude;
     const key = `${targetLat ?? 'none'}:${targetLon ?? 'none'}`;
     const [result, setResult] = useState<{
         key: string;
@@ -180,9 +184,9 @@ export function WeatherSafetyTelemetry({
         };
     }, [key, targetLat, targetLon]);
 
-    const location = isSite
-        ? locationLabel || 'Job site'
-        : locationLabel || 'Base Yard (Metro Manila)';
+    const location = usesYard
+        ? FOCHUN_WAREHOUSE.label
+        : (locationLabel ?? (isSite ? 'Job site' : null));
     const locationControl =
         variant === 'tracking' && availableLocations?.length ? (
             <label className="flex items-center gap-2 text-xs text-ink-soft">
@@ -228,13 +232,20 @@ export function WeatherSafetyTelemetry({
                         <h3 className="font-semibold text-ink">
                             {isSite ? 'Site weather' : 'Weather and wind'}
                         </h3>
-                        <p className="flex items-center gap-1 text-xs text-ink-soft">
-                            <MapPin className="size-3" aria-hidden="true" />
-                            {location}
-                            {targetLat != null && targetLon != null
-                                ? ` · ${targetLat.toFixed(4)}, ${targetLon.toFixed(4)}`
-                                : ' · coordinates not recorded'}
-                        </p>
+                        <div className="flex flex-wrap items-start gap-x-1.5 text-xs text-ink-soft">
+                            {location && (
+                                <span className="font-medium text-ink">
+                                    {location} ·
+                                </span>
+                            )}
+                            <LocationLabel
+                                latitude={targetLat}
+                                longitude={targetLon}
+                                variant="inline"
+                                showIcon={!location}
+                                emptyLabel="Coordinates not recorded"
+                            />
+                        </div>
                     </div>
                 </div>
                 {locationControl}

@@ -225,6 +225,51 @@ it('allows authorized manager to request report export and queues generation job
     expect(AuditEvent::query()->where('action', 'report_export.requested')->exists())->toBeTrue();
 });
 
+it('stores the job report status filter and ignores it for other datasets', function (): void {
+    Queue::fake();
+
+    $manager = createExportUser(RoleName::OperationsManager);
+
+    $this->actingAs($manager)
+        ->post('/operations/reports/exports', ['export_type' => 'job_reports', 'format' => 'csv', 'status' => 'approved'])
+        ->assertRedirect();
+    $this->actingAs($manager)
+        ->post('/operations/reports/exports', ['export_type' => 'dispatches', 'format' => 'csv', 'status' => 'approved'])
+        ->assertRedirect();
+    $this->actingAs($manager)
+        ->post('/operations/reports/exports', ['export_type' => 'job_reports', 'format' => 'csv', 'status' => 'bogus'])
+        ->assertSessionHasErrors('status');
+
+    expect(ReportExport::query()->where('export_type', ReportExportType::JobReports)->sole()->filters)->toBe(['status' => 'approved'])
+        ->and(ReportExport::query()->where('export_type', ReportExportType::Dispatches)->sole()->filters)->toBe([]);
+});
+
+it('exports job report duration, meter, sign-off, and attachment counts filtered by status', function (): void {
+    $manager = createExportUser(RoleName::OperationsManager);
+    $approved = createExportReport($manager, 'Approved lift', now());
+    $approved->forceFill([
+        'status' => 'approved',
+        'started_at' => now()->subHours(3),
+        'ended_at' => now()->subHours(3)->addMinutes(150),
+        'ending_meter_value' => 4520,
+        'meter_type' => 'engine_hours',
+        'signer_name' => 'Engr. Santos',
+    ])->saveQuietly();
+    createExportReport($manager, 'Pending lift', now());
+
+    $dataset = app(ReportExportCatalog::class)->dataset(ReportExportType::JobReports);
+    $rows = iterator_to_array($dataset->rows($manager, ['status' => 'approved']), false);
+    $row = array_combine($dataset->headers(), $rows[0]);
+
+    expect($rows)->toHaveCount(1)
+        ->and($row['Work Summary'])->toBe('Approved lift')
+        ->and($row['Status'])->toBe('Approved')
+        ->and($row['Duration (Minutes)'])->toBe(150)
+        ->and($row['Meter Unit'])->toBe('hrs')
+        ->and($row['Client Sign-Off'])->toBe('Engr. Santos')
+        ->and($row['Attachments'])->toBe(0);
+});
+
 it('prevents unauthorized driver from requesting report export', function (): void {
     $driver = createExportUser(RoleName::CraneOperator);
 

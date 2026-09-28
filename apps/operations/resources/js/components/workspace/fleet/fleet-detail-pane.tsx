@@ -7,6 +7,7 @@ import {
     ClipboardCheck,
     Clock3,
     ExternalLink,
+    FileBarChart,
     FileText,
     Gauge,
     MapPin,
@@ -428,6 +429,19 @@ export function FleetDetailPane({
                             </span>
                         )}
                     </p>
+
+                    {capabilities.export_reports && (
+                        <a
+                            href={`/operations?view=reports&report=asset&asset_id=${asset.id}`}
+                            className="mt-2 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-brand-strong hover:underline lg:min-h-0"
+                        >
+                            <FileBarChart
+                                className="h-4 w-4"
+                                aria-hidden="true"
+                            />
+                            Weekly report: fuel, personnel &amp; jobs
+                        </a>
+                    )}
                 </div>
 
                 <FleetQuickActionToolbar

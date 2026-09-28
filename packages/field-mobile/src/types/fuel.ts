@@ -53,6 +53,7 @@ export interface MobileFuelLog {
     no_receipt_note?: string | null;
     requires_receipt_review?: boolean;
     receipt_reviewed_at?: string | null;
+    receipt_review_note?: string | null;
 }
 
 export interface MobileFuelRequest {

@@ -3,6 +3,7 @@ import {
     FLEET_ASSET_CATEGORY_LABELS,
 } from '@/components/workspace/fleet/fleet-asset-classification';
 import { getFleetLocationFreshnessLabel } from '@/components/workspace/fleet/fleet-location-labels';
+import { formatCoordinates } from '@/lib/coordinates';
 import { resolveLocationName } from '@/lib/asset-kind';
 import {
     getCoordinatesCacheKey,
@@ -166,7 +167,7 @@ export function createTrackingLocationPopup(
         locationName: resolveLocationName(location),
         coordinateText:
             location.latitude !== null && location.longitude !== null
-                ? `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`
+                ? formatCoordinates(location.latitude, location.longitude)
                 : undefined,
         onCopyCoordinates,
     });
@@ -205,10 +206,11 @@ export function createTrackingSosPopup(
         ? resolveLocationName({
               latitude: lat,
               longitude: lon,
-              job: incident.dispatch ? { site: incident.dispatch.site } : null,
-              asset: null,
+              place: incident.location?.place,
           })
-        : (incident.dispatch?.site ?? undefined);
+        : resolveLocationName({
+              job: incident.dispatch ? { site: incident.dispatch.site } : null,
+          });
 
     const card = createPopupCard({
         title: incident.worker.name,
@@ -237,7 +239,7 @@ export function createTrackingSosPopup(
         ],
         locationName,
         coordinateText: hasCoords
-            ? `${lat.toFixed(5)}, ${lon.toFixed(5)}`
+            ? formatCoordinates(lat, lon)
             : undefined,
         onCopyCoordinates,
     });

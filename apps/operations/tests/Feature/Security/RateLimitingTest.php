@@ -9,6 +9,7 @@ use App\Platform\Identity\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -117,6 +118,10 @@ it('throttles password reset submissions after 5 attempts', function (): void {
 });
 
 it('decouples weather endpoint rate limiting from location telemetry', function (): void {
+    Http::fake(['api.open-meteo.com/*' => Http::response(['current' => [
+        'temperature_2m' => 30.1, 'relative_humidity_2m' => 70, 'precipitation' => 0,
+        'weather_code' => 1, 'wind_speed_10m' => 12.0, 'wind_gusts_10m' => 18.0,
+    ]])]);
     /** @var User $user */
     $user = User::factory()->create(['is_active' => true]);
     $user->syncRoles([RoleName::CraneOperator->value]);
@@ -125,13 +130,13 @@ it('decouples weather endpoint rate limiting from location telemetry', function 
     // Send 60 weather requests
     for ($i = 0; $i < 60; $i++) {
         $this->withToken($token)
-            ->getJson('/api/v1/telemetry/weather')
+            ->getJson('/api/v1/telemetry/weather?latitude=14.7&longitude=121.0')
             ->assertOk();
     }
 
     // 61st weather request is throttled
     $this->withToken($token)
-        ->getJson('/api/v1/telemetry/weather')
+        ->getJson('/api/v1/telemetry/weather?latitude=14.7&longitude=121.0')
         ->assertStatus(429);
 
     // Location upload is NOT throttled because it uses independent rate limiter

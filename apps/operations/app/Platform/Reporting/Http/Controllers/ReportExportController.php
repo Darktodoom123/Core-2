@@ -30,6 +30,8 @@ class ReportExportController extends Controller
         $filters = array_filter([
             'date_from' => $validated['date_from'] ?? null,
             'date_to' => $validated['date_to'] ?? null,
+            // Status only narrows job report exports; other datasets ignore it.
+            'status' => $type === ReportExportType::JobReports ? ($validated['status'] ?? null) : null,
         ]);
 
         $createAction->execute($user, $type, $format, $filters);

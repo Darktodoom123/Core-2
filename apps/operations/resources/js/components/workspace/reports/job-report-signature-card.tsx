@@ -1,6 +1,8 @@
-import { CheckCircle2, Clock, MapPin, UserCheck } from 'lucide-react';
+import { CheckCircle2, Clock, UserCheck } from 'lucide-react';
+import { LocationLabel } from '@/components/location/location-label';
 import { formatDateTime } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
+import type { PlaceViewModel } from '@/types/workspace';
 
 interface JobReportSignatureCardProps {
     signerName?: string | null;
@@ -8,6 +10,7 @@ interface JobReportSignatureCardProps {
     signedAt?: string | null;
     latitude?: number | null;
     longitude?: number | null;
+    place?: PlaceViewModel | null;
     className?: string;
 }
 
@@ -17,6 +20,7 @@ export function JobReportSignatureCard({
     signedAt,
     latitude,
     longitude,
+    place,
     className,
 }: JobReportSignatureCardProps) {
     const isSigned = Boolean(signerName && signerName.trim() !== '');
@@ -99,15 +103,13 @@ export function JobReportSignatureCard({
                     <span className="text-[10px] font-bold text-ink-soft uppercase">
                         Location Stamp
                     </span>
-                    <p className="flex items-center gap-1 font-mono text-ink">
-                        <MapPin className="h-3 w-3 text-brand-strong" />
-                        {latitude !== null &&
-                        longitude !== null &&
-                        latitude !== undefined &&
-                        longitude !== undefined
-                            ? `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
-                            : 'Location not recorded'}
-                    </p>
+                    <LocationLabel
+                        latitude={latitude}
+                        longitude={longitude}
+                        place={place}
+                        emptyLabel="Location not recorded"
+                        className="mt-0.5"
+                    />
                 </div>
             </div>
         </div>
