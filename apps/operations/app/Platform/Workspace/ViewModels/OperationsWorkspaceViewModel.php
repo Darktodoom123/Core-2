@@ -391,7 +391,13 @@ final class OperationsWorkspaceViewModel
             $statusChange = $latestStatusChanges->get((string) $asset->getKey())
                 ?? $latestStatusChanges->get($asset->getKey());
 
-            $activeShift = $asset->relationLoaded('activeOperatorShift') ? $asset->activeOperatorShift : null;
+            // The operator who linked the unit first: their shift usually
+            // started before the link, so it does not name the unit itself.
+            $linkShift = $asset->relationLoaded('openUnitLink')
+                ? $asset->openUnitLink?->activeShift
+                : null;
+            $activeShift = $linkShift
+                ?? ($asset->relationLoaded('activeOperatorShift') ? $asset->activeOperatorShift : null);
             $activeOperator = null;
             $hosData = null;
             if ($activeShift !== null) {

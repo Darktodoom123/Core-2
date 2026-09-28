@@ -248,7 +248,8 @@ export function FleetDetailPane({
                 </div>
             )}
 
-            <div className="flex flex-col items-stretch gap-4 border-b border-line pb-4 @lg:flex-row @lg:items-start @lg:justify-between">
+            {/* Side by side only when the actions leave the name and position room. */}
+            <div className="flex flex-col items-stretch gap-4 border-b border-line pb-4 @3xl:flex-row @3xl:items-start @3xl:justify-between">
                 <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                         <span className="text-xl font-bold whitespace-nowrap text-ink">
@@ -363,7 +364,7 @@ export function FleetDetailPane({
                         setShowDvirModal(true);
                     }}
                     lockdownTriggerRef={lockdownTriggerRef}
-                    className="w-full @lg:w-auto @lg:justify-end"
+                    className="w-full @3xl:w-auto @3xl:justify-end"
                 />
             </div>
 

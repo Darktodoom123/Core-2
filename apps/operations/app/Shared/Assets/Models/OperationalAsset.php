@@ -101,6 +101,19 @@ class OperationalAsset extends Model
             ->latestOfMany('started_at');
     }
 
+    /**
+     * Who is on the unit now. A shift usually starts before the unit is
+     * linked, so the shift's own unit is often empty; the open link is not.
+     *
+     * @return HasOne<UnitLink, $this>
+     */
+    public function openUnitLink(): HasOne
+    {
+        return $this->hasOne(UnitLink::class, 'operational_asset_id')
+            ->whereNull('released_at')
+            ->latestOfMany('linked_at');
+    }
+
     /** @return HasOne<MaintenanceWorkOrder, $this> */
     public function activeBlockingWorkOrder(): HasOne
     {

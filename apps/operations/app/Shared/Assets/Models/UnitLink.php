@@ -2,12 +2,15 @@
 
 namespace App\Shared\Assets\Models;
 
+use App\Modules\HoursOfService\Enums\ShiftStatus;
+use App\Modules\HoursOfService\Models\OperatorShift;
 use App\Platform\Identity\Models\User;
 use App\Shared\Assets\Enums\UnitLinkReleaseReason;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * An operator physically bound to a unit on site, from link to release.
@@ -45,6 +48,18 @@ class UnitLink extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * The linked operator's open shift, for duty and hours on the unit.
+     *
+     * @return HasOne<OperatorShift, $this>
+     */
+    public function activeShift(): HasOne
+    {
+        return $this->hasOne(OperatorShift::class, 'user_id', 'user_id')
+            ->whereIn('status', [ShiftStatus::ACTIVE, ShiftStatus::ON_BREAK])
+            ->latestOfMany('started_at');
     }
 
     /**

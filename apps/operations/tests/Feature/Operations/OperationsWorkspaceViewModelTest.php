@@ -27,6 +27,7 @@ use App\Platform\Workspace\ViewModels\OperationsWorkspaceViewModel;
 use App\Shared\Assets\Enums\AssetStatus;
 use App\Shared\Assets\Models\MaintenanceWorkOrder;
 use App\Shared\Assets\Models\OperationalAsset;
+use App\Shared\Assets\Models\UnitLink;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -159,6 +160,75 @@ it('maps asset active operator with canonical DOLE clocks without inferring tele
         ->and($item['hos']['duty_status_label'])->toBe('Operating')
         ->and($item['hos']['dole_warning'])->toBeTrue()
         ->and($item['hos']['fatigue_status'])->toBe('warning');
+});
+
+it('shows the operator who linked the unit when their shift started before the link', function (): void {
+    $manager = User::factory()->create();
+    $manager->syncRoles([RoleName::OperationsManager->value]);
+    $operator = User::factory()->create(['name' => 'BJ Linked Operator']);
+    $operator->syncRoles([RoleName::CraneOperator->value]);
+    $asset = OperationalAsset::query()->create([
+        'code' => 'CRN-LINK-01',
+        'name' => '55T Rough-Terrain Crane',
+        'kind' => 'mobile_crane',
+        'status' => AssetStatus::Available,
+    ]);
+
+    // Lifecycle step 3 then 4: the shift starts with no unit, then the unit is linked.
+    $shift = OperatorShift::query()->create([
+        'user_id' => $operator->id,
+        'operational_asset_id' => null,
+        'status' => ShiftStatus::ON_BREAK,
+        'started_at' => now()->subHours(2),
+    ]);
+    OperatorDutyLog::query()->create([
+        'user_id' => $operator->id,
+        'operator_shift_id' => $shift->id,
+        'duty_status' => DutyStatus::ON_BREAK,
+        'started_at' => now()->subMinutes(10),
+    ]);
+    UnitLink::query()->create([
+        'operational_asset_id' => $asset->id,
+        'user_id' => $operator->id,
+        'linked_at' => now()->subHour(),
+    ]);
+
+    $page = app(WorkspaceAssetsQuery::class)->paginate($manager, ['per_page' => 50]);
+    $item = collect(OperationsWorkspaceViewModel::assets($page->getCollection()))
+        ->firstWhere('id', $asset->id);
+
+    expect($item['active_operator'])->not()->toBeNull()
+        ->and($item['active_operator']['name'])->toBe('BJ Linked Operator')
+        ->and($item['hos']['duty_status'])->toBe('on_break');
+});
+
+it('shows no operator once the unit is released', function (): void {
+    $manager = User::factory()->create();
+    $manager->syncRoles([RoleName::OperationsManager->value]);
+    $operator = User::factory()->create();
+    $asset = OperationalAsset::query()->create([
+        'code' => 'CRN-LINK-02',
+        'name' => '55T Rough-Terrain Crane',
+        'kind' => 'mobile_crane',
+        'status' => AssetStatus::Available,
+    ]);
+    OperatorShift::query()->create([
+        'user_id' => $operator->id,
+        'status' => ShiftStatus::ACTIVE,
+        'started_at' => now()->subHours(2),
+    ]);
+    UnitLink::query()->create([
+        'operational_asset_id' => $asset->id,
+        'user_id' => $operator->id,
+        'linked_at' => now()->subHour(),
+        'released_at' => now()->subMinutes(5),
+    ]);
+
+    $page = app(WorkspaceAssetsQuery::class)->paginate($manager, ['per_page' => 50]);
+    $item = collect(OperationsWorkspaceViewModel::assets($page->getCollection()))
+        ->firstWhere('id', $asset->id);
+
+    expect($item['active_operator'])->toBeNull();
 });
 
 it('does not derive telemetry status from duty-log activity age', function (): void {
