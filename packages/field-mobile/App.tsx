@@ -3,6 +3,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/auth/AuthContext';
 import type { TokenStorageProvider } from './src/auth/tokenStorage';
 import type { NetworkMonitor } from './src/connectivity/networkMonitor';
+import type { LastServerViewStores } from './src/hooks/useLastServerView';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import type { OutboxRepository } from './src/storage/outboxRepository';
 import type { PayloadHasher } from './src/storage/outboxRepository';
@@ -14,6 +15,7 @@ export interface AppProps {
     networkMonitor?: NetworkMonitor;
     outboxHasher?: PayloadHasher;
     outboxRepository?: OutboxRepository;
+    lastServerViewStores?: LastServerViewStores;
 }
 
 import { ThemeProvider } from './src/theme';
@@ -25,6 +27,7 @@ export const App: React.FC<AppProps> = ({
     networkMonitor,
     outboxHasher,
     outboxRepository,
+    lastServerViewStores,
 }) => {
     return (
         <SafeAreaProvider>
@@ -35,6 +38,7 @@ export const App: React.FC<AppProps> = ({
                     fetchFn={fetchFn}
                 >
                     <AppNavigator
+                        lastServerViewStores={lastServerViewStores}
                         networkMonitor={networkMonitor}
                         outboxHasher={outboxHasher}
                         outboxRepository={outboxRepository}

@@ -38,6 +38,8 @@ import {
     isFetchError,
 } from '../connectivity/networkMonitor';
 import type { NetworkMonitor } from '../connectivity/networkMonitor';
+import { useLastServerView } from '../hooks/useLastServerView';
+import type { LastServerViewStores } from '../hooks/useLastServerView';
 import { useResumeTracking } from '../hooks/useResumeTracking';
 import { useServerPostTrip } from '../hooks/useServerPostTrip';
 import { useTrackingPause } from '../hooks/useTrackingPause';
@@ -101,6 +103,7 @@ import type { TrackingPauseStore } from '../storage/trackingPauseStore';
 import type { UnitLinkStore } from '../storage/unitLinkStore';
 import { useTheme } from '../theme';
 import type {
+    CurrentHosShiftResponse,
     DispatchJob,
     DispatchStatus,
     DutyStatus,
@@ -111,7 +114,6 @@ import type {
     SosIncident,
     SosIncidentCategory,
     ShiftInfo,
-    ShiftStatus,
     StandbyReason,
     WeatherTelemetry,
     ReportDelayPayload,
@@ -119,6 +121,7 @@ import type {
     WorkStoppageCommandPayload,
 } from '../types/index';
 import { resolveDesignatedEquipmentType } from '../utils/equipmentClassification';
+import { shiftStateFromServer } from './shiftFromServer';
 import { statusBarAppearance } from './status-bar-appearance';
 
 export { isAuthorizedFieldRole } from '../auth/fieldRoles';
@@ -532,6 +535,7 @@ export interface AppNavigatorProps {
     outboxRepository?: OutboxRepository;
     unitLinkStore?: UnitLinkStore;
     trackingPauseStore?: TrackingPauseStore;
+    lastServerViewStores?: LastServerViewStores;
 }
 
 export const AppNavigator: React.FC<AppNavigatorProps> = ({
@@ -540,6 +544,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     outboxRepository,
     unitLinkStore,
     trackingPauseStore,
+    lastServerViewStores,
 }) => {
     const {
         user,
@@ -614,6 +619,29 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     const [shiftStartedAtIso, setShiftStartedAtIso] = useState<string | null>(
         null,
     );
+    const applyShift = useCallback((shift: CurrentHosShiftResponse) => {
+        const next = shiftStateFromServer(shift);
+
+        if (next) {
+            setShiftStartedAtIso(next.startedAtIso);
+            setShiftInfo(next.shiftInfo);
+        }
+    }, []);
+    const lastServerViewHandlers = useMemo(
+        () => ({ restoreJobs: setJobs, restoreShift: applyShift }),
+        [applyShift],
+    );
+    // The last jobs and shift the server sent, shown after an offline start.
+    const {
+        restoredFrom: lastServerViewAt,
+        rememberJobs,
+        rememberShift,
+        forget: forgetServerView,
+    } = useLastServerView(
+        user?.id,
+        lastServerViewHandlers,
+        lastServerViewStores,
+    );
     // Where the DVIR's back button returns to (HoS opens the post-trip).
     const [dvirReturnView, setDvirReturnView] = useState<'main' | 'hos'>(
         'main',
@@ -678,8 +706,10 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
             // Best effort push token revocation
         }
 
+        // A shared phone must not show this operator's jobs to the next one.
+        forgetServerView();
         await logout();
-    }, [apiClient, logout]);
+    }, [apiClient, forgetServerView, logout]);
     const { width } = useWindowDimensions();
     const isCompact = width < 600;
 
@@ -880,7 +910,9 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         setJobsError(null);
 
         try {
-            setJobs((await apiClient.fetchAssignedJobs()) || []);
+            const assignedJobs = (await apiClient.fetchAssignedJobs()) || [];
+            setJobs(assignedJobs);
+            rememberJobs(assignedJobs);
         } catch (error: unknown) {
             if (
                 error instanceof ApiClientError &&
@@ -903,7 +935,14 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         } finally {
             setIsLoadingJobs(false);
         }
-    }, [apiClient, handleLogout, handleRequestFailure, isOnline, status]);
+    }, [
+        apiClient,
+        handleLogout,
+        handleRequestFailure,
+        isOnline,
+        rememberJobs,
+        status,
+    ]);
 
     // Native mobile push notifications: token lifecycle, foreground data refresh, and authorized notification-tap navigation
     useEffect(() => {
@@ -1289,73 +1328,14 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                 Date.now(),
             );
 
-            if (currentShift?.clocks && currentShift.clocks.shift_active) {
-                const clock = currentShift.clocks;
-                const statusMap: Record<string, DutyStatus> = {
-                    operating: 'operating',
-                    driving: 'driving',
-                    standby: 'standby',
-                    on_break: 'on_break',
-                    off_duty: 'off_duty',
-                };
-                const dutyStatus: DutyStatus =
-                    statusMap[clock.current_duty_status] ?? 'operating';
-                setShiftStartedAtIso(clock.started_at ?? null);
-                const nextShiftStatus: ShiftStatus =
-                    dutyStatus === 'off_duty'
-                        ? 'off_shift'
-                        : dutyStatus === 'on_break'
-                          ? 'on_break'
-                          : dutyStatus === 'standby'
-                            ? 'standby'
-                            : 'on_shift';
-
-                setShiftInfo({
-                    status: nextShiftStatus,
-                    dutyStatus,
-                    startedAt: clock.started_at
-                        ? new Date(clock.started_at).toLocaleTimeString([], {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                          })
-                        : null,
-                    hoursElapsed: clock.hours_elapsed ?? null,
-                    currentDutyStartedAt: clock.current_duty_started_at ?? null,
-                    lastAcceptedDutyAt: clock.last_accepted_duty_at ?? null,
-                    serverTime: clock.server_time ?? null,
-                    shiftElapsedMinutes: clock.shift_elapsed_minutes ?? null,
-                    operatingMinutes: clock.operating_minutes ?? null,
-                    drivingMinutes: clock.driving_minutes ?? null,
-                    standbyMinutes: clock.standby_minutes ?? null,
-                    breakMinutes: clock.break_minutes ?? null,
-                    limitCounterMinutes: clock.limit_counter_minutes ?? null,
-                    limitCounterLabel: clock.limit_counter_label ?? null,
-                    fatigueStatus: clock.fatigue_status ?? null,
-                    doleWarning: clock.dole_warning ?? false,
-                });
-            } else if (currentShift && !currentShift.clocks?.shift_active) {
-                setShiftStartedAtIso(null);
-                setShiftInfo({
-                    status: 'off_shift',
-                    dutyStatus: 'off_duty',
-                    startedAt: null,
-                    hoursElapsed: null,
-                    currentDutyStartedAt: null,
-                    lastAcceptedDutyAt: null,
-                    serverTime: currentShift.clocks.server_time ?? null,
-                    shiftElapsedMinutes: null,
-                    operatingMinutes: null,
-                    drivingMinutes: null,
-                    standbyMinutes: null,
-                    breakMinutes: null,
-                    limitCounterMinutes: null,
-                    limitCounterLabel: null,
-                });
+            if (currentShift?.clocks) {
+                applyShift(currentShift);
+                rememberShift(currentShift);
             }
         } catch {
             // Keep local shift info if offline or fetch fails
         }
-    }, [apiClient, isOnline, status]);
+    }, [apiClient, applyShift, isOnline, rememberShift, status]);
 
     const syncQueue = useCallback(
         async (refreshViewState = true) => {
@@ -3087,6 +3067,11 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 )}
                                 <AssignedJobsListScreen
                                     apiClient={apiClient}
+                                    lastServerViewAt={
+                                        isOnline === true
+                                            ? null
+                                            : lastServerViewAt
+                                    }
                                     onSosHoldComplete={handleGlobalSosHold}
                                     sosDisabled={isSosActivating}
                                     error={jobsError}

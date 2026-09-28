@@ -164,6 +164,10 @@ Rules for new and touched code:
   a response); sync problems are counted once, in the pill. The bell's sheet
   opens with `includeSyncItems={false}`, so it never lists sync failures or
   claims the outbox is clear.
+- Home after an offline start shows the jobs and shift the server last sent
+  (saved per operator on the phone, cleared on sign-out), never an empty,
+  off-duty home. The `LastSentNote` under the header says when they were
+  sent, and goes away once the server answers again.
 - The outbox sheet ("Saved actions", `components/sheets/outbox/`) uses plain
   words and one set of counts (on the filter tabs). The summary card is
   neutral, orange when something can be retried or reviewed, red when the

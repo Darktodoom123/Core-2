@@ -16,6 +16,7 @@ import { activeJobs } from '../components/cards/job-card/job-lifecycle';
 import { LocationWeatherCard } from '../components/cards/LocationWeatherCard';
 import { Icon } from '../components/common/Icon';
 import { AssignmentSummaryCard } from '../components/home/assignment-summary-card';
+import { LastSentNote } from '../components/home/last-sent-note';
 import { NoUnitCard } from '../components/home/no-unit-card';
 import { ReliefClaimButton } from '../components/home/relief-claim-button';
 import { TelemetryToggleButton } from '../components/home/telemetry-toggle-button';
@@ -63,6 +64,8 @@ export interface AssignedJobsListScreenProps {
     userRole?: string | null;
     shiftInfo?: ShiftInfo;
     locationSharingActive?: boolean;
+    /** Set while home shows a saved view after an offline start. */
+    lastServerViewAt?: string | null;
     locationTrackingError?: string | null;
     error?: string | null;
     onSosHoldComplete: () => void;
@@ -149,6 +152,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
         hoursElapsed: 4,
     },
     locationSharingActive = true,
+    lastServerViewAt = null,
     locationTrackingError = null,
     error,
     onSosHoldComplete,
@@ -550,6 +554,10 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                     userName={userName}
                     userRole={userRole}
                 />
+
+                {lastServerViewAt ? (
+                    <LastSentNote savedAt={lastServerViewAt} />
+                ) : null}
 
                 {locationTrackingError ? (
                     <View

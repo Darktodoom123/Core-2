@@ -1033,7 +1033,7 @@ export function projectOutbox(
     } else if (telemetryCount > 0) {
         if (isOnline === false) {
             pillLabel = 'Offline';
-            pillMessage = `${telemetryCount} GPS pings saved`;
+            pillMessage = `${telemetryCount} GPS ping${telemetryCount === 1 ? '' : 's'} saved`;
             pillTone = 'offline';
         } else {
             pillLabel = `${telemetryCount} GPS ping${telemetryCount === 1 ? '' : 's'} queued`;

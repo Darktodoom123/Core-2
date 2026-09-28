@@ -954,6 +954,63 @@ describe('native application component tree', () => {
         expect(screen.queryByRole('alert')).toBeNull();
     });
 
+    it('after an offline start, shows the jobs and shift dispatch last sent instead of an empty home', async () => {
+        const networkMonitor = new ControlledNetworkMonitor(false);
+        const savedAt = new Date(Date.now() - 10 * 60_000).toISOString();
+        const stores = {
+            jobs: {
+                read: jest.fn(async () => ({ savedAt, value: [driverJob] })),
+                write: jest.fn(async () => undefined),
+                remove: jest.fn(async () => undefined),
+            },
+            shift: {
+                read: jest.fn(async () => ({
+                    savedAt,
+                    value: {
+                        shift: null,
+                        clocks: {
+                            shift_active: true,
+                            shift_status: 'active',
+                            current_duty_status: 'standby',
+                            started_at: savedAt,
+                            hours_elapsed: 1,
+                        },
+                    },
+                })),
+                write: jest.fn(async () => undefined),
+                remove: jest.fn(async () => undefined),
+            },
+        };
+        const { fetchFn } = createApi({ assignedJobs: [driverJob] });
+
+        await renderScreen(
+            <App
+                baseUrl={apiBaseUrl}
+                fetchFn={fetchFn}
+                lastServerViewStores={stores}
+                networkMonitor={networkMonitor}
+                tokenStorage={new TestTokenStorage(rawToken)}
+            />,
+        );
+
+        expect(await screen.findByTestId('last-sent-note')).toBeVisible();
+        expect(
+            await screen.findByText(new RegExp(`^Ref: ${driverJob.reference}`)),
+        ).toBeVisible();
+        expect(screen.queryByText('No unit assigned')).toBeNull();
+        expect(screen.queryByText('Off Duty — Shift Complete')).toBeNull();
+
+        // Back online, the server's answer replaces it and is saved.
+        await act(() => networkMonitor.setOnline(true));
+
+        await waitFor(() => {
+            expect(screen.queryByTestId('last-sent-note')).toBeNull();
+        });
+        await waitFor(() => {
+            expect(stores.jobs.write).toHaveBeenCalled();
+        });
+    });
+
     it('restores an eight-hour-old command and replays it once after reconnect', async () => {
         const repository = new MemoryOutboxRepository();
         const networkMonitor = new ControlledNetworkMonitor(false);
