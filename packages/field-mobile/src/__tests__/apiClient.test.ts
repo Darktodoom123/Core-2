@@ -4,6 +4,9 @@ import {
     ApiClientError,
     FieldApiClient,
     LOCATION_BATCH_TIMEOUT_MS,
+    REQUEST_TIMEOUT_MS,
+    UPLOAD_TIMEOUT_MS,
+    withRequestTimeout,
 } from '../services/apiClient';
 import type { DispatchJob } from '../types/index';
 
@@ -920,5 +923,72 @@ describe('location batches', () => {
                 },
             },
         ]);
+    });
+});
+
+describe('request time limits', () => {
+    const hangingFetch = ((_url: string, init: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+            init.signal?.addEventListener('abort', () =>
+                reject(new Error('Aborted')),
+            );
+        })) as unknown as typeof fetch;
+
+    const isTimeout = (error: unknown) => {
+        assert.ok(error instanceof ApiClientError);
+        assert.equal(error.status, 408);
+        assert.equal(error.errorCode, 'TIMEOUT');
+
+        return true;
+    };
+
+    test('gives up on any request the server never answers, so the outbox is not held', async (context) => {
+        context.mock.timers.enable({ apis: ['setTimeout'] });
+        const client = new FieldApiClient({
+            baseUrl: 'http://localhost:8000',
+            getToken: () => 'test-bearer-token-123',
+            fetchFn: hangingFetch,
+        });
+
+        const jobs = client.fetchAssignedJobs();
+        context.mock.timers.tick(REQUEST_TIMEOUT_MS);
+
+        await assert.rejects(jobs, isTimeout);
+    });
+
+    test('gives uploads longer before giving up', async (context) => {
+        context.mock.timers.enable({ apis: ['setTimeout'] });
+        const timed = withRequestTimeout(hangingFetch);
+        let settled = false;
+
+        const upload = timed('http://localhost:8000/api/v1/attachments', {
+            method: 'POST',
+            body: new FormData(),
+        }).finally(() => {
+            settled = true;
+        });
+        context.mock.timers.tick(REQUEST_TIMEOUT_MS);
+        await Promise.resolve();
+        assert.equal(settled, false);
+
+        context.mock.timers.tick(UPLOAD_TIMEOUT_MS - REQUEST_TIMEOUT_MS);
+        await assert.rejects(upload, isTimeout);
+    });
+
+    test("keeps a caller's own time limit", async () => {
+        const controller = new AbortController();
+        let received: AbortSignal | null | undefined;
+        const timed = withRequestTimeout((async (
+            _url: string,
+            init: RequestInit,
+        ) => {
+            received = init.signal;
+
+            return new Response('{}', { status: 200 });
+        }) as unknown as typeof fetch);
+
+        await timed('http://localhost:8000/x', { signal: controller.signal });
+
+        assert.equal(received, controller.signal);
     });
 });

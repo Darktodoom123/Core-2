@@ -38,6 +38,55 @@ import type {
 /** A ping batch that has not answered by now is given up and retried. */
 export const LOCATION_BATCH_TIMEOUT_MS = 45_000;
 
+/**
+ * How long any request may go unanswered. Without a limit, one request the
+ * server never answers holds the outbox forever and nothing behind it syncs.
+ * A timed-out write is retried with the same command id, so the server
+ * applies it once.
+ */
+export const REQUEST_TIMEOUT_MS = 60_000;
+
+/** Photo and file uploads get longer, for slow site connections. */
+export const UPLOAD_TIMEOUT_MS = 300_000;
+
+/**
+ * Adds the default time limit to every request that does not set its own.
+ * A request that runs out fails as a 408 TIMEOUT, which the outbox retries.
+ */
+export function withRequestTimeout(fetchFn: typeof fetch): typeof fetch {
+    return async (input, init = {}) => {
+        if (init.signal || typeof AbortController === 'undefined') {
+            return fetchFn(input, init);
+        }
+
+        const controller = new AbortController();
+        const limit =
+            typeof FormData !== 'undefined' && init.body instanceof FormData
+                ? UPLOAD_TIMEOUT_MS
+                : REQUEST_TIMEOUT_MS;
+        const timer = setTimeout(() => controller.abort(), limit);
+
+        try {
+            return await fetchFn(input, {
+                ...init,
+                signal: controller.signal,
+            });
+        } catch (error: unknown) {
+            if (controller.signal.aborted) {
+                throw new ApiClientError(
+                    'The server did not answer in time.',
+                    408,
+                    { errorCode: 'TIMEOUT' },
+                );
+            }
+
+            throw error;
+        } finally {
+            clearTimeout(timer);
+        }
+    };
+}
+
 /** The server's answer for one ping in a batch. */
 export interface LocationBatchResult {
     commandId: string;
@@ -171,7 +220,7 @@ export class FieldApiClient {
     constructor(config: ApiClientConfig) {
         this.baseUrl = config.baseUrl.replace(/\/+$/, '');
         this.getToken = config.getToken;
-        this.fetchFn = config.fetchFn ?? globalThis.fetch;
+        this.fetchFn = withRequestTimeout(config.fetchFn ?? globalThis.fetch);
         this.refreshTokenFn = config.refreshToken;
         this.onTokenRefreshedFn = config.onTokenRefreshed;
     }
