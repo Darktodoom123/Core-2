@@ -1,7 +1,9 @@
 version: 2
 updates:
   - package-ecosystem: "docker"
-    directory: "/"
+    directories:
+      - "/"
+      - "/infra/docker"
     schedule:
       interval: "weekly"
     cooldown:
@@ -11,19 +13,33 @@ updates:
         patterns:
           - "*"
   - package-ecosystem: "composer"
-    directory: "/"
+    directories:
+      - "/apps/operations"
+      - "/apps/tracking"
     schedule:
       interval: "weekly"
     cooldown:
       default-days: 5
+    groups:
+      composer-minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "weekly"
     cooldown:
       default-days: 5
+    groups:
+      npm-minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
   - package-ecosystem: "github-actions"
-    directory: "/"
+    directories:
+      - "/"
+      - "/.github/actions/setup"
     schedule:
       interval: "weekly"
     cooldown:

@@ -1,0 +1,782 @@
+name: ci
+
+# One pipeline for every quality gate. Pull requests run only the lanes their
+# changes touch; pushes to main, the nightly run, and manual runs run every
+# lane so main is always proven as a whole. `ci-gate` is the single required
+# status check.
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    # 02:00 Asia/Manila
+    - cron: '0 18 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  COMPOSER_NO_INTERACTION: 1
+  COMPOSER_NO_AUDIT: 1
+  COMPOSER_PROCESS_TIMEOUT: 0
+
+jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      quality: ${{ steps.scope.outputs.quality }}
+      backend: ${{ steps.scope.outputs.backend }}
+      database: ${{ steps.scope.outputs.database }}
+      browser: ${{ steps.scope.outputs.browser }}
+      mobile: ${{ steps.scope.outputs.mobile }}
+      docker: ${{ steps.scope.outputs.docker }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Filter changed paths
+        id: filter
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          predicate-quantifier: 'some-with-excludes'
+          filters: |
+            ci: &ci
+              - '.github/workflows/ci.yml'
+              - '.github/actions/**'
+            quality:
+              - '**'
+              - '!Docs/**'
+              - '!.ai-reports/**'
+              - '!graphify-out/**'
+              - '!**.md'
+              - '!.vscode/**'
+              - '!.idea/**'
+              - '!.gitattributes'
+              - '!.gitignore'
+              - '!LICENSE*'
+            backend:
+              - *ci
+              - 'apps/operations/**'
+              - '!apps/operations/resources/css/**'
+              - '!apps/operations/tests/Browser/**'
+              - 'apps/tracking/**'
+              - 'composer.json'
+              - 'composer.lock'
+              - '.env.example'
+              - 'package.json'
+              - 'package-lock.json'
+            database:
+              - *ci
+              - 'apps/operations/**'
+              - '!apps/operations/resources/**'
+              - '!apps/operations/tests/Browser/**'
+              - 'composer.json'
+              - 'composer.lock'
+              - '.env.example'
+            browser:
+              - *ci
+              - 'apps/operations/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - '.nvmrc'
+              - 'playwright.config.ts'
+              - 'composer.json'
+              - 'composer.lock'
+              - '.env.example'
+              - 'third_party/image-size/**'
+            mobile:
+              - *ci
+              - 'packages/field-mobile/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - '.nvmrc'
+              - 'tsconfig.json'
+              - 'third_party/image-size/**'
+            docker:
+              - *ci
+              - 'infra/**'
+              - 'docker-compose.yml'
+              - 'docker-compose.*.yml'
+              - '.dockerignore'
+              - 'scripts/test-integration-services.ts'
+              - 'scripts/verify-frontend-build.cjs'
+              - 'apps/tracking/**'
+              - 'composer.json'
+              - 'composer.lock'
+              - 'apps/operations/composer.json'
+              - 'apps/operations/composer.lock'
+              - 'package.json'
+              - 'package-lock.json'
+              - '.nvmrc'
+
+      - name: Resolve lanes
+        id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          FILTER: ${{ toJSON(steps.filter.outputs) }}
+        run: |
+          for lane in quality backend database browser mobile docker; do
+            if [ "$EVENT_NAME" != "pull_request" ]; then
+              value=true
+            else
+              value="$(jq -r --arg lane "$lane" '.[$lane] // "false"' <<<"$FILTER")"
+            fi
+            echo "$lane=$value" >> "$GITHUB_OUTPUT"
+            echo "$lane: $value"
+          done
+
+  php-quality:
+    name: PHP quality
+    needs: changes
+    if: needs.changes.outputs.quality == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+        with:
+          php: 'true'
+
+      - name: Validate Composer manifests
+        if: success() || failure()
+        run: |
+          composer validate --strict
+          composer --working-dir=apps/operations validate --strict
+          composer --working-dir=apps/tracking validate --strict
+
+      - name: Check PHP formatting
+        if: success() || failure()
+        run: composer lint:check
+
+      - name: Check PHP types
+        if: success() || failure()
+        run: composer types:check
+
+      - name: Audit Composer dependencies
+        if: success() || failure()
+        run: |
+          composer --working-dir=apps/operations audit --locked
+          composer --working-dir=apps/tracking audit --locked
+
+  web-quality:
+    name: Web quality
+    needs: changes
+    if: needs.changes.outputs.quality == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+        with:
+          node: 'true'
+
+      - name: Check formatting
+        if: success() || failure()
+        run: npm run format:check
+
+      - name: Check linting
+        if: success() || failure()
+        run: npm run lint:check
+
+      - name: Check types
+        if: success() || failure()
+        run: npm run types:check
+
+      - name: Run unit tests
+        if: success() || failure()
+        run: mkdir -p test-results && npm run test:unit -- --reporter=default --reporter=junit --outputFile.junit=test-results/junit-vitest.xml
+
+      - name: Audit production npm dependencies
+        if: success() || failure()
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Verify image-size parser hardening
+        if: success() || failure()
+        run: npm run security:image-size
+
+      - name: Upload Vitest results
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        if: ${{ !cancelled() }}
+        with:
+          name: junit-vitest
+          path: test-results/junit-vitest.xml
+          retention-days: 7
+          if-no-files-found: warn
+
+  assets:
+    name: Build web assets
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.browser == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+        with:
+          php: 'true'
+          composer-apps: operations
+          node: 'true'
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          cp apps/operations/.env.example apps/operations/.env
+          php apps/operations/artisan key:generate
+
+      - name: Build assets
+        run: npm run build
+
+      - name: Upload built assets
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        with:
+          name: operations-build
+          path: apps/operations/public/build
+          retention-days: 1
+          if-no-files-found: error
+
+  backend-operations:
+    name: Operations tests
+    needs: [changes, assets]
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+        with:
+          php: 'true'
+          composer-apps: operations
+
+      - name: Download built assets
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: operations-build
+          path: apps/operations/public/build
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          cp apps/operations/.env.example apps/operations/.env
+          php apps/operations/artisan key:generate
+          php apps/operations/artisan config:clear --ansi
+
+      - name: Run Operations test suite
+        run: |
+          mkdir -p test-results
+          apps/operations/vendor/bin/pest --configuration=apps/operations/phpunit.xml --log-junit=test-results/junit-operations.xml
+
+      - name: Upload Operations results
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        if: ${{ !cancelled() }}
+        with:
+          name: junit-operations
+          path: test-results/junit-operations.xml
+          retention-days: 7
+          if-no-files-found: warn
+
+  backend-tracking:
+    name: Tracking tests
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+        with:
+          php: 'true'
+          composer-apps: tracking
+
+      - name: Prepare environment
+        run: |
+          cp apps/tracking/.env.example apps/tracking/.env
+          php apps/tracking/artisan key:generate
+
+      - name: Run Tracking test suite
+        run: |
+          mkdir -p test-results
+          apps/tracking/vendor/bin/pest --configuration=apps/tracking/phpunit.xml --log-junit=test-results/junit-tracking.xml
+
+      - name: Upload Tracking results
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        if: ${{ !cancelled() }}
+        with:
+          name: junit-tracking
+          path: test-results/junit-tracking.xml
+          retention-days: 7
+          if-no-files-found: warn
+
+  postgresql:
+    name: PostgreSQL security & concurrency
+    needs: changes
+    if: needs.changes.outputs.database == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: core2_bootstrap
+          POSTGRES_PASSWORD: core2_bootstrap
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U core2_bootstrap -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_USERNAME: core2_app
+      DB_PASSWORD: core2_app
+      DB_SSLMODE: disable
+      BROADCAST_CONNECTION: 'null'
+      BROADCAST_DRIVER: 'null'
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+        with:
+          php: 'true'
+          php-extensions: pdo_pgsql
+          composer-apps: operations
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          cp apps/operations/.env.example apps/operations/.env
+          php apps/operations/artisan key:generate
+
+      - name: Prepare isolated PostgreSQL roles and databases
+        env:
+          PGPASSWORD: core2_bootstrap
+        run: |
+          psql --host=127.0.0.1 --port=5432 --username=core2_bootstrap --dbname=postgres <<'SQL'
+          DO $$
+          BEGIN
+            IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'anon') THEN
+              CREATE ROLE anon NOLOGIN;
+            END IF;
+            IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'authenticated') THEN
+              CREATE ROLE authenticated NOLOGIN;
+            END IF;
+            IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'core2_app') THEN
+              CREATE ROLE core2_app LOGIN PASSWORD 'core2_app' NOSUPERUSER NOBYPASSRLS;
+            ELSE
+              ALTER ROLE core2_app WITH LOGIN PASSWORD 'core2_app' NOSUPERUSER NOBYPASSRLS;
+            END IF;
+          END $$;
+          SQL
+          for database in core2_migration_test core2_rental_sales_test core2_concurrency_test; do
+            psql --host=127.0.0.1 --port=5432 --username=core2_bootstrap --dbname=postgres \
+              --command="CREATE DATABASE $database OWNER core2_app;"
+          done
+
+      - name: Migrations apply, fully roll back, and re-apply
+        env:
+          DB_DATABASE: core2_migration_test
+        run: |
+          php apps/operations/artisan migrate --force --database=pgsql
+          php apps/operations/artisan migrate:reset --force --database=pgsql
+          php apps/operations/artisan migrate --force --database=pgsql
+
+      - name: Row-lock and server-only security gates
+        if: success() || failure()
+        env:
+          DB_DATABASE: core2_concurrency_test
+        run: |
+          mkdir -p test-results
+          php apps/operations/artisan migrate --force --database=pgsql
+          apps/operations/vendor/bin/pest --configuration=apps/operations/phpunit.concurrency.xml --test-directory=tests --testsuite=Concurrency --log-junit=test-results/junit-concurrency.xml
+
+      - name: Rental RLS and grant tests
+        if: success() || failure()
+        env:
+          DB_DATABASE: core2_rental_sales_test
+        run: apps/operations/vendor/bin/pest --configuration=apps/operations/phpunit.postgresql.xml --test-directory=tests --testsuite=PostgreSQL --log-junit=test-results/junit-postgresql.xml
+
+      - name: Upload PostgreSQL results
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        if: ${{ !cancelled() }}
+        with:
+          name: junit-postgresql
+          path: |
+            test-results/junit-concurrency.xml
+            test-results/junit-postgresql.xml
+          retention-days: 7
+          if-no-files-found: warn
+
+  browser:
+    name: Browser acceptance & accessibility
+    needs: [changes, assets]
+    if: needs.changes.outputs.browser == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      APP_URL: http://127.0.0.1:4173
+      BROADCAST_CONNECTION: 'null'
+      BROADCAST_DRIVER: 'null'
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+        with:
+          php: 'true'
+          composer-apps: operations
+          node: 'true'
+
+      - name: Download built assets
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: operations-build
+          path: apps/operations/public/build
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          cp apps/operations/.env.example apps/operations/.env
+          sed -i 's|APP_URL=.*|APP_URL=http://127.0.0.1:4173|' .env apps/operations/.env
+          php apps/operations/artisan key:generate
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@d4323d4df104b026a6aa633fdb11d772146be0bf # v4.2.2
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+          restore-keys: ${{ runner.os }}-playwright-
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Accessibility smoke test
+        env:
+          PLAYWRIGHT_JUNIT_OUTPUT: test-results/junit-a11y.xml
+        run: npm run test:a11y
+
+      - name: Acceptance suite
+        if: success() || failure()
+        env:
+          PLAYWRIGHT_JUNIT_OUTPUT: test-results/junit-e2e.xml
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+  mobile:
+    name: Mobile package & bundling
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+        with:
+          node: 'true'
+
+      - name: Typecheck
+        run: npm run types:check:mobile
+
+      - name: Unit and component tests
+        if: success() || failure()
+        run: npm run test:mobile
+
+      - name: Expo Doctor
+        if: success() || failure()
+        working-directory: packages/field-mobile
+        env:
+          NPM_CONFIG_CACHE: ${{ runner.temp }}/npm-cache
+        run: npm run doctor
+
+      - name: Android bundle export
+        if: success() || failure()
+        working-directory: packages/field-mobile
+        env:
+          EXPO_PUBLIC_API_BASE_URL: https://api.example.test
+        run: npm run export:android
+
+  docker:
+    name: Docker build & service integration
+    needs: changes
+    if: needs.changes.outputs.docker == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      actions: read
+    env:
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      APP_ENV: production
+      APP_DEBUG: 'false'
+      APP_URL: http://localhost:18000
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: '5432'
+      DB_DATABASE: core2_ci
+      DB_USERNAME: core2_ci
+      DB_PASSWORD: core2-ci-database-password
+      DB_SSLMODE: disable
+      REVERB_APP_ID: core2-ci
+      REVERB_APP_KEY: core2-ci-public-key
+      REVERB_APP_SECRET: core2-ci-reverb-secret
+      VITE_REVERB_HOST: localhost
+      VITE_REVERB_PORT: '18080'
+      VITE_REVERB_SCHEME: http
+      VITE_MAP_PROVIDER: stadia
+      VITE_MAP_PLAN: starter
+      VITE_MAP_USE_CASE: commercial
+      VITE_MAP_STYLE_URL: https://tiles.stadiamaps.com/styles/core2-ci.json
+      VITE_MAP_ATTRIBUTION: Core2 CI map attribution
+      VITE_STADIA_MAPS_API_KEY: core2-ci-public-map-key
+      PORT: '18000'
+      REVERB_FORWARD_PORT: '18080'
+      RUN_MIGRATIONS: 'true'
+      CACHE_CONFIG: 'true'
+      TRACKING_APP_KEY: base64:BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=
+      TRACKING_DB_CONNECTION: pgsql
+      TRACKING_DB_HOST: tracking-db
+      TRACKING_DB_PORT: '5432'
+      TRACKING_DB_DATABASE: core2_tracking_ci
+      TRACKING_DB_USERNAME: core2_tracking_ci
+      TRACKING_DB_PASSWORD: core2-tracking-ci-database-password
+      TRACKING_DB_SSLMODE: disable
+      TRACKING_SERVICE_DRIVER: http
+      TRACKING_SERVICE_URL: http://tracking
+      TRACKING_SERVICE_SECRET: core2-ci-tracking-service-secret
+      TRACKING_ALLOWED_SERVICES: operations
+      TRACKING_RUN_MIGRATIONS: 'true'
+      TRACKING_CACHE_CONFIG: 'true'
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+
+      - name: Check Dockerfile
+        run: |
+          for attempt in 1 2 3; do
+            docker buildx build --check -f infra/docker/Dockerfile . && break || {
+              if [ "$attempt" -lt 3 ]; then
+                echo "Dockerfile check attempt $attempt failed; retrying in 3s..."
+                sleep 3
+              else
+                echo "Dockerfile check failed after 3 attempts."
+                exit 1
+              fi
+            }
+          done
+
+      - name: Validate Compose configuration
+        run: docker compose config --quiet
+
+      - uses: ./.github/actions/setup
+        with:
+          node: 'true'
+          npm-ignore-scripts: 'true'
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@d4323d4df104b026a6aa633fdb11d772146be0bf # v4.2.2
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+          restore-keys: ${{ runner.os }}-playwright-
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Build production image
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        with:
+          context: .
+          file: ./infra/docker/Dockerfile
+          target: runtime
+          push: false
+          load: true
+          tags: core2/runtime:ci
+          build-args: |
+            VITE_PUBLIC_REVERB_IDENTIFIER=${{ env.REVERB_APP_KEY }}
+            VITE_REVERB_HOST=${{ env.VITE_REVERB_HOST }}
+            VITE_REVERB_PORT=${{ env.VITE_REVERB_PORT }}
+            VITE_REVERB_SCHEME=${{ env.VITE_REVERB_SCHEME }}
+            VITE_MAP_PROVIDER=${{ env.VITE_MAP_PROVIDER }}
+            VITE_MAP_PLAN=${{ env.VITE_MAP_PLAN }}
+            VITE_MAP_USE_CASE=${{ env.VITE_MAP_USE_CASE }}
+            VITE_MAP_STYLE_URL=${{ env.VITE_MAP_STYLE_URL }}
+            VITE_MAP_ATTRIBUTION=${{ env.VITE_MAP_ATTRIBUTION }}
+            VITE_STADIA_MAPS_API_KEY=${{ env.VITE_STADIA_MAPS_API_KEY }}
+          cache-from: type=gha,scope=core2-runtime
+          cache-to: type=gha,mode=max,scope=core2-runtime
+
+      - name: Build Tracking image
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        with:
+          context: .
+          file: ./infra/docker/Dockerfile
+          target: tracking-runtime
+          push: false
+          load: true
+          tags: core2/tracking:ci
+          cache-from: |
+            type=gha,scope=core2-tracking
+            type=gha,scope=core2-runtime
+          cache-to: type=gha,mode=max,scope=core2-tracking
+
+      - name: Verify production frontend map configuration
+        env:
+          CORE2_SERVER_SECRET: ${{ env.REVERB_APP_SECRET }}
+        run: |
+          set -Eeuo pipefail
+          rm -rf frontend-build
+          mkdir -p frontend-build
+          container="$(docker create core2/runtime:ci)"
+          trap 'docker rm "$container" >/dev/null' EXIT
+          docker cp "$container:/var/www/html/public/build/." frontend-build/
+          node scripts/verify-frontend-build.cjs frontend-build
+
+      - name: Build concurrency test image
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        with:
+          context: .
+          file: ./infra/docker/Dockerfile
+          target: test-runner
+          push: false
+          load: true
+          tags: core2/test-runner:ci
+          cache-from: |
+            type=gha,scope=core2-test
+            type=gha,scope=core2-runtime
+          cache-to: type=gha,mode=max,scope=core2-test
+
+      - name: Run isolated service integration contract
+        env:
+          CORE2_APP_IMAGE: core2/runtime:ci
+          CORE2_TRACKING_IMAGE: core2/tracking:ci
+          CORE2_INTEGRATION_NO_BUILD: 'true'
+        run: npm run test:integration:services
+
+      - name: Start stack and run bounded smoke checks
+        run: |
+          set -Eeuo pipefail
+
+          cleanup() {
+            local exit_code=$?
+            if (( exit_code != 0 )); then
+              echo "::group::Compose service status on failure"
+              docker compose ps || true
+              echo "::endgroup::"
+              echo "::group::Compose logs on failure"
+              docker compose logs --no-color app db redis tracking tracking-db test || true
+              echo "::endgroup::"
+            fi
+            docker compose down -v || true
+          }
+          trap cleanup EXIT
+
+          docker compose up --detach --no-build
+
+          deadline=$((SECONDS + 180))
+          while (( SECONDS < deadline )); do
+            ready=1
+            for service in db redis app tracking tracking-db; do
+              container="$(docker compose ps -q "$service")"
+              if [[ -z "$container" ]]; then
+                ready=0
+                continue
+              fi
+
+              status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container")"
+              if [[ "$status" != "healthy" ]]; then
+                ready=0
+              fi
+            done
+
+            if (( ready == 1 )); then
+              break
+            fi
+            sleep 5
+          done
+
+          if (( ready != 1 )); then
+            exit 1
+          fi
+
+          curl --fail --silent --show-error http://127.0.0.1:18000/up
+          docker compose --profile test run --rm test
+
+  ci-gate:
+    name: ci-gate
+    if: always()
+    needs:
+      - changes
+      - php-quality
+      - web-quality
+      - assets
+      - backend-operations
+      - backend-tracking
+      - postgresql
+      - browser
+      - mobile
+      - docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every lane to pass or be skipped
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          failed="$(echo "$RESULTS" | jq -r '[to_entries[] | select(.value.result != "success" and .value.result != "skipped") | .key] | join(", ")')"
+          if [ -n "$failed" ]; then
+            echo "::error::CI lanes did not pass: $failed"
+            exit 1
+          fi

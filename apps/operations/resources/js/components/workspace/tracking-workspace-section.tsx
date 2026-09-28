@@ -302,7 +302,7 @@ export function TrackingSurface({
                                     className={cn(
                                         'inline-flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-medium capitalize transition-all duration-150',
                                         isSelected
-                                            ? 'bg-brand-strong font-semibold text-white dark:text-brand-contrast shadow-xs'
+                                            ? 'bg-brand-strong font-semibold text-white shadow-xs dark:text-brand-contrast'
                                             : 'bg-surface-subtle text-ink-soft hover:bg-surface-subtle/80 hover:text-ink',
                                     )}
                                     aria-pressed={isSelected}

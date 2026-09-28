@@ -242,7 +242,7 @@ All commands are run from the monorepo root:
 | **Web Browser E2E** | `npm run test:e2e` | Playwright browser test suite |
 | **Service Integration** | `npm run test:integration:services` | Bounded Docker runner verifying 2-service stack |
 | **Web Production Build** | `npm run build` | Vite production bundle build |
-| **Full CI Quality Gate** | `composer run ci:check` | Web lint, format, types, unit tests, and all PHP tests |
+| **Full CI Quality Gate** | `composer run ci:check` | Web and PHP lint, format, and types; web and mobile tests; all PHP tests. See [Docs/runbooks/ci.md](Docs/runbooks/ci.md) |
 
 ---
 

@@ -59,16 +59,23 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('sales_order_items', function (Blueprint $table): void {
-            $table->dropIndex(self::ORDER_ITEM_CONFLICT_INDEX);
-        });
+        // The Sales module removal drops these tables and cannot be reversed.
+        if (Schema::hasTable('sales_order_items')) {
+            Schema::table('sales_order_items', function (Blueprint $table): void {
+                $table->dropIndex(self::ORDER_ITEM_CONFLICT_INDEX);
+            });
+        }
 
-        Schema::table('ownership_transfers', function (Blueprint $table): void {
-            $table->dropUnique(self::OWNERSHIP_INDEX);
-        });
+        if (Schema::hasTable('ownership_transfers')) {
+            Schema::table('ownership_transfers', function (Blueprint $table): void {
+                $table->dropUnique(self::OWNERSHIP_INDEX);
+            });
+        }
 
-        Schema::table('sales_orders', function (Blueprint $table): void {
-            $table->string('reference', 48)->change();
-        });
+        if (Schema::hasTable('sales_orders')) {
+            Schema::table('sales_orders', function (Blueprint $table): void {
+                $table->string('reference', 48)->change();
+            });
+        }
     }
 };

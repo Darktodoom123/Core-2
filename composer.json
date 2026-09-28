@@ -54,6 +54,10 @@
             "npm run format:check",
             "npm run types:check",
             "npm run test:unit",
+            "@lint:check",
+            "@types:check",
+            "npm run types:check:mobile",
+            "npm run test:mobile",
             "@test"
         ]
     },

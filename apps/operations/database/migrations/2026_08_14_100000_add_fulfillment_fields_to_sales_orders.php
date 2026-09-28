@@ -17,6 +17,11 @@ return new class extends Migration
 
     public function down(): void
     {
+        // The Sales module removal drops this table and cannot be reversed.
+        if (! Schema::hasTable('sales_orders')) {
+            return;
+        }
+
         Schema::table('sales_orders', function (Blueprint $table): void {
             $table->dropConstrainedForeignId('dispatch_job_id');
             $table->dropColumn(['fulfillment_mode', 'delivery_location']);

@@ -107,6 +107,7 @@ Procedures for emergency response and operational governance:
 | Document | Purpose & Scope |
 | :--- | :--- |
 | [field-emergency-sos.md](runbooks/field-emergency-sos.md) | Field Emergency SOS responder workflows, 180s escalation timer, and enablement checklist. |
+| [ci.md](runbooks/ci.md) | GitHub Actions lanes, the `ci-gate` required check, and matching local commands. |
 
 ### 7. External References (`Docs/references/`)
 

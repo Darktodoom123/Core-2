@@ -63,9 +63,6 @@ const MIGRATED = [
     ...fs
         .readdirSync(path.join(SRC, 'screens', 'dvir'))
         .map((file) => `screens/dvir/${file}`),
-    ...fs
-        .readdirSync(path.join(SRC, 'screens', 'safety'))
-        .map((file) => `screens/safety/${file}`),
     'screens/HosScreen.tsx',
     'screens/profile/ProfileScreen.tsx',
     ...fs

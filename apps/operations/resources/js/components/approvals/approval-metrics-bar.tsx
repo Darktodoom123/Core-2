@@ -37,7 +37,8 @@ export function ApprovalMetricsBar({
             description: 'Total queue',
             colorClass: 'text-brand-strong',
             bgClass: 'bg-brand-soft/40',
-            activeClass: 'ring-2 ring-brand-strong border-brand-strong bg-brand-soft/60',
+            activeClass:
+                'ring-2 ring-brand-strong border-brand-strong bg-brand-soft/60',
         },
         {
             id: 'actionable' as ApprovalFilterType,

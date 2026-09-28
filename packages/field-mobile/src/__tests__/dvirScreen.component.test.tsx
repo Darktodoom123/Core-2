@@ -537,9 +537,10 @@ describe('DvirScreen Component & Workflows', () => {
         expect(capturedBody.checks[0]).toHaveProperty('label');
         expect(capturedBody.checks[0]).toHaveProperty('status');
 
-        // Server-derived / forbidden-on-create fields should NOT be sent
+        // Server-derived fields should NOT be sent
         expect(capturedBody.critical_defects_count).toBeUndefined();
-        expect(capturedBody.completed_at).toBeUndefined();
+        // The device completion time is sent so an offline DVIR keeps when it was done
+        expect(Number.isNaN(Date.parse(capturedBody.completed_at))).toBe(false);
     });
 
     it('submits completed DVIR with walkaround photos when photos are captured', async () => {

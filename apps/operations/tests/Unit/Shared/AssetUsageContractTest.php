@@ -7,6 +7,7 @@ use App\Shared\Assets\Data\AssetUsageSource;
 use App\Shared\Assets\Enums\AssetStatus;
 use App\Shared\Assets\Enums\AssetUsageType;
 use App\Shared\Assets\Models\OperationalAsset;
+use App\Shared\Assets\Services\AssetInspectionReadiness;
 use App\Shared\Assets\Services\OperationalAssetAvailability;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -47,7 +48,7 @@ it('returns stable checker conflicts and lets callers choose the validation key'
         }
     };
 
-    $availability = new OperationalAssetAvailability([$checker]);
+    $availability = new OperationalAssetAvailability([$checker], new AssetInspectionReadiness);
     $request = new AssetUsageRequest(1, AssetUsageType::AssetStatusChange);
 
     expect($availability->assess($request)->conflicts)->toHaveCount(1)

@@ -230,6 +230,17 @@ it('executes full happy path: dispatcher intake -> staffing -> manager approval 
     $replayResponse->assertOk()
         ->assertJsonPath('data.version', 4);
 
+    // Starting the route requires a signed, defect-free pre-trip DVIR per asset.
+    foreach ([$truck, $crane] as $asset) {
+        $this->withToken($driverToken)
+            ->withHeader('Idempotency-Key', (string) Str::uuid())
+            ->postJson('/api/v1/dvir/inspections', [
+                'inspection_type' => 'pre_trip', 'operational_asset_id' => $asset->id,
+                'dispatch_job_id' => $job->id, 'has_defects' => false,
+                'signature_captured' => true, 'checks' => [],
+            ])->assertCreated();
+    }
+
     // 6. Step Progression via Mobile API
     $progressionSteps = [
         ['status' => 'accepted', 'expectedVersion' => 5],

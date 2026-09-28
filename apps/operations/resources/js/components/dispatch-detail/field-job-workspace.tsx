@@ -323,7 +323,7 @@ export function FieldProgressionPanel({
                                 </div>
                                 <a
                                     href={`/?view=reports&job_id=${job.id}`}
-                                    className="inline-flex items-center gap-1.5 rounded-lg bg-brand-strong px-3.5 py-2 text-xs font-semibold text-white dark:text-brand-contrast shadow-xs transition-colors hover:bg-brand"
+                                    className="inline-flex items-center gap-1.5 rounded-lg bg-brand-strong px-3.5 py-2 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-brand dark:text-brand-contrast"
                                 >
                                     <FileText className="h-4 w-4" />
                                     Submit Job Report

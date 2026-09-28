@@ -57,8 +57,8 @@ describe('DVIR cab and defect photos', () => {
 
             expect(card.backgroundColor).toBe(theme.surface);
             // A tappable card uses the secondary-button border, not a resting one.
-        expect(card.borderColor).toBe(theme.borderStrong);
-        expect(card.backgroundColor).not.toBe(theme.brandAmber);
+            expect(card.borderColor).toBe(theme.borderStrong);
+            expect(card.backgroundColor).not.toBe(theme.brandAmber);
         },
     );
 

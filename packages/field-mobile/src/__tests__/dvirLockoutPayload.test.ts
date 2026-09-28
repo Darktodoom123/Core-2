@@ -38,7 +38,10 @@ const submit = (
         remarks: 'Grinding from the slew drive',
         selectedDefects,
     });
-    if (completedAt) record.completedAt = completedAt;
+
+    if (completedAt) {
+        record.completedAt = completedAt;
+    }
 
     return buildDvirSubmitPayload({
         attested: true,

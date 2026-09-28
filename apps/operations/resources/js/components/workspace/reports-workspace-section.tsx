@@ -352,7 +352,7 @@ export function ReportsSurface({
                                 className={cn(
                                     'inline-flex min-h-11 min-w-11 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
                                     statusFilter === tab.id
-                                        ? 'bg-brand-strong text-white dark:text-brand-contrast shadow-sm'
+                                        ? 'bg-brand-strong text-white shadow-sm dark:text-brand-contrast'
                                         : 'bg-surface-subtle text-ink-soft hover:bg-surface-subtle/80 hover:text-ink',
                                 )}
                             >

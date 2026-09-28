@@ -119,7 +119,7 @@ export function AssetTypeMultiSelect({
                     appearance === 'neutral'
                         ? 'rounded-lg border border-line bg-surface text-ink hover:border-line-strong hover:bg-surface-subtle'
                         : allTypesSelected
-                          ? 'bg-brand-strong font-semibold text-white dark:text-brand-contrast shadow-xs'
+                          ? 'bg-brand-strong font-semibold text-white shadow-xs dark:text-brand-contrast'
                           : 'bg-brand-soft font-semibold text-brand-strong ring-1 ring-brand-strong/20',
                 )}
                 aria-label={`Asset type filter: ${selectedLabel}`}

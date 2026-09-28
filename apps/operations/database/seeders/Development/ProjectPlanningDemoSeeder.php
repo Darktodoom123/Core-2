@@ -35,6 +35,7 @@ final class ProjectPlanningDemoSeeder extends Seeder
                 $person->personnelCredentials()->create(['kind' => in_array($person, $operators, true) ? 'operator_certification' : 'rigger_certification', 'credential_number' => 'DEMO-CERT-'.$person->id, 'credential_type' => 'Demo qualification', 'status' => 'active', 'issued_at' => now()->subYear(), 'expires_at' => now()->addYear()]);
             }
             $asset = OperationalAsset::query()->create(['code' => 'DEMO-CR-90', 'name' => '90 t site crane', 'kind' => 'crane', 'status' => AssetStatus::Available]);
+            $asset->inspections()->create(['technician_id' => $manager->id, 'type' => 'daily_safety', 'result' => 'passed', 'checklist' => ['demo_readiness' => true], 'completed_at' => now()->subHour()]);
             $plans = app(ProjectPlanService::class);
             $shifts = app(ProjectShiftService::class);
             $plan = $plans->create($manager, ['name' => 'Riverside bridge · 90-day works', 'source_reference' => 'DEMO-CORE1-BRIDGE-90', 'client' => 'Demo Civil Works', 'site' => 'Riverside bridge site']);

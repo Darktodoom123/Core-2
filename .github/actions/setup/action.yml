@@ -1,0 +1,67 @@
+name: Set up Core-2 toolchain
+description: Install PHP, Composer, and Node dependencies with shared caches.
+
+inputs:
+  php:
+    description: Install PHP and Composer dependencies.
+    default: 'false'
+  php-extensions:
+    description: Extra PHP extensions beyond the shared baseline.
+    default: ''
+  composer-apps:
+    description: Space-separated app directories under apps/ to install with Composer.
+    default: 'operations tracking'
+  node:
+    description: Install Node and npm dependencies.
+    default: 'false'
+  npm-ignore-scripts:
+    description: Skip npm lifecycle scripts during install.
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - name: Setup PHP
+      if: inputs.php == 'true'
+      uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+      with:
+        php-version: '8.4'
+        tools: composer:v2
+        coverage: none
+        extensions: mbstring, xml, curl, zip, gd, intl, sqlite3, pdo_sqlite ${{ inputs.php-extensions != '' && format(', {0}', inputs.php-extensions) || '' }}
+
+    - name: Get Composer cache directory
+      if: inputs.php == 'true'
+      id: composer-cache
+      shell: bash
+      run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+    - name: Cache Composer dependencies
+      if: inputs.php == 'true'
+      uses: actions/cache@d4323d4df104b026a6aa633fdb11d772146be0bf # v4.2.2
+      with:
+        path: ${{ steps.composer-cache.outputs.dir }}
+        key: ${{ runner.os }}-composer-${{ hashFiles('composer.lock', 'apps/operations/composer.lock', 'apps/tracking/composer.lock') }}
+        restore-keys: ${{ runner.os }}-composer-
+
+    - name: Install Composer dependencies
+      if: inputs.php == 'true'
+      shell: bash
+      env:
+        COMPOSER_APPS: ${{ inputs.composer-apps }}
+      run: |
+        for app in $COMPOSER_APPS; do
+          composer --working-dir="apps/$app" install --no-interaction --prefer-dist --optimize-autoloader --no-progress
+        done
+
+    - name: Setup Node
+      if: inputs.node == 'true'
+      uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+      with:
+        node-version-file: '.nvmrc'
+        cache: npm
+
+    - name: Install npm dependencies
+      if: inputs.node == 'true'
+      shell: bash
+      run: npm ci ${{ inputs.npm-ignore-scripts == 'true' && '--ignore-scripts' || '' }}
