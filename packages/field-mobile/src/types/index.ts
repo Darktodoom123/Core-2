@@ -493,7 +493,7 @@ export interface RentalHandoverCommandPayload {
     }>;
     signature?: string;
     signee_name: string;
-    signee_role: string;
+    signee_role?: string;
 }
 
 export interface JobReportCommandPayload {

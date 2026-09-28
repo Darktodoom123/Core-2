@@ -13,9 +13,11 @@ import { Icon } from '../components/common/Icon';
 import { TileScreenHeader } from '../components/layout/tile-screen-header';
 import { colors, shadows } from '../components/nativeStyles';
 import { DigitalSignatureModal } from '../components/signature/DigitalSignatureModal';
+import { signatureSvgDataUri } from '../components/signature/signature-svg';
 import { durableAttachmentStorage } from '../services/durableAttachmentStorage';
 import { useTheme } from '../theme';
 import type { AssetAssignment } from '../types';
+import { checkHandoverForm } from './rental/handover-form';
 
 type HandoverAssetOption = Pick<
     AssetAssignment,
@@ -49,7 +51,7 @@ export interface RentalCheckoutData {
     hourMeter: number;
     fuelLevelPercent: number;
     conditionAssessment?: 'excellent' | 'good' | 'fair' | 'poor';
-    conditionNotes: string;
+    conditionNotes?: string;
     damageNoted?: boolean;
     damageNotes?: string;
     photos: PhotoAttachment[];
@@ -65,7 +67,7 @@ export interface RentalReturnData {
     hourMeter: number;
     fuelLevelPercent: number;
     conditionAssessment?: 'excellent' | 'good' | 'fair' | 'poor';
-    conditionNotes: string;
+    conditionNotes?: string;
     damageNoted: boolean;
     damageNotes?: string;
     photos: PhotoAttachment[];
@@ -94,18 +96,20 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
 }) => {
     const { isDarkHud } = useTheme();
     const [mode, setMode] = useState<'checkout' | 'return'>(initialMode);
-    const [hourMeter, setHourMeter] = useState('1420.5');
-    const [fuelLevel, setFuelLevel] = useState('100');
+    // Read off the machine by the operator; never pre-filled.
+    const [hourMeter, setHourMeter] = useState('');
+    const [fuelLevel, setFuelLevel] = useState('');
     const [conditionNotes, setConditionNotes] = useState('');
     const [damageNoted, setDamageNoted] = useState(false);
     const [photos, setPhotos] = useState<PhotoAttachment[]>([]);
-    const [signeeName, setSigneeName] = useState('Engr. Antonio Santos');
+    const [signeeName, setSigneeName] = useState('');
     const [signatureModalVisible, setSignatureModalVisible] = useState(false);
     const [signatureCaptured, setSignatureCaptured] = useState(false);
     const [signatureData, setSignatureData] = useState<string | undefined>(
         undefined,
     );
-    const [signeeRole, setSigneeRole] = useState('Site Supervisor');
+    const [signeeRole, setSigneeRole] = useState('');
+    const [formProblems, setFormProblems] = useState<string[]>([]);
     const [localSyncStatus, setLocalSyncStatus] = useState<
         'idle' | 'saving' | 'queued' | 'submitting' | 'success' | 'failed'
     >('idle');
@@ -157,12 +161,24 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
         }
 
         setAssetSelectionError(null);
+        const form = checkHandoverForm({
+            hourMeter,
+            fuelLevel,
+            signeeName,
+            signatureData,
+        });
+
+        if (!form.ok) {
+            setFormProblems(form.problems);
+
+            return;
+        }
+
+        setFormProblems([]);
         submitInFlightRef.current = true;
-        const signaturePayload =
-            signatureData ||
-            (signatureCaptured
-                ? 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
-                : undefined);
+        const { values } = form;
+        const notes = conditionNotes.trim() || undefined;
+        const role = signeeRole.trim() || undefined;
 
         setLocalSyncStatus('saving');
         setLocalErrorMessage(null);
@@ -203,36 +219,28 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
                     jobId,
                     reservationId: numericReservationId,
                     assetId: selectedAssetId ?? assetId,
-                    hourMeter: parseFloat(hourMeter) || 0,
-                    fuelLevelPercent: parseInt(fuelLevel, 10) || 100,
-                    conditionAssessment: 'good',
-                    conditionNotes:
-                        conditionNotes ||
-                        'Checkout inspection completed with zero safety defects.',
+                    hourMeter: values.hourMeter,
+                    fuelLevelPercent: values.fuelLevelPercent,
+                    conditionNotes: notes,
                     photos: durablePhotos,
-                    signatureBase64: signaturePayload,
-                    signeeName,
-                    signeeRole,
+                    signatureBase64: values.signatureBase64,
+                    signeeName: values.signeeName,
+                    signeeRole: role,
                 });
             } else {
                 await onCompleteReturn?.({
                     jobId,
                     reservationId: numericReservationId,
                     assetId: selectedAssetId ?? assetId,
-                    hourMeter: parseFloat(hourMeter) || 0,
-                    fuelLevelPercent: parseInt(fuelLevel, 10) || 100,
-                    conditionAssessment: damageNoted ? 'fair' : 'good',
-                    conditionNotes:
-                        conditionNotes ||
-                        (damageNoted
-                            ? 'Damage recorded during return inspection.'
-                            : 'Returned in good operational condition.'),
+                    hourMeter: values.hourMeter,
+                    fuelLevelPercent: values.fuelLevelPercent,
+                    conditionNotes: notes,
                     damageNoted,
-                    damageNotes: damageNoted ? conditionNotes : undefined,
+                    damageNotes: damageNoted ? notes : undefined,
                     photos: durablePhotos,
-                    signatureBase64: signaturePayload,
-                    signeeName,
-                    signeeRole,
+                    signatureBase64: values.signatureBase64,
+                    signeeName: values.signeeName,
+                    signeeRole: role,
                 });
             }
 
@@ -620,7 +628,7 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
                                 accessibilityLabel="Fuel Level percentage"
                                 keyboardType="numeric"
                                 onChangeText={setFuelLevel}
-                                placeholder="100"
+                                placeholder="0–100"
                                 placeholderTextColor={
                                     isDarkHud ? colors.hudTextDim : colors.muted
                                 }
@@ -1000,6 +1008,22 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
                     </View>
                 )}
 
+                {formProblems.length > 0 ? (
+                    <View
+                        accessibilityRole="alert"
+                        testID="handover-form-problems"
+                    >
+                        {formProblems.map((problem) => (
+                            <Text
+                                key={problem}
+                                style={styles.assetSelectionError}
+                            >
+                                {problem}
+                            </Text>
+                        ))}
+                    </View>
+                ) : null}
+
                 {/* Final Action Button */}
                 <Pressable
                     accessibilityLabel={
@@ -1048,8 +1072,9 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
                         setSigneeRole(data.signerRole);
                     }
 
-                    const base64Sig = `data:image/svg+xml;base64,${typeof btoa === 'function' ? btoa(JSON.stringify(data?.strokes || [])) : Buffer.from(JSON.stringify(data?.strokes || [])).toString('base64')}`;
-                    setSignatureData(base64Sig);
+                    setSignatureData(
+                        signatureSvgDataUri(data?.strokes ?? []) ?? undefined,
+                    );
                     setSignatureModalVisible(false);
                 }}
                 visible={signatureModalVisible}

@@ -4,6 +4,28 @@ import { StyleSheet } from 'react-native';
 import { RentalHandoverScreen } from '../screens/RentalHandoverScreen';
 import { ThemeProvider } from '../theme';
 import { darkHudThemeColors, lightThemeColors } from '../theme/tokens';
+import { drawSignature } from './support/drawSignature';
+
+type View = Awaited<ReturnType<typeof render>>;
+
+/** What an operator enters: readings off the machine and a real sign-off. */
+async function fillHandover(view: View) {
+    await act(async () => {
+        fireEvent.changeText(view.getByTestId('input-hour-meter'), '1532.4');
+        fireEvent.changeText(view.getByTestId('input-fuel-level'), '65');
+        fireEvent.press(view.getByTestId('open-signature-button'));
+    });
+    await act(async () => {
+        fireEvent.changeText(
+            view.getByTestId('digital-signature-modal-name-input'),
+            'Maria Cruz',
+        );
+    });
+    await drawSignature(view.getByTestId('digital-signature-modal-canvas'));
+    await act(async () => {
+        fireEvent.press(view.getByTestId('digital-signature-modal-submit'));
+    });
+}
 
 describe('RentalHandoverScreen', () => {
     afterEach(async () => {
@@ -34,10 +56,26 @@ describe('RentalHandoverScreen', () => {
         expect(view.getByText('DOLE-OSHC CERTIFIED')).toBeTruthy();
 
         // Confirm Checkout
+        await fillHandover(view);
         await act(async () => {
             fireEvent.press(view.getByTestId('confirm-handover-button'));
         });
         expect(onCompleteCheckout).toHaveBeenCalledTimes(1);
+        const sent = onCompleteCheckout.mock.calls[0][0];
+        expect(sent).toMatchObject({
+            hourMeter: 1532.4,
+            fuelLevelPercent: 65,
+            signeeName: 'Maria Cruz',
+            conditionNotes: undefined,
+        });
+        expect(sent.conditionAssessment).toBeUndefined();
+        const svg = Buffer.from(
+            sent.signatureBase64.replace('data:image/svg+xml;base64,', ''),
+            'base64',
+        ).toString('utf-8');
+        expect(svg).toMatch(
+            /^<svg [^>]*><g [^>]*><polyline points="[^"]+"\/><\/g><\/svg>$/,
+        );
         expect(view.getByText('Saved for Synchronization')).toBeTruthy();
         expect(
             view.getByText(/Check synchronization status for server receipt/),
@@ -71,10 +109,43 @@ describe('RentalHandoverScreen', () => {
         });
 
         // Confirm Return
+        await fillHandover(view);
         await act(async () => {
             fireEvent.press(view.getByTestId('confirm-handover-button'));
         });
         expect(onCompleteReturn).toHaveBeenCalledTimes(1);
+    });
+
+    it('never fills in readings or a signature: an empty form is refused with the reasons', async () => {
+        const onCompleteCheckout = jest.fn();
+        const view = await render(
+            <RentalHandoverScreen
+                assetCode="ALB-CRN-050"
+                mode="checkout"
+                onCompleteCheckout={onCompleteCheckout}
+            />,
+        );
+
+        expect(view.getByTestId('input-hour-meter').props.value).toBe('');
+        expect(view.getByTestId('input-fuel-level').props.value).toBe('');
+        expect(view.getByTestId('input-signee-name').props.value).toBe('');
+
+        await act(async () => {
+            fireEvent.press(view.getByTestId('confirm-handover-button'));
+        });
+
+        expect(onCompleteCheckout).not.toHaveBeenCalled();
+        expect(
+            view.getByText('Enter the hour meter reading from the machine.'),
+        ).toBeTruthy();
+        expect(
+            view.getByText(
+                'Enter the fuel level as a whole number from 0 to 100.',
+            ),
+        ).toBeTruthy();
+        expect(
+            view.getByText('Capture the client representative’s signature.'),
+        ).toBeTruthy();
     });
 
     it('requires an explicit assigned asset when the job contains multiple machines', async () => {
@@ -111,6 +182,7 @@ describe('RentalHandoverScreen', () => {
         await act(async () => {
             fireEvent.press(view.getByTestId('rental-asset-80'));
         });
+        await fillHandover(view);
         await act(async () => {
             fireEvent.press(view.getByTestId('confirm-handover-button'));
         });

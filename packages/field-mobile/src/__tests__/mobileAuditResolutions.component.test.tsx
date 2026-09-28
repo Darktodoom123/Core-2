@@ -11,6 +11,7 @@ import { FieldSafetySheet } from '../components/sheets/field-safety-sheet';
 import { AssignedJobsListScreen } from '../screens/AssignedJobsListScreen';
 import { ApiClientError } from '../services/apiClient';
 import type { DispatchJob } from '../types/index';
+import { drawSignature } from './support/drawSignature';
 
 jest.setTimeout(25000);
 
@@ -177,13 +178,13 @@ describe('Mobile Application Audit Resolutions Component Tests', () => {
                 view.getByText('Client Sign-Off & Job Completion'),
             ).toBeTruthy();
 
-            // Fill signer name and adopt signature mark
+            // Fill signer name and sign on the pad
             const nameInput = view.getByTestId(
                 'digital-signature-modal-name-input',
             );
             await fireEvent.changeText(nameInput, 'Engr. Roberto Santos');
-            await fireEvent.press(
-                view.getByTestId('digital-signature-modal-adopt-mark'),
+            await drawSignature(
+                view.getByTestId('digital-signature-modal-canvas'),
             );
 
             await fireEvent.press(

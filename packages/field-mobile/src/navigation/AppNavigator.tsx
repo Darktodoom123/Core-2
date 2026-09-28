@@ -2224,14 +2224,14 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                     handover_type: 'checkout',
                     hour_meter: data.hourMeter,
                     fuel_percent: data.fuelLevelPercent,
-                    condition_assessment: data.conditionAssessment || 'good',
+                    condition_assessment: data.conditionAssessment,
                     condition_notes: data.conditionNotes,
                     damage_noted: data.damageNoted ?? false,
                     damage_notes: data.damageNotes,
                     photos: photosPayload,
                     signature: data.signatureBase64,
                     signee_name: data.signeeName,
-                    signee_role: data.signeeRole || 'Site Representative',
+                    signee_role: data.signeeRole,
                 });
                 queued = true;
 
@@ -2335,16 +2335,14 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                     handover_type: 'return',
                     hour_meter: data.hourMeter,
                     fuel_percent: data.fuelLevelPercent,
-                    condition_assessment:
-                        data.conditionAssessment ||
-                        (data.damageNoted ? 'fair' : 'good'),
+                    condition_assessment: data.conditionAssessment,
                     condition_notes: data.conditionNotes,
                     damage_noted: data.damageNoted,
                     damage_notes: data.damageNotes,
                     photos: photosPayload,
                     signature: data.signatureBase64,
                     signee_name: data.signeeName,
-                    signee_role: data.signeeRole || 'Site Representative',
+                    signee_role: data.signeeRole,
                 });
                 queued = true;
 
