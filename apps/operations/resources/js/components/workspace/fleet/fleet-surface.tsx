@@ -491,7 +491,7 @@ export function FleetSurface({
                             )}
                         >
                             {selectedAsset ? (
-                                <div className="space-y-3">
+                                <div className="flex min-h-0 flex-col gap-3 lg:h-full">
                                     {selectionOutsideFilters && (
                                         <InlineNotice
                                             tone="info"

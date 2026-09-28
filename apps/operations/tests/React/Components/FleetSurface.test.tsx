@@ -829,8 +829,13 @@ describe('FleetSurface & Modular Fleet Components', () => {
             ).not.toBeInTheDocument();
             expect(screen.getByText('No active operator')).toBeInTheDocument();
             expect(screen.getByText('No active duty')).toBeInTheDocument();
-            expect(screen.getByText('Passed')).toBeInTheDocument();
-            expect(screen.getByText('Conditional')).toBeInTheDocument();
+            const overviewPanel = screen.getByRole('tabpanel');
+            expect(
+                within(overviewPanel).getByText('Passed'),
+            ).toBeInTheDocument();
+            expect(
+                within(overviewPanel).getByText('Conditional'),
+            ).toBeInTheDocument();
 
             fireEvent.click(
                 screen.getByRole('button', { name: /view inspections/i }),

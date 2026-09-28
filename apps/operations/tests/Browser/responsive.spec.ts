@@ -230,7 +230,42 @@ test.describe('responsive operations workspace contract', () => {
                 name: /Collapse sidebar|Expand sidebar/,
             }),
         ).toBeVisible();
-        await expect(navigation).toHaveClass(/min-\[840px\]:sticky/);
+        await expect(navigation).toHaveCSS('position', 'fixed');
+    });
+
+    test('keeps the fleet sidebar in the viewport while the page scrolls', async ({
+        page,
+    }) => {
+        await page.setViewportSize({ width: 1280, height: 640 });
+        await page.goto('/?view=assets', { waitUntil: 'domcontentloaded' });
+
+        const navigation = page.locator('#workspace-navigation');
+        await expect(navigation).toHaveCSS('position', 'fixed');
+        await page.locator('#workspace-content').evaluate((content) => {
+            const spacer = document.createElement('div');
+            spacer.style.height = '1000px';
+            content.append(spacer);
+        });
+        await page.evaluate(() =>
+            window.scrollTo(0, document.body.scrollHeight),
+        );
+        expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+
+        const bounds = await navigation.boundingBox();
+        expect(bounds?.y).toBe(0);
+        expect(bounds?.height).toBe(640);
+        expect(
+            (await page.locator('#workspace-content').boundingBox())?.x,
+        ).toBe(248);
+
+        await page.getByRole('button', { name: 'Collapse sidebar' }).click();
+        await expect(navigation).toHaveCSS('width', '76px');
+        await expect
+            .poll(
+                async () =>
+                    (await page.locator('#workspace-content').boundingBox())?.x,
+            )
+            .toBe(76);
     });
 
     test('keeps operational attention tabs roving and status text available', async ({
@@ -468,11 +503,11 @@ async function assertResponsiveContract(
     if (viewport.width < 840) {
         await expect(openTrigger).toBeVisible();
         await expect(collapseControl).toBeHidden();
-        await expect(navigation).toHaveClass(/min-\[840px\]:sticky/);
+        await expect(navigation).toHaveCSS('position', 'fixed');
     } else {
         await expect(openTrigger).toBeHidden();
         await expect(collapseControl).toBeVisible();
-        await expect(navigation).toHaveClass(/min-\[840px\]:sticky/);
+        await expect(navigation).toHaveCSS('position', 'fixed');
     }
 
     const heading = page.locator('#workspace-content h1').first();

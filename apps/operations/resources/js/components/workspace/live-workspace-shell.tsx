@@ -381,7 +381,14 @@ export function LiveWorkspaceShell({
 
     return (
         <MotionConfig reducedMotion="user">
-            <div className="min-h-screen min-w-0 bg-canvas text-ink min-[840px]:grid min-[840px]:grid-cols-[auto_minmax(0,1fr)]">
+            <div
+                className={cn(
+                    'min-h-screen min-w-0 bg-canvas text-ink min-[840px]:grid',
+                    collapsed
+                        ? 'min-[840px]:grid-cols-[4.75rem_minmax(0,1fr)]'
+                        : 'min-[840px]:grid-cols-[15.5rem_minmax(0,1fr)]',
+                )}
+            >
                 <a
                     href="#workspace-content"
                     className="sr-only z-[70] rounded-lg bg-ink px-4 py-3 text-white focus:not-sr-only focus:fixed focus:top-2 focus:left-2"
@@ -413,7 +420,7 @@ export function LiveWorkspaceShell({
                     aria-label={mobileOpen ? 'Workspace navigation' : undefined}
                     tabIndex={mobileOpen ? -1 : undefined}
                     className={cn(
-                        'fixed inset-y-0 left-0 z-50 flex h-screen w-[15.5rem] flex-col border-r border-line bg-surface text-ink transition-[width,transform] duration-200 ease-out min-[840px]:sticky min-[840px]:top-0 min-[840px]:translate-x-0',
+                        'fixed inset-y-0 left-0 z-50 flex h-dvh w-[15.5rem] flex-col border-r border-line bg-surface text-ink transition-[width,transform] duration-200 ease-out min-[840px]:translate-x-0',
                         mobileOpen ? 'translate-x-0' : '-translate-x-full',
                         collapsed && 'min-[840px]:w-[4.75rem]',
                     )}
@@ -447,7 +454,7 @@ export function LiveWorkspaceShell({
                     </div>
 
                     <nav
-                        className="flex-1 overflow-y-auto p-3"
+                        className="min-h-0 flex-1 overflow-y-auto p-3"
                         aria-label="Available operations modules"
                     >
                         <div className="space-y-4">
@@ -613,7 +620,7 @@ export function LiveWorkspaceShell({
                 </aside>
 
                 <div
-                    className="min-w-0"
+                    className="min-w-0 min-[840px]:col-start-2"
                     inert={mobileOpen || undefined}
                     aria-hidden={mobileOpen ? true : undefined}
                 >

@@ -231,9 +231,7 @@ describe('FleetMaintenanceSection UI', () => {
         fireEvent.click(recordBtn);
 
         expect(
-            screen.getByText(
-                /authoritatively record physical repair completion/i,
-            ),
+            screen.getByText(/record the physical repair first/i),
         ).toBeInTheDocument();
 
         const workPerformedTextarea =

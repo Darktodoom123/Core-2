@@ -87,7 +87,7 @@ export function FleetStatusForm({ asset, canUpdate }: FleetStatusFormProps) {
 
                 <div
                     role="note"
-                    className="flex items-start gap-3 rounded-lg bg-surface-subtle p-3.5 text-sm text-ink-soft"
+                    className="flex items-start gap-3 rounded-xl bg-surface-subtle p-3.5 text-sm text-ink-soft"
                 >
                     <ShieldAlert
                         className="mt-0.5 h-4 w-4 shrink-0 text-warning-strong"
@@ -112,7 +112,7 @@ export function FleetStatusForm({ asset, canUpdate }: FleetStatusFormProps) {
                     </div>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-[minmax(0,0.75fr)_minmax(0,1.25fr)]">
+                <div className="grid gap-4">
                     <label className="text-sm font-medium text-ink">
                         Target status *
                         <select
@@ -185,13 +185,14 @@ export function FleetStatusForm({ asset, canUpdate }: FleetStatusFormProps) {
                     </p>
                 )}
 
-                <div className="flex flex-col-reverse gap-3 border-t border-line pt-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap-reverse items-center justify-between gap-3 border-t border-line pt-4">
                     <p className="text-xs text-ink-soft">
                         The change is recorded with your reason and identity.
                     </p>
                     <Button
                         type="submit"
                         variant="primary"
+                        className="whitespace-nowrap"
                         disabled={form.processing || !form.data.reason.trim()}
                     >
                         {form.processing ? 'Updating…' : 'Update asset status'}

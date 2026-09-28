@@ -204,9 +204,21 @@ export default function DispatchDetail({
             }
         };
 
+        const initialHashFrame = window.requestAnimationFrame(() => {
+            handleHashChange();
+
+            if (window.location.hash === '#assignment-summary') {
+                document
+                    .getElementById('assignment-summary')
+                    ?.scrollIntoView({ block: 'start' });
+            }
+        });
         window.addEventListener('hashchange', handleHashChange);
 
-        return () => window.removeEventListener('hashchange', handleHashChange);
+        return () => {
+            window.cancelAnimationFrame(initialHashFrame);
+            window.removeEventListener('hashchange', handleHashChange);
+        };
     }, [setActiveStep]);
 
     const handleMobileActivationAction = () => {
@@ -540,6 +552,25 @@ export default function DispatchDetail({
                                                             </div>
                                                             <a
                                                                 href="#assignment-summary"
+                                                                onClick={() => {
+                                                                    setActiveStep(2);
+
+                                                                    if (
+                                                                        window.location.hash ===
+                                                                        '#assignment-summary'
+                                                                    ) {
+                                                                        document
+                                                                            .getElementById(
+                                                                                'assignment-summary',
+                                                                            )
+                                                                            ?.scrollIntoView(
+                                                                                {
+                                                                                    behavior: 'smooth',
+                                                                                    block: 'start',
+                                                                                },
+                                                                            );
+                                                                    }
+                                                                }}
                                                                 className="inline-flex min-h-9 items-center gap-1.5 self-start rounded-md px-2.5 text-xs font-semibold text-brand-strong transition-colors hover:bg-brand-soft focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden sm:self-auto"
                                                             >
                                                                 Review selection
@@ -898,7 +929,7 @@ export default function DispatchDetail({
                                     )}
                                 </div>
 
-                                <aside className="min-w-0 space-y-5 xl:sticky xl:top-24 xl:self-start">
+                                <aside className="min-w-0 space-y-5 xl:self-start">
                                     <AssignmentSelectionSummary
                                         formId={
                                             capabilities.view_assignment_candidates

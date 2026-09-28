@@ -4,6 +4,7 @@ import {
     Download,
     Eye,
     FileText,
+    Paperclip,
     Pencil,
     Plus,
     RefreshCw,
@@ -11,11 +12,15 @@ import {
     ShieldCheck,
     Trash2,
     Upload,
-    X,
 } from 'lucide-react';
 import type { FormEvent } from 'react';
 import React, { useState } from 'react';
-import { Button, InlineNotice, Modal } from '@/components/ui';
+import { Button, InlineNotice, Modal, buttonVariants } from '@/components/ui';
+import {
+    FleetEmptyState,
+    FleetPill,
+    FleetSectionHeader,
+} from '@/components/workspace/fleet/fleet-detail-primitives';
 import { FleetInput } from '@/components/workspace/fleet/fleet-input';
 import { formatDate } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
@@ -37,6 +42,27 @@ const CATEGORIES = [
     { value: 'emission_certs', label: 'Smoke Emission Clearance' },
     { value: 'other', label: 'Other Regulatory Permit' },
 ];
+
+const fieldClass =
+    'mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden disabled:cursor-not-allowed disabled:bg-surface-subtle disabled:text-ink-soft';
+const textareaClass =
+    'mt-1 w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden';
+const fileInputClass =
+    'mt-1 block min-h-11 w-full cursor-pointer rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink file:mr-3 file:rounded-md file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-brand-contrast hover:file:bg-brand-strong hover:file:text-white dark:hover:file:text-brand-contrast';
+const iconButtonClass =
+    'inline-flex h-9 w-9 items-center justify-center rounded-md text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden';
+
+function formatFileSize(bytes: number): string {
+    if (bytes < 1024 * 1024) {
+        return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+    }
+
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function todayIsoDate(): string {
+    return new Date().toISOString().slice(0, 10);
+}
 
 export function FleetDocumentsSection({
     asset,
@@ -238,71 +264,89 @@ export function FleetDocumentsSection({
         switch (doc.validity_status) {
             case 'valid':
                 return (
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-success-strong">
-                        <ShieldCheck className="h-3.5 w-3.5" />
+                    <FleetPill tone="success" icon={ShieldCheck}>
                         Valid
-                    </span>
+                    </FleetPill>
                 );
             case 'expiring_soon':
                 return (
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-warning-strong">
-                        <AlertTriangle className="h-3.5 w-3.5" />
+                    <FleetPill tone="warning" icon={AlertTriangle}>
                         Expiring soon
-                    </span>
+                    </FleetPill>
                 );
             case 'expired':
                 return (
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-danger">
-                        <ShieldAlert className="h-3.5 w-3.5" />
+                    <FleetPill tone="danger" icon={ShieldAlert}>
                         Expired
-                    </span>
+                    </FleetPill>
                 );
             case 'revoked':
-                return (
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-danger">
-                        Revoked
-                    </span>
-                );
+                return <FleetPill tone="danger">Revoked</FleetPill>;
             case 'superseded':
-                return (
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-ink-soft">
-                        Superseded
-                    </span>
-                );
+                return <FleetPill tone="neutral">Superseded</FleetPill>;
             case 'no_expiration':
             case 'permanent':
             default:
-                return (
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-ink-soft">
-                        No expiration date
-                    </span>
-                );
+                return <FleetPill tone="neutral">No expiration date</FleetPill>;
         }
     };
 
+    const expiredCount = documents.filter((doc) => doc.is_expired).length;
+    const expiringCount = documents.filter(
+        (doc) => !doc.is_expired && doc.expires_soon,
+    ).length;
+    const missingFileCount = documents.filter((doc) => !doc.attachment).length;
+
     return (
         <div className="space-y-5">
-            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line pb-4">
-                <div>
-                    <h3 className="text-sm font-semibold text-ink">
-                        Permits &amp; documents
-                    </h3>
-                    <p className="mt-1 max-w-2xl text-sm text-ink-soft">
-                        Authorized certificates, road transit clearances, and
-                        proof of insurance for {asset.code}.
-                    </p>
+            <FleetSectionHeader
+                title="Permits & documents"
+                description={`Authorized certificates, road transit clearances, and proof of insurance for ${asset.code}.`}
+                action={
+                    canManage && (
+                        <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={openUploadDialog}
+                        >
+                            <Plus className="h-3.5 w-3.5" />
+                            Add Document
+                        </Button>
+                    )
+                }
+            />
+
+            {documents.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5 text-xs text-ink-soft">
+                    <span className="mr-1 font-medium tabular-nums">
+                        {documents.length}{' '}
+                        {documents.length === 1 ? 'document' : 'documents'}
+                    </span>
+                    {expiredCount > 0 && (
+                        <FleetPill tone="danger" dot>
+                            {expiredCount} expired
+                        </FleetPill>
+                    )}
+                    {expiringCount > 0 && (
+                        <FleetPill tone="warning" dot>
+                            {expiringCount} expiring soon
+                        </FleetPill>
+                    )}
+                    {missingFileCount > 0 && (
+                        <FleetPill tone="warning" icon={Paperclip}>
+                            {missingFileCount} missing{' '}
+                            {missingFileCount === 1 ? 'file' : 'files'}
+                        </FleetPill>
+                    )}
+                    {expiredCount === 0 &&
+                        expiringCount === 0 &&
+                        missingFileCount === 0 && (
+                            <FleetPill tone="success" icon={ShieldCheck}>
+                                All current
+                            </FleetPill>
+                        )}
                 </div>
-                {canManage && (
-                    <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={openUploadDialog}
-                        className="flex items-center gap-1.5"
-                    >
-                        <Plus className="h-3.5 w-3.5" /> Add Document
-                    </Button>
-                )}
-            </div>
+            )}
 
             {successMessage && (
                 <InlineNotice tone="success" title={successMessage} />
@@ -627,7 +671,7 @@ export function FleetDocumentsSection({
                                     e.target.files?.[0] ?? null,
                                 )
                             }
-                            className="block min-h-11 w-full cursor-pointer rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink file:mr-3 file:rounded-md file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-brand-contrast hover:file:bg-brand-strong hover:file:text-white dark:hover:file:text-brand-contrast"
+                            className={fileInputClass}
                         />
                         {form.data.file && (
                             <p className="text-xs text-ink-soft">
@@ -645,45 +689,73 @@ export function FleetDocumentsSection({
                 </form>
             </Modal>
 
-            {/* Documents List */}
             {documents.length === 0 ? (
-                <div className="border-y border-dashed border-line py-10 text-center">
-                    <FileText className="mx-auto h-8 w-8 text-ink-soft/40" />
-                    <h4 className="mt-2 text-sm font-semibold text-ink">
-                        No documents on record
-                    </h4>
-                    <p className="mt-1 text-xs text-ink-soft">
-                        No road permits, load test certificates, or insurance
-                        records have been registered for this asset yet.
-                    </p>
-                </div>
+                <FleetEmptyState
+                    icon={FileText}
+                    title="No documents on record"
+                    description="No road permits, load test certificates, or insurance records have been registered for this asset yet."
+                    action={
+                        canManage ? (
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={openUploadDialog}
+                            >
+                                <Upload className="h-3.5 w-3.5" />
+                                Upload the first document
+                            </Button>
+                        ) : undefined
+                    }
+                />
             ) : (
-                <div className="divide-y divide-line border-y border-line">
+                <ul className="space-y-3" aria-label="Asset documents">
                     {sortedDocuments.map((doc) => (
-                        <div
+                        <li
                             key={doc.id}
-                            className="flex flex-col justify-between py-4 transition-colors hover:bg-surface-subtle/40"
+                            className={cn(
+                                'overflow-hidden rounded-xl border bg-surface transition-colors',
+                                doc.is_expired
+                                    ? 'border-danger/40'
+                                    : doc.expires_soon
+                                      ? 'border-warning/40'
+                                      : 'border-line hover:border-line-strong',
+                            )}
                         >
-                            <div>
-                                <div className="flex items-start justify-between gap-2">
-                                    <div className="min-w-0 flex-1">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-[11px] font-bold tracking-wider text-brand-strong uppercase">
-                                                {doc.category_label ||
-                                                    doc.category}
-                                            </span>
-                                            {renderValidityBadge(doc)}
+                            <div className="p-4">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="flex min-w-0 flex-1 items-start gap-3">
+                                        <span
+                                            className={cn(
+                                                'hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg sm:flex',
+                                                doc.is_expired
+                                                    ? 'bg-danger-soft text-danger-strong'
+                                                    : doc.expires_soon
+                                                      ? 'bg-warning-soft text-warning-strong'
+                                                      : 'bg-brand-soft text-brand-strong',
+                                            )}
+                                            aria-hidden="true"
+                                        >
+                                            <FileText className="h-5 w-5" />
+                                        </span>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                                <span className="text-[11px] font-bold tracking-wider text-ink-soft uppercase">
+                                                    {doc.category_label ||
+                                                        doc.category}
+                                                </span>
+                                                {renderValidityBadge(doc)}
+                                            </div>
+                                            <h4 className="mt-1 text-sm font-semibold break-words text-ink">
+                                                {doc.title}
+                                            </h4>
                                         </div>
-                                        <h4 className="mt-1 truncate text-sm font-semibold text-ink">
-                                            {doc.title}
-                                        </h4>
                                     </div>
                                     {canManage && (
-                                        <div className="flex shrink-0 items-center gap-1">
+                                        <div className="-mt-1 -mr-1 flex shrink-0 items-center">
                                             <button
                                                 type="button"
                                                 onClick={() => openReplace(doc)}
-                                                className="min-h-9 min-w-9 rounded-md p-2 text-ink-soft transition-colors hover:bg-surface-subtle hover:text-brand-strong"
+                                                className={iconButtonClass}
                                                 title="Replace Document File"
                                                 aria-label={`Replace file for ${doc.title}`}
                                             >
@@ -692,7 +764,7 @@ export function FleetDocumentsSection({
                                             <button
                                                 type="button"
                                                 onClick={() => openEdit(doc)}
-                                                className="min-h-9 min-w-9 rounded-md p-2 text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink"
+                                                className={iconButtonClass}
                                                 title="Edit Document Metadata"
                                                 aria-label={`Edit metadata for ${doc.title}`}
                                             >
@@ -703,7 +775,10 @@ export function FleetDocumentsSection({
                                                 onClick={() =>
                                                     handleDelete(doc.id)
                                                 }
-                                                className="min-h-9 min-w-9 rounded-md p-2 text-ink-soft transition-colors hover:bg-surface-subtle hover:text-danger"
+                                                className={cn(
+                                                    iconButtonClass,
+                                                    'hover:bg-danger-soft hover:text-danger-strong',
+                                                )}
                                                 title="Delete Document"
                                                 aria-label={`Delete ${doc.title}`}
                                             >
@@ -713,20 +788,20 @@ export function FleetDocumentsSection({
                                     )}
                                 </div>
 
-                                <dl className="mt-3 grid grid-cols-2 gap-x-2 gap-y-1.5 text-xs">
-                                    <div>
+                                <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-xs sm:grid-cols-4 sm:pl-13">
+                                    <div className="min-w-0">
                                         <dt className="text-ink-soft">
                                             Permit / Cert #
                                         </dt>
-                                        <dd className="font-mono font-medium text-ink">
+                                        <dd className="mt-0.5 truncate font-mono font-medium text-ink">
                                             {doc.document_number || 'N/A'}
                                         </dd>
                                     </div>
-                                    <div>
+                                    <div className="min-w-0">
                                         <dt className="text-ink-soft">
                                             Issuing Authority
                                         </dt>
-                                        <dd className="truncate font-medium text-ink">
+                                        <dd className="mt-0.5 truncate font-medium text-ink">
                                             {doc.issuing_authority || 'N/A'}
                                         </dd>
                                     </div>
@@ -734,7 +809,7 @@ export function FleetDocumentsSection({
                                         <dt className="text-ink-soft">
                                             Issued Date
                                         </dt>
-                                        <dd className="text-ink">
+                                        <dd className="mt-0.5 font-medium text-ink">
                                             {doc.issued_at
                                                 ? formatDate(doc.issued_at)
                                                 : 'N/A'}
@@ -746,7 +821,7 @@ export function FleetDocumentsSection({
                                         </dt>
                                         <dd
                                             className={cn(
-                                                'font-medium',
+                                                'mt-0.5 font-medium',
                                                 doc.is_expired
                                                     ? 'text-danger'
                                                     : doc.expires_soon
@@ -762,23 +837,32 @@ export function FleetDocumentsSection({
                                 </dl>
 
                                 {doc.notes && (
-                                    <p className="mt-2 border-l-2 border-line pl-3 text-sm text-ink-soft">
+                                    <p className="mt-3 rounded-lg bg-surface-subtle px-3 py-2 text-xs leading-5 text-ink-soft sm:ml-13">
                                         {doc.notes}
                                     </p>
                                 )}
                             </div>
 
-                            <div className="mt-3 flex items-center justify-between border-t border-line pt-2 text-xs">
+                            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line bg-surface-subtle/50 px-4 py-1.5 text-xs">
                                 {doc.attachment ? (
                                     <>
-                                        <span className="max-w-[160px] truncate text-ink-soft">
-                                            {doc.attachment.original_filename} (
-                                            {(
-                                                doc.attachment.size_bytes /
-                                                1024 /
-                                                1024
-                                            ).toFixed(1)}{' '}
-                                            MB)
+                                        <span className="inline-flex min-w-0 items-center gap-1.5 text-ink-soft">
+                                            <Paperclip
+                                                className="h-3.5 w-3.5 shrink-0"
+                                                aria-hidden="true"
+                                            />
+                                            <span className="max-w-56 truncate">
+                                                {
+                                                    doc.attachment
+                                                        .original_filename
+                                                }
+                                            </span>
+                                            <span className="shrink-0 tabular-nums">
+                                                ·{' '}
+                                                {formatFileSize(
+                                                    doc.attachment.size_bytes,
+                                                )}
+                                            </span>
                                         </span>
                                         <div className="flex items-center gap-1">
                                             <button
@@ -786,7 +870,7 @@ export function FleetDocumentsSection({
                                                 onClick={() =>
                                                     setPreviewDoc(doc)
                                                 }
-                                                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-ink-soft hover:bg-surface-subtle hover:text-ink"
+                                                className="inline-flex min-h-9 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium text-ink-soft transition-colors hover:bg-surface hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                                             >
                                                 <Eye className="h-3.5 w-3.5" />{' '}
                                                 Preview
@@ -799,7 +883,7 @@ export function FleetDocumentsSection({
                                                     doc.attachment
                                                         .original_filename
                                                 }
-                                                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-brand-strong hover:bg-brand-soft hover:text-brand-strong"
+                                                className="inline-flex min-h-9 items-center gap-1.5 rounded-md px-2.5 text-xs font-semibold text-brand-strong transition-colors hover:bg-brand-soft focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
                                             >
                                                 <Download className="h-3.5 w-3.5" />{' '}
                                                 Download
@@ -807,80 +891,48 @@ export function FleetDocumentsSection({
                                         </div>
                                     </>
                                 ) : (
-                                    <span className="inline-flex items-center gap-1 font-medium text-warning-strong">
-                                        <AlertTriangle className="h-3 w-3" />{' '}
+                                    <span className="inline-flex min-h-9 items-center gap-1.5 font-medium text-warning-strong">
+                                        <AlertTriangle className="h-3.5 w-3.5" />{' '}
                                         Missing attachment
                                     </span>
                                 )}
                             </div>
-                        </div>
+                        </li>
                     ))}
-                </div>
+                </ul>
             )}
 
-            {/* Document Preview Modal */}
-            {previewDoc && previewDoc.attachment && (
-                <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="preview-doc-title"
-                >
-                    <div className="relative flex max-h-[85vh] w-full max-w-3xl flex-col rounded-2xl border border-line bg-surface p-5 shadow-2xl">
-                        <div className="flex items-start justify-between border-b border-line pb-3">
-                            <div>
-                                <h3
-                                    id="preview-doc-title"
-                                    className="text-base font-semibold text-ink"
-                                >
-                                    {previewDoc.title}
-                                </h3>
-                                <p className="text-xs text-ink-soft">
-                                    {previewDoc.category_label} ·{' '}
-                                    {previewDoc.document_number} · Issued by{' '}
-                                    {previewDoc.issuing_authority}
-                                </p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setPreviewDoc(null)}
-                                className="rounded-lg p-1.5 text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink"
-                            >
-                                <X className="h-5 w-5" />
-                            </button>
-                        </div>
-
-                        <div className="my-4 flex min-h-[300px] flex-1 items-center justify-center overflow-auto rounded-xl border border-line bg-surface-subtle p-2">
-                            {previewDoc.attachment.mime_type.startsWith(
-                                'image/',
-                            ) ? (
-                                <img
-                                    src={previewDoc.attachment.download_url}
-                                    alt={previewDoc.title}
-                                    className="max-h-[60vh] max-w-full rounded-lg object-contain"
-                                />
-                            ) : (
-                                <iframe
-                                    src={previewDoc.attachment.download_url}
-                                    title={previewDoc.title}
-                                    className="h-[60vh] w-full rounded-lg border-0"
-                                />
-                            )}
-                        </div>
-
-                        <div className="flex items-center justify-between border-t border-line pt-3">
-                            <span className="text-xs text-ink-soft">
-                                {previewDoc.attachment.original_filename} (
-                                {(
-                                    previewDoc.attachment.size_bytes /
-                                    1024 /
-                                    1024
-                                ).toFixed(2)}{' '}
-                                MB)
+            <Modal
+                open={Boolean(previewDoc?.attachment)}
+                onClose={() => setPreviewDoc(null)}
+                title={previewDoc?.title}
+                description={
+                    previewDoc
+                        ? [
+                              previewDoc.category_label,
+                              previewDoc.document_number,
+                              previewDoc.issuing_authority
+                                  ? `Issued by ${previewDoc.issuing_authority}`
+                                  : null,
+                          ]
+                              .filter(Boolean)
+                              .join(' · ')
+                        : undefined
+                }
+                size="xl"
+                contentClassName="bg-surface-subtle p-3 sm:p-4"
+                footer={
+                    previewDoc?.attachment && (
+                        <div className="flex w-full flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <span className="truncate text-xs text-ink-soft">
+                                {previewDoc.attachment.original_filename} ·{' '}
+                                {formatFileSize(
+                                    previewDoc.attachment.size_bytes,
+                                )}
                             </span>
-                            <div className="flex items-center gap-2">
+                            <div className="flex shrink-0 items-center gap-2">
                                 <Button
-                                    variant="quiet"
+                                    variant="secondary"
                                     size="sm"
                                     onClick={() => setPreviewDoc(null)}
                                 >
@@ -891,464 +943,421 @@ export function FleetDocumentsSection({
                                     download={
                                         previewDoc.attachment.original_filename
                                     }
-                                    className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-brand-contrast shadow-xs hover:bg-brand-strong hover:text-white dark:hover:text-brand-contrast"
+                                    className={buttonVariants({
+                                        variant: 'primary',
+                                        size: 'sm',
+                                    })}
                                 >
-                                    <Download className="h-3.5 w-3.5" />{' '}
+                                    <Download className="h-3.5 w-3.5" />
                                     Download File
                                 </a>
                             </div>
                         </div>
+                    )
+                }
+            >
+                {previewDoc?.attachment && (
+                    <div className="flex min-h-[300px] items-center justify-center">
+                        {previewDoc.attachment.mime_type.startsWith(
+                            'image/',
+                        ) ? (
+                            <img
+                                src={previewDoc.attachment.download_url}
+                                alt={previewDoc.title}
+                                className="max-h-[60vh] max-w-full rounded-lg object-contain"
+                            />
+                        ) : (
+                            <iframe
+                                src={previewDoc.attachment.download_url}
+                                title={previewDoc.title}
+                                className="h-[60vh] w-full rounded-lg border-0 bg-surface"
+                            />
+                        )}
                     </div>
-                </div>
-            )}
+                )}
+            </Modal>
 
-            {/* Edit Document Modal */}
-            {editingDoc && (
-                <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="edit-doc-title"
-                >
-                    <div className="relative flex max-h-[90vh] w-full max-w-xl flex-col rounded-2xl border border-line bg-surface p-5 shadow-2xl">
-                        <div className="flex items-start justify-between border-b border-line pb-3">
-                            <div>
-                                <h3
-                                    id="edit-doc-title"
-                                    className="text-base font-semibold text-ink"
-                                >
-                                    Edit Document Metadata
-                                </h3>
-                                <p className="text-xs text-ink-soft">
-                                    Update compliance certificate details and
-                                    operating status for {asset.code}.
-                                </p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setEditingDoc(null)}
-                                className="rounded-lg p-1.5 text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink"
-                            >
-                                <X className="h-5 w-5" />
-                            </button>
-                        </div>
-
-                        <form
-                            onSubmit={submitEdit}
-                            className="space-y-3 overflow-y-auto py-4"
+            <Modal
+                open={editingDoc !== null}
+                onClose={() => setEditingDoc(null)}
+                title="Edit Document Metadata"
+                description={`Update compliance certificate details and operating status for ${asset.code}.`}
+                size="lg"
+                closeOnBackdrop={false}
+                footer={
+                    <>
+                        <Button
+                            variant="secondary"
+                            onClick={() => setEditingDoc(null)}
+                            disabled={editForm.processing}
                         >
-                            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                                <div>
-                                    <label className="block text-xs font-medium text-ink">
-                                        Category *
-                                    </label>
-                                    <select
-                                        value={editForm.data.category}
-                                        onChange={(e) =>
-                                            editForm.setData(
-                                                'category',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
-                                    >
-                                        {CATEGORIES.map((c) => (
-                                            <option
-                                                key={c.value}
-                                                value={c.value}
-                                            >
-                                                {c.label}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {editForm.errors.category && (
-                                        <p className="mt-1 text-xs text-danger">
-                                            {editForm.errors.category}
-                                        </p>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <FleetInput
-                                        label="Document Title"
-                                        required
-                                        value={editForm.data.title}
-                                        onChange={(val) =>
-                                            editForm.setData('title', val)
-                                        }
-                                        placeholder="Document title"
-                                    />
-                                    {editForm.errors.title && (
-                                        <p className="mt-1 text-xs text-danger">
-                                            {editForm.errors.title}
-                                        </p>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <FleetInput
-                                        label="Document / Permit Number"
-                                        value={editForm.data.document_number}
-                                        onChange={(val) =>
-                                            editForm.setData(
-                                                'document_number',
-                                                val,
-                                            )
-                                        }
-                                        placeholder="e.g. DPWH-NCR-2026-SP-8821"
-                                    />
-                                    {editForm.errors.document_number && (
-                                        <p className="mt-1 text-xs text-danger">
-                                            {editForm.errors.document_number}
-                                        </p>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <FleetInput
-                                        label="Issuing Authority"
-                                        value={editForm.data.issuing_authority}
-                                        onChange={(val) =>
-                                            editForm.setData(
-                                                'issuing_authority',
-                                                val,
-                                            )
-                                        }
-                                        placeholder="Issuing agency"
-                                    />
-                                    {editForm.errors.issuing_authority && (
-                                        <p className="mt-1 text-xs text-danger">
-                                            {editForm.errors.issuing_authority}
-                                        </p>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <label className="block text-xs font-medium text-ink">
-                                        Issued Date
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={editForm.data.issued_at}
-                                        onChange={(e) =>
-                                            editForm.setData(
-                                                'issued_at',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
-                                    />
-                                    {editForm.errors.issued_at && (
-                                        <p className="mt-1 text-xs text-danger">
-                                            {editForm.errors.issued_at}
-                                        </p>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <label
-                                        htmlFor={`edit-document-expires-at-${editingDoc.id}`}
-                                        className="block text-xs font-medium text-ink"
-                                    >
-                                        Expiry Date
-                                    </label>
-                                    <input
-                                        id={`edit-document-expires-at-${editingDoc.id}`}
-                                        type="date"
-                                        value={editForm.data.expires_at}
-                                        disabled={!editForm.data.expires_at}
-                                        onChange={(e) =>
-                                            editForm.setData(
-                                                'expires_at',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden disabled:cursor-not-allowed disabled:bg-surface-subtle disabled:text-ink-soft"
-                                    />
-                                    <label className="mt-2 flex items-center gap-2 text-xs text-ink-soft">
-                                        <input
-                                            type="checkbox"
-                                            checked={!editForm.data.expires_at}
-                                            onChange={(e) => {
-                                                if (e.target.checked) {
-                                                    editForm.setData(
-                                                        'expires_at',
-                                                        '',
-                                                    );
-                                                } else {
-                                                    const today = new Date();
-                                                    editForm.setData(
-                                                        'expires_at',
-                                                        today
-                                                            .toISOString()
-                                                            .slice(0, 10),
-                                                    );
-                                                }
-                                            }}
-                                            className="h-4 w-4 rounded border-line-strong text-brand-strong focus:ring-brand-strong"
-                                        />
-                                        No expiration date
-                                    </label>
-                                    {editForm.errors.expires_at && (
-                                        <p className="mt-1 text-xs text-danger">
-                                            {editForm.errors.expires_at}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-
+                            Cancel
+                        </Button>
+                        <Button
+                            type="submit"
+                            variant="primary"
+                            form={`document-edit-form-${asset.id}`}
+                            disabled={editForm.processing}
+                        >
+                            {editForm.processing ? 'Saving…' : 'Save Changes'}
+                        </Button>
+                    </>
+                }
+            >
+                {editingDoc && (
+                    <form
+                        id={`document-edit-form-${asset.id}`}
+                        onSubmit={submitEdit}
+                        className="space-y-4"
+                        noValidate
+                    >
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div>
-                                <label className="block text-xs font-medium text-ink">
-                                    Document Status
+                                <label
+                                    htmlFor={`edit-document-category-${editingDoc.id}`}
+                                    className="block text-sm font-medium text-ink"
+                                >
+                                    Category *
                                 </label>
                                 <select
-                                    value={editForm.data.status}
+                                    id={`edit-document-category-${editingDoc.id}`}
+                                    value={editForm.data.category}
+                                    data-autofocus
                                     onChange={(e) =>
                                         editForm.setData(
-                                            'status',
+                                            'category',
                                             e.target.value,
                                         )
                                     }
-                                    className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
+                                    className={fieldClass}
                                 >
-                                    <option value="active">Active</option>
-                                    <option value="revoked">Revoked</option>
-                                    <option value="superseded">
-                                        Superseded
-                                    </option>
+                                    {CATEGORIES.map((c) => (
+                                        <option key={c.value} value={c.value}>
+                                            {c.label}
+                                        </option>
+                                    ))}
                                 </select>
-                                {editForm.errors.status && (
+                                {editForm.errors.category && (
                                     <p className="mt-1 text-xs text-danger">
-                                        {editForm.errors.status}
+                                        {editForm.errors.category}
                                     </p>
                                 )}
                             </div>
 
-                            <div>
-                                <label className="block text-xs font-medium text-ink">
-                                    Notes / Operating Restrictions
-                                </label>
-                                <textarea
-                                    rows={3}
-                                    value={editForm.data.notes}
-                                    onChange={(e) =>
-                                        editForm.setData(
-                                            'notes',
-                                            e.target.value,
-                                        )
-                                    }
-                                    placeholder="Operating conditions or restrictions..."
-                                    className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
-                                />
-                                {editForm.errors.notes && (
-                                    <p className="mt-1 text-xs text-danger">
-                                        {editForm.errors.notes}
-                                    </p>
-                                )}
-                            </div>
+                            <FleetInput
+                                label="Document Title"
+                                required
+                                value={editForm.data.title}
+                                error={editForm.errors.title}
+                                onChange={(val) =>
+                                    editForm.setData('title', val)
+                                }
+                                placeholder="Document title"
+                            />
 
-                            <div className="flex justify-end gap-2 border-t border-line pt-3">
-                                <Button
-                                    type="button"
-                                    variant="quiet"
-                                    size="sm"
-                                    onClick={() => setEditingDoc(null)}
-                                    disabled={editForm.processing}
-                                >
-                                    Cancel
-                                </Button>
-                                <Button
-                                    type="submit"
-                                    size="sm"
-                                    disabled={editForm.processing}
-                                >
-                                    {editForm.processing
-                                        ? 'Saving…'
-                                        : 'Save Changes'}
-                                </Button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+                            <FleetInput
+                                label="Document / Permit Number"
+                                value={editForm.data.document_number}
+                                error={editForm.errors.document_number}
+                                onChange={(val) =>
+                                    editForm.setData('document_number', val)
+                                }
+                                placeholder="e.g. DPWH-NCR-2026-SP-8821"
+                            />
 
-            {/* Replace Document Attachment Modal */}
-            {replacingDoc && (
-                <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="replace-doc-title"
-                >
-                    <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col rounded-2xl border border-line bg-surface p-5 shadow-2xl">
-                        <div className="flex items-start justify-between border-b border-line pb-3">
-                            <div>
-                                <h3
-                                    id="replace-doc-title"
-                                    className="text-base font-semibold text-ink"
-                                >
-                                    Replace Document Attachment
-                                </h3>
-                                <p className="text-xs text-ink-soft">
-                                    Upload a renewed or superseding file for "
-                                    {replacingDoc.title}".
-                                </p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setReplacingDoc(null)}
-                                className="rounded-lg p-1.5 text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink"
-                            >
-                                <X className="h-5 w-5" />
-                            </button>
-                        </div>
-
-                        <form
-                            onSubmit={submitReplace}
-                            className="space-y-3 py-4"
-                        >
-                            {replacingDoc.attachment && (
-                                <div className="rounded-lg border border-line/80 bg-surface-subtle p-3 text-xs text-ink-soft">
-                                    <span className="font-semibold text-ink">
-                                        Current file:
-                                    </span>{' '}
-                                    {replacingDoc.attachment.original_filename}{' '}
-                                    (
-                                    {(
-                                        replacingDoc.attachment.size_bytes /
-                                        1024 /
-                                        1024
-                                    ).toFixed(2)}{' '}
-                                    MB)
-                                </div>
-                            )}
+                            <FleetInput
+                                label="Issuing Authority"
+                                value={editForm.data.issuing_authority}
+                                error={editForm.errors.issuing_authority}
+                                onChange={(val) =>
+                                    editForm.setData('issuing_authority', val)
+                                }
+                                placeholder="Issuing agency"
+                            />
 
                             <div>
-                                <label className="block text-xs font-medium text-ink">
-                                    New Attachment File (PDF or Image, max 10MB)
-                                    *
+                                <label
+                                    htmlFor={`edit-document-issued-at-${editingDoc.id}`}
+                                    className="block text-sm font-medium text-ink"
+                                >
+                                    Issued Date
                                 </label>
                                 <input
-                                    type="file"
-                                    accept="application/pdf,image/jpeg,image/png,image/heic"
+                                    id={`edit-document-issued-at-${editingDoc.id}`}
+                                    type="date"
+                                    value={editForm.data.issued_at}
                                     onChange={(e) =>
-                                        replaceForm.setData(
-                                            'file',
-                                            e.target.files?.[0] ?? null,
+                                        editForm.setData(
+                                            'issued_at',
+                                            e.target.value,
                                         )
                                     }
-                                    className="mt-1 block w-full cursor-pointer text-xs text-ink file:mr-3 file:rounded-md file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-brand-contrast hover:file:bg-brand-strong hover:file:text-white dark:hover:file:text-brand-contrast"
+                                    className={fieldClass}
                                 />
-                                {replaceForm.errors.file && (
+                                {editForm.errors.issued_at && (
                                     <p className="mt-1 text-xs text-danger">
-                                        {replaceForm.errors.file}
+                                        {editForm.errors.issued_at}
                                     </p>
                                 )}
                             </div>
 
                             <div>
                                 <label
-                                    htmlFor={`replace-document-expires-at-${replacingDoc.id}`}
-                                    className="block text-xs font-medium text-ink"
+                                    htmlFor={`edit-document-expires-at-${editingDoc.id}`}
+                                    className="block text-sm font-medium text-ink"
                                 >
-                                    Updated Expiration Date
+                                    Expiry Date
                                 </label>
                                 <input
-                                    id={`replace-document-expires-at-${replacingDoc.id}`}
+                                    id={`edit-document-expires-at-${editingDoc.id}`}
                                     type="date"
-                                    value={replaceForm.data.expires_at}
-                                    disabled={!replaceForm.data.expires_at}
+                                    value={editForm.data.expires_at}
+                                    disabled={!editForm.data.expires_at}
                                     onChange={(e) =>
-                                        replaceForm.setData(
+                                        editForm.setData(
                                             'expires_at',
                                             e.target.value,
                                         )
                                     }
-                                    className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden disabled:cursor-not-allowed disabled:bg-surface-subtle disabled:text-ink-soft"
+                                    className={fieldClass}
                                 />
                                 <label className="mt-2 flex items-center gap-2 text-xs text-ink-soft">
                                     <input
                                         type="checkbox"
-                                        checked={!replaceForm.data.expires_at}
-                                        onChange={(e) => {
-                                            if (e.target.checked) {
-                                                replaceForm.setData(
-                                                    'expires_at',
-                                                    '',
-                                                );
-                                            } else {
-                                                const today = new Date();
-                                                replaceForm.setData(
-                                                    'expires_at',
-                                                    today
-                                                        .toISOString()
-                                                        .slice(0, 10),
-                                                );
-                                            }
-                                        }}
+                                        checked={!editForm.data.expires_at}
+                                        onChange={(e) =>
+                                            editForm.setData(
+                                                'expires_at',
+                                                e.target.checked
+                                                    ? ''
+                                                    : todayIsoDate(),
+                                            )
+                                        }
                                         className="h-4 w-4 rounded border-line-strong text-brand-strong focus:ring-brand-strong"
                                     />
                                     No expiration date
                                 </label>
-                                {replaceForm.errors.expires_at && (
+                                {editForm.errors.expires_at && (
                                     <p className="mt-1 text-xs text-danger">
-                                        {replaceForm.errors.expires_at}
+                                        {editForm.errors.expires_at}
                                     </p>
                                 )}
                             </div>
+                        </div>
 
-                            <div>
-                                <label className="block text-xs font-medium text-ink">
-                                    Update Notes / Renewal Details
-                                </label>
-                                <textarea
-                                    rows={2}
-                                    value={replaceForm.data.notes}
+                        <div>
+                            <label
+                                htmlFor={`edit-document-status-${editingDoc.id}`}
+                                className="block text-sm font-medium text-ink"
+                            >
+                                Document Status
+                            </label>
+                            <select
+                                id={`edit-document-status-${editingDoc.id}`}
+                                value={editForm.data.status}
+                                onChange={(e) =>
+                                    editForm.setData('status', e.target.value)
+                                }
+                                className={fieldClass}
+                            >
+                                <option value="active">Active</option>
+                                <option value="revoked">Revoked</option>
+                                <option value="superseded">Superseded</option>
+                            </select>
+                            {editForm.errors.status && (
+                                <p className="mt-1 text-xs text-danger">
+                                    {editForm.errors.status}
+                                </p>
+                            )}
+                        </div>
+
+                        <div>
+                            <label
+                                htmlFor={`edit-document-notes-${editingDoc.id}`}
+                                className="block text-sm font-medium text-ink"
+                            >
+                                Notes / Operating Restrictions
+                            </label>
+                            <textarea
+                                id={`edit-document-notes-${editingDoc.id}`}
+                                rows={3}
+                                value={editForm.data.notes}
+                                onChange={(e) =>
+                                    editForm.setData('notes', e.target.value)
+                                }
+                                placeholder="Operating conditions or restrictions..."
+                                className={textareaClass}
+                            />
+                            {editForm.errors.notes && (
+                                <p className="mt-1 text-xs text-danger">
+                                    {editForm.errors.notes}
+                                </p>
+                            )}
+                        </div>
+                    </form>
+                )}
+            </Modal>
+
+            <Modal
+                open={replacingDoc !== null}
+                onClose={() => setReplacingDoc(null)}
+                title="Replace Document Attachment"
+                description={
+                    replacingDoc
+                        ? `Upload a renewed or superseding file for “${replacingDoc.title}”.`
+                        : undefined
+                }
+                size="md"
+                closeOnBackdrop={false}
+                footer={
+                    <>
+                        <Button
+                            variant="secondary"
+                            onClick={() => setReplacingDoc(null)}
+                            disabled={replaceForm.processing}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="submit"
+                            variant="primary"
+                            form={`document-replace-form-${asset.id}`}
+                            disabled={
+                                replaceForm.processing || !replaceForm.data.file
+                            }
+                        >
+                            <Upload className="h-3.5 w-3.5" />
+                            {replaceForm.processing
+                                ? 'Uploading…'
+                                : 'Upload Replacement'}
+                        </Button>
+                    </>
+                }
+            >
+                {replacingDoc && (
+                    <form
+                        id={`document-replace-form-${asset.id}`}
+                        onSubmit={submitReplace}
+                        className="space-y-4"
+                        noValidate
+                    >
+                        {replacingDoc.attachment && (
+                            <div className="flex items-center gap-2 rounded-lg border border-line bg-surface-subtle px-3 py-2.5 text-xs text-ink-soft">
+                                <Paperclip
+                                    className="h-3.5 w-3.5 shrink-0"
+                                    aria-hidden="true"
+                                />
+                                <span className="font-semibold text-ink">
+                                    Current file:
+                                </span>
+                                <span className="min-w-0 truncate">
+                                    {replacingDoc.attachment.original_filename}
+                                </span>
+                                <span className="shrink-0 tabular-nums">
+                                    ·{' '}
+                                    {formatFileSize(
+                                        replacingDoc.attachment.size_bytes,
+                                    )}
+                                </span>
+                            </div>
+                        )}
+
+                        <div>
+                            <label
+                                htmlFor={`replace-document-file-${replacingDoc.id}`}
+                                className="block text-sm font-medium text-ink"
+                            >
+                                New Attachment File (PDF or Image, max 10MB) *
+                            </label>
+                            <input
+                                id={`replace-document-file-${replacingDoc.id}`}
+                                type="file"
+                                data-autofocus
+                                accept="application/pdf,image/jpeg,image/png,image/heic"
+                                onChange={(e) =>
+                                    replaceForm.setData(
+                                        'file',
+                                        e.target.files?.[0] ?? null,
+                                    )
+                                }
+                                className={fileInputClass}
+                            />
+                            {replaceForm.errors.file && (
+                                <p className="mt-1 text-xs text-danger">
+                                    {replaceForm.errors.file}
+                                </p>
+                            )}
+                        </div>
+
+                        <div>
+                            <label
+                                htmlFor={`replace-document-expires-at-${replacingDoc.id}`}
+                                className="block text-sm font-medium text-ink"
+                            >
+                                Updated Expiration Date
+                            </label>
+                            <input
+                                id={`replace-document-expires-at-${replacingDoc.id}`}
+                                type="date"
+                                value={replaceForm.data.expires_at}
+                                disabled={!replaceForm.data.expires_at}
+                                onChange={(e) =>
+                                    replaceForm.setData(
+                                        'expires_at',
+                                        e.target.value,
+                                    )
+                                }
+                                className={fieldClass}
+                            />
+                            <label className="mt-2 flex items-center gap-2 text-xs text-ink-soft">
+                                <input
+                                    type="checkbox"
+                                    checked={!replaceForm.data.expires_at}
                                     onChange={(e) =>
                                         replaceForm.setData(
-                                            'notes',
-                                            e.target.value,
+                                            'expires_at',
+                                            e.target.checked
+                                                ? ''
+                                                : todayIsoDate(),
                                         )
                                     }
-                                    placeholder="e.g. Renewed for FY 2026-2027 by LTO central office."
-                                    className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden"
+                                    className="h-4 w-4 rounded border-line-strong text-brand-strong focus:ring-brand-strong"
                                 />
-                                {replaceForm.errors.notes && (
-                                    <p className="mt-1 text-xs text-danger">
-                                        {replaceForm.errors.notes}
-                                    </p>
-                                )}
-                            </div>
+                                No expiration date
+                            </label>
+                            {replaceForm.errors.expires_at && (
+                                <p className="mt-1 text-xs text-danger">
+                                    {replaceForm.errors.expires_at}
+                                </p>
+                            )}
+                        </div>
 
-                            <div className="flex justify-end gap-2 border-t border-line pt-3">
-                                <Button
-                                    type="button"
-                                    variant="quiet"
-                                    size="sm"
-                                    onClick={() => setReplacingDoc(null)}
-                                    disabled={replaceForm.processing}
-                                >
-                                    Cancel
-                                </Button>
-                                <Button
-                                    type="submit"
-                                    size="sm"
-                                    disabled={
-                                        replaceForm.processing ||
-                                        !replaceForm.data.file
-                                    }
-                                    className="flex items-center gap-1.5"
-                                >
-                                    <Upload className="h-3.5 w-3.5" />
-                                    {replaceForm.processing
-                                        ? 'Uploading…'
-                                        : 'Upload Replacement'}
-                                </Button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+                        <div>
+                            <label
+                                htmlFor={`replace-document-notes-${replacingDoc.id}`}
+                                className="block text-sm font-medium text-ink"
+                            >
+                                Update Notes / Renewal Details
+                            </label>
+                            <textarea
+                                id={`replace-document-notes-${replacingDoc.id}`}
+                                rows={2}
+                                value={replaceForm.data.notes}
+                                onChange={(e) =>
+                                    replaceForm.setData('notes', e.target.value)
+                                }
+                                placeholder="e.g. Renewed for FY 2026-2027 by LTO central office."
+                                className={textareaClass}
+                            />
+                            {replaceForm.errors.notes && (
+                                <p className="mt-1 text-xs text-danger">
+                                    {replaceForm.errors.notes}
+                                </p>
+                            )}
+                        </div>
+                    </form>
+                )}
+            </Modal>
         </div>
     );
 }

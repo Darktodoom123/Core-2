@@ -14,12 +14,17 @@ import {
     ShieldCheck,
     Wrench,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import type { FormEvent, KeyboardEvent as ReactKeyboardEvent } from 'react';
 import React, { useEffect, useRef, useState } from 'react';
 import { Button, Panel } from '@/components/ui';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import { DvirWalkaroundModal } from '@/components/workspace/fleet/dvir-walkaround-modal';
 import { getFleetAssetCategoryLabel } from '@/components/workspace/fleet/fleet-asset-classification';
+import {
+    FleetPill,
+    FleetSectionHeader,
+} from '@/components/workspace/fleet/fleet-detail-primitives';
 import { getFleetDispatchabilityState } from '@/components/workspace/fleet/fleet-dispatchability';
 import { FleetDocumentsSection } from '@/components/workspace/fleet/fleet-documents-section';
 import { FleetInspectionsSection } from '@/components/workspace/fleet/fleet-inspections-section';
@@ -116,6 +121,7 @@ export function FleetDetailPane({
     const tabRefs = useRef<
         Partial<Record<DetailTab, HTMLButtonElement | null>>
     >({});
+    const tabListRef = useRef<HTMLDivElement | null>(null);
 
     const lockdownForm = useForm({
         reason: '',
@@ -163,6 +169,72 @@ export function FleetDetailPane({
     const displayLocation = preciseLocation.startsWith('GPS ')
         ? 'Location unavailable'
         : preciseLocation;
+    const detailTabs: Array<{
+        id: DetailTab;
+        icon: LucideIcon;
+        label: string;
+        fullLabel?: string;
+        count: number | null;
+        countTone?: 'danger';
+    }> = [
+        {
+            id: 'overview',
+            icon: Gauge,
+            label: 'Overview',
+            fullLabel: 'Overview & Specs',
+            count: null,
+        },
+        {
+            id: 'status',
+            icon: ShieldCheck,
+            label: 'Readiness',
+            fullLabel: 'Readiness & Status',
+            count: null,
+        },
+        {
+            id: 'inspections',
+            icon: ClipboardCheck,
+            label: 'Inspections',
+            count: totalInspectionsCount,
+        },
+        {
+            id: 'maintenance',
+            icon: Wrench,
+            label: 'Work Orders',
+            count: maintenanceWorkOrdersCount,
+            countTone:
+                asset.blocking_work_orders_count > 0 ? 'danger' : undefined,
+        },
+        {
+            id: 'documents',
+            icon: FileText,
+            label: 'Documents',
+            fullLabel: 'Permits & Docs',
+            count: documentsCount,
+        },
+    ];
+
+    // Keep the selected tab visible when the bar scrolls on narrow panes.
+    useEffect(() => {
+        const list = tabListRef.current;
+        const tab = tabRefs.current[activeTab];
+
+        if (!list || !tab) {
+            return;
+        }
+
+        const tabStart = tab.offsetLeft - list.offsetLeft;
+        const tabEnd = tabStart + tab.offsetWidth;
+
+        if (tabStart < list.scrollLeft) {
+            list.scrollTo({ left: tabStart - 16, behavior: 'smooth' });
+        } else if (tabEnd > list.scrollLeft + list.clientWidth) {
+            list.scrollTo({
+                left: tabEnd - list.clientWidth + 16,
+                behavior: 'smooth',
+            });
+        }
+    }, [activeTab]);
 
     useEffect(() => {
         if (showLockdownModal) {
@@ -233,7 +305,7 @@ export function FleetDetailPane({
     };
 
     return (
-        <Panel className="@container flex min-h-0 flex-col gap-4 p-4 md:p-6 lg:h-full lg:overflow-hidden [&>*]:shrink-0">
+        <Panel className="@container flex min-h-0 flex-col gap-4 p-4 md:p-6 lg:h-full lg:flex-1 lg:overflow-hidden [&>*]:shrink-0">
             {onBackToList && (
                 <div className="pb-2 lg:hidden">
                     <Button
@@ -249,107 +321,90 @@ export function FleetDetailPane({
             )}
 
             {/* Side by side only when the actions leave the name and position room. */}
-            <div className="flex flex-col items-stretch gap-4 border-b border-line pb-4 @3xl:flex-row @3xl:items-start @3xl:justify-between">
+            <div className="flex flex-col items-stretch gap-4 @3xl:flex-row @3xl:items-start @3xl:justify-between">
                 <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                        <span className="text-xl font-bold whitespace-nowrap text-ink">
+                    <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
+                        {assetCategoryLabel}
+                        {asset.subtype ? ` · ${asset.subtype}` : ''}
+                    </p>
+                    <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                        <span className="text-2xl font-bold tracking-tight whitespace-nowrap text-ink tabular-nums">
                             {asset.code}
                         </span>
+                        <h2 className="min-w-0 text-base font-medium text-ink-soft">
+                            {asset.name}
+                        </h2>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-1.5">
                         <CanonicalStatusBadge
                             status={asset.status}
-                            variant="minimal"
-                            size="md"
-                            presentation="inline"
+                            variant="soft"
+                            size="sm"
+                            presentation="pill"
                         />
-                        {assetLocation && (
-                            <span
-                                className={cn(
-                                    'inline-flex items-center gap-1.5 text-xs font-semibold',
-                                    hasFreshLocation
-                                        ? 'text-success-strong'
-                                        : 'text-ink-soft',
-                                )}
-                            >
-                                {hasFreshLocation ? (
-                                    <Radio className="h-3 w-3 animate-pulse text-success-strong" />
-                                ) : (
-                                    <span className="h-1.5 w-1.5 rounded-full bg-ink-soft/50" />
-                                )}
-                                {getFleetLocationFreshnessLabel(assetLocation)}
-                            </span>
-                        )}
                         {dispatchabilityState === 'ready' ? (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-success-strong">
-                                <span
-                                    className="h-1.5 w-1.5 rounded-full bg-success-strong"
-                                    aria-hidden="true"
-                                />
+                            <FleetPill tone="success" icon={ShieldCheck}>
                                 Ready for dispatch
-                            </span>
+                            </FleetPill>
                         ) : dispatchabilityState === 'blocking_work_orders' ? (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-warning-strong">
-                                <Wrench
-                                    className="h-3.5 w-3.5 shrink-0"
-                                    aria-hidden="true"
-                                />
+                            <FleetPill tone="danger" icon={Wrench}>
                                 {asset.blocking_work_orders_count} blocking work
                                 order
                                 {asset.blocking_work_orders_count > 1
                                     ? 's'
                                     : ''}
-                            </span>
+                            </FleetPill>
                         ) : dispatchabilityState === 'inspection_required' ? (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-warning-strong">
-                                <ShieldAlert
-                                    className="h-3.5 w-3.5 shrink-0"
-                                    aria-hidden="true"
-                                />
+                            <FleetPill tone="warning" icon={ShieldAlert}>
                                 Inspection required before dispatch
-                            </span>
+                            </FleetPill>
                         ) : null}
+                        {assetLocation &&
+                            (hasFreshLocation ? (
+                                <FleetPill tone="success" icon={Radio}>
+                                    {getFleetLocationFreshnessLabel(
+                                        assetLocation,
+                                    )}
+                                </FleetPill>
+                            ) : (
+                                <FleetPill tone="neutral" dot>
+                                    {getFleetLocationFreshnessLabel(
+                                        assetLocation,
+                                    )}
+                                </FleetPill>
+                            ))}
                     </div>
-                    <h2 className="mt-1 text-lg font-semibold text-ink">
-                        {asset.name}
-                    </h2>
-                    <div className="mt-1 space-y-1.5 text-sm">
-                        <p className="text-ink-soft">
-                            {assetCategoryLabel}{' '}
-                            {asset.subtype ? `· ${asset.subtype}` : ''}
-                        </p>
+
+                    <p className="mt-3 flex min-w-0 items-start gap-1.5 text-sm text-ink-soft">
+                        <MapPin
+                            className="mt-0.5 h-4 w-4 shrink-0 text-brand-strong"
+                            aria-hidden="true"
+                        />
                         {assetLocation &&
                         hasLocationCoordinates(assetLocation) ? (
-                            <div className="flex min-w-0 items-start gap-1.5 text-ink-soft">
-                                <span className="inline-flex min-w-0 items-start gap-1.5">
-                                    <MapPin
-                                        className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-strong"
-                                        aria-hidden="true"
-                                    />
-                                    <span className="shrink-0">
-                                        {hasFreshLocation
-                                            ? 'Current position'
-                                            : 'Last known location'}
-                                        :
-                                    </span>
-                                    <span className="min-w-0 font-medium text-ink">
-                                        {displayLocation}
-                                    </span>
+                            <span className="min-w-0">
+                                <span className="text-ink-soft">
+                                    {hasFreshLocation
+                                        ? 'Current position'
+                                        : 'Last known location'}
+                                    :{' '}
                                 </span>
-                            </div>
+                                <span className="font-medium text-ink">
+                                    {displayLocation}
+                                </span>
+                            </span>
                         ) : (
-                            <p className="inline-flex items-start gap-1.5 text-ink-soft">
-                                <MapPin
-                                    className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-strong"
-                                    aria-hidden="true"
-                                />
-                                <span>
-                                    Location:{' '}
+                            <span className="min-w-0">
+                                <span className="sr-only">Location: </span>
+                                <span className="font-medium text-ink">
                                     {assetLocation?.recorded_location ??
                                         asset.location ??
                                         'Location not recorded'}
                                 </span>
-                            </p>
+                            </span>
                         )}
-                    </div>
+                    </p>
                 </div>
 
                 <FleetQuickActionToolbar
@@ -500,177 +555,84 @@ export function FleetDetailPane({
                 </div>
             )}
 
-            <div
-                className="flex min-w-0 flex-nowrap overflow-x-auto overscroll-x-contain border-b border-line"
-                role="tablist"
-                aria-label="Asset detail sections"
-                aria-orientation="horizontal"
-            >
-                <button
-                    type="button"
-                    role="tab"
-                    id={`asset-tab-overview-${asset.id}`}
-                    aria-controls={`asset-tabpanel-overview-${asset.id}`}
-                    aria-selected={activeTab === 'overview'}
-                    tabIndex={activeTab === 'overview' ? 0 : -1}
-                    ref={(element) => {
-                        tabRefs.current.overview = element;
-                    }}
-                    onClick={() => setActiveTab('overview')}
-                    onKeyDown={(event) => handleTabKeyDown(event, 'overview')}
-                    className={cn(
-                        'flex min-h-11 shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
-                        activeTab === 'overview'
-                            ? 'border-brand-strong font-semibold text-brand-strong'
-                            : 'border-transparent text-ink-soft hover:text-ink',
-                    )}
+            <div className="relative -mx-4 border-b border-line md:-mx-6">
+                <div
+                    ref={tabListRef}
+                    className="flex min-w-0 scrollbar-none flex-nowrap gap-1 overflow-x-auto overscroll-x-contain [mask-image:linear-gradient(to_right,transparent,black_1rem,black_calc(100%-1rem),transparent)] px-4 md:px-6"
+                    role="tablist"
+                    aria-label="Asset detail sections"
+                    aria-orientation="horizontal"
                 >
-                    <Gauge className="h-4 w-4" />
-                    <span className="@lg:hidden">Overview</span>
-                    <span className="hidden @lg:inline">
-                        Overview &amp; Specs
-                    </span>
-                </button>
-                <button
-                    type="button"
-                    role="tab"
-                    id={`asset-tab-status-${asset.id}`}
-                    aria-controls={`asset-tabpanel-status-${asset.id}`}
-                    aria-selected={activeTab === 'status'}
-                    tabIndex={activeTab === 'status' ? 0 : -1}
-                    ref={(element) => {
-                        tabRefs.current.status = element;
-                    }}
-                    onClick={() => setActiveTab('status')}
-                    onKeyDown={(event) => handleTabKeyDown(event, 'status')}
-                    className={cn(
-                        'flex min-h-11 shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
-                        activeTab === 'status'
-                            ? 'border-brand-strong font-semibold text-brand-strong'
-                            : 'border-transparent text-ink-soft hover:text-ink',
-                    )}
-                >
-                    <ShieldCheck className="h-4 w-4" />
-                    <span className="@lg:hidden">Readiness</span>
-                    <span className="hidden @lg:inline">
-                        Readiness &amp; Status
-                    </span>
-                </button>
-                <button
-                    type="button"
-                    role="tab"
-                    id={`asset-tab-inspections-${asset.id}`}
-                    aria-controls={`asset-tabpanel-inspections-${asset.id}`}
-                    aria-selected={activeTab === 'inspections'}
-                    tabIndex={activeTab === 'inspections' ? 0 : -1}
-                    ref={(element) => {
-                        tabRefs.current.inspections = element;
-                    }}
-                    onClick={() => setActiveTab('inspections')}
-                    onKeyDown={(event) =>
-                        handleTabKeyDown(event, 'inspections')
-                    }
-                    className={cn(
-                        'flex min-h-11 shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
-                        activeTab === 'inspections'
-                            ? 'border-brand-strong font-semibold text-brand-strong'
-                            : 'border-transparent text-ink-soft hover:text-ink',
-                    )}
-                >
-                    <ClipboardCheck className="h-4 w-4" />
-                    Inspections
-                    {totalInspectionsCount !== null && (
-                        <span
-                            className={cn(
-                                'rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums',
-                                totalInspectionsCount > 0
-                                    ? 'bg-brand-soft text-brand-strong'
-                                    : 'bg-surface-subtle text-ink-soft',
-                            )}
-                        >
-                            {totalInspectionsCount}
-                        </span>
-                    )}
-                </button>
-                <button
-                    type="button"
-                    role="tab"
-                    id={`asset-tab-maintenance-${asset.id}`}
-                    aria-controls={`asset-tabpanel-maintenance-${asset.id}`}
-                    aria-selected={activeTab === 'maintenance'}
-                    tabIndex={activeTab === 'maintenance' ? 0 : -1}
-                    ref={(element) => {
-                        tabRefs.current.maintenance = element;
-                    }}
-                    onClick={() => setActiveTab('maintenance')}
-                    onKeyDown={(event) =>
-                        handleTabKeyDown(event, 'maintenance')
-                    }
-                    className={cn(
-                        'flex min-h-11 shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
-                        activeTab === 'maintenance'
-                            ? 'border-brand-strong font-semibold text-brand-strong'
-                            : 'border-transparent text-ink-soft hover:text-ink',
-                    )}
-                >
-                    <Wrench className="h-4 w-4" />
-                    Work Orders
-                    {maintenanceWorkOrdersCount !== null && (
-                        <span
-                            className={cn(
-                                'rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums',
-                                asset.blocking_work_orders_count > 0
-                                    ? 'bg-danger-soft text-danger-strong'
-                                    : maintenanceWorkOrdersCount > 0
-                                      ? 'bg-brand-soft text-brand-strong'
-                                      : 'bg-surface-subtle text-ink-soft',
-                            )}
-                        >
-                            {maintenanceWorkOrdersCount}
-                        </span>
-                    )}
-                </button>
-                <button
-                    type="button"
-                    role="tab"
-                    id={`asset-tab-documents-${asset.id}`}
-                    aria-controls={`asset-tabpanel-documents-${asset.id}`}
-                    aria-selected={activeTab === 'documents'}
-                    tabIndex={activeTab === 'documents' ? 0 : -1}
-                    ref={(element) => {
-                        tabRefs.current.documents = element;
-                    }}
-                    onClick={() => setActiveTab('documents')}
-                    onKeyDown={(event) => handleTabKeyDown(event, 'documents')}
-                    className={cn(
-                        'flex min-h-11 shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
-                        activeTab === 'documents'
-                            ? 'border-brand-strong font-semibold text-brand-strong'
-                            : 'border-transparent text-ink-soft hover:text-ink',
-                    )}
-                >
-                    <FileText className="h-4 w-4" />
-                    <span className="@lg:hidden">Documents</span>
-                    <span className="hidden @lg:inline">
-                        Permits &amp; Docs
-                    </span>
-                    {documentsCount !== null && (
-                        <span
-                            className={cn(
-                                'rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums',
-                                documentsCount > 0
-                                    ? 'bg-brand-soft text-brand-strong'
-                                    : 'bg-surface-subtle text-ink-soft',
-                            )}
-                        >
-                            {documentsCount}
-                        </span>
-                    )}
-                </button>
+                    {detailTabs.map((tab) => {
+                        const selected = activeTab === tab.id;
+                        const Icon = tab.icon;
+
+                        return (
+                            <button
+                                key={tab.id}
+                                type="button"
+                                role="tab"
+                                id={`asset-tab-${tab.id}-${asset.id}`}
+                                aria-controls={`asset-tabpanel-${tab.id}-${asset.id}`}
+                                aria-selected={selected}
+                                tabIndex={selected ? 0 : -1}
+                                ref={(element) => {
+                                    tabRefs.current[tab.id] = element;
+                                }}
+                                onClick={() => setActiveTab(tab.id)}
+                                onKeyDown={(event) =>
+                                    handleTabKeyDown(event, tab.id)
+                                }
+                                className={cn(
+                                    'relative flex min-h-11 shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-sm whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden focus-visible:ring-inset',
+                                    selected
+                                        ? 'border-brand-strong font-semibold text-ink'
+                                        : 'border-transparent font-medium text-ink-soft hover:border-line-strong hover:text-ink',
+                                )}
+                            >
+                                <Icon
+                                    className={cn(
+                                        'h-4 w-4 shrink-0',
+                                        selected
+                                            ? 'text-brand-strong'
+                                            : 'text-ink-soft',
+                                    )}
+                                    aria-hidden="true"
+                                />
+                                {tab.fullLabel ? (
+                                    <>
+                                        <span className="@5xl:hidden">
+                                            {tab.label}
+                                        </span>
+                                        <span className="hidden @5xl:inline">
+                                            {tab.fullLabel}
+                                        </span>
+                                    </>
+                                ) : (
+                                    tab.label
+                                )}
+                                {tab.count !== null && (
+                                    <span
+                                        className={cn(
+                                            'min-w-5 rounded-full px-1.5 py-0.5 text-center text-[11px] leading-none font-semibold tabular-nums',
+                                            tab.countTone === 'danger'
+                                                ? 'bg-danger-soft text-danger-strong'
+                                                : tab.count > 0
+                                                  ? 'bg-brand-soft text-brand-strong'
+                                                  : 'bg-surface-subtle text-ink-soft',
+                                        )}
+                                    >
+                                        {tab.count}
+                                    </span>
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
             </div>
 
             <div
-                className="min-h-0 space-y-5 pt-1 lg:flex-1 lg:shrink! lg:overflow-y-auto lg:overscroll-contain"
+                className="min-h-0 space-y-6 pt-1 lg:flex-1 lg:shrink! lg:overflow-y-auto lg:overscroll-contain"
                 role="region"
                 aria-label="Asset detail content"
                 tabIndex={0}
@@ -691,34 +653,31 @@ export function FleetDetailPane({
                     role="tabpanel"
                     id={`asset-tabpanel-overview-${asset.id}`}
                     aria-labelledby={`asset-tab-overview-${asset.id}`}
-                    className="space-y-5"
+                    className="space-y-8"
                 >
                     <section
                         aria-labelledby={`current-operation-${asset.id}`}
-                        className="space-y-4 border-b border-line pb-5"
+                        className="space-y-4"
                     >
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div>
-                                <h3
-                                    id={`current-operation-${asset.id}`}
-                                    className="text-base font-semibold text-ink"
-                                >
-                                    Current operation
-                                </h3>
-                                <p className="mt-1 text-sm leading-5 text-ink-soft">
-                                    Accepted field activity and inspection
-                                    context for this asset.
-                                </p>
-                            </div>
-                            <span className="text-xs font-medium text-ink-soft">
-                                {locationReportedAt
-                                    ? `Last reported ${formatRecordedAt(locationReportedAt)}`
-                                    : 'No accepted location update'}
-                            </span>
-                        </div>
+                        <FleetSectionHeader
+                            id={`current-operation-${asset.id}`}
+                            title="Current operation"
+                            description="Accepted field activity and inspection context for this asset."
+                            action={
+                                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-soft">
+                                    <Clock3
+                                        className="h-3.5 w-3.5"
+                                        aria-hidden="true"
+                                    />
+                                    {locationReportedAt
+                                        ? `Last reported ${formatRecordedAt(locationReportedAt)}`
+                                        : 'No accepted location update'}
+                                </span>
+                            }
+                        />
 
-                        <div className="grid border-y border-line md:grid-cols-2 md:divide-x md:divide-line">
-                            <div className="min-h-28 py-4 md:pr-5">
+                        <div className="grid overflow-hidden rounded-xl border border-line md:grid-cols-2 md:divide-x md:divide-line">
+                            <div className="min-h-28 p-4">
                                 <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
                                     Operator
                                 </p>
@@ -789,7 +748,7 @@ export function FleetDetailPane({
                                 )}
                             </div>
 
-                            <div className="min-h-28 border-t border-line py-4 md:border-t-0 md:pl-5">
+                            <div className="min-h-28 border-t border-line p-4 md:border-t-0">
                                 <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
                                     Duty
                                 </p>
@@ -856,11 +815,14 @@ export function FleetDetailPane({
                         </div>
 
                         {asset.hos && (
-                            <div className="grid grid-cols-2 gap-3 border-b border-line pb-4 text-xs sm:grid-cols-4">
+                            <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line text-xs sm:grid-cols-4">
                                 {durationBreakdown.map(([label, minutes]) => (
-                                    <div key={label}>
+                                    <div
+                                        key={label}
+                                        className="bg-surface px-4 py-3"
+                                    >
                                         <p className="text-ink-soft">{label}</p>
-                                        <p className="mt-1 font-semibold text-ink tabular-nums">
+                                        <p className="mt-1 text-sm font-semibold text-ink tabular-nums">
                                             {formatDurationMinutes(minutes)}
                                         </p>
                                     </div>
@@ -869,7 +831,7 @@ export function FleetDetailPane({
                         )}
 
                         {asset.hos && (
-                            <div className="grid gap-4 border-b border-line pb-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(16rem,0.75fr)]">
+                            <div className="grid gap-4 border-b border-line pb-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(16rem,0.75fr)]">
                                 <section
                                     aria-labelledby={`duty-history-heading-${asset.id}`}
                                     className="min-w-0"
@@ -1047,7 +1009,7 @@ export function FleetDetailPane({
                                 </button>
                             </div>
                             <div className="grid gap-3 md:grid-cols-2">
-                                <div className="rounded-lg border border-line bg-surface-subtle/50 p-3">
+                                <div className="rounded-xl border border-line bg-surface-subtle/40 p-4">
                                     <p className="text-xs font-semibold text-ink-soft">
                                         Field DVIR
                                     </p>
@@ -1084,7 +1046,7 @@ export function FleetDetailPane({
                                         </p>
                                     )}
                                 </div>
-                                <div className="rounded-lg border border-line bg-surface-subtle/50 p-3">
+                                <div className="rounded-xl border border-line bg-surface-subtle/40 p-4">
                                     <p className="text-xs font-semibold text-ink-soft">
                                         Workshop check
                                     </p>
@@ -1124,16 +1086,11 @@ export function FleetDetailPane({
                         </div>
                     </section>
 
-                    <section className="space-y-3">
-                        <div>
-                            <h3 className="text-base font-semibold text-ink">
-                                Asset profile
-                            </h3>
-                            <p className="mt-1 text-sm leading-5 text-ink-soft">
-                                Registered identity, asset type, capacity, and
-                                current readings.
-                            </p>
-                        </div>
+                    <section className="space-y-3 border-t border-line pt-6">
+                        <FleetSectionHeader
+                            title="Asset profile"
+                            description="Registered identity, asset type, capacity, and current readings."
+                        />
 
                         <dl className="grid gap-x-6 sm:grid-cols-2 md:grid-cols-3">
                             <div className="border-b border-line py-4">
@@ -1201,7 +1158,10 @@ export function FleetDetailPane({
                                                     asset.blocking_work_orders_count
                                                 }
                                             </span>{' '}
-                                            open orders
+                                            {asset.blocking_work_orders_count ===
+                                            1
+                                                ? 'open order'
+                                                : 'open orders'}
                                         </span>
                                     ) : (
                                         <span className="text-success-strong">
@@ -1216,17 +1176,11 @@ export function FleetDetailPane({
                     {(specificationPresentation.groups.length > 0 ||
                         specificationPresentation.sources.length > 0 ||
                         specificationPresentation.notes.length > 0) && (
-                        <section className="space-y-5 border-t border-line pt-5">
-                            <div>
-                                <h3 className="text-base font-semibold text-ink">
-                                    Specifications &amp; references
-                                </h3>
-                                <p className="mt-1 text-sm leading-5 text-ink-soft">
-                                    Operator-facing values are grouped below;
-                                    source and availability notes are kept in
-                                    the reference panel.
-                                </p>
-                            </div>
+                        <section className="space-y-5 border-t border-line pt-6">
+                            <FleetSectionHeader
+                                title="Specifications & references"
+                                description="Operator-facing values are grouped below; source and availability notes are kept in the reference panel."
+                            />
 
                             {specificationPresentation.groups.length > 0 && (
                                 <div className="space-y-5">
@@ -1344,7 +1298,7 @@ export function FleetDetailPane({
                             </div>
                             <div
                                 className={cn(
-                                    'flex items-center gap-2 rounded-lg px-3 py-2',
+                                    'flex items-center gap-2.5 rounded-xl px-3.5 py-2.5',
                                     asset.is_dispatchable
                                         ? 'bg-success-soft text-success-strong'
                                         : 'bg-warning-soft text-warning-strong',
@@ -1377,17 +1331,18 @@ export function FleetDetailPane({
                             </div>
                         </div>
 
-                        <dl className="grid overflow-hidden rounded-lg border border-line bg-surface-subtle/50 text-sm sm:grid-cols-2 sm:divide-x sm:divide-line">
+                        <dl className="grid overflow-hidden rounded-xl border border-line text-sm sm:grid-cols-2 sm:divide-x sm:divide-line">
                             <div className="p-4">
                                 <dt className="text-xs font-semibold text-ink-soft">
                                     Operational status
                                 </dt>
-                                <dd className="mt-1.5 flex items-center gap-2 text-base font-semibold text-ink">
-                                    <span
-                                        className="h-2 w-2 rounded-full bg-brand-strong"
-                                        aria-hidden="true"
+                                <dd className="mt-2">
+                                    <CanonicalStatusBadge
+                                        status={asset.status}
+                                        variant="soft"
+                                        size="md"
+                                        presentation="pill"
                                     />
-                                    {asset.status.label}
                                 </dd>
                                 <p className="mt-1 text-xs text-ink-soft">
                                     Recorded asset state
@@ -1397,7 +1352,14 @@ export function FleetDetailPane({
                                 <dt className="text-xs font-semibold text-ink-soft">
                                     Dispatchability
                                 </dt>
-                                <dd className="mt-1.5 text-base font-semibold text-ink">
+                                <dd
+                                    className={cn(
+                                        'mt-2 text-base font-semibold',
+                                        asset.is_dispatchable
+                                            ? 'text-success-strong'
+                                            : 'text-warning-strong',
+                                    )}
+                                >
                                     {asset.is_dispatchable
                                         ? 'Dispatchable'
                                         : 'Not dispatchable'}
@@ -1411,7 +1373,7 @@ export function FleetDetailPane({
                         {!asset.is_dispatchable && (
                             <div
                                 role="status"
-                                className="rounded-lg border border-warning/30 bg-warning-soft/60 p-4 text-sm text-warning-strong"
+                                className="rounded-xl border border-warning/30 bg-warning-soft/60 p-4 text-sm text-warning-strong"
                             >
                                 <div className="flex items-start gap-2">
                                     <AlertTriangle
@@ -1428,7 +1390,7 @@ export function FleetDetailPane({
                                         </p>
                                         {asset.dispatchability?.blockers
                                             ?.length ? (
-                                            <ul className="mt-3 space-y-2 text-xs leading-5">
+                                            <ul className="mt-3 space-y-2 border-t border-warning/20 pt-3 text-xs leading-5">
                                                 {asset.dispatchability.blockers.map(
                                                     (blocker) => (
                                                         <li
@@ -1464,7 +1426,7 @@ export function FleetDetailPane({
                             </div>
                         )}
 
-                        <div className="border-t border-line pt-4">
+                        <div className="rounded-xl border border-line p-4">
                             <div className="flex items-center gap-2">
                                 <Clock3
                                     className="h-4 w-4 text-ink-soft"

@@ -103,10 +103,10 @@ export function FleetQuickActionToolbar({
                 <Button
                     ref={lockdownTriggerRef}
                     size="sm"
-                    variant="danger"
+                    variant="secondary"
                     onClick={onOpenLockdown}
                     title="Place asset under emergency safety recall lockdown"
-                    className="shrink-0 lg:ml-1"
+                    className="shrink-0 border-danger/40 text-danger-strong hover:border-danger hover:bg-danger-soft active:bg-danger-soft"
                 >
                     <ShieldAlert className="h-3.5 w-3.5" />
                     Safety Lockdown

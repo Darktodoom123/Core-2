@@ -239,6 +239,14 @@ textarea {
     scrollbar-width: thin;
 }
 
+.scrollbar-none {
+    scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+    display: none;
+}
+
 .touch-target-web {
     min-height: 44px;
     min-width: 44px;

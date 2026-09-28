@@ -1,9 +1,22 @@
 import { useForm } from '@inertiajs/react';
+import {
+    CheckCircle2,
+    ClipboardCheck,
+    Plus,
+    ShieldAlert,
+    Wrench,
+} from 'lucide-react';
 import type { FormEvent } from 'react';
 import React, { useState } from 'react';
 import { Button, InlineNotice, Modal } from '@/components/ui';
+import {
+    FleetEmptyState,
+    FleetPill,
+    FleetSectionHeader,
+} from '@/components/workspace/fleet/fleet-detail-primitives';
 import { FleetInput } from '@/components/workspace/fleet/fleet-input';
 import { formatDateTime } from '@/lib/formatters';
+import { cn } from '@/lib/utils';
 import type { AssetViewModel } from '@/types/workspace';
 
 export interface FleetMaintenanceSectionProps {
@@ -127,6 +140,13 @@ export function FleetMaintenanceSection({
         },
     );
 
+    const openCount = asset.maintenance_work_orders.filter(
+        (order) => !order.released_at,
+    ).length;
+    const blockingOpenCount = asset.maintenance_work_orders.filter(
+        (order) => !order.released_at && order.dispatch_blocking,
+    ).length;
+
     const openWorkOrderDialog = () => {
         setSuccessMessage(null);
         openForm.clearErrors();
@@ -139,22 +159,48 @@ export function FleetMaintenanceSection({
 
     return (
         <div className="space-y-5">
-            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line pb-4">
-                <div>
-                    <h3 className="text-sm font-semibold text-ink">
-                        Maintenance work orders
-                    </h3>
-                    <p className="mt-1 max-w-2xl text-sm text-ink-soft">
-                        Track repair progress and release dispatch blocks only
-                        after post-repair verification.
-                    </p>
+            <FleetSectionHeader
+                title="Maintenance work orders"
+                description="Track repair progress and release dispatch blocks only after post-repair verification."
+                action={
+                    canMaintain && (
+                        <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={openWorkOrderDialog}
+                        >
+                            <Plus className="h-3.5 w-3.5" />
+                            Open maintenance work order
+                        </Button>
+                    )
+                }
+            />
+
+            {asset.maintenance_work_orders.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5 text-xs text-ink-soft">
+                    <span className="mr-1 font-medium tabular-nums">
+                        {asset.maintenance_work_orders.length}{' '}
+                        {asset.maintenance_work_orders.length === 1
+                            ? 'work order'
+                            : 'work orders'}
+                    </span>
+                    {blockingOpenCount > 0 && (
+                        <FleetPill tone="danger" icon={ShieldAlert}>
+                            {blockingOpenCount} blocking dispatch
+                        </FleetPill>
+                    )}
+                    {openCount > 0 && (
+                        <FleetPill tone="warning" dot>
+                            {openCount} open
+                        </FleetPill>
+                    )}
+                    {openCount === 0 && (
+                        <FleetPill tone="success" icon={CheckCircle2}>
+                            All released
+                        </FleetPill>
+                    )}
                 </div>
-                {canMaintain && (
-                    <Button variant="primary" onClick={openWorkOrderDialog}>
-                        Open maintenance work order
-                    </Button>
-                )}
-            </div>
+            )}
 
             {successMessage && (
                 <InlineNotice tone="success" title={successMessage} />
@@ -261,17 +307,13 @@ export function FleetMaintenanceSection({
             </Modal>
 
             {asset.maintenance_work_orders.length === 0 ? (
-                <div className="border-y border-dashed border-line py-8 text-center">
-                    <p className="text-sm font-medium text-ink">
-                        No maintenance work orders recorded for this asset.
-                    </p>
-                    <p className="mt-1 text-sm text-ink-soft">
-                        Open a work order when this asset needs repair or
-                        inspection follow-up.
-                    </p>
-                </div>
+                <FleetEmptyState
+                    icon={Wrench}
+                    title="No maintenance work orders recorded for this asset."
+                    description="Open a work order when this asset needs repair or inspection follow-up."
+                />
             ) : (
-                <ul className="divide-y divide-line">
+                <ul className="space-y-3" aria-label="Maintenance work orders">
                     {sortedMaintenanceOrders.map((order) => {
                         const isUnreleased = !order.released_at;
                         const isCompletingThis = completingOrderId === order.id;
@@ -332,83 +374,184 @@ export function FleetMaintenanceSection({
                                             verifiedAt,
                                 ));
 
+                        const isVerified = Boolean(
+                            qualifyingInspection && !hasSubsequentDefect,
+                        );
+                        const steps: Array<[string, boolean]> = [
+                            ['Opened', true],
+                            ['Repaired', Boolean(order.completed_at)],
+                            [
+                                'Verified',
+                                Boolean(order.released_at) || isVerified,
+                            ],
+                            ['Released', Boolean(order.released_at)],
+                        ];
+
                         return (
-                            <li key={order.id} className="space-y-2 py-4">
-                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-semibold text-ink">
-                                            {order.defect}
-                                        </span>
-                                        {order.dispatch_blocking && (
-                                            <span className="inline-flex items-center text-xs font-semibold text-danger-strong">
-                                                Blocking
-                                            </span>
-                                        )}
-                                        {order.completed_at ? (
-                                            <>
-                                                <span className="text-positive-strong inline-flex items-center text-xs font-semibold">
-                                                    Repair Completed:{' '}
-                                                    {formatDateTime(
-                                                        order.completed_at,
-                                                    )}
-                                                </span>
-                                                {qualifyingInspection &&
-                                                !hasSubsequentDefect ? (
-                                                    <span className="text-positive-strong inline-flex items-center text-xs font-semibold">
-                                                        Post-Repair: Verified
-                                                    </span>
-                                                ) : (
-                                                    <span className="inline-flex items-center text-xs font-semibold text-warning-strong">
-                                                        Post-Repair: Awaiting
-                                                        Verification
-                                                    </span>
+                            <li
+                                key={order.id}
+                                className={cn(
+                                    'overflow-hidden rounded-xl border bg-surface',
+                                    isUnreleased && order.dispatch_blocking
+                                        ? 'border-danger/40'
+                                        : 'border-line',
+                                )}
+                            >
+                                <div className="space-y-3 p-4">
+                                    <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+                                        <div className="min-w-0 flex-1">
+                                            <p className="font-semibold text-ink">
+                                                {order.defect}
+                                            </p>
+                                            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                                                {order.dispatch_blocking && (
+                                                    <FleetPill
+                                                        tone={
+                                                            isUnreleased
+                                                                ? 'danger'
+                                                                : 'neutral'
+                                                        }
+                                                        icon={ShieldAlert}
+                                                    >
+                                                        Blocking
+                                                    </FleetPill>
                                                 )}
-                                            </>
-                                        ) : (
-                                            <span className="inline-flex items-center text-xs font-semibold text-warning-strong">
-                                                Pending Repair Completion
-                                            </span>
-                                        )}
+                                                {order.completed_at ? (
+                                                    <>
+                                                        <FleetPill
+                                                            tone="success"
+                                                            icon={CheckCircle2}
+                                                        >
+                                                            Repair Completed:{' '}
+                                                            {formatDateTime(
+                                                                order.completed_at,
+                                                            )}
+                                                        </FleetPill>
+                                                        {isVerified ? (
+                                                            <FleetPill tone="success">
+                                                                Post-Repair:
+                                                                Verified
+                                                            </FleetPill>
+                                                        ) : (
+                                                            <FleetPill tone="warning">
+                                                                Post-Repair:
+                                                                Awaiting
+                                                                Verification
+                                                            </FleetPill>
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    <FleetPill tone="warning">
+                                                        Pending Repair
+                                                        Completion
+                                                    </FleetPill>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <span className="text-xs text-ink-soft tabular-nums">
+                                            {order.released_at
+                                                ? `Released: ${formatDateTime(order.released_at, 'Not recorded')}`
+                                                : 'Open / In progress'}
+                                        </span>
                                     </div>
-                                    <span className="text-xs text-ink-soft tabular-nums">
-                                        {order.released_at
-                                            ? `Released: ${formatDateTime(order.released_at, 'Not recorded')}`
-                                            : 'Open / In progress'}
-                                    </span>
+
+                                    <ol
+                                        className="flex items-center gap-1.5"
+                                        aria-label="Work order progress"
+                                    >
+                                        {steps.map(([label, done], index) => (
+                                            <li
+                                                key={label}
+                                                className="flex min-w-0 flex-1 flex-col gap-1"
+                                            >
+                                                <span
+                                                    className={cn(
+                                                        'h-1 rounded-full',
+                                                        done
+                                                            ? 'bg-success-strong'
+                                                            : index > 0 &&
+                                                                steps[
+                                                                    index - 1
+                                                                ][1]
+                                                              ? 'bg-warning'
+                                                              : 'bg-line',
+                                                    )}
+                                                    aria-hidden="true"
+                                                />
+                                                <span
+                                                    className={cn(
+                                                        'truncate text-[11px] font-medium',
+                                                        done
+                                                            ? 'text-ink'
+                                                            : 'text-ink-soft',
+                                                    )}
+                                                >
+                                                    {label}
+                                                    <span className="sr-only">
+                                                        {done
+                                                            ? ' (done)'
+                                                            : ' (pending)'}
+                                                    </span>
+                                                </span>
+                                            </li>
+                                        ))}
+                                    </ol>
+
+                                    {isUnreleased &&
+                                        order.completed_at &&
+                                        !isVerified && (
+                                            <p className="flex items-start gap-2 rounded-lg bg-warning-soft/60 px-3 py-2 text-xs leading-5 text-warning-strong">
+                                                <ClipboardCheck
+                                                    className="mt-0.5 h-3.5 w-3.5 shrink-0"
+                                                    aria-hidden="true"
+                                                />
+                                                In Inspections, record a passing
+                                                Post-repair verification before
+                                                releasing this work order.
+                                                Routine DVIRs do not verify
+                                                repairs.
+                                            </p>
+                                        )}
+
+                                    {(order.work_performed.length > 0 ||
+                                        order.parts.length > 0) && (
+                                        <dl className="grid gap-2 text-xs sm:grid-cols-2">
+                                            {order.work_performed.length >
+                                                0 && (
+                                                <div>
+                                                    <dt className="font-medium text-ink-soft">
+                                                        Work performed
+                                                    </dt>
+                                                    <dd className="mt-0.5 text-ink">
+                                                        {order.work_performed.join(
+                                                            '; ',
+                                                        )}
+                                                    </dd>
+                                                </div>
+                                            )}
+                                            {order.parts.length > 0 && (
+                                                <div>
+                                                    <dt className="font-medium text-ink-soft">
+                                                        Parts used
+                                                    </dt>
+                                                    <dd className="mt-0.5 text-ink">
+                                                        {order.parts.join(', ')}
+                                                    </dd>
+                                                </div>
+                                            )}
+                                        </dl>
+                                    )}
                                 </div>
 
-                                {isUnreleased &&
-                                    order.completed_at &&
-                                    (!qualifyingInspection ||
-                                        hasSubsequentDefect) && (
-                                        <p className="text-xs text-ink-soft">
-                                            In Inspections, record a passing
-                                            Post-repair verification before
-                                            releasing this work order. Routine
-                                            DVIRs do not verify repairs.
-                                        </p>
-                                    )}
-
-                                {order.work_performed.length > 0 && (
-                                    <p className="text-xs text-ink-soft">
-                                        Work performed:{' '}
-                                        {order.work_performed.join('; ')}
-                                    </p>
-                                )}
-                                {order.parts.length > 0 && (
-                                    <p className="text-xs text-ink-soft">
-                                        Parts used: {order.parts.join(', ')}
-                                    </p>
-                                )}
-
                                 {isUnreleased && canMaintain && (
-                                    <div className="pt-2">
+                                    <div className="border-t border-line bg-surface-subtle/50 px-4 py-3">
                                         {!isCompletingThis &&
                                             !isReleasingThis && (
                                                 <div className="flex flex-wrap gap-2">
                                                     {!order.completed_at && (
                                                         <Button
                                                             variant="secondary"
+                                                            size="sm"
                                                             onClick={() => {
                                                                 setCompletingOrderId(
                                                                     order.id,
@@ -425,6 +568,7 @@ export function FleetMaintenanceSection({
                                                     {order.completed_at && (
                                                         <Button
                                                             variant="secondary"
+                                                            size="sm"
                                                             onClick={() => {
                                                                 setReleasingOrderId(
                                                                     order.id,
@@ -445,16 +589,15 @@ export function FleetMaintenanceSection({
                                                 onSubmit={(e) =>
                                                     submitComplete(e, order.id)
                                                 }
-                                                className="mt-3 space-y-3 border-t border-line pt-3"
+                                                className="space-y-3"
                                                 noValidate
                                             >
-                                                <div className="border-l-2 border-brand-strong/50 pl-3 text-sm text-brand-strong">
-                                                    Notice: Authoritatively
-                                                    record physical repair
-                                                    completion details before
-                                                    conducting post-repair
-                                                    verification in Inspections.
-                                                </div>
+                                                <p className="rounded-lg bg-brand-soft/60 px-3 py-2 text-xs leading-5 text-brand-strong">
+                                                    Record the physical repair
+                                                    first. Post-repair
+                                                    verification happens next,
+                                                    in the Inspections tab.
+                                                </p>
                                                 <label className="block text-sm font-medium text-ink">
                                                     Work performed * (One task
                                                     per line)
@@ -579,14 +722,13 @@ export function FleetMaintenanceSection({
                                                 onSubmit={(e) =>
                                                     submitRelease(e, order.id)
                                                 }
-                                                className="mt-3 space-y-3 border-t border-line pt-3"
+                                                className="space-y-3"
                                                 noValidate
                                             >
-                                                <div className="border-l-2 border-warning-strong/50 pl-3 text-sm text-warning-strong">
-                                                    Notice: Releasing requires a
-                                                    passing safety inspection
-                                                    completed after repair was
-                                                    completed
+                                                <div className="rounded-lg bg-warning-soft/60 px-3 py-2 text-xs leading-5 text-warning-strong">
+                                                    Releasing requires a passing
+                                                    safety inspection completed
+                                                    after repair was completed
                                                     {order.completed_at
                                                         ? ` on ${formatDateTime(order.completed_at)}`
                                                         : ''}

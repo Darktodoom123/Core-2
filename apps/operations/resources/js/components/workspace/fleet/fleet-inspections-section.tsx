@@ -13,6 +13,11 @@ import type { FormEvent } from 'react';
 import React, { useState } from 'react';
 import { Button, InlineNotice, Modal } from '@/components/ui';
 import { DvirStatusBadge } from '@/components/workspace/fleet/dvir-status-badge';
+import {
+    FleetEmptyState,
+    FleetPill,
+} from '@/components/workspace/fleet/fleet-detail-primitives';
+import type { FleetPillTone } from '@/components/workspace/fleet/fleet-detail-primitives';
 import { FleetInput } from '@/components/workspace/fleet/fleet-input';
 import { formatDateTime, humanize } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
@@ -102,6 +107,31 @@ function dvirTypeLabel(dvir: DvirInspectionViewModel): string {
         ? 'Post-trip'
         : 'Pre-trip';
 }
+
+function workshopResultPill(result: string) {
+    const tone: FleetPillTone =
+        result === 'passed'
+            ? 'success'
+            : result === 'conditional'
+              ? 'warning'
+              : 'danger';
+
+    return (
+        <FleetPill tone={tone} dot>
+            {{ passed: 'Passed', conditional: 'Conditional', failed: 'Failed' }[
+                result
+            ] ?? humanize(result)}
+        </FleetPill>
+    );
+}
+
+const chipClass = (selected: boolean) =>
+    cn(
+        'inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:ring-offset-2 focus-visible:outline-hidden lg:min-h-9',
+        selected
+            ? 'border-brand-strong bg-brand-soft text-brand-strong'
+            : 'border-line bg-surface text-ink-soft hover:border-line-strong hover:text-ink',
+    );
 
 function recordCountLabel(count: number): string {
     return `${count} ${count === 1 ? 'record' : 'records'}`;
@@ -293,9 +323,9 @@ export function FleetInspectionsSection({
     };
 
     return (
-        <div className="space-y-7">
-            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-line pb-5">
-                <div className="min-w-0">
+        <div className="space-y-6">
+            <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+                <div className="min-w-0 flex-1 basis-64">
                     <h3 className="text-base font-semibold text-ink">
                         Inspection history
                     </h3>
@@ -310,7 +340,7 @@ export function FleetInspectionsSection({
                         onClick={openInspectionDialog}
                         className="shrink-0"
                     >
-                        <ClipboardCheck className="mr-1.5 h-3.5 w-3.5" />
+                        <ClipboardCheck className="h-3.5 w-3.5" />
                         Record workshop inspection
                     </Button>
                 )}
@@ -322,7 +352,7 @@ export function FleetInspectionsSection({
 
             <section
                 aria-label="Inspection status overview"
-                className="overflow-hidden rounded-lg border border-line bg-surface"
+                className="overflow-hidden rounded-xl border border-line bg-surface"
             >
                 <div className="grid md:grid-cols-2 md:divide-x md:divide-line">
                     <div className="p-4 sm:p-5">
@@ -382,24 +412,9 @@ export function FleetInspectionsSection({
                         </div>
                         <div className="mt-3">
                             {latestWorkshopInspection ? (
-                                <span
-                                    className={cn(
-                                        'inline-flex items-center gap-1.5 text-sm font-semibold capitalize',
-                                        latestWorkshopInspection.result ===
-                                            'passed'
-                                            ? 'text-success-strong'
-                                            : latestWorkshopInspection.result ===
-                                                'conditional'
-                                              ? 'text-warning-strong'
-                                              : 'text-danger-strong',
-                                    )}
-                                >
-                                    <span
-                                        className="h-2 w-2 rounded-full bg-current"
-                                        aria-hidden="true"
-                                    />
-                                    {latestWorkshopInspection.result}
-                                </span>
+                                workshopResultPill(
+                                    latestWorkshopInspection.result,
+                                )
                             ) : (
                                 <p className="text-sm font-semibold text-ink">
                                     No workshop check recorded
@@ -589,22 +604,17 @@ export function FleetInspectionsSection({
             </Modal>
 
             {!hasAnyInspections ? (
-                <div className="rounded-lg bg-surface-subtle/50 px-4 py-8 text-center">
-                    <ClipboardCheck className="mx-auto h-7 w-7 stroke-1 text-ink-soft opacity-60" />
-                    <p className="mt-3 text-sm font-semibold text-ink">
-                        No inspections recorded for this asset yet.
-                    </p>
-                    <p className="mx-auto mt-1 max-w-md text-xs leading-5 text-ink-soft">
-                        Field operator pre/post-trip DVIRs and shop audits will
-                        appear here after they are recorded.
-                    </p>
-                </div>
+                <FleetEmptyState
+                    icon={ClipboardCheck}
+                    title="No inspections recorded for this asset yet."
+                    description="Field operator pre/post-trip DVIRs and shop audits will appear here after they are recorded."
+                />
             ) : (
-                <div className="space-y-8">
+                <div className="space-y-5">
                     <div
                         role="tablist"
                         aria-label="Inspection record source"
-                        className="flex flex-wrap gap-2 border-b border-line pb-3"
+                        className="inline-flex max-w-full flex-wrap gap-1 rounded-xl bg-surface-subtle p-1"
                     >
                         {(
                             [
@@ -634,14 +644,25 @@ export function FleetInspectionsSection({
                                     })
                                 }
                                 className={cn(
-                                    'min-h-11 rounded-lg border px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:ring-offset-2 focus-visible:outline-hidden',
+                                    'inline-flex min-h-11 items-center gap-2 rounded-lg px-3.5 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden lg:min-h-9',
                                     selectedSource === source
-                                        ? 'border-brand-strong bg-brand-soft text-brand-strong'
-                                        : 'border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
+                                        ? 'bg-surface font-semibold text-ink shadow-xs ring-1 ring-line'
+                                        : 'text-ink-soft hover:text-ink',
                                 )}
                             >
                                 {label}{' '}
-                                <span className="tabular-nums">({count})</span>
+                                <span
+                                    className={cn(
+                                        'rounded-full px-1.5 py-0.5 text-[11px] leading-none font-semibold tabular-nums',
+                                        selectedSource === source
+                                            ? 'bg-brand-soft text-brand-strong'
+                                            : 'bg-surface text-ink-soft',
+                                    )}
+                                >
+                                    <span className="sr-only">(</span>
+                                    {count}
+                                    <span className="sr-only">)</span>
+                                </span>
                             </button>
                         ))}
                     </div>
@@ -677,7 +698,7 @@ export function FleetInspectionsSection({
                             </span>
                         </div>
 
-                        <div className="flex flex-col gap-3 border-y border-line py-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                             <div
                                 className="flex flex-wrap gap-2"
                                 role="group"
@@ -702,11 +723,8 @@ export function FleetInspectionsSection({
                                                 append: false,
                                             });
                                         }}
-                                        className={cn(
-                                            'min-h-11 rounded-lg border px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:ring-offset-2 focus-visible:outline-hidden',
-                                            dvirFilter === value
-                                                ? 'border-brand-strong bg-brand-soft text-brand-strong'
-                                                : 'border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
+                                        className={chipClass(
+                                            dvirFilter === value,
                                         )}
                                     >
                                         {label}
@@ -714,7 +732,7 @@ export function FleetInspectionsSection({
                                 ))}
                             </div>
                             <div className="flex flex-wrap items-center gap-2">
-                                <label className="flex min-h-11 items-center gap-2 rounded-lg border border-line bg-surface px-3 text-sm text-ink-soft">
+                                <label className="flex min-h-11 items-center gap-2 rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink-soft lg:min-h-9">
                                     <span className="sr-only">
                                         History range
                                     </span>
@@ -753,7 +771,7 @@ export function FleetInspectionsSection({
                                 >
                                     <RefreshCw
                                         className={cn(
-                                            'mr-1.5 h-3.5 w-3.5',
+                                            'h-3.5 w-3.5',
                                             historyLoading && 'animate-spin',
                                         )}
                                     />
@@ -792,7 +810,7 @@ export function FleetInspectionsSection({
                         )}
 
                         {dvirInspections.length === 0 ? (
-                            <p className="rounded-lg bg-surface-subtle/60 px-4 py-4 text-sm text-ink-soft">
+                            <p className="rounded-xl border border-dashed border-line-strong/70 bg-surface-subtle/40 px-4 py-6 text-center text-sm text-ink-soft">
                                 {dvirFilter === 'all' && dvirRange === 'all'
                                     ? 'No field DVIR reports have been accepted for this asset yet.'
                                     : 'No DVIR records match the selected filters.'}
@@ -800,7 +818,7 @@ export function FleetInspectionsSection({
                         ) : (
                             <ul
                                 aria-label="Field DVIR records"
-                                className="overflow-hidden rounded-lg border border-line"
+                                className="overflow-hidden rounded-xl border border-line"
                             >
                                 {[...dvirInspections]
                                     .sort((a, b) => {
@@ -1081,7 +1099,7 @@ export function FleetInspectionsSection({
                                                                     }
                                                                     className="shrink-0"
                                                                 >
-                                                                    <Camera className="mr-1.5 h-3.5 w-3.5" />
+                                                                    <Camera className="h-3.5 w-3.5" />
                                                                     {photoCount >
                                                                     0
                                                                         ? `View walkaround photos (${photoCount})`
@@ -1126,7 +1144,7 @@ export function FleetInspectionsSection({
                         role="tabpanel"
                         aria-labelledby={`asset-workshop-heading-${asset.id}`}
                         hidden={selectedSource !== 'workshop'}
-                        className="space-y-3 border-t border-line pt-6"
+                        className="space-y-3"
                     >
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
@@ -1150,12 +1168,12 @@ export function FleetInspectionsSection({
                         </p>
 
                         {asset.inspections.length === 0 ? (
-                            <p className="rounded-lg bg-surface-subtle/60 px-4 py-3 text-sm text-ink-soft">
+                            <p className="rounded-xl border border-dashed border-line-strong/70 bg-surface-subtle/40 px-4 py-6 text-center text-sm text-ink-soft">
                                 No shop or periodic safety audits recorded for
                                 this asset yet.
                             </p>
                         ) : (
-                            <ul className="divide-y divide-line overflow-hidden rounded-lg border border-line">
+                            <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line">
                                 {asset.inspections.map((ins) => (
                                     <li key={ins.id} className="space-y-2 p-4">
                                         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1172,23 +1190,7 @@ export function FleetInspectionsSection({
                                                     )}
                                                 </p>
                                             </div>
-                                            <span
-                                                className={cn(
-                                                    'inline-flex items-center gap-1.5 text-xs font-semibold capitalize',
-                                                    ins.result === 'passed'
-                                                        ? 'text-success-strong'
-                                                        : ins.result ===
-                                                            'conditional'
-                                                          ? 'text-warning-strong'
-                                                          : 'text-danger-strong',
-                                                )}
-                                            >
-                                                <span
-                                                    className="h-1.5 w-1.5 rounded-full bg-current"
-                                                    aria-hidden="true"
-                                                />
-                                                {ins.result}
-                                            </span>
+                                            {workshopResultPill(ins.result)}
                                         </div>
                                         {ins.findings && (
                                             <p className="rounded-md bg-surface-subtle px-3 py-2 text-sm text-ink-soft">

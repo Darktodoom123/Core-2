@@ -232,7 +232,7 @@ describe('Phase 2 Factual Truth & 5-Stage Machine Challenger', () => {
             );
 
             expect(
-                screen.getByText(/Location: Location not recorded/i),
+                screen.getByText('Location not recorded'),
             ).toBeInTheDocument();
             expect(screen.queryByText(/Base Yard/i)).not.toBeInTheDocument();
         });
