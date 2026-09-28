@@ -63,6 +63,8 @@ Authoritative product specifications defining commercial boundaries, business ru
 | [dispatch-project-planning.md](product/dispatch-project-planning.md) | Multi-phase long-term project planning, phase allocations, and shift rostering. |
 | [core-hr-workforce-boundary.md](product/core-hr-workforce-boundary.md) | Upstream HR employee master vs. Core-2 operational personnel profiles and credentials. |
 | [userflow.md](product/userflow.md) | End-to-end user journey flows across System Administrator, Operations Manager, and Operator roles. |
+| [operations-manager-web-user-flow.md](product/operations-manager-web-user-flow.md) | Current Operations Manager journey across the complete web workspace, with section map, dispatch path, and permission boundaries. |
+| [web-sidebar-user-flows.md](product/web-sidebar-user-flows.md) | Whole routed web sidebar for Administrator, Manager, and Operator, with non-login Rigger handoff and cross-role audit findings. |
 
 ### 3. Native Field Mobile Client (`Docs/prds/`)
 

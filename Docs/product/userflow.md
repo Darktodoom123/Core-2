@@ -252,9 +252,11 @@ sign-outs and requires both `users.manage` and `audit.view`. Each event shows
 the parsed browser/platform and device class, the IP address, and an
 approximate IP-derived location. This is not GPS, and browser data may not
 identify an exact device model; unknown values remain labeled as unknown.
-Personnel credentials remain in a separate view. Rigger accounts can sign in
-and are managed under Accounts; their qualifications and credentials are
-managed under Personnel credentials.
+Personnel credentials remain in a separate view. Riggers are non-software
+workforce crew: they are tracked through personnel profiles and qualifications
+for assignment, but receive no web account or mobile login. The current
+user-linked Rigger assignment and legacy RBAC paths do not yet fully meet this
+boundary; see the [whole-web audit](web-sidebar-user-flows.md).
 
 ## 9. Shared service: GPT-assisted dispatch — current flow
 
