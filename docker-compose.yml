@@ -72,6 +72,13 @@ services:
       MAIL_PASSWORD: "${MAIL_PASSWORD:-}"
       MAIL_FROM_ADDRESS: "${MAIL_FROM_ADDRESS:-hello@example.com}"
       MAIL_FROM_NAME: "${MAIL_FROM_NAME:-Core-2}"
+      # Local-only seed overrides; the seeder applies them only when APP_ENV=local.
+      LOCAL_ADMIN_NAME: "${LOCAL_ADMIN_NAME:-}"
+      LOCAL_ADMIN_EMAIL: "${LOCAL_ADMIN_EMAIL:-}"
+      LOCAL_MANAGER_NAME: "${LOCAL_MANAGER_NAME:-}"
+      LOCAL_MANAGER_EMAIL: "${LOCAL_MANAGER_EMAIL:-}"
+      LOCAL_OPERATOR_NAME: "${LOCAL_OPERATOR_NAME:-}"
+      LOCAL_OPERATOR_EMAIL: "${LOCAL_OPERATOR_EMAIL:-}"
     volumes:
       - storage-data:/var/www/html/storage
     depends_on:
