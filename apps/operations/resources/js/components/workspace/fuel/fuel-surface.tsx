@@ -341,39 +341,46 @@ export function FuelSurface({
 
             <div className="space-y-4 p-4 md:p-6">
                 <div
-                    role="group"
-                    aria-label="Fuel Management sections"
-                    className="flex gap-4 overflow-x-auto border-b border-line"
+                    role="region"
+                    aria-label="Fuel Management section tabs"
+                    tabIndex={0}
+                    className="workspace-scroll-region border-b border-line"
                 >
-                    {(
-                        [
-                            {
-                                value: 'requests',
-                                label: 'Requests & Approvals',
-                            },
-                            { value: 'logs', label: 'Fuel Logs' },
-                            { value: 'consumption', label: 'Consumption' },
-                        ] as const
-                    ).map((item) => (
-                        <button
-                            key={item.value}
-                            type="button"
-                            aria-pressed={section === item.value}
-                            onClick={() => {
-                                setSection(item.value);
-                                setReturnSection(null);
-                                setMobileDetailView(false);
-                            }}
-                            className={cn(
-                                'min-h-11 shrink-0 border-b-2 px-1 text-sm whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
-                                section === item.value
-                                    ? 'border-brand-strong font-semibold text-ink'
-                                    : 'border-transparent font-medium text-ink-soft hover:text-ink',
-                            )}
-                        >
-                            {item.label}
-                        </button>
-                    ))}
+                    <div
+                        role="group"
+                        aria-label="Fuel Management sections"
+                        className="flex w-max gap-4"
+                    >
+                        {(
+                            [
+                                {
+                                    value: 'requests',
+                                    label: 'Requests & Approvals',
+                                },
+                                { value: 'logs', label: 'Fuel Logs' },
+                                { value: 'consumption', label: 'Consumption' },
+                            ] as const
+                        ).map((item) => (
+                            <button
+                                key={item.value}
+                                type="button"
+                                aria-pressed={section === item.value}
+                                onClick={() => {
+                                    setSection(item.value);
+                                    setReturnSection(null);
+                                    setMobileDetailView(false);
+                                }}
+                                className={cn(
+                                    'min-h-11 shrink-0 border-b-2 px-1 text-sm whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-hidden',
+                                    section === item.value
+                                        ? 'border-brand-strong font-semibold text-ink'
+                                        : 'border-transparent font-medium text-ink-soft hover:text-ink',
+                                )}
+                            >
+                                {item.label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
                 <p className="text-xs leading-5 text-ink-soft tabular-nums">
                     Showing {requests.length} of{' '}

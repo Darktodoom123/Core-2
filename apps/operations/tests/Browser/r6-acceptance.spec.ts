@@ -805,8 +805,11 @@ test.describe('R6 deterministic authenticated acceptance', () => {
 
         await openNavigation.click();
         await page.getByRole('button', { name: 'Job reports' }).click();
+        // The compact header repeats the page title, so check the page heading.
         await expect(
-            page.getByRole('heading', { name: /Job reports/i }),
+            page
+                .locator('#workspace-content')
+                .getByRole('heading', { name: /Job reports/i }),
         ).toBeVisible();
 
         const skipLink = page.getByRole('link', { name: 'Skip to workspace' });

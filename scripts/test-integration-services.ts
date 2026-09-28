@@ -718,7 +718,8 @@ async function exerciseMobileBoundary(): Promise<void> {
     // With TRACKING_ALLOW_INGEST_FALLBACK=false (the production setting),
     // Operations refuses a ping during an outage with a retryable 503 and
     // never writes a second, local copy of the location.
-    await compose(['stop', 'tracking']);
+    // Longer than the service's 30s stop_grace_period.
+    await compose(['stop', 'tracking'], 90_000);
     const outageCommand = randomUUID();
     const outagePayload = {
         ...firstPayload,
@@ -741,7 +742,7 @@ async function exerciseMobileBoundary(): Promise<void> {
 
     await runPlaywright(baseUrl, true);
 
-    await compose(['start', 'tracking']);
+    await compose(['start', 'tracking'], 90_000);
     await waitForHealthy(['db', 'redis', 'tracking-db', 'tracking', 'app']);
 
     // The ping refused during the outage goes through when the phone resends
