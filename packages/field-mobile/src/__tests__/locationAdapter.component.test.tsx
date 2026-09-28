@@ -1,5 +1,5 @@
 jest.mock('expo-location', () => ({
-    Accuracy: { Balanced: 1, Low: 2 },
+    Accuracy: { Balanced: 1, Low: 2, High: 3 },
     getForegroundPermissionsAsync: jest.fn(),
     getBackgroundPermissionsAsync: jest.fn(),
     requestForegroundPermissionsAsync: jest.fn(),
@@ -8,7 +8,10 @@ jest.mock('expo-location', () => ({
 }));
 
 import * as Location from 'expo-location';
-import { NativeLocationAdapter } from '../native/locationAdapter';
+import {
+    NativeLocationAdapter,
+    TRACKING_MAX_FIX_AGE_MS,
+} from '../native/locationAdapter';
 
 const foregroundPermissions =
     Location.getForegroundPermissionsAsync as jest.Mock;
@@ -117,6 +120,49 @@ describe('NativeLocationAdapter duty snapshots', () => {
             accuracyMetres: null,
             observedAt: null,
             source: 'unavailable',
+        });
+    });
+});
+
+describe('NativeLocationAdapter tracking fixes', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        foregroundPermissions.mockResolvedValue({
+            granted: true,
+            canAskAgain: true,
+        });
+        backgroundPermissions.mockResolvedValue({ granted: true });
+    });
+
+    it('asks for a live GPS fix instead of reusing a cached one', async () => {
+        const observedAt = Date.now();
+        currentPosition.mockResolvedValue({
+            timestamp: observedAt,
+            coords: { latitude: 14.56, longitude: 121.03, accuracy: 4 },
+        });
+
+        await expect(
+            new NativeLocationAdapter().getTrackingLocation(),
+        ).resolves.toMatchObject({
+            latitude: 14.56,
+            observedAt: new Date(observedAt).toISOString(),
+            source: 'gps',
+        });
+        expect(currentPosition).toHaveBeenCalledWith(
+            expect.objectContaining({ accuracy: Location.Accuracy.High }),
+        );
+        expect(lastKnownPosition).not.toHaveBeenCalled();
+    });
+
+    it('falls back only to a recent cached fix, and fails rather than send an old one', async () => {
+        currentPosition.mockRejectedValue(new Error('no fix'));
+        lastKnownPosition.mockResolvedValue(null);
+
+        await expect(
+            new NativeLocationAdapter().getTrackingLocation(),
+        ).rejects.toThrow('unavailable');
+        expect(lastKnownPosition).toHaveBeenCalledWith({
+            maxAge: TRACKING_MAX_FIX_AGE_MS,
         });
     });
 });

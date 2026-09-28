@@ -5,7 +5,7 @@ jest.mock('expo-task-manager', () => ({
 }));
 
 jest.mock('expo-location', () => ({
-    Accuracy: { Balanced: 3 },
+    Accuracy: { Balanced: 3, High: 4 },
     getBackgroundPermissionsAsync: jest.fn(),
     getForegroundPermissionsAsync: jest.fn(),
     hasStartedLocationUpdatesAsync: jest.fn(),
@@ -54,7 +54,7 @@ describe('background location task registration', () => {
         expect(Location.startLocationUpdatesAsync).toHaveBeenCalledWith(
             FIELD_BACKGROUND_LOCATION_TASK,
             expect.objectContaining({
-                accuracy: 3,
+                accuracy: 4,
                 timeInterval: 15_000,
                 deferredUpdatesInterval: 15_000,
                 foregroundService: expect.objectContaining({

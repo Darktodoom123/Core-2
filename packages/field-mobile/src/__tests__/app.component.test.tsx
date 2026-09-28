@@ -1536,6 +1536,9 @@ describe('native application component tree', () => {
         const locationSpy = jest
             .spyOn(nativeLocationAdapter, 'getCurrentLocation')
             .mockResolvedValue({ latitude: 14.6, longitude: 120.98 });
+        const trackingSpy = jest
+            .spyOn(nativeLocationAdapter, 'getTrackingLocation')
+            .mockResolvedValue({ latitude: 14.6, longitude: 120.98 });
         const { fetchFn } = createApi({ assignedJobs: [assignedJob] });
 
         try {
@@ -1551,6 +1554,7 @@ describe('native application component tree', () => {
                 await screen.findByTestId('hero-vehicle-card'),
             ).toBeVisible();
             expect(locationSpy).not.toHaveBeenCalled();
+            expect(trackingSpy).not.toHaveBeenCalled();
             expect(screen.queryByTestId('weather-refresh-btn')).toBeNull();
 
             const refreshControl =
@@ -1560,16 +1564,19 @@ describe('native application component tree', () => {
                 await new Promise((resolve) => setTimeout(resolve, 20));
             });
             expect(locationSpy).not.toHaveBeenCalled();
+            expect(trackingSpy).not.toHaveBeenCalled();
 
             await fireEvent.press(screen.getByTestId('start-unit-on-site-btn'));
             await fireEvent.press(screen.getByTestId('confirm-on-site-btn'));
 
+            // Linking starts tracking, which asks for a live fix.
             await waitFor(() => {
-                expect(locationSpy).toHaveBeenCalled();
+                expect(trackingSpy).toHaveBeenCalled();
             });
         } finally {
             AppState.currentState = previousAppState;
             locationSpy.mockRestore();
+            trackingSpy.mockRestore();
         }
     });
 

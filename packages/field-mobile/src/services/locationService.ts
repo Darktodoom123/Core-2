@@ -22,6 +22,18 @@ export interface DutyLocationSnapshot {
         | 'unavailable';
 }
 
+/**
+ * When the position was measured, not when it was queued, so the map ages a
+ * cached fix correctly. A missing or future time falls back to now.
+ */
+export function fixTime(observedAt?: string | null, now = Date.now()): string {
+    const measured = observedAt ? Date.parse(observedAt) : Number.NaN;
+
+    return new Date(
+        Number.isFinite(measured) && measured <= now ? measured : now,
+    ).toISOString();
+}
+
 export class LocationSharingService {
     private trackingTimer: ReturnType<typeof setInterval> | null = null;
     private isAutoTracking = false;
@@ -64,7 +76,7 @@ export class LocationSharingService {
             longitude: coords.longitude,
             accuracy_metres: coords.accuracyMetres ?? null,
             sharing_enabled: true,
-            captured_at: new Date().toISOString(),
+            captured_at: fixTime(coords.observedAt),
             remarks: remarks ?? null,
         };
 
@@ -121,6 +133,7 @@ export class LocationSharingService {
         }
 
         this.isAutoTracking = true;
+        let lastSentFix: string | null = null;
 
         const captureAndQueue = async () => {
             if (!this.isAutoTracking || !this.canShareLocation(user, job)) {
@@ -131,6 +144,15 @@ export class LocationSharingService {
 
             try {
                 const coords = await getLocationCoords();
+
+                // The same fix again (no newer one yet) adds nothing.
+                if (coords.observedAt && coords.observedAt === lastSentFix) {
+                    onCaptureIssue?.(null);
+
+                    return;
+                }
+
+                lastSentFix = coords.observedAt ?? null;
                 await this.shareLocation(
                     user,
                     job,

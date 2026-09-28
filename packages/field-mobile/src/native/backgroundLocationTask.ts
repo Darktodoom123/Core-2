@@ -69,7 +69,8 @@ export async function registerBackgroundLocationUpdates(
                 await Location.startLocationUpdatesAsync(
                     FIELD_BACKGROUND_LOCATION_TASK,
                     {
-                        accuracy: Location.Accuracy.Balanced,
+                        // GPS, not Wi-Fi or cell: a site pin needs metres, not ~100 m.
+                        accuracy: Location.Accuracy.High,
                         timeInterval: 15_000,
                         distanceInterval: 0,
                         deferredUpdatesInterval: 15_000,

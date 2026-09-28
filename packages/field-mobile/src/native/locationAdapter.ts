@@ -10,6 +10,25 @@ export interface LocationPermissionState {
     canAskAgain: boolean;
 }
 
+/** Longest a live tracking fix may take; below the 15 s ping cadence. */
+export const TRACKING_FIX_TIMEOUT_MS = 10_000;
+
+/** Oldest cached fix tracking may send in place of a live one. */
+export const TRACKING_MAX_FIX_AGE_MS = 30_000;
+
+const toCoordinates = (
+    position: Location.LocationObject,
+    source: 'gps' | 'last_known',
+): LocationCoordinates => ({
+    latitude: position.coords.latitude,
+    longitude: position.coords.longitude,
+    accuracyMetres: position.coords.accuracy ?? null,
+    observedAt: position.timestamp
+        ? new Date(position.timestamp).toISOString()
+        : null,
+    source,
+});
+
 /**
  * Native location adapter providing hardware GPS access via expo-location with safe fallback for testing environments.
  */
@@ -174,6 +193,50 @@ export class NativeLocationAdapter {
                 }
             } catch {
                 // Ignore fallback error
+            }
+
+            throw new Error('Device GPS location timed out or is unavailable.');
+        }
+    }
+
+    /**
+     * A fix for live tracking. Unlike getCurrentLocation, it never reuses a
+     * cached fix older than TRACKING_MAX_FIX_AGE_MS: a ping marks where the
+     * unit is now, and an old fix sent as new would show a wrong spot as
+     * fresh on the dispatch map. With no fresh fix it throws, the ping is
+     * skipped, and the map shows the unit as delayed.
+     */
+    public async getTrackingLocation(): Promise<LocationCoordinates> {
+        const permissions = await this.checkPermissions();
+
+        if (!permissions.foregroundGranted) {
+            throw new Error(
+                'Location permission is not granted in device settings.',
+            );
+        }
+
+        try {
+            const live = await Promise.race([
+                Location.getCurrentPositionAsync({
+                    accuracy: Location.Accuracy.High,
+                    mayShowUserSettingsDialog: false,
+                }),
+                new Promise<never>((_, reject) =>
+                    setTimeout(
+                        () => reject(new Error('GPS timeout')),
+                        TRACKING_FIX_TIMEOUT_MS,
+                    ),
+                ),
+            ]);
+
+            return toCoordinates(live, 'gps');
+        } catch {
+            const recent = await Location.getLastKnownPositionAsync({
+                maxAge: TRACKING_MAX_FIX_AGE_MS,
+            }).catch(() => null);
+
+            if (recent?.coords) {
+                return toCoordinates(recent, 'last_known');
             }
 
             throw new Error('Device GPS location timed out or is unavailable.');

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import { CommandOutboxManager } from '../services/commandOutbox';
-import { LocationSharingService } from '../services/locationService';
+import { fixTime, LocationSharingService } from '../services/locationService';
 import { MemoryOutboxRepository } from '../storage/outboxRepository';
 import type { DispatchJob, User } from '../types/index';
 
@@ -64,6 +64,49 @@ describe('LocationSharingService Unit Tests', () => {
             service.stopAutoTracking();
             t.mock.timers.tick(15_000);
             assert.equal(captures, 2);
+        } finally {
+            service.stopAutoTracking();
+        }
+    });
+
+    test('does not send the same fix twice when no newer one has arrived', async (t) => {
+        t.mock.timers.enable({ apis: ['setInterval'] });
+        const outbox = new CommandOutboxManager({
+            repository: new MemoryOutboxRepository(),
+            hasher: testHasher,
+        });
+        await outbox.activateActor(activeUser.id);
+        const service = new LocationSharingService(outbox);
+        const fixes = [
+            '2026-09-28T00:53:43.000Z',
+            '2026-09-28T00:53:43.000Z',
+            '2026-09-28T00:53:59.000Z',
+        ];
+        let next = 0;
+        const capture = async () => ({
+            latitude: 14.56,
+            longitude: 121.03,
+            observedAt: fixes[Math.min(next++, fixes.length - 1)],
+        });
+        const settle = () => new Promise((resolve) => setImmediate(resolve));
+
+        try {
+            service.startAutoTracking(activeUser, activeJob, capture);
+            await settle();
+            t.mock.timers.tick(15_000);
+            await settle();
+            t.mock.timers.tick(15_000);
+            await settle();
+
+            assert.deepEqual(
+                outbox
+                    .getCommands()
+                    .map(
+                        (c) =>
+                            (c.payload as { captured_at: string }).captured_at,
+                    ),
+                ['2026-09-28T00:53:43.000Z', '2026-09-28T00:53:59.000Z'],
+            );
         } finally {
             service.stopAutoTracking();
         }
@@ -203,6 +246,43 @@ describe('LocationSharingService Unit Tests', () => {
         assert.equal(
             (pending[0].payload as { longitude: number }).longitude,
             120.9842,
+        );
+    });
+
+    test('stamps a ping with the time the fix was measured, not when it was queued', async () => {
+        const outbox = new CommandOutboxManager({
+            repository: new MemoryOutboxRepository(),
+            hasher: testHasher,
+        });
+        await outbox.activateActor(activeUser.id);
+        const measured = new Date(Date.now() - 90_000).toISOString();
+
+        await new LocationSharingService(outbox).shareLocation(
+            activeUser,
+            activeJob,
+            null,
+            { latitude: 14.5, longitude: 121, observedAt: measured },
+        );
+
+        assert.equal(
+            (outbox.getCommands()[0].payload as { captured_at: string })
+                .captured_at,
+            measured,
+        );
+    });
+
+    test('falls back to now for a fix with no time or a time in the future', () => {
+        const now = Date.parse('2026-09-28T01:00:00.000Z');
+
+        assert.equal(fixTime(null, now), '2026-09-28T01:00:00.000Z');
+        assert.equal(fixTime('not a date', now), '2026-09-28T01:00:00.000Z');
+        assert.equal(
+            fixTime('2026-09-28T01:05:00.000Z', now),
+            '2026-09-28T01:00:00.000Z',
+        );
+        assert.equal(
+            fixTime('2026-09-28T00:59:30.000Z', now),
+            '2026-09-28T00:59:30.000Z',
         );
     });
 

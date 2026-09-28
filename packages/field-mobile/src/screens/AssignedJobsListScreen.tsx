@@ -18,6 +18,7 @@ import { Icon } from '../components/common/Icon';
 import { AssignmentSummaryCard } from '../components/home/assignment-summary-card';
 import { NoUnitCard } from '../components/home/no-unit-card';
 import { ReliefClaimButton } from '../components/home/relief-claim-button';
+import { TelemetryToggleButton } from '../components/home/telemetry-toggle-button';
 import { FieldBottomNav } from '../components/layout/field-bottom-nav';
 import type { FieldNavItem } from '../components/layout/field-bottom-nav';
 import type { FieldScreen } from '../components/layout/field-bottom-nav';
@@ -997,46 +998,10 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                             </Text>
                         </View>
                         <View style={styles.quickActionsRow}>
-                            <Pressable
-                                accessibilityLabel={
-                                    locationSharingActive
-                                        ? 'Pause Telemetry'
-                                        : 'Resume Telemetry'
-                                }
-                                accessibilityRole="button"
+                            <TelemetryToggleButton
                                 onPress={onToggleLocationSharing}
-                                style={({ pressed }) => [
-                                    styles.quickActionBtn,
-                                    isDarkHud && styles.darkQuickActionBtn,
-                                    pressed && styles.pressed,
-                                ]}
-                                testID="quick-action-pause-telemetry-btn"
-                            >
-                                <Icon
-                                    color={
-                                        locationSharingActive
-                                            ? isDarkHud
-                                                ? '#FFBF00'
-                                                : '#806000'
-                                            : isDarkHud
-                                              ? '#10B981'
-                                              : '#059669'
-                                    }
-                                    name="location"
-                                    size={14}
-                                />
-                                <Text
-                                    style={[
-                                        styles.quickActionBtnText,
-                                        isDarkHud &&
-                                            styles.darkQuickActionBtnText,
-                                    ]}
-                                >
-                                    {locationSharingActive
-                                        ? 'Pause Telemetry'
-                                        : 'Resume Telemetry'}
-                                </Text>
-                            </Pressable>
+                                sharing={Boolean(locationSharingActive)}
+                            />
                             <Pressable
                                 accessibilityLabel="Post-Trip DVIR"
                                 accessibilityRole="button"
@@ -1173,6 +1138,12 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                 Start Pre-Trip DVIR Inspection
                             </Text>
                         </Pressable>
+                        {/* Sharing starts at link, before the pre-trip. */}
+                        <TelemetryToggleButton
+                            onPress={onToggleLocationSharing}
+                            sharing={Boolean(locationSharingActive)}
+                            wide
+                        />
                     </View>
                 )}
 

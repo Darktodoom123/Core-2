@@ -726,6 +726,10 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
             nativeLocationAdapter.getCurrentLocation(isStationary),
         [],
     );
+    const getTrackingLocation = useCallback(
+        () => nativeLocationAdapter.getTrackingLocation(),
+        [],
+    );
 
     const refreshActiveSosIncident = useCallback(async () => {
         if (status !== 'authenticated') {
@@ -2483,7 +2487,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
             !activeTrackingJob ||
             !user ||
             !isUnitLinked ||
-            !getCurrentLocation ||
+            !getTrackingLocation ||
             !locationSharingActive ||
             !locationService.canShareLocation(user, activeTrackingJob)
         ) {
@@ -2500,7 +2504,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                 locationService.startAutoTracking(
                     user,
                     activeTrackingJob,
-                    getCurrentLocation,
+                    getTrackingLocation,
                     activeTrackingAssetId,
                     15_000,
                     handleLocationCaptureIssue,
@@ -2543,7 +2547,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     }, [
         activeTrackingJob,
         activeTrackingAssetId,
-        getCurrentLocation,
+        getTrackingLocation,
         handleLocationCaptureIssue,
         locationService,
         locationSharingActive,
