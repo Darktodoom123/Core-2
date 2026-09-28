@@ -174,17 +174,44 @@ function Set-EmulatorHostLocation {
 if ($MyInvocation.InvocationName -ne '.') {
     $ErrorActionPreference = 'Stop'
     $adb = Resolve-AdbPath -AdbPath $EmulatorAdbPath
-    $target = Resolve-EmulatorSerial -AdbPath $adb -Serial $EmulatorSerial
 
-    do {
+    if (-not $Watch) {
+        $target = Resolve-EmulatorSerial -AdbPath $adb -Serial $EmulatorSerial
         $sent = Set-EmulatorHostLocation -AdbPath $adb -Serial $target
         Write-Host (
-            "$(Get-Date -Format HH:mm:ss) Sent this PC's location to " +
-            "$target (accuracy about $([math]::Round($sent.AccuracyMetres)) m)."
+            "Sent this PC's location to $target " +
+            "(accuracy about $([math]::Round($sent.AccuracyMetres)) m)."
         )
 
-        if ($Watch) {
-            Start-Sleep -Seconds $IntervalSeconds
+        return
+    }
+
+    # Watch mode outlives emulator restarts: while no emulator is up it
+    # waits, and a restarted emulator gets the host location again at once
+    # instead of its Mountain View default.
+    $lastProblem = $null
+
+    while ($true) {
+        try {
+            $target = Resolve-EmulatorSerial -AdbPath $adb -Serial $EmulatorSerial
+            $sent = Set-EmulatorHostLocation -AdbPath $adb -Serial $target
+            $lastProblem = $null
+            Write-Host (
+                "$(Get-Date -Format HH:mm:ss) Sent this PC's location to " +
+                "$target (accuracy about $([math]::Round($sent.AccuracyMetres)) m)."
+            )
+            $delay = $IntervalSeconds
+        } catch {
+            $problem = $_.Exception.Message
+
+            if ($problem -ne $lastProblem) {
+                Write-Host "$(Get-Date -Format HH:mm:ss) Waiting: $problem"
+                $lastProblem = $problem
+            }
+
+            $delay = 5
         }
-    } while ($Watch)
+
+        Start-Sleep -Seconds $delay
+    }
 }
