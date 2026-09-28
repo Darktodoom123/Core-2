@@ -85,10 +85,11 @@ test('manager sees a clear no-GPS state when Tracking has no location samples', 
     await openTelemetryWorkspace(page);
     const craneCard = page.getByRole('listitem').filter({ hasText: 'CRN-01' });
 
-    await expect(craneCard.getByText('No GPS report')).toBeVisible({
+    // The fleet card shows "Location not recorded" until Tracking has a sample.
+    await expect(craneCard.getByText('Location not recorded')).toBeVisible({
         timeout: 30_000,
     });
-    await expect(craneCard.getByText(/GPS Live/)).toHaveCount(0);
+    await expect(craneCard.getByText('Fresh location')).toHaveCount(0);
 });
 
 test('manager can use the telemetry workspace during a Tracking outage', async ({
