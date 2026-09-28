@@ -54,7 +54,6 @@ import { DispatchOrdersScreen } from '../screens/DispatchOrdersScreen';
 import { walletAssets } from '../screens/documents/document-catalog';
 import { DocumentsWalletScreen } from '../screens/DocumentsWalletScreen';
 import { DvirScreen } from '../screens/DvirScreen';
-import { FieldSafetyScreen } from '../screens/FieldSafetyScreen';
 import { FuelScreen } from '../screens/FuelScreen';
 import {
     planDutyCommand,
@@ -117,8 +116,6 @@ import type {
     StandbyReason,
     WeatherTelemetry,
     ReportDelayPayload,
-    SafetyHazardCommandPayload,
-    WorkStoppageCommandPayload,
 } from '../types/index';
 import { resolveDesignatedEquipmentType } from '../utils/equipmentClassification';
 import { dutyTarget } from './dutyTarget';
@@ -582,7 +579,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     const { theme } = useTheme();
     const [activeAppView, setActiveAppView] = useState<
         | 'main'
-        | 'safety'
         | 'dvir'
         | 'documents'
         | 'inspection'
@@ -2022,34 +2018,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         [commandOutbox, currentJob, handleRequestFailure, syncQueue],
     );
 
-    const handleReportSafetyHazard = useCallback(
-        async (payload: SafetyHazardCommandPayload): Promise<string> => {
-            const command =
-                await commandOutbox.enqueueReportSafetyHazard(payload);
-
-            if (isOnline === true) {
-                void syncQueue();
-            }
-
-            return command.id;
-        },
-        [commandOutbox, isOnline, syncQueue],
-    );
-
-    const handleIssueWorkStoppage = useCallback(
-        async (payload: WorkStoppageCommandPayload): Promise<string> => {
-            const command =
-                await commandOutbox.enqueueIssueWorkStoppage(payload);
-
-            if (isOnline === true) {
-                void syncQueue();
-            }
-
-            return command.id;
-        },
-        [commandOutbox, isOnline, syncQueue],
-    );
-
     const handleAcceptServerState = useCallback(
         (commandId: string) => {
             void commandOutbox
@@ -2720,26 +2688,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 </Text>
                             </View>
                         ) : null}
-                        {activeAppView === 'safety' ? (
-                            <FieldSafetyScreen
-                                actorId={user?.id}
-                                apiClient={apiClient}
-                                activeSite={currentJob?.site ?? null}
-                                commands={outboxCommands.filter(
-                                    (command) =>
-                                        command.type ===
-                                            'report_safety_hazard' ||
-                                        command.type === 'issue_work_stoppage',
-                                )}
-                                isOnline={isOnline}
-                                onBack={() => setActiveAppView('main')}
-                                onIssueWorkStoppage={handleIssueWorkStoppage}
-                                onReportHazard={handleReportSafetyHazard}
-                                onRetryCommand={(commandId) =>
-                                    void handleRetryCommand(commandId)
-                                }
-                            />
-                        ) : activeAppView === 'hos' ? (
+                        {activeAppView === 'hos' ? (
                             <HosScreen
                                 activeJobId={currentJob?.id}
                                 apiClient={apiClient}
@@ -3117,9 +3066,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                         setDvirInitialMode(mode || 'pre_trip');
                                         setActiveAppView('dvir');
                                     }}
-                                    onOpenSafety={() =>
-                                        setActiveAppView('safety')
-                                    }
                                     onOpenForms={() =>
                                         setActiveAppView('dispatch')
                                     }

@@ -313,8 +313,8 @@ export function WeatherSafetyTelemetry({
             )}
             <p className="text-xs text-ink-soft">
                 Weather data does not establish ground bearing, lightning
-                distance, or lift clearance. Check the approved lift plan and
-                on-site measurements.
+                distance, or lift clearance. Check on-site measurements and
+                operating conditions.
             </p>
         </div>
     );

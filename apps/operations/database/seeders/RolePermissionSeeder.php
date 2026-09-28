@@ -64,10 +64,6 @@ final class RolePermissionSeeder extends Seeder
                 PermissionName::RentalView, PermissionName::RentalCreate, PermissionName::RentalApprove, PermissionName::RentalAssignOperator, PermissionName::RentalCheckout,
                 PermissionName::RentalReturn,
                 PermissionName::SosView, PermissionName::SosRespond,
-                PermissionName::SafetyGovernanceView,
-                PermissionName::SafetyHazardReport, PermissionName::SafetyHazardRectify,
-                PermissionName::SafetyTbmCoSign, PermissionName::SafetyLiftPlanApprove,
-                PermissionName::SafetyWorkStoppageIssue, PermissionName::SafetyWorkStoppageLift,
             ]),
             RoleName::CraneOperator->value => self::values([
                 PermissionName::DispatchViewAssigned, PermissionName::DispatchRespondOwn, PermissionName::DispatchUpdateOwnStatus, PermissionName::RentalOperate,
@@ -75,17 +71,12 @@ final class RolePermissionSeeder extends Seeder
                 PermissionName::FuelViewOwn, PermissionName::FuelRequest, PermissionName::FuelRecord,
                 PermissionName::TrackingShareOwn, PermissionName::ReportsViewOwn,
                 PermissionName::SosTrigger,
-                PermissionName::SafetyHazardReport,
-                PermissionName::SafetyTbmSubmit, PermissionName::SafetyLiftPlanCreate,
-                PermissionName::SafetyWorkStoppageIssue,
             ]),
             RoleName::Rigger->value => self::values([
                 PermissionName::DispatchViewAssigned, PermissionName::DispatchRespondOwn,
                 PermissionName::AssignmentsViewOwn, PermissionName::EquipmentViewAssigned,
                 PermissionName::ReportsViewOwn,
                 PermissionName::SosTrigger,
-                PermissionName::SafetyHazardReport,
-                PermissionName::SafetyWorkStoppageIssue,
             ]),
         ];
     }

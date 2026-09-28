@@ -81,10 +81,6 @@ erDiagram
     PROJECT_PLAN_PHASES ||--o{ PROJECT_PLAN_ALLOCATIONS : reserves
     PROJECT_PLAN_PHASES ||--o{ PROJECT_PLAN_SHIFTS : rosters
     PROJECT_PLAN_SHIFTS ||--o| DISPATCH_JOBS : links
-    DISPATCH_JOBS ||--o{ SAFETY_LIFT_PLANS : governs
-    DISPATCH_JOBS ||--o{ SAFETY_TOOLBOX_MEETINGS : convenes
-    DISPATCH_JOBS ||--o{ SAFETY_WORK_STOPPAGES : halted_by
-    USERS ||--o{ SAFETY_HAZARDS : reports
     CLIENTS ||--o{ RENTAL_RESERVATIONS : rents
     RENTAL_RESERVATIONS ||--o{ RENTAL_RESERVATION_ITEMS : contains
     OPERATIONAL_ASSETS ||--o{ RENTAL_RESERVATION_ITEMS : reserved
@@ -181,14 +177,6 @@ collision behavior.
 HOS event coordinates are intentionally stored with the accepted duty record because an offline transition must retain the location observed when the operator acted; they are not a copy of the asset's latest tracking projection and are never replaced during synchronization. This is a documented extension of the existing location privacy boundary: the `location:prune` command applies the same configured 30-day retention window to duty-event coordinates, accuracy, and precise freshness based on the observation/event timestamp (not delayed server receipt), preserving the duty transition, occurrence/acceptance metadata, source, and an explicit `Location unavailable` state after redaction. The authenticated HOS API and existing visibility/authorization checks remain the access boundary; no separate latest-location table or tracking projection is used for historical event snapshots.
 
 Operator HOS minutes remain canonical on `operator_shifts` and `CalculateHosClocksQuery`. Equipment-linked duty intervals are reported separately; an estimated equipment-use total is emitted only when an explicit equipment-kind policy names the statuses that count. Official meter readings remain sourced from the existing authorized meter-reading or telemetry workflows and are never modified by duty selections.
-
-### Statutory Philippine Safety Governance tables (`apps/operations/app/Platform/Safety`)
-
-- `safety_hazards`: ticket number, reporter ID, assigned investigator, hazard category, severity rating, location coordinates, status (`open`, `triaged`, `rectified`, `closed`), rectification notes, and clearance timestamp.
-- `safety_lift_plans`: plan number, dispatch job ID, creator ID, authorizer ID (Operations Manager), crane asset ID, gross load tonnage, rated capacity tonnage, capacity utilization percentage, tandem lift flag, blind lift flag, powerline proximity flag, and authorization timestamp.
-- `safety_toolbox_meetings`: meeting reference, dispatch job ID, conductor ID, meeting date, topic checklist, and participant cosignature ledger.
-- `safety_work_stoppages`: stop-work notice number, dispatch job ID, issuer ID, lifting authorizer ID, imminent danger description, status (`active`, `lifted`), and resumption authorization timestamp.
-- `safety_tower_crane_shift_logs`: tower crane asset, operator ID, anemometer wind speeds, load counts, structural observations, and handover clearance.
 
 ### Module 8: Rental tables
 

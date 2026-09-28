@@ -29,11 +29,8 @@ use App\Platform\Reporting\Models\JobReport;
 use App\Platform\Reporting\Models\ReportExport;
 use App\Platform\Safety\Enums\SosIncidentCategory;
 use App\Platform\Safety\Enums\SosIncidentStatus;
-use App\Platform\Safety\Models\CriticalLiftPlan;
-use App\Platform\Safety\Models\SiteHazardTicket;
 use App\Platform\Safety\Models\SosIncident;
 use App\Platform\Safety\Models\SosIncidentRecipient;
-use App\Platform\Safety\Models\ToolboxMeeting;
 use App\Shared\Assets\Enums\AssetStatus;
 use App\Shared\Assets\Models\OperationalAsset;
 use Database\Seeders\Development\ProjectPlanningDemoSeeder;
@@ -488,54 +485,6 @@ final class BrowserAcceptanceSeeder extends Seeder
             'notified_at' => now()->subMinute(),
         ]);
 
-        $tbm = ToolboxMeeting::query()->create([
-            'project_site' => 'Browser fixture site',
-            'topic_id' => 'tbm-01',
-            'topic_title' => 'DOLE D.O. 13: Critical Lifting & Swing Radius Clearance',
-            'topic_category' => 'lifting_rigging',
-            'conductor_id' => $foreman->id,
-            'conductor_role' => 'Field Foreman',
-            'attendee_ids' => ['w1', 'w2', 'w3', 'w4'],
-            'attendee_count' => 4,
-            'photo_evidence_url' => 'https://storage.example.com/tbm/site-fixture.jpg',
-            'photo_timestamp' => now()->subHours(2),
-            'notes' => 'Pre-shift briefing on outriggers, swing radius, and rigging inspection.',
-            'audit_hash' => 'PH-DOLE-CSHP-BROWSER-TBM-001',
-            'safety_officer_id' => null,
-            'safety_officer_signed_at' => null,
-        ]);
-
-        $liftPlan = CriticalLiftPlan::query()->create([
-            'lift_reference' => 'CR-LIFT-BROWSER-001',
-            'dispatch_job_id' => $job->id,
-            'operational_asset_id' => $crane->id,
-            'project_site' => 'Browser fixture site',
-            'foreman_id' => $foreman->id,
-            'rigger_tesda_nc_number' => 'TESDA-RIG-BROWSER',
-            'risk_level' => 'critical',
-            'gross_load_weight_tons' => 28.50,
-            'crane_rated_capacity_tons' => 34.00,
-            'load_percentage_of_capacity' => 83.82,
-            'boom_length_meters' => 38.00,
-            'working_radius_meters' => 14.50,
-            'ground_bearing_condition' => 'Engineered Timber Pads',
-            'weather_wind_speed_kph' => 12.00,
-            'status' => 'pending_so_review',
-        ]);
-
-        $hazardTicket = SiteHazardTicket::query()->create([
-            'ticket_code' => 'HAZ-BROWSER-001',
-            'project_site' => 'Browser fixture site',
-            'reporter_id' => $safetyOfficer->id,
-            'category' => 'rigging_tackle',
-            'severity' => 'medium',
-            'description' => 'Damaged synthetic web sling observed at staging point.',
-            'location_detail' => 'Staging Yard Bay 1',
-            'corrective_action_required' => 'Tag out immediately.',
-            'status' => 'open',
-            'work_stoppage_issued' => false,
-        ]);
-
         File::ensureDirectoryExists(storage_path('framework/testing'));
         File::put(storage_path('framework/testing/browser-fixtures.json'), json_encode([
             'users' => [
@@ -572,9 +521,6 @@ final class BrowserAcceptanceSeeder extends Seeder
             ),
             'export_ids' => [$export->id, $pdfExport->id],
             'sos_incident_id' => $sosIncident->id,
-            'lift_plan_id' => $liftPlan->id,
-            'tbm_id' => $tbm->id,
-            'hazard_id' => $hazardTicket->id,
             'recommendations' => collect($recommendations)->mapWithKeys(static fn (GptRecommendation $rec, string $key): array => [$key => $rec->id])->all(),
         ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
 

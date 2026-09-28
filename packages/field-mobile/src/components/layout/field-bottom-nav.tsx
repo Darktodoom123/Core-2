@@ -6,7 +6,7 @@ import { Icon } from '../common/Icon';
 import { colors } from '../nativeStyles';
 import { EmergencySosButton } from '../sos/emergency-sos-button';
 
-export type FieldNavItem = 'safety' | 'documents' | 'profile';
+export type FieldNavItem = 'documents' | 'profile';
 export type FieldScreen = FieldNavItem | 'today';
 
 export interface FieldBottomNavProps {
@@ -40,45 +40,47 @@ export const FieldBottomNav: React.FC<FieldBottomNavProps> = ({
                 style={[styles.container, isDarkHud && styles.darkContainer]}
                 testID="bottom-nav-bar"
             >
-                {/* Safety actions stay one tap from every field screen. */}
+                {/* Documents stay one tap from every field screen. */}
                 <Pressable
-                    accessibilityLabel="Safety"
+                    accessibilityLabel="Documents"
                     accessibilityRole="tab"
-                    accessibilityState={{ selected: activeItem === 'safety' }}
-                    onPress={() => onSelect('safety')}
+                    accessibilityState={{
+                        selected: activeItem === 'documents',
+                    }}
+                    onPress={() => onSelect('documents')}
                     style={({ pressed }) => [
                         styles.item,
-                        activeItem === 'safety' && styles.itemSelected,
+                        activeItem === 'documents' && styles.itemSelected,
                         pressed && styles.pressed,
                     ]}
-                    testID="bottom-nav-safety"
+                    testID="bottom-nav-documents"
                 >
                     <View style={styles.indicator}>
                         <Icon
                             color={
-                                activeItem === 'safety'
-                                    ? colors.redDark
+                                activeItem === 'documents'
+                                    ? theme.brandAmberText
                                     : isDarkHud
                                       ? '#94A3B8'
                                       : '#64748B'
                             }
-                            name="shield"
+                            name="document"
                             size={20}
                         />
                     </View>
                     <Text
                         style={[
                             styles.label,
-                            activeItem === 'safety' && {
-                                color: colors.redDark,
+                            activeItem === 'documents' && {
+                                color: theme.brandAmberText,
                                 fontWeight: '700',
                             },
                             isDarkHud &&
-                                activeItem !== 'safety' &&
+                                activeItem !== 'documents' &&
                                 styles.darkLabel,
                         ]}
                     >
-                        Safety
+                        Documents
                     </Text>
                 </Pressable>
 

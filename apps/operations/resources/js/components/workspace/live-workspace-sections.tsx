@@ -26,7 +26,6 @@ import { GptRecommendationsSurface } from '@/components/workspace/gpt-workspace-
 import { NotificationsSurface } from '@/components/workspace/notifications-workspace-section';
 import { UserManagementWorkspaceSection } from '@/components/workspace/personnel/user-management-workspace-section';
 import { ReportsSurface } from '@/components/workspace/reports-workspace-section';
-import { SafetyGovernanceSection } from '@/components/workspace/safety-governance-section';
 import { formatDateTime } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import type {
@@ -204,13 +203,6 @@ export function LiveWorkspaceSection({
             );
         case 'audit':
             return <AuditSurface events={auditEvents} />;
-        case 'safety':
-            return (
-                <SafetyGovernanceSection
-                    capabilities={capabilities}
-                    onSectionChange={onSectionChange}
-                />
-            );
     }
 }
 

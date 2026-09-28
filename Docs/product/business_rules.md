@@ -14,7 +14,7 @@ for Core 1 commercial transaction boundaries.
 - **BR-001:** Only authenticated, active, non-suspended users may enter operational routes.
 - **BR-002:** Operational access is expressed through roles and permissions; frontend visibility is not authorization.
 - **BR-003:** A normal software user has one active operational role from the 3 canonical system user roles (`system_administrator`, `operations_manager`, `crane_operator` [Operator]). Supervisory governance, approvals, and emergency triage are consolidated into `operations_manager`, while equipment operation and field reporting are governed by `crane_operator` [Operator].
-- **BR-003A:** Field personnel without direct software interaction duties (specifically **Riggers**) are registered as employees with [`PersonnelProfile`](../../apps/operations/app/Platform/Identity/Models/PersonnelProfile.php) and [`PersonnelCredential`](../../apps/operations/app/Platform/Identity/Models/PersonnelCredential.php) for crew assignment, DOLE/TESDA certification compliance, and critical lift planning, but are not provisioned with [`User`](../../apps/operations/app/Platform/Identity/Models/User.php) login accounts, web sessions, or mobile Sanctum API tokens.
+- **BR-003A:** Field personnel without direct software interaction duties (specifically **Riggers**) are registered as employees with [`PersonnelProfile`](../../apps/operations/app/Platform/Identity/Models/PersonnelProfile.php) and [`PersonnelCredential`](../../apps/operations/app/Platform/Identity/Models/PersonnelCredential.php) for crew assignment, DOLE/TESDA certification compliance, but are not provisioned with [`User`](../../apps/operations/app/Platform/Identity/Models/User.php) login accounts, web sessions, or mobile Sanctum API tokens.
 - **BR-004:** “Own” means the authenticated user is the requester or has an active assignment; it is never accepted from a client-supplied user ID.
 - **BR-005:** The last active System Administrator cannot be suspended or demoted.
 - **BR-006:** Role or activation changes revoke existing sessions for the affected user.
@@ -240,14 +240,7 @@ for Core 1 commercial transaction boundaries.
 - **BR-124:** Real-time fatigue risk scoring evaluates shift duration and rest intervals; critical fatigue thresholds trigger automated warnings to the operator and Operations Manager.
 - **BR-125:** Duty log edits maintain full audit history with mandatory edit remarks, original values, and electronic certification signatures.
 
-## Statutory Safety Governance (DOLE OSHS Rule 1410 & DO 198-18)
-
-- **BR-130:** Toolbox Meetings (TBM) must be documented prior to commencing daily field operations, capturing topics discussed, GPS location, digital attendee signatures (Operator, Rigger), and supervisor/Operations Manager co-signatures.
-- **BR-131:** Critical Lift Plans are mandatory for heavy crane operations exceeding 75% rated capacity, tandem lifts, or operations near live hazards; plans must specify ground bearing pressure, rigging configuration, wind limits, and require Operations Manager authorization.
-- **BR-132:** Work Stoppage Orders (WSO) can be issued by any field personnel under DOLE DO 198-18 upon identifying imminent danger; issuing a WSO immediately freezes active dispatches on site and requires formal safety resolution to clear.
-- **BR-133:** Safety Hazards and near-misses record severity (`low`, `medium`, `high`, `critical`), photographic evidence, GPS location, and require corrective action sign-off from the Operations Manager.
-- **BR-134:** Safety governance actions broadcast live events across the `operations.safety` Reverb channel for dispatch dashboard situational awareness.
-- **BR-135:** Lift team members must hold verified certifications (TESDA Crane Rigging NC II for Riggers, DOLE Heavy Equipment Operator Accreditation for Operators) before assignment.
+- **BR-135:** Crane crew members must hold verified certifications (TESDA Crane Rigging NC II for Riggers, DOLE Heavy Equipment Operator Accreditation for Operators) before assignment.
 
 ## Dispatch Project Planning & Multi-Crane Allocations
 
@@ -256,7 +249,6 @@ for Core 1 commercial transaction boundaries.
 - **BR-142:** Downstream project milestones remain blocked until upstream dependency requirements are certified complete.
 - **BR-143:** Project performance monitors estimated vs. actual equipment operating hours, fuel consumption, and labor expenditure.
 - **BR-144:** Project plans maintain version history and support cloning for standard recurring industrial lift workflows.
-- **BR-145:** Project completion compiles a unified dossier containing all linked dispatch tickets, job reports, DVIR logs, and statutory lift plans.
 
 ## Granular Rate Limiting & Mobile Resilience
 

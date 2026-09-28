@@ -7,7 +7,6 @@ import {
 } from '@testing-library/react-native/pure';
 import React from 'react';
 import { JobListItemCard } from '../components/cards/JobListItemCard';
-import { FieldSafetySheet } from '../components/sheets/field-safety-sheet';
 import { AssignedJobsListScreen } from '../screens/AssignedJobsListScreen';
 import { ApiClientError } from '../services/apiClient';
 import type { DispatchJob } from '../types/index';
@@ -579,44 +578,6 @@ describe('Mobile Application Audit Resolutions Component Tests', () => {
             expect(view.getByText(/Plan a break soon/i)).toBeTruthy();
             expect(view.getByText(/4\.2h continuous/i)).toBeTruthy();
             expect(view.getByText(/Plan a rest or standby/i)).toBeTruthy();
-        });
-    });
-
-    describe('Issue 6: FieldSafetySheet and RA 11058 Statutory Safety Stoppage Modal', () => {
-        it('renders FieldSafetySheet modal with fullScreen presentation and can trigger work stoppage', async () => {
-            const onClose = jest.fn();
-            const onIssueWorkStoppage = jest
-                .fn()
-                .mockResolvedValue('stop-cmd-99');
-            const view = await render(
-                <FieldSafetySheet
-                    activeSite="Cavite Gateway Terminal"
-                    commands={[]}
-                    isOnline={true}
-                    onClose={onClose}
-                    onIssueWorkStoppage={onIssueWorkStoppage}
-                    onReportHazard={jest.fn()}
-                    visible={true}
-                />,
-            );
-
-            expect(view.getByTestId('field-safety-sheet')).toBeTruthy();
-            expect(view.getByText('Safety and hazards')).toBeTruthy();
-
-            // Open stop work form
-            await fireEvent.press(view.getByTestId('open-stop-work-form'));
-
-            // Select RA 11058 imminent danger
-            await fireEvent.press(
-                view.getByTestId('stoppage-type-imminent-danger'),
-            );
-            expect(view.getByTestId('ra-11058-statutory-badge')).toBeTruthy();
-
-            // Close sheet
-            await fireEvent.press(view.getByLabelText('Back'));
-            expect(view.getByText('Safety and hazards')).toBeTruthy();
-            await fireEvent.press(view.getByLabelText('Back'));
-            expect(onClose).toHaveBeenCalled();
         });
     });
 });

@@ -25,7 +25,7 @@ beforeEach(function (): void {
     Queue::fake();
 });
 
-it('provisions Operations Manager with the safety governance permissions', function (): void {
+it('provisions Operations Manager with operational and SOS permissions', function (): void {
     $manager = User::factory()->create(['name' => 'Jane Operations Manager']);
     $manager->syncRoles([RoleName::OperationsManager->value]);
 
@@ -37,24 +37,20 @@ it('provisions Operations Manager with the safety governance permissions', funct
         ->and($manager->can(PermissionName::FleetInspect->value))->toBeTrue()
         ->and($manager->can(PermissionName::EquipmentInspect->value))->toBeTrue()
         ->and($manager->can(PermissionName::DispatchViewAll->value))->toBeTrue()
-        ->and($manager->can(PermissionName::ReportsViewAll->value))->toBeTrue()
-        ->and($manager->can(PermissionName::SafetyGovernanceView->value))->toBeTrue()
-        ->and($manager->can(PermissionName::SafetyTbmCoSign->value))->toBeTrue()
-        ->and($manager->can(PermissionName::SafetyLiftPlanApprove->value))->toBeTrue()
-        ->and($manager->can(PermissionName::SafetyWorkStoppageIssue->value))->toBeTrue()
-        ->and($manager->can(PermissionName::SafetyWorkStoppageLift->value))->toBeTrue();
+        ->and($manager->can(PermissionName::ReportsViewAll->value))->toBeTrue();
 });
 
-it('allows field workers to issue a work stoppage but reserves lift authority for managers', function (): void {
-    $operator = User::factory()->create(['name' => 'Field Crane Operator']);
-    $operator->syncRoles([RoleName::CraneOperator->value]);
-    $rigger = User::factory()->create(['name' => 'Field Rigger']);
-    $rigger->syncRoles([RoleName::Rigger->value]);
+it('does not expose retired safety governance routes', function (): void {
+    $manager = User::factory()->create(['is_active' => true]);
+    $manager->syncRoles([RoleName::OperationsManager->value]);
 
-    expect($operator->can(PermissionName::SafetyWorkStoppageIssue->value))->toBeTrue()
-        ->and($rigger->can(PermissionName::SafetyWorkStoppageIssue->value))->toBeTrue()
-        ->and($operator->can(PermissionName::SafetyWorkStoppageLift->value))->toBeFalse()
-        ->and($rigger->can(PermissionName::SafetyWorkStoppageLift->value))->toBeFalse();
+    $this->actingAs($manager)
+        ->get('/operations/safety/overview')
+        ->assertNotFound();
+
+    $this->actingAs($manager)
+        ->getJson('/api/v1/safety/hazards')
+        ->assertNotFound();
 });
 
 it('includes active Operations Managers as recipients when an SOS alert is triggered', function (): void {

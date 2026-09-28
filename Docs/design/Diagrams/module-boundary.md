@@ -61,11 +61,10 @@ flowchart TD
     F_RNT ==> D
     F_RNT ==> C
 
-    subgraph SHARED[Shared Platform Services & Safety Foundations]
+    subgraph SHARED[Shared Platform Services]
         S1[Auth, Spatie RBAC 3 System Users, Scoped Visibility]
         S2[Immutable Audit, Notifications, Job Reports]
         S3[MapLibre GL Live Tracking, Outbox Replay, GPT-6 Luna]
-        S4[Statutory Safety Governance: DOLE Rule 1410, TBM, Critical Lift Plans, WSO]
         S5[SOS Emergency Response System: Floating Jewel, Cradle Notch, Reverb Broadcast]
     end
 
@@ -75,7 +74,7 @@ flowchart TD
 Core 1 owns Sales, CRM, Client, Job Order, Rental, and Project Management and
 is external to this repository. Core 2 receives two actionable business transaction flows:
 **Service and Rental**, and also supports direct (manual) dispatch. Core 2 does not receive or fulfill sale handoffs. These flows are scheduled, staffed, equipped, and executed by the
-**5 main operational business modules** (Dispatch with Planning, Assignment, Fleet, Cranes, Fuel), with DVIR, HoS, and Safety acting as integrated capabilities.
+**5 main operational business modules** (Dispatch with Planning, Assignment, Fleet, Cranes, Fuel), with DVIR, HoS, and SOS acting as integrated capabilities.
 
 Rental operations use backend flow handlers in `app/Modules/Rental`
 to coordinate equipment reservation, inspection diffs, and prevent inventory collisions with active dispatch operations.
@@ -237,8 +236,8 @@ flowchart TD
         ACCEPTED --> DVIR_PRE["Pre-Trip DVIR & 360 Walkaround (Module 3)"]
         DVIR_PRE --> EN_ROUTE["Status: En Route (Heavy-Vehicle Navigation)"]
         EN_ROUTE --> ARRIVED["Status: Arrived & Parked"]
-        ARRIVED --> TBM["Toolbox Meeting & Crane Setup"]
-        TBM --> WORKING["Status: Working (HoS Driving/On-Duty Tracked)"]
+        ARRIVED --> CRANE_SETUP["Crane Setup"]
+        CRANE_SETUP --> WORKING["Status: Working (HoS Driving/On-Duty Tracked)"]
         WORKING --> DVIR_POST["Post-Trip DVIR Inspection (Module 3)"]
         DVIR_POST --> COMPLETED["Status: Completed"]
         
@@ -266,18 +265,16 @@ flowchart TD
         REINSPECT -- "Pass" --> RELEASE["Safe Release to Ready for Service"]
     end
 
-    subgraph SharedServices["Shared Platform Services & Safety Governance"]
+    subgraph SharedServices["Shared Platform Services"]
         AUTH["Auth, Spatie RBAC 3 System Users & Scoped Visibility"]
         AUDIT["Versioned Audit Trail & Notifications"]
         TRACK["Live MapLibre Tracking & Outbox Replay"]
         GPT["GPT Dispatch Recommendation Engine"]
-        SAFETY["Statutory Safety: DOLE Rule 1410, TBM, Critical Lift Plans, WSO"]
         SOS["SOS Emergency Response: Floating Jewel, Reverb Broadcast, Escalation"]
     end
 
     FieldExecution --> AUDIT
     FieldExecution --> TRACK
-    FieldExecution --> SAFETY
     FieldExecution --> SOS
     FuelMgmt --> AUDIT
     Maintenance --> AUDIT

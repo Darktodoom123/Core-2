@@ -37,7 +37,7 @@ export const PhotoAttachmentPicker: React.FC<PhotoAttachmentPickerProps> = ({
     onRemoveAttachment,
     maxCount = 4,
     title = 'Attach Photo Evidence',
-    helperText = 'Add photos of defects, serial tags, or site hazards.',
+    helperText = 'Add photos of defects, serial tags, or equipment conditions.',
     testID = 'photo-attachment-picker',
     style,
 }) => {

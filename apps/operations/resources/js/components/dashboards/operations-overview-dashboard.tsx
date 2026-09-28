@@ -410,7 +410,7 @@ function SystemAdminDashboardView({
         };
     }, [gptRecommendations]);
 
-    // Fleet & Safety Governance
+    // Fleet status
     const assetsNeedingAttention = useMemo(() => {
         return assets.filter(
             (a) =>

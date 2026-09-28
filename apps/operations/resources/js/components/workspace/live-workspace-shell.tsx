@@ -58,7 +58,6 @@ const sectionIcons: Record<WorkspaceSection, LucideIcon> = {
     users: Users,
     audit: History,
     sos: ShieldCheck,
-    safety: ShieldAlert,
 };
 
 interface NavGroupDefinition {
@@ -79,9 +78,9 @@ const NAV_GROUPS: NavGroupDefinition[] = [
         sections: ['reports', 'archive'],
     },
     {
-        id: 'safety_system',
-        label: 'Safety & System',
-        sections: ['safety', 'gpt-recommendations', 'users', 'audit'],
+        id: 'system',
+        label: 'System',
+        sections: ['gpt-recommendations', 'users', 'audit'],
     },
 ];
 
@@ -611,7 +610,6 @@ export function LiveWorkspaceShell({
                             ))}
                         </div>
                     </nav>
-
                 </aside>
 
                 <div
@@ -636,10 +634,14 @@ export function LiveWorkspaceShell({
                             onClick={() => setCollapsed((value) => !value)}
                             className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-strong focus-visible:outline-none min-[840px]:flex"
                             aria-label={
-                                collapsed ? 'Expand sidebar' : 'Collapse sidebar'
+                                collapsed
+                                    ? 'Expand sidebar'
+                                    : 'Collapse sidebar'
                             }
                             title={
-                                collapsed ? 'Expand sidebar' : 'Collapse sidebar'
+                                collapsed
+                                    ? 'Expand sidebar'
+                                    : 'Collapse sidebar'
                             }
                             aria-expanded={!collapsed}
                             aria-controls="workspace-navigation"
@@ -863,9 +865,7 @@ function WorkspaceClock() {
             <span className="text-[10px] font-medium text-ink-soft">
                 {dateLabel}
             </span>
-            <span className="text-xs font-semibold text-ink">
-                {timeLabel}
-            </span>
+            <span className="text-xs font-semibold text-ink">{timeLabel}</span>
         </time>
     );
 }

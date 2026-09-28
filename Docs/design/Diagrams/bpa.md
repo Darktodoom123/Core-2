@@ -27,11 +27,11 @@ flowchart LR
     end
 
     subgraph VS3["3. Governance & Activation"]
-        C1[Critical Lift Plan & Manager Approval] --> C2[Asset Safety Lock & Activation]
+        C1[Dispatch Readiness & Manager Approval] --> C2[Asset Safety Lock & Activation]
     end
 
     subgraph VS4["4. Field Execution & Safety"]
-        D1[Pre-Trip DVIR & TBM Sign-Off] --> D2[Navigation, HoS Tracking & Lift Execution]
+        D1[Pre-Trip DVIR] --> D2[Navigation, HoS Tracking & Lift Execution]
     end
 
     subgraph VS5["5. Asset, Fuel & Post-Trip Governance"]
@@ -66,9 +66,6 @@ flowchart LR
 | **5. Fuel Management** | `BP-5.1` | Fuel Request Intake & Verification | Field driver fuel request | Pending Fuel Authorization |
 | | `BP-5.2` | Fuel Approval & Dispense Logging | Pending request review | Verified Fuel Log & Reconciled Cost |
 | | `BP-5.3` | Burn Rate Anomaly Detection | Completed fuel log calculation | Flagged Anomaly & Investigation Alert |
-| **Platform: Statutory Safety** | `BP-6.1` | Toolbox Meeting (TBM) Digital Briefing | Daily shift start on site | Signed Digital TBM Record (DOLE Rule 1410) |
-| | `BP-6.2` | Critical Lift Plan Authorization | Heavy lift >75% / complex rigging | Manager-Approved Lift Plan |
-| | `BP-6.3` | Work Stoppage Order (WSO) Governance | Imminent danger observation | Immediate Dispatch Freeze & Resolution Audit |
 | **Platform: SOS Emergency** | `BP-7.1` | SOS Distress Trigger & Reverb Broadcast | Worker emergency distress | Real-time Alert on `operations.sos` |
 | | `BP-7.2` | Incident Escalation & Structured Resolution | Unacknowledged SOS alert / response | Escalated Alert or Documented Resolution |
 | **Platform: Administration** | `BP-8.1` | User Lifecycle, RBAC & Break-Glass Overrides | SysAdmin configuration / incident | Provisioned Users, Permissions, Audit History |
@@ -112,10 +109,9 @@ sequenceDiagram
         Operator->>Server: Submit Rejection with Mandatory Reason
         Server->>OpsManager: Flag Dispatch for Reassignment
     else Worker Accepts Assignment
-        Operator->>Server: Submit Pre-Trip DVIR 360 Walkaround (BP-6.1)
+        Operator->>Server: Submit Pre-Trip DVIR 360 Walkaround (BP-3.3)
         Operator->>Server: Transition: dispatched -> accepted -> en_route (Heavy Navigation)
-        Operator->>Server: Arrived at Site & Setup Crane (BP-8.1 TBM with Rigger)
-        Rigger->>Operator: Digital Co-Signature on TBM Attendance
+        Operator->>Server: Arrived at Site & Setup Crane
         Operator->>Server: Transition: arrived -> working -> completed (Post-Trip DVIR)
         Server->>DB: Persist Version Increment & Append-Only Audit Event
     end
@@ -176,9 +172,6 @@ The RACI matrix defines role accountability across Core Transaction 2 business p
 | Maintenance Work Order & Safe Release | `BP-3.2` | - | **R / A** | **I** | - | - |
 | Heavy Equipment Certification Check | `BP-4.1 / 4.2` | - | **R / A** | **C** | - | - |
 | Fuel Request & Dispense Verification | `BP-5.1 / 5.2 / 5.3` | - | **A** | **R** | - | - |
-| Toolbox Meeting (TBM) Briefing | `BP-6.1` | - | **A** | **R** | **R** | - |
-| Critical Lift Plan Authorization | `BP-6.2` | **C** | **R / A** | **C** | **C** | - |
-| Work Stoppage Order (WSO) Governance | `BP-6.3` | **I** | **A** | **R** | **R** | - |
 | Field Execution & Status Update | `BP-1.4` | **I** | **I** | **R / A** | **R** | - |
 | SOS Emergency Distress & Response | `BP-7.1 / 7.2` | - | **A** | **R** | **I** | - |
 | System RBAC & User Administration | `BP-8.1` | - | **C** | - | - | **R / A** |

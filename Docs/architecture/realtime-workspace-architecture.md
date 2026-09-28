@@ -46,12 +46,6 @@ Whenever operational resources (jobs, assets, locations, approvals, fuel request
    * **Broadcast Events**:
      - `App\Platform\Safety\Events\SosIncidentChanged` (`incident_id`, `status`, `action`, `timestamp`)
 
-3. **`operations.safety` Channel**:
-   * **Channel Name:** `private-operations.safety`
-   * **Authorization Gate:** Active, verified, non-suspended user holding an operational role (`System Administrator`, `Operations Manager`, `Operator`).
-   * **Broadcast Events**:
-     - Real-time statutory safety updates: hazard notices, critical lift approvals, toolbox meeting cosignings, and stop-work orders.
-
 ---
 
 ## 2. Frontend Integration

@@ -177,7 +177,7 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
             expect(view.getByText('Hours of\nService')).toBeTruthy();
             expect(view.getByText('Vehicle\nInspection')).toBeTruthy();
             expect(view.queryByText('Drive\nRoutes')).toBeNull();
-            expect(view.getByText('Documents')).toBeTruthy();
+            expect(view.getAllByText('Documents').length).toBeGreaterThan(0);
             expect(view.getByText('Machine\nProfile')).toBeTruthy();
             expect(view.getByText('Dispatch')).toBeTruthy();
             expect(view.getByText('Intake & Orders')).toBeTruthy();

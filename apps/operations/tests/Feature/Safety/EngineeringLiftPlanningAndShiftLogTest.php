@@ -10,7 +10,6 @@ use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\PersonnelCredential;
 use App\Platform\Identity\Models\PersonnelProfile;
 use App\Platform\Identity\Models\User;
-use App\Platform\Safety\Actions\CreateCriticalLiftPlan;
 use App\Shared\Assets\Enums\AssetStatus;
 use App\Shared\Assets\Models\OperationalAsset;
 use Database\Seeders\RolePermissionSeeder;
@@ -113,56 +112,6 @@ it('allows assigning a certified rigger to a dispatch job', function (): void {
     expect($job->personnelAssignments()->count())->toBe(1)
         ->and($job->personnelAssignments()->first()->assignment_type)->toBe('rigger')
         ->and($job->personnelAssignments()->first()->user_id)->toBe($rigger->id);
-});
-
-it('calculates gross load weight, deductions, and load moment ton-meters in critical lift plans', function (): void {
-    $operator = User::factory()->create(['name' => 'Operator Carlo', 'is_active' => true]);
-    $operator->syncRoles([RoleName::CraneOperator->value]);
-
-    $action = app(CreateCriticalLiftPlan::class);
-
-    $plan = $action->handle($operator, [
-        'project_site' => 'Makati CBD Tower 3',
-        'rigger_tesda_nc_number' => 'TESDA-NC2-RIG-1029',
-        'net_load_weight_tons' => 12.0,
-        'rigging_weight_tons' => 0.8,
-        'hook_block_weight_tons' => 1.2,
-        'crane_rated_capacity_tons' => 20.0,
-        'boom_length_meters' => 45.0,
-        'working_radius_meters' => 18.0,
-        'ground_bearing_condition' => 'Engineered Steel Plates on Concrete',
-        'weather_wind_speed_kph' => 15.0,
-    ]);
-
-    // Gross load = 12.0 (net) + 0.8 (rigging) + 1.2 (hook block) = 14.0 tons
-    // Load percentage = (14.0 / 20.0) * 100 = 70.0%
-    // Load moment = 14.0 tons * 18.0 m = 252.0 ton-meters
-    expect($plan->gross_load_weight_tons)->toBe(14.0)
-        ->and($plan->net_load_weight_tons)->toBe(12.0)
-        ->and($plan->rigging_weight_tons)->toBe(0.8)
-        ->and($plan->hook_block_weight_tons)->toBe(1.2)
-        ->and($plan->load_percentage_of_capacity)->toBe(70.0)
-        ->and($plan->load_moment_ton_meters)->toBe(252.0)
-        ->and($plan->risk_level)->toBe('routine');
-});
-
-it('rejects critical lift plans exceeding DOLE statutory 95% capacity limit', function (): void {
-    $operator = User::factory()->create(['name' => 'Operator Carlo', 'is_active' => true]);
-    $operator->syncRoles([RoleName::CraneOperator->value]);
-
-    $action = app(CreateCriticalLiftPlan::class);
-
-    expect(fn () => $action->handle($operator, [
-        'project_site' => 'Pasig River Bridge',
-        'rigger_tesda_nc_number' => 'TESDA-NC2-RIG-9900',
-        'net_load_weight_tons' => 19.5,
-        'rigging_weight_tons' => 0.5,
-        'hook_block_weight_tons' => 0.5,
-        'crane_rated_capacity_tons' => 20.0, // Gross = 20.5T / 20T = 102.5%
-        'boom_length_meters' => 30.0,
-        'working_radius_meters' => 10.0,
-        'ground_bearing_condition' => 'Concrete Pad',
-    ]))->toThrow(ValidationException::class);
 });
 
 it('records tower crane shift logs with pre-climb inspection and free-slew verification', function (): void {

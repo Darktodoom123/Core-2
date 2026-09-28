@@ -105,10 +105,10 @@ The ingestion pipeline processes employees according to their operational softwa
 2. **Core-2 Personnel Staging (No Software Account)**:
    - The integration adapter identifies `'Certified Heavy Rigger'` as a non-software operational role.
    - Provisions a [`PersonnelProfile`](../../apps/operations/app/Platform/Identity/Models/PersonnelProfile.php) and attaches statutory [`PersonnelCredential`](../../apps/operations/app/Platform/Identity/Models/PersonnelCredential.php) records (e.g., TESDA Rigger NC II, DOLE-BOSH).
-   - Sets `availability_status = 'available'` for dispatch crew eligibility and critical lift plan assignment.
+   - Sets `availability_status = 'available'` for dispatch crew eligibility.
    - **No `users` record is created, no web session login is provisioned, and no Sanctum mobile token is issued.**
 3. **Operational Execution**:
-   - Operations managers assign Riggers to crane crews and lift plans based on qualifications.
+   - Operations managers assign Riggers to crane crews based on qualifications.
    - On-site lift execution, outrigger checklists, exclusion zone enforcement, and timesheet hours are recorded and signed off via mobile/web by the assigned Operator or Operations Manager.
 
 ---

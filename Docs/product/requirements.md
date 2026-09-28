@@ -13,7 +13,7 @@ Core 2 organizes its operational capabilities into **5 Main Operational Business
 4. **Crane and Equipment Management** — mobile/tower heavy cranes and specialized equipment, certifications, readiness, load capacity verification, pre-use inspections, rigging gear inspections, and safe release.
 5. **Fuel Management** — multi-step fuel requests, independent approvals, verification, burn rate monitoring, anomaly detection, and logging.
 
-*(Note: DVIR inspections, Hours of Service compliance, Emergency SOS, and Statutory Safety Governance operate as sub-features and platform services embedded across these 5 modules and the mobile application).*
+*(Note: DVIR inspections, Hours of Service compliance, and Emergency SOS operate as sub-features and platform services embedded across these 5 modules and the mobile application).*
 
 These 5 main operational engines execute and coordinate the **2 inbound business flows** received from Core 1, plus direct (manual) dispatch created in Core 2:
 - **Field Service Flow**: Client service requests converted into scheduled, dispatched field execution and project plans.
@@ -22,7 +22,7 @@ These 5 main operational engines execute and coordinate the **2 inbound business
 
 Core 2 does not receive or fulfill sale handoffs; the Sales module was removed on 2026-09-25.
 
-Identity & RBAC, live tracking & telemetry, statutory safety governance (DOLE OSHS Rule 1410 & DO 198-18), SOS emergency response, audit trail, notifications, reports & attachments, data exports, and GPT assistance serve as shared cross-cutting platform services. See [Top-level modules](../architecture/modules.md).
+Identity & RBAC, live tracking & telemetry, SOS emergency response, audit trail, notifications, reports & attachments, data exports, and GPT assistance serve as shared cross-cutting platform services. See [Top-level modules](../architecture/modules.md).
 
 Core 1 is the upstream commercial system containing Sales, CRM, Client, Job Order, Rental,
 and Project Management. Core 2 receives two handoff types from Core 1:
@@ -201,15 +201,6 @@ Sanctum token handling, CSRF protection, and password hashing are unchanged.
 - **FR-094 — Implemented:** The system shall calculate real-time fatigue risk scores based on sleep debt and duty duration, alerting operators and managers upon reaching elevated fatigue thresholds.
 - **FR-095 — Implemented:** Duty logs shall support tamper-evident manual edits with mandatory remarks, original value retention, and electronic signature sign-offs.
 
-## Cross-Cutting: Statutory Safety Governance (DOLE OSHS Rule 1410 & DO 198-18)
-
-- **FR-100 — Implemented:** The application shall capture Toolbox Meetings (TBM) prior to daily field operations, including discussion topics, GPS coordinates, crew attendance rosters (Operator, Rigger), and supervisor co-signatures.
-- **FR-101 — Implemented:** Critical Lift Plans shall be required for heavy lifts exceeding 75% crane rated capacity, tandem crane operations, or lifts over active hazards, specifying ground bearing pressure, rigging configurations, wind thresholds, and requiring Operations Manager approval.
-- **FR-102 — Implemented:** Any worker shall be empowered to issue a Work Stoppage Order (WSO) under DOLE DO 198-18 upon detecting imminent danger, which immediately freezes affected dispatches and notifies the Operations Manager.
-- **FR-103 — Implemented:** Safety hazards and near-misses shall be recordable via mobile or web with severity classification (`low`, `medium`, `high`, `critical`), GPS tagging, and photographic attachments.
-- **FR-104 — Implemented:** Real-time safety events (TBM, lift plans, WSO, hazards) shall broadcast immediately across the `operations.safety` Reverb WebSocket channel.
-- **FR-105 — Implemented:** Assignment engines shall verify that Riggers hold active TESDA Crane Rigging NC II certifications and Operators hold valid DOLE Heavy Equipment Operator accreditations before deployment.
-
 ## Cross-Cutting: SOS Emergency Response System
 
 - **FR-110 — Implemented:** Field users shall be able to trigger an SOS emergency distress alert with optional category and automated GPS coordinate capture.
@@ -225,7 +216,6 @@ Sanctum token handling, CSRF protection, and password hashing are unchanged.
 - **FR-121 — Implemented:** Project Plans shall support sequenced milestones and tasks, enforcing predecessor dependency completions before subsequent dispatches can activate.
 - **FR-122 — Implemented:** The allocation engine shall detect equipment and operator scheduling conflicts across overlapping project plans and routine dispatches.
 - **FR-123 — Implemented:** Project plans shall track estimated versus actual operating hours, fuel usage, and labor costs.
-- **FR-124 — Implemented:** Project completion shall generate an integrated closeout dossier combining all linked dispatch tickets, job reports, DVIR logs, and statutory lift plans.
 
 ## Inbound Flow: Rental Operations
 

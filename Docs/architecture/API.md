@@ -390,16 +390,6 @@ The `/api/v1` prefix is composed from module- and platform-owned route files. Al
 - `POST /api/v1/hos/shifts/certify` (`throttle:60,1`): Certify daily shift log and clock out.
 - `GET /api/v1/hos/cycle-history` (`throttle:60,1`): Historical shift and duty log summary.
 
-### Statutory Philippine Safety Governance (`/api/v1/safety`)
-- `GET|POST /api/v1/safety/hazards` (`throttle:safety`): Report site safety hazard with geo-coordinates and severity.
-- `POST /api/v1/safety/hazards/{ticket}/rectify` (`throttle:safety`): Submit rectification evidence.
-- `GET|POST /api/v1/safety/lift-plans` (`throttle:safety`): Submit critical lift plan (>75% capacity, tandem, proximity).
-- `POST /api/v1/safety/lift-plans/{plan}/authorize` (`throttle:safety`): Operations Manager digital lift authorization.
-- `GET|POST /api/v1/safety/toolbox-meetings` (`throttle:safety`): Submit daily pre-lift Toolbox Meeting (TBM).
-- `POST /api/v1/safety/toolbox-meetings/{meeting}/cosign` (`throttle:safety`): Crew member digital cosignature.
-- `GET|POST /api/v1/safety/work-stoppages` (`throttle:safety`): Issue imminent danger work stoppage notice.
-- `POST /api/v1/safety/work-stoppages/{notice}/lift` (`throttle:safety`): Lift work stoppage notice after hazard clearance.
-- `GET /api/v1/safety/metrics` (`throttle:safety`): Real-time safety compliance KPI indicators.
 
 ### Fleet & Equipment Catalogs
 - `GET /api/v1/fleet/assets`, `GET /api/v1/fleet/assets/{operationalAsset}`: Read-only fleet asset specs and readiness.
@@ -436,10 +426,6 @@ The application broadcasts live operational updates via **Laravel Reverb**.
 2. **`operations.sos`**:
    - **Authorization**: User is active, verified, non-suspended, and possesses the `sos.view` permission.
    - **Broadcast Events**: `App\Platform\Safety\Events\SosIncidentChanged`.
-3. **`operations.safety`**:
-   - **Authorization**: User is active, verified, non-suspended, and holds an operational role.
-   - **Broadcast Events**: Real-time statutory safety governance updates (hazard notifications, lift plan authorizations, and work stoppages).
-
 ## Rate Limiting & Resilience Architecture
 
 All endpoints enforce named rate limiters defined in `bootstrap/app.php` and route service providers:
@@ -448,7 +434,6 @@ All endpoints enforce named rate limiters defined in `bootstrap/app.php` and rou
 - `throttle:120,1`: General web operations, planning, and admin endpoints.
 - `throttle:60,1`: Mobile DVIR and Hours of Service endpoints.
 - `throttle:location`: High-frequency location sharing (60 requests/minute).
-- `throttle:safety`: Safety governance actions (30 requests/minute).
 - `throttle:sos`: Emergency distress operations (15 requests/minute).
 - `throttle:gpt`: Advisory generation (10 requests/minute).
 - `throttle:uploads`: Attachment uploads (20 requests/minute).

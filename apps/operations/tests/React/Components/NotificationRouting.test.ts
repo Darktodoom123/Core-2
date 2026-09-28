@@ -18,12 +18,12 @@ function notification(
 }
 
 describe('notification destinations', () => {
-    it('routes general safety notices to Safety Governance', () => {
+    it('routes inspection notices to Fleet & Equipment', () => {
         expect(
             notificationDestination(
                 notification({ event: 'inspection.failed' }),
             ),
-        ).toBe('safety');
+        ).toBe('assets');
     });
 
     it('keeps emergency SOS notices in the SOS response queue', () => {

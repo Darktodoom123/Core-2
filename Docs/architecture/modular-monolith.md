@@ -25,7 +25,6 @@ The Core Transaction 2 Operations service (`apps/operations`) is structured as a
 | Path | Platform Scope |
 | --- | --- |
 | `apps/operations/app/Shared/Assets` | Shared asset registry kernel, inspections, and maintenance persistence |
-| `apps/operations/app/Platform/Safety` | Statutory safety governance (DOLE OSHS Rule 1410 & DO 198-18): Toolbox Meetings (TBM), Critical Lift Plans, Work Stoppage Orders (WSO), Safety Hazards |
 | `apps/operations/app/Platform/Sos` | SOS emergency response system: floating distress jewel, cradle notch, Reverb WebSocket broadcast, responder escalation and resolution |
 | `apps/operations/app/Platform` | Identity, audit, attachments, notifications, reporting, tracking client, GPT, idempotency, and workspace composition |
 

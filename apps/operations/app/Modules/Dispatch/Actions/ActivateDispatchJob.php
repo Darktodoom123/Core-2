@@ -10,8 +10,6 @@ use App\Modules\Dispatch\Planning\Services\ProjectShiftReadiness;
 use App\Modules\Dispatch\Services\DispatchResourceRequirements;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Models\User;
-use App\Platform\Safety\Models\CriticalLiftPlan;
-use App\Platform\Safety\Services\WorkStoppageGate;
 use App\Shared\Assets\Models\OperationalAsset;
 use App\Shared\Assets\Services\OperationalAssetAvailability;
 use Illuminate\Support\Facades\DB;
@@ -24,7 +22,6 @@ final class ActivateDispatchJob
         private RecordAuditEvent $audit,
         private DispatchResourceEligibility $eligibility,
         private OperationalAssetAvailability $availability,
-        private WorkStoppageGate $workStoppageGate,
         private DispatchResourceRequirements $resourceRequirements,
     ) {}
 
@@ -55,24 +52,6 @@ final class ActivateDispatchJob
                 DispatchStatus::Scheduled,
             ], true)) {
                 throw ValidationException::withMessages(['status' => 'Only a draft, pending approval, or scheduled dispatch can be activated.']);
-            }
-
-            // 1. Statutory DOLE Work Stoppage Gate
-            $this->workStoppageGate->assertDispatchMayProgress($job);
-
-            // 2. Critical Lift Safety Officer Authorization Gate
-            $criticalLift = CriticalLiftPlan::query()
-                ->where('dispatch_job_id', $job->id)
-                ->orWhere(function ($q) use ($job) {
-                    $q->where('project_site', $job->site)->where('risk_level', 'critical');
-                })
-                ->latest('id')
-                ->first();
-
-            if ($criticalLift !== null && $criticalLift->status !== 'approved') {
-                throw ValidationException::withMessages([
-                    'safety' => 'Dispatch activation blocked: Critical Lift Permit requires digital authorization from a Safety Officer.',
-                ]);
             }
 
             $personnelAssignments = $job->personnelAssignments()

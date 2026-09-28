@@ -557,7 +557,7 @@ export function notificationDestination(
     }
 
     if (category === 'safety') {
-        return 'safety';
+        return 'assets';
     }
 
     return null;

@@ -80,8 +80,6 @@ class AppServiceProvider extends ServiceProvider
         // Handover PINs are four digits; claims also cancel after five wrong PINs.
         RateLimiter::for('handover-claims', static fn (Request $request): Limit => Limit::perMinute(10)->by($request->user()?->id ?: $request->ip() ?: 'unknown'));
 
-        RateLimiter::for('safety', static fn (Request $request): Limit => Limit::perMinute(60)->by($request->user()?->id ?: $request->ip() ?: 'unknown'));
-
         RateLimiter::for('weather', static fn (Request $request): Limit => Limit::perMinute(60)->by($request->user()?->id ?: $request->ip() ?: 'unknown'));
 
         RateLimiter::for('sos', static fn (Request $request): Limit => Limit::perMinute(12)->by(sprintf(

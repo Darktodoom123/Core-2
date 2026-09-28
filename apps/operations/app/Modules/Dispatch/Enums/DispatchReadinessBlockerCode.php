@@ -26,12 +26,10 @@ enum DispatchReadinessBlockerCode: string
     case PersonnelConflict = 'personnel_conflict';
     case AssetConflict = 'asset_conflict';
     case SafetyOfficerPermitRequired = 'safety_officer_permit_required';
-    case ActiveWorkStoppageOrder = 'active_work_stoppage_order';
 
     public function order(): int
     {
         return match ($this) {
-            self::ActiveWorkStoppageOrder => 5,
             self::SafetyOfficerPermitRequired => 8,
             self::MissingSchedule => 10,
             self::MissingMandatoryAssignment => 20,

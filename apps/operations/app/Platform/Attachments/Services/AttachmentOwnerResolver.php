@@ -8,7 +8,6 @@ use App\Modules\Fuel\Models\FuelLog;
 use App\Modules\Fuel\Models\FuelRequest;
 use App\Platform\Identity\Models\PersonnelCredential;
 use App\Platform\Reporting\Models\JobReport;
-use App\Platform\Safety\Models\SiteHazardTicket;
 use App\Shared\Assets\Models\OperationalAsset;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -38,9 +37,6 @@ final class AttachmentOwnerResolver
         'asset_document' => AssetDocument::class,
         'AssetDocument' => AssetDocument::class,
         'asset_documents' => AssetDocument::class,
-        'site_hazard_ticket' => SiteHazardTicket::class,
-        'SiteHazardTicket' => SiteHazardTicket::class,
-        'site_hazard_tickets' => SiteHazardTicket::class,
     ];
 
     /** @return list<string> */

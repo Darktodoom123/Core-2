@@ -21,7 +21,7 @@ The operational core of Core Transaction 2 is built around **5 Main Operational 
 4. **Crane and Equipment Management** (`apps/operations/app/Modules/CraneEquipment`, including heavy crane safety, rigging gear inspections, and load verification)
 5. **Fuel Management** (`apps/operations/app/Modules/Fuel`, tracking fuel bowsers, on-site storage, and asset consumption)
 
-*(Note: DVIR inspections, Hours of Service compliance, Emergency SOS, and Statutory Safety Governance operate as sub-features and platform services embedded across these 5 modules and the mobile application).*
+*(Note: DVIR inspections, Hours of Service compliance, and Emergency SOS operate as sub-features and platform services embedded across these 5 modules and the mobile application).*
 
 These operational modules execute and coordinate work from **2 upstream inbound handoff types** originating from Core 1, plus direct (manual) dispatch created inside Core 2:
 - **Field Service Flow**: Client service requests converted into scheduled, dispatched field lifts.
@@ -32,12 +32,12 @@ Core 2 does not perform equipment sales fulfillment; the former Sales module and
 
 Authentication and RBAC enforce **3 canonical system users**:
 - `System Administrator` (`system_administrator`) — Platform configuration, user lifecycle, role-based access control, master data management, and system auditing.
-- `Operations Manager` (`operations_manager` — consolidating supervisory dispatch desk, resource assignment, schedule approvals, fleet/crane oversight, fuel logistics, statutory safety governance, and emergency response)
+- `Operations Manager` (`operations_manager` — consolidating supervisory dispatch desk, resource assignment, schedule approvals, fleet/crane oversight, fuel logistics, emergency response)
 - `Operator` (`operator` / `crane_operator` — field mobile application user executing dispatch trips, heavy crane lift operations, equipment telemetry, DVIR pre/post-trip safety inspections, HoS status recording, and SOS emergency triggers)
 
 *(Workforce field personnel such as Riggers are non-software workforce crew tracked via `PersonnelProfile` and credentials without direct system login accounts).*
 
-Statutory Philippine Safety Governance (DOLE/OSHC hazard rectification, digital lift plans, toolbox meetings, work stoppages) and SOS Emergency Safety, personnel administration (`PersonnelProfile`, `PersonnelCredential`), audit, tracking, reports, attachments, notifications, and proactive GPT assistance are shared platform services (`apps/operations/app/Platform`).
+SOS Emergency Safety, personnel administration (`PersonnelProfile`, `PersonnelCredential`), audit, tracking, reports, attachments, notifications, and proactive GPT assistance are shared platform services (`apps/operations/app/Platform`).
 The detailed ownership map is maintained in [Top-level modules](./modules.md).
 
 Core 1 owns Sales, CRM, Client, Job Order, Rental, and Project Management. Core
@@ -116,7 +116,7 @@ flowchart LR
 - The routed tracking surface uses server-fed location view models, MapLibre GL JS with a configurable basemap, freshness filters, a synchronized list, measured polling, and a browser location outbox.
 - The dispatch desk incorporates **Dispatch Project Planning** (multi-phase timelines, equipment reservations, and shift coverage) and **Proactive GPT Advisories** with drawer telemetry and one-click adoption.
 - Full-stack error handling (`resources/js/pages/error.tsx`) delivers branded, accessible error experiences with unique incident Reference IDs across HTTP 401, 403, 404, 419, 429, 500, and 503.
-- Laravel Echo connects to **Laravel Reverb** for zero-latency live workspace (`operations.workspace`), SOS incident updates (`operations.sos`), and safety governance broadcasts (`operations.safety`).
+- Laravel Echo connects to **Laravel Reverb** for zero-latency live workspace (`operations.workspace`) and SOS incident updates (`operations.sos`).
 - `packages/field-mobile` provides the native React Native / Expo application with:
   - **Tactical Cockpit HUD**: Daylight and high-contrast Tactical Dark HUD mode tokens.
   - **Hours of Service (HoS) Cockpit**: Real-time shift timers, duty cycle tracking, and safeguard modals.
@@ -140,7 +140,6 @@ Web and canonical mobile authentication look up a normalized unique username; em
   - Field dispatch jobs (`/api/v1/dispatch-jobs/*`) & handover claims (`/api/v1/dispatch-jobs/{job}/handover/*`)
   - Driver Vehicle Inspection Reports (`/api/v1/dvir/inspections/*`)
   - Hours of Service (`/api/v1/hos/*`)
-  - Safety governance (`/api/v1/safety/*`: hazards, lift plans, toolbox meetings, work stoppages)
   - SOS emergency distress (`/api/v1/sos-incidents/*`, `/api/v1/sos-configuration`)
   - Location tracking & telemetry (`/api/v1/locations`, `/api/v1/dispatch/jobs/{id}/weather*`)
 - **Granular Rate Limiting**: Dedicated named rate limiters protect operational surfaces:
@@ -149,7 +148,6 @@ Web and canonical mobile authentication look up a normalized unique username; em
   - `throttle:120,1` for general operations and admin routes
   - `throttle:gpt` (10/min) for AI advisory generation
   - `throttle:location` (60/min) for GPS telemetry pings
-  - `throttle:safety` (30/min) for safety governance actions
   - `throttle:sos` (15/min) for emergency distress broadcasts
   - `throttle:uploads` (20/min) and `throttle:exports` (10/min) for attachments and report exports
   - On HTTP 429, the `Retry-After` header is emitted and parsed by mobile clients to back off outbox replay automatically.
@@ -217,7 +215,7 @@ vehicle inspection checklists and defect lockouts within Fleet & Equipment opera
 Upstream commercial business flows from Core 1 (Service and Rental) feed into this operational core, alongside direct dispatch.
 Rental has backend operational flow handlers in `apps/operations/app/Modules/Rental` to coordinate
 reservation, checkout/return condition diffs, and prevent asset double-booking. Core 1 customer, CRM,
-and financial billing interfaces are outside this architecture. Identity, safety governance, SOS emergency response,
+and financial billing interfaces are outside this architecture. Identity, SOS emergency response,
 records, notifications, reports, attachments, and proactive GPT remain shared platform services in Operations. High-frequency GPS telemetry ingestion and caching are isolated into the dedicated Tracking microservice (`apps/tracking`).
 
 ### Adopt Plan A (2-Service Model: Operations Monolith & BFF + Tracking Microservice)

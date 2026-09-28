@@ -265,9 +265,6 @@ final class LocalDevelopmentSeeder extends Seeder
                     ->where('operational_asset_id', $legacyId)
                     ->update(['operational_asset_id' => $replacementId]);
 
-                DB::table('critical_lift_plans')
-                    ->where('operational_asset_id', $legacyId)
-                    ->update(['operational_asset_id' => $replacementId]);
             }
 
             OperationalAsset::withTrashed()
@@ -303,7 +300,6 @@ final class LocalDevelopmentSeeder extends Seeder
                 DB::table('dispatch_asset_assignments')->where('assigned_by', $user->id)->update(['assigned_by' => $replacementId]);
                 DB::table('toolbox_meetings')->where('safety_officer_id', $user->id)->update(['safety_officer_id' => $replacementId]);
                 DB::table('toolbox_meetings')->where('conductor_id', $user->id)->update(['conductor_id' => $replacementId]);
-                DB::table('critical_lift_plans')->where('foreman_id', $user->id)->update(['foreman_id' => $replacementId]);
                 DB::table('site_hazard_tickets')->where('reporter_id', $user->id)->update(['reporter_id' => $replacementId]);
                 DB::table('work_stoppage_notices')->where('issued_by', $user->id)->update(['issued_by' => $replacementId]);
                 DB::table('work_stoppage_notices')->where('lifted_by', $user->id)->update(['lifted_by' => $replacementId]);

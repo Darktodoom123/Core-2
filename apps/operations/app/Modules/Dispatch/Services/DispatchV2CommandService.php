@@ -21,7 +21,6 @@ use App\Modules\Dispatch\Planning\Services\ProjectShiftReadiness;
 use App\Modules\Dispatch\Queries\DispatchReadinessEvaluator;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
-use App\Platform\Safety\Services\WorkStoppageGate;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -34,7 +33,6 @@ final class DispatchV2CommandService
         private readonly DispatchReadinessEvaluator $readiness,
         private readonly DispatchEmergencyOverrideCommandService $overrides,
         private readonly DispatchPlanMateriality $materiality,
-        private readonly WorkStoppageGate $workStoppageGate,
         private readonly DispatchPreTripGate $preTripGate,
     ) {}
 
@@ -485,7 +483,6 @@ final class DispatchV2CommandService
                 if ($lockedAttempt->legacy_dispatch_job_id !== null) {
                     $legacyJob = DispatchJob::query()->find($lockedAttempt->legacy_dispatch_job_id);
                     if ($legacyJob !== null) {
-                        $this->workStoppageGate->assertDispatchMayProgress($legacyJob);
                         if ($next === DispatchAttemptStatus::EnRoute) {
                             $missing = $this->preTripGate->missingAssetCodes($legacyJob);
                             if ($missing !== []) {

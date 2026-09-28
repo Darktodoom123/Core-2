@@ -503,13 +503,6 @@ export function isCommandDiscardable(
         };
     }
 
-    if (command.type === 'issue_work_stoppage') {
-        return {
-            canDiscard: false,
-            reason: 'A stop-work order must be delivered or reported directly to the Operations Manager.',
-        };
-    }
-
     const payload = (command.payload || {}) as Record<string, unknown>;
 
     // Safety DVIR inspection with critical defects / lockout cannot be discarded

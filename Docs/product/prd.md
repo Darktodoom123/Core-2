@@ -35,7 +35,7 @@ The product supports **3 canonical system users**:
 
 *(Workforce field personnel such as Riggers are non-software workforce crew tracked via `PersonnelProfile` and credentials without direct system login accounts).*
 
-Following role consolidation, supervisory safety oversight, incident response, and lift authorization are unified into `Operations Manager`, while field checklists, hazard reporting, DVIR inspections, and TBM submissions are performed by the `Operator`. Riggers are maintained as employee records (`PersonnelProfile` and `PersonnelCredential`) for dispatch scheduling, DOLE/TESDA certification compliance, and critical lift planning, but do not hold software user accounts.
+Following role consolidation, incident response is handled by the `Operations Manager`, while DVIR inspections are performed by the `Operator`. Riggers are maintained as employee records (`PersonnelProfile` and `PersonnelCredential`) for dispatch scheduling, DOLE/TESDA certification compliance, but do not hold software user accounts.
 
 The operational core is built upon **5 Main Operational Business Modules**:
 1. **Dispatch Job and Scheduling (Real-Time Activation)** — Job intake, route planning, shift scheduling, real-time activation, and multi-phase project planning.
@@ -44,13 +44,13 @@ The operational core is built upon **5 Main Operational Business Modules**:
 4. **Crane and Equipment Management** — Heavy cranes, boom extensions, rigging gear, load capacity verification, and crane safety compliance.
 5. **Fuel Management** — On-site tank levels, mobile fuel bowser replenishment, fuel logs, and consumption analytics.
 
-*(Note: DVIR inspections, Hours of Service compliance, Emergency SOS, and Statutory Safety Governance operate as sub-features and platform services embedded across these 5 modules and the mobile application).*
+*(Note: DVIR inspections, Hours of Service compliance, and Emergency SOS operate as sub-features and platform services embedded across these 5 modules and the mobile application).*
 
 These 5 operational modules execute and govern the **two inbound business transaction flows** received from Core 1, plus direct (manual) dispatch:
 - **Field Service Flow**: Field service requests converted into scheduled, staffed, and executed dispatches and project plans.
 - **Rental Flow**: Equipment rental reservations, pre-checkout condition inspections, operator assignments, active rental deployment, and return check-ins.
 
-Identity & RBAC, live tracking & telemetry, statutory safety governance (DOLE OSHS Rule 1410 & DO 198-18), SOS emergency response, audit trail, notifications, reports & attachments, data exports, and GPT assistance serve as shared cross-cutting platform services. Real-time updates are broadcast across all active clients using Laravel Reverb WebSockets.
+Identity & RBAC, live tracking & telemetry, SOS emergency response, audit trail, notifications, reports & attachments, data exports, and GPT assistance serve as shared cross-cutting platform services. Real-time updates are broadcast across all active clients using Laravel Reverb WebSockets.
 
 ## 2. Problem
 
@@ -95,15 +95,15 @@ Governs the platform configuration, Core HR / Workforce Management sync pipeline
 
 ### 2. Operations Manager (`operations_manager`)
 
-Central operational, safety governance, and dispatch authority for Alibaton. Reviews work received from Core 1, schedules dispatches and structured project plans, verifies multi-crane resource allocations, assigns qualified personnel and safe assets, activates routine work, independently decides exceptional approvals, oversees live operations, manages SOS incidents, approves/rejects fuel requests, reviews DVIR defects and links work orders, authorizes Critical Lift Plans, countersigns Toolbox Meetings (TBM), and oversees Work Stoppage Order (WSO) investigations and resolutions.
+Central operational and dispatch authority for Alibaton. Reviews work received from Core 1, schedules dispatches and structured project plans, verifies multi-crane resource allocations, assigns qualified personnel and safe assets, activates routine work, independently decides exceptional approvals, oversees live operations, manages SOS incidents, approves/rejects fuel requests, reviews DVIR defects and links work orders.
 
 ### 3. Operator (`operator` / `crane_operator`)
 
-Field personnel operating heavy equipment and transport assets. Operates via the native field mobile app (Tactical Cockpit HUD with day/night modes, turn-by-turn in-cab navigation, monotonic job milestone progression, 4-angle walkaround DVIR pre/post-trip photo tagging, Hours of Service [HoS] duty status logging and fatigue tracking, DOLE TBM submission, safety hazard reporting, 1-tap floating SOS distress jewel, and fuel request logging). Operators see only their assigned work and cannot discover other workers' assignments.
+Field personnel operating heavy equipment and transport assets. Operates via the native field mobile app (Tactical Cockpit HUD with day/night modes, turn-by-turn in-cab navigation, monotonic job milestone progression, 4-angle walkaround DVIR pre/post-trip photo tagging, Hours of Service [HoS] duty status logging and fatigue tracking, 1-tap floating SOS distress jewel, and fuel request logging). Operators see only their assigned work and cannot discover other workers' assignments.
 
 Heavy equipment and crane journeys show approved access routes, site staging details, and turn-by-turn guidance. The app enforces an explicit Drive mode versus Crane setup/operation mode to ensure safe field execution.
 
-*(Note: Workforce field personnel such as Riggers are non-software workforce crew tracked via [`PersonnelProfile`](../../apps/operations/app/Platform/Identity/Models/PersonnelProfile.php) and statutory credentials [e.g. TESDA Crane Rigging NC II] for crew eligibility and lift plan assignment, but do not possess software login accounts).*
+*(Note: Workforce field personnel such as Riggers are non-software workforce crew tracked via [`PersonnelProfile`](../../apps/operations/app/Platform/Identity/Models/PersonnelProfile.php) and statutory credentials [e.g. TESDA Crane Rigging NC II] for crew eligibility, but do not possess software login accounts).*
 
 ## 6. Core product experience
 
@@ -188,8 +188,7 @@ The operational capability set follows the **5 Main Operational Business Modules
 Core 1 is the upstream commercial source that feeds two business transaction flows into Core 2:
 Service and Rental transactions. Rental operations are supported via backend
 operational flow handlers in `apps/operations/app/Modules/Rental` to coordinate availability
-and prevent resource collisions with the 5 main operational modules. Statutory safety governance
-(DOLE OSHS Rule 1410 & DO 198-18) and SOS emergency response operate as cross-cutting platform foundations.
+and prevent resource collisions with the 5 main operational modules. SOS emergency response operates as a cross-cutting platform service.
 Building Core 1 commercial interfaces is not a Core 2 roadmap item. See [Core 1 involvement in
 Core 2](../README.md) and [Alibaton Business Context and CT2 Scope](./alibaton-business-scope.md).
 

@@ -522,7 +522,7 @@ function OperatorSurface({
         const safetyItems = [
             'Outriggers and ground conditions checked',
             'Wire rope and hook inspected',
-            'Load chart matches lift plan',
+            'Load chart matches planned load',
             'Rigging crew briefing completed',
             'Exclusion zone established',
             'Emergency stop tested',

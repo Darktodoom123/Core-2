@@ -119,7 +119,6 @@ Core Transaction 2 is structured as a two-service monorepo:
 - **Platform Services (`apps/operations/app/Platform/`)**:
   - `Identity/`: Authentication (normalized username-first), Spatie RBAC enforcing the **3 canonical system users** (`System Administrator`, `Operations Manager`, `Operator`), user status management, `PersonnelProfile`, `PersonnelCredential` (tracking enterprise operational employees, credentials, and DOLE/TESDA qualifications, including non-software field personnel like Riggers), and upstream Core HR / Workforce Management adapters.
   - `Safety/`:
-    - **Statutory Safety Governance** (`SafetyGovernanceApiController`): DOLE/OSHC safety tickets (`safety/hazards`, `safety/lift-plans`, `safety/toolbox-meetings`, `safety/work-stoppages`, `safety/metrics`).
     - **SOS Emergency Response System** (`SosResponderController`, `SosConfigurationController`, `Api/V1/SosIncidentController`, Models: `SosIncident`, `SosIncidentRecipient`, `SosEmergencyContact`, `SosDeliveryAttempt`, Event: `SosIncidentChanged`, Jobs: `DeliverSosEscalationJob`, `SweepSosEscalationsJob`).
   - `Tracking/`: `TrackingClientInterface`, `HttpTrackingClient`, `FakeTrackingClient`, `DatabaseTrackingClient`, `LocationController`, `LocationUpdateController`. Serves as BFF proxy and integration adapter to the Tracking microservice.
   - `Weather/`: `LocationWeatherController`, `LocationWeatherService` (`/api/v1/telemetry/weather`). External Tomorrow.io weather & masthead wind telemetry adapter.

@@ -1,7 +1,6 @@
 import {
     ExpoPayloadHasher,
     MemoryOutboxRepository,
-    canonicalJson,
 } from '../storage/outboxRepository';
 import type {
     OutboxRepository,
@@ -27,8 +26,6 @@ import type {
     HosStartCommandPayload,
     RentalHandoverCommandPayload,
     ReportDelayPayload,
-    SafetyHazardCommandPayload,
-    WorkStoppageCommandPayload,
 } from '../types/index';
 import type { FieldApiClient, LocationBatchResult } from './apiClient';
 import { ApiClientError } from './apiClient';
@@ -521,60 +518,6 @@ export class CommandOutboxManager {
                     baseTime + this.sosRetryWindowMs,
                 ).toISOString(),
             },
-        );
-    }
-
-    public async enqueueReportSafetyHazard(
-        payload: SafetyHazardCommandPayload,
-    ): Promise<OutboxCommand> {
-        const payloadForDedupe = { ...payload };
-        delete payloadForDedupe.photo_command_ids;
-        const normalizedPayload = canonicalJson(payloadForDedupe);
-        const existing = this.getCommands().find((command) => {
-            if (
-                command.type !== 'report_safety_hazard' ||
-                command.state === 'completed'
-            ) {
-                return false;
-            }
-
-            const existingPayload = { ...command.payload };
-            delete existingPayload.photo_command_ids;
-
-            return canonicalJson(existingPayload) === normalizedPayload;
-        });
-
-        if (existing) {
-            return existing;
-        }
-
-        const commandPayload = {
-            ...payload,
-            photo_command_ids:
-                payload.photo_command_ids ??
-                (await Promise.all(
-                    (payload.photos ?? []).map(() => createCommandId()),
-                )),
-        };
-
-        return this.enqueue(
-            'report_safety_hazard',
-            null,
-            null,
-            commandPayload as unknown as Record<string, unknown>,
-        );
-    }
-
-    public enqueueIssueWorkStoppage(
-        payload: WorkStoppageCommandPayload,
-    ): Promise<OutboxCommand> {
-        return this.enqueue(
-            'issue_work_stoppage',
-            null,
-            null,
-            payload as unknown as Record<string, unknown>,
-            null,
-            { priority: 'emergency' },
         );
     }
 
@@ -1073,12 +1016,6 @@ export class CommandOutboxManager {
 
         if (command.type === 'activate_sos' && command.state !== 'expired') {
             throw new Error('Active emergency SOS cannot be discarded.');
-        }
-
-        if (command.type === 'issue_work_stoppage') {
-            throw new Error(
-                'A stop-work order cannot be discarded locally. Sync it or contact the Operations Manager directly.',
-            );
         }
 
         if (command.state !== 'completed') {
@@ -1629,16 +1566,6 @@ export class CommandOutboxManager {
                     command.payload as unknown as ActivateSosIncidentPayload,
                     command.id,
                 );
-            } else if (command.type === 'report_safety_hazard') {
-                response = await apiClient.reportSafetyHazard(
-                    command.payload as unknown as SafetyHazardCommandPayload,
-                    command.id,
-                );
-            } else if (command.type === 'issue_work_stoppage') {
-                response = await apiClient.issueWorkStoppage(
-                    command.payload as unknown as WorkStoppageCommandPayload,
-                    command.id,
-                );
             } else if (command.type === 'submit_job_report') {
                 response = await apiClient.submitJobReport(
                     command.payload as unknown as JobReportCommandPayload,
@@ -1713,6 +1640,17 @@ export class CommandOutboxManager {
                     payload.details,
                     payload.receipt,
                     command.id,
+                );
+            }
+
+            if (
+                command.type === 'report_safety_hazard' ||
+                command.type === 'issue_work_stoppage'
+            ) {
+                throw new ApiClientError(
+                    'Safety reporting is no longer available in Core-2. Contact your Operations Manager about this unsent record.',
+                    422,
+                    { errorCode: 'RETIRED_SAFETY_COMMAND' },
                 );
             }
 

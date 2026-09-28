@@ -27,9 +27,7 @@ use App\Platform\Notifications\Models\Notification;
 use App\Platform\Notifications\Policies\NotificationPolicy;
 use App\Platform\Reporting\Models\JobReport;
 use App\Platform\Reporting\Policies\JobReportPolicy;
-use App\Platform\Safety\Models\SiteHazardTicket;
 use App\Platform\Safety\Models\SosIncident;
-use App\Platform\Safety\Policies\SiteHazardTicketPolicy;
 use App\Platform\Storage\Contracts\StorageFallbackServiceInterface;
 use App\Platform\Storage\Services\StorageFallbackService;
 use App\Platform\Tracking\Models\LocationUpdate;
@@ -68,7 +66,6 @@ final class PlatformServiceProvider extends ServiceProvider
         Gate::policy(GptRecommendation::class, GptRecommendationPolicy::class);
         Gate::policy(JobReport::class, JobReportPolicy::class);
         Gate::policy(Notification::class, NotificationPolicy::class);
-        Gate::policy(SiteHazardTicket::class, SiteHazardTicketPolicy::class);
 
         DispatchJob::observe(WorkspaceResourceObserver::class);
         DispatchAssetAssignment::observe(WorkspaceResourceObserver::class);

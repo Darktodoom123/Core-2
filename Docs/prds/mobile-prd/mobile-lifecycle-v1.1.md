@@ -168,7 +168,6 @@ Status roles map to colors in [Docs/design/mobile.md](../../design/mobile.md#tel
     - A finish time is shown only when the server recorded one; otherwise the card shows the scheduled date, labelled as such.
 - **DVIR:** History lists server inspections from the last 30 days. It starts empty, never shows sample records, and marks an inspection saved on the phone as _Saved on this phone_ until the server returns it.
 - **Fuel:** Requests read **Ready to refuel · In progress · Finished**, where finished means `logged`, `rejected` or `withdrawn`.
-- **Safety:** **Your reports** (`GET /api/v1/safety/my-reports`) shows the operator's own hazard reports as _Open_ or _Fixed_ and their stop-work orders as _Stop-work active_ or _Lifted_, from the last 30 days.
 - **Failure states:** A history list that fails to load says so and offers a retry. It never shows an empty state that implies there is no history.
 - **Out of scope for the phone:** SOS incident history stays on the web. Rental and equipment handover records are reviewed on the web.
 
@@ -254,6 +253,6 @@ For transit operations involving lowbed/flatbed units (`TRK-202`) carrying crane
 
 ### 5.3. Supported Shift Profiles
 
-1. **Day Shift (Standard Site Work):** `07:00 AM – 05:00 PM` (10 hours total: includes toolbox meeting, pre-trip DVIR, and 1-hour lunch).
+1. **Day Shift (Standard Site Work):** `07:00 AM – 05:00 PM` (10 hours total: includes pre-trip DVIR and 1-hour lunch).
 2. **Night Shift (Concrete Pour / Steel Erection):** `08:00 PM – 05:00 AM` (Triggers NSD pay rules).
 3. **24/7 Site Rotation (Two-Shift Split):** `07:00 AM – 07:00 PM` / `07:00 PM – 07:00 AM` (Requires the on-site hot-seating handover flow).

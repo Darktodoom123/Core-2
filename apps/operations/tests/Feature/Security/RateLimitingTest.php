@@ -116,27 +116,6 @@ it('throttles password reset submissions after 5 attempts', function (): void {
     $response->assertStatus(429);
 });
 
-it('throttles safety api endpoints after 60 requests per minute', function (): void {
-    /** @var User $user */
-    $user = User::factory()->create(['is_active' => true]);
-    $user->syncRoles([RoleName::OperationsManager->value]);
-    $token = $user->createToken('Safety Device')->plainTextToken;
-
-    for ($i = 0; $i < 60; $i++) {
-        $this->withToken($token)
-            ->getJson('/api/v1/safety/hazards')
-            ->assertOk();
-    }
-
-    $response = $this->withToken($token)
-        ->getJson('/api/v1/safety/hazards');
-
-    $response->assertStatus(429);
-    $response->assertJson([
-        'error' => 'rate_limited',
-    ]);
-});
-
 it('decouples weather endpoint rate limiting from location telemetry', function (): void {
     /** @var User $user */
     $user = User::factory()->create(['is_active' => true]);

@@ -132,8 +132,7 @@ test.describe('notification center E2E workflow', () => {
             .getByRole('button', { name: /Safety & Inspection Alert/ })
             .click();
 
-        await expect(page).toHaveURL(/view=safety/, { timeout: 45_000 });
-        await expect(page.locator('#safety-governance-title')).toBeVisible();
+        await expect(page).toHaveURL(/view=assets/, { timeout: 45_000 });
 
         const response = await page.request.get('/operations/notifications');
         expect(response.ok()).toBeTruthy();

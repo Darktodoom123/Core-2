@@ -933,11 +933,6 @@ final class OperationsWorkspaceViewModel
                 ],
             ],
             [
-                'id' => 'safety',
-                'label' => 'Safety governance',
-                'permissions' => [PermissionName::SafetyGovernanceView],
-            ],
-            [
                 'id' => 'archive',
                 'label' => 'Archived dispatches',
                 'permissions' => [
@@ -1017,13 +1012,6 @@ final class OperationsWorkspaceViewModel
             'restore_dispatch' => $user->can(PermissionName::ArchiveManage->value),
             'view_sos' => $user->can('sos.view'),
             'respond_sos' => $user->can('sos.respond'),
-            'safety_governance_view' => $user->can(PermissionName::SafetyGovernanceView->value),
-            'safety_tbm_cosign' => $user->can(PermissionName::SafetyTbmCoSign->value),
-            'safety_lift_plan_approve' => $user->can(PermissionName::SafetyLiftPlanApprove->value),
-            'safety_hazard_report' => $user->can(PermissionName::SafetyHazardReport->value),
-            'safety_hazard_rectify' => $user->can(PermissionName::SafetyHazardRectify->value),
-            'safety_work_stoppage_issue' => $user->can(PermissionName::SafetyWorkStoppageIssue->value),
-            'safety_work_stoppage_lift' => $user->can(PermissionName::SafetyWorkStoppageLift->value),
             'manage_users' => $user->can(PermissionName::UsersManage->value),
             'view_audit' => $user->can(PermissionName::AuditView->value),
         ];

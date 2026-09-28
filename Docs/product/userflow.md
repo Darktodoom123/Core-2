@@ -13,7 +13,7 @@
 
 Failure paths include invalid credentials, throttling, suspension, and unverified email.
 
-The operational journeys below execute across the **5 Main Operational Business Modules** (1. Dispatch Job and Scheduling [Real-Time Activation], 2. Assign Driver/Operator and Equipment, 3. Fleet Management, 4. Crane and Equipment Management, 5. Fuel Management) and govern the **2 inbound business flows** (Service and Rental) plus direct dispatch. DVIR, HoS, emergency SOS, statutory safety governance, and GPT advisories operate as integrated sub-features and platform services.
+The operational journeys below execute across the **5 Main Operational Business Modules** (1. Dispatch Job and Scheduling [Real-Time Activation], 2. Assign Driver/Operator and Equipment, 3. Fleet Management, 4. Crane and Equipment Management, 5. Fuel Management) and govern the **2 inbound business flows** (Service and Rental) plus direct dispatch. DVIR, HoS, emergency SOS, and GPT advisories operate as integrated sub-features and platform services.
 
 Core 1 is the upstream source for customer, commercial, job-order, rental, and
 project context. Core 2 receives two handoff types from Core 1—service and
@@ -321,26 +321,7 @@ flowchart LR
 4. **Rest Break Logging**: Operator logs `on_break` periods during the shift for fatigue mitigation.
 5. **Log Certification & Edits**: Operator electronically signs duty logs (`operator_duty_logs`); any manual adjustments require a mandatory reason and are logged to an immutable audit trail.
 
-## 12. Statutory Safety Governance (DOLE OSHS Rule 1410 & DO 198-18)
-
-1. **Toolbox Meeting (TBM)**:
-   - Before daily operations, Operator conducts a site briefing.
-   - Operator records topics discussed, hazards identified, and site GPS coordinates.
-   - Rigger and other crew members sign digitally on the mobile device.
-   - Operations Manager reviews and countersigns the TBM in the web workspace.
-2. **Critical Lift Plan Authorization**:
-   - For lifts > 75% rated crane capacity, tandem lifts, or lifts over structures, Operations Manager creates or reviews a Critical Lift Plan.
-   - Ground bearing capacity, crane boom configuration, rigging tackle, and maximum wind speed limits are verified.
-   - The plan requires managerial digital authorization before field lifting can proceed.
-3. **Work Stoppage Order (WSO)**:
-   - Any worker observing imminent danger (e.g. soil shifting, high winds, crane instability) invokes a WSO under DOLE DO 198-18.
-   - The system immediately halts field dispatches on site and broadcasts an emergency alert via Reverb.
-   - The Operations Manager conducts an investigation and must digitally certify hazards resolved before lifting the stoppage.
-4. **Safety Hazard Reporting**:
-   - Field personnel submit near-miss or hazard reports with severity rating (`low`, `medium`, `high`, `critical`), GPS, and photos.
-   - Operations Manager assigns corrective actions and tracks resolution status.
-
-## 13. SOS Emergency Response System
+## 12. SOS Emergency Response System
 
 ```mermaid
 flowchart TD
@@ -362,7 +343,7 @@ flowchart TD
 4. **Escalation Sweep**: If not acknowledged within the escalation threshold, automated scheduler escalates the alert to senior management.
 5. **Resolution**: Responders coordinate assistance, mark the status as resolved using a valid code (`all_clear`, `assistance_rendered`, `evacuated`, `medical_attended`, `false_alarm`), and record detailed notes.
 
-## 14. Dispatch Project Planning & Multi-Crane Allocations
+## 13. Dispatch Project Planning & Multi-Crane Allocations
 
 1. **Project Plan Creation**: Operations Manager creates a multi-day industrial project plan, setting scope, customer, site, and operational dates.
 2. **Phases & Milestones**: Manager defines sequenced phases with predecessor dependencies (e.g. Phase 1: Site Prep & Foundation, Phase 2: Heavy Turbine Lift).

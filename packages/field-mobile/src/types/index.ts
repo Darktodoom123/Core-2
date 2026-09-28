@@ -326,42 +326,6 @@ export type OutboxCommandType =
     | 'link_unit'
     | 'release_unit';
 
-export interface SafetyHazardCommandPayload {
-    project_site: string;
-    category: string;
-    severity: 'low' | 'medium' | 'high' | 'critical';
-    description: string;
-    location_detail: string;
-    corrective_action_required: string;
-    location_latitude?: number | null;
-    location_longitude?: number | null;
-    location_accuracy_metres?: number | null;
-    location_observed_at?: string | null;
-    photos?: Array<{
-        uri: string;
-        fileName?: string;
-        fileSize?: number;
-    }>;
-    photo_command_ids?: string[];
-}
-
-export type WorkStoppageType = 'standard' | 'imminent_danger';
-
-export interface WorkStoppageCommandPayload {
-    project_site: string;
-    reason: string;
-    affected_area: string;
-    affected_asset_ids?: number[] | null;
-    dole_regulation_reference?: string | null;
-    is_imminent_danger?: boolean | null;
-    stoppage_type?: WorkStoppageType | string | null;
-    statutory_basis?: 'ra_11058' | 'dole_do13' | string | null;
-    location_latitude?: number | null;
-    location_longitude?: number | null;
-    location_accuracy_metres?: number | null;
-    location_observed_at?: string | null;
-}
-
 export interface HosStartCommandPayload {
     operational_asset_id?: number | null;
     dispatch_job_id?: number | null;
@@ -1013,36 +977,3 @@ export interface CurrentHosShiftResponse {
 }
 
 export * from './account';
-
-/** A hazard the operator reported, and whether it has been fixed. */
-export interface MySafetyHazard {
-    id: number;
-    ticket_code: string;
-    project_site: string;
-    category: string;
-    severity: string;
-    status: string;
-    work_stoppage_issued: boolean;
-    reported_at: string;
-    rectified_at: string | null;
-    rectification_notes: string | null;
-}
-
-/** A stop-work order the operator issued, and whether it was lifted. */
-export interface MyWorkStoppage {
-    id: number;
-    notice_number: string;
-    project_site: string;
-    reason: string;
-    affected_area: string;
-    is_active: boolean;
-    issued_at: string;
-    lifted_at: string | null;
-    lift_reason: string | null;
-}
-
-/** GET /api/v1/safety/my-reports */
-export interface MySafetyReports {
-    hazards: MySafetyHazard[];
-    work_stoppages: MyWorkStoppage[];
-}

@@ -13,7 +13,6 @@ export * from './sheets/ReliefHandoverModal';
 export * from './sheets/replacement-request/replacement-request-sheet';
 export * from './sheets/PreTripDefectFallbackModal';
 export * from './sheets/DispatchIntakeSheet';
-export * from './sheets/field-safety-sheet';
 export * from './sheets/ReportDelayModal';
 export * from './common/Icon';
 export * from './sos';

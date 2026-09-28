@@ -1416,7 +1416,7 @@ describe('native application component tree', () => {
         expect(screen.queryByTestId('bottom-nav-today')).toBeNull();
         const navigation = within(screen.getByTestId('bottom-nav-bar'));
         expect(navigation.getAllByRole('tab')).toHaveLength(2);
-        expect(navigation.getByLabelText('Safety')).toBeVisible();
+        expect(navigation.getByLabelText('Documents')).toBeVisible();
         expect(navigation.getByLabelText('Profile')).toBeVisible();
         expect(navigation.getAllByRole('button')).toHaveLength(1);
         expect(
@@ -1425,12 +1425,12 @@ describe('native application component tree', () => {
         expect(navigation.getByTestId('bottom-nav-sos-slot')).toBeVisible();
         expect(screen.getAllByTestId('open-emergency-sos')).toHaveLength(1);
         expect(screen.queryByTestId('bottom-nav-route')).toBeNull();
-        expect(screen.queryByTestId('bottom-nav-documents')).toBeNull();
+        expect(screen.getByTestId('bottom-nav-documents')).toBeVisible();
         expect(screen.queryByText(/synced 2 min ago/i)).toBeNull();
         expect(screen.queryByText('Inspection')).toBeNull();
     });
 
-    it('opens the native safety flow from the persistent field navigation', async () => {
+    it('keeps the field navigation focused on documents, SOS, and profile', async () => {
         const { fetchFn } = createApi({ assignedJobs: [driverJob] });
 
         await renderScreen(
@@ -1442,16 +1442,9 @@ describe('native application component tree', () => {
         );
 
         await screen.findByText(new RegExp(`^Ref: ${driverJob.reference}`));
-        await fireEvent.press(screen.getByTestId('bottom-nav-safety'));
-
-        expect(await screen.findByText('Safety and hazards')).toBeVisible();
-        expect(screen.getByTestId('open-stop-work-form')).toBeVisible();
-        expect(screen.getByTestId('open-hazard-form')).toBeVisible();
-
-        await fireEvent.press(screen.getByLabelText('Back'));
-        expect(
-            await screen.findByText(new RegExp(`^Ref: ${driverJob.reference}`)),
-        ).toBeVisible();
+        expect(screen.queryByTestId('bottom-nav-safety')).toBeNull();
+        expect(screen.getByTestId('bottom-nav-documents')).toBeVisible();
+        expect(screen.getByTestId('bottom-nav-sos-slot')).toBeVisible();
     });
 
     it('keeps healthy sync details hidden until an attention state exists', async () => {

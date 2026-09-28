@@ -122,7 +122,7 @@ authoritative. The desk summarizes recorded issues; it does not bypass checks.
 The site weather panel requests Open-Meteo conditions only for pinned site
 coordinates. Missing coordinates and provider failures display an unavailable
 state. Weather observations do not assert ground bearing, lightning distance,
-or lift clearance; the approved lift plan and site measurements govern those
+or lift clearance; site measurements and operational procedure govern those
 decisions.
 The preparation Resources step and the assigned-resource summary expose an
 **Assign resources** entry point when the existing capability allows it. The

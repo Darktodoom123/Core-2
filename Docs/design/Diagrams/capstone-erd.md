@@ -17,6 +17,8 @@ This is the core operational ERD. The printable sheet shows selected business fi
 
 The revision describes the current repository, including local migration additions. It does not certify which migrations have been applied to a live database.
 
+The legacy lift-plan and site-safety tables remain in migrations for historical data preservation. They are no longer active product workflows.
+
 | Mark | Meaning |
 | --- | --- |
 | PK | Primary key |

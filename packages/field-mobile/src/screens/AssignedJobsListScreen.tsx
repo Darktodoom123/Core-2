@@ -94,7 +94,6 @@ export interface AssignedJobsListScreenProps {
     ) => void;
     onOpenDvir?: (mode?: 'pre_trip' | 'post_trip') => void;
     onOpenHos?: () => void;
-    onOpenSafety?: () => void;
     onOpenDocuments?: () => void;
     onOpenVehicle?: () => void;
     onOpenFuel?: () => void;
@@ -164,7 +163,6 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     onChangeDutyStatus,
     onOpenDvir,
     onOpenHos,
-    onOpenSafety,
     onOpenDocuments,
     onOpenVehicle,
     onOpenFuel,
@@ -512,12 +510,6 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
 
         if (item === 'documents') {
             onOpenDocuments?.();
-
-            return;
-        }
-
-        if (item === 'safety') {
-            onOpenSafety?.();
 
             return;
         }

@@ -961,8 +961,7 @@ export type WorkspaceSection =
     | 'gpt-recommendations'
     | 'users'
     | 'audit'
-    | 'sos'
-    | 'safety';
+    | 'sos';
 
 export interface WorkspaceNavigationItem {
     id: WorkspaceSection;
@@ -1010,13 +1009,6 @@ export interface WorkspaceCapabilities {
     restore_dispatch: boolean;
     view_sos: boolean;
     respond_sos: boolean;
-    safety_governance_view?: boolean;
-    safety_tbm_cosign?: boolean;
-    safety_lift_plan_approve?: boolean;
-    safety_hazard_report?: boolean;
-    safety_hazard_rectify?: boolean;
-    safety_work_stoppage_issue?: boolean;
-    safety_work_stoppage_lift?: boolean;
     manage_users?: boolean;
     view_audit?: boolean;
 }

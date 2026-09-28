@@ -91,7 +91,6 @@ const SECTION_PROPS: Record<WorkspaceSection, string[]> = {
     users: ['users', 'auditEvents'],
     audit: ['auditEvents'],
     sos: [],
-    safety: [],
 };
 
 function hasSectionProps(
@@ -120,10 +119,6 @@ export default function Workspace(props: WorkspacePageProps) {
     const [, setOutboxQueue] = useState<OutboxItem[]>(() => getOutboxQueue());
     const [locationPending, setLocationPending] = useState(false);
     const [locationError, setLocationError] = useState<string | null>(null);
-    const [safetyNotice, setSafetyNotice] = useState<{
-        action: 'issued' | 'lifted';
-        message: string;
-    } | null>(null);
     const [dismissedRefreshedAt, setDismissedRefreshedAt] = useState<
         string | null
     >(null);
@@ -448,39 +443,11 @@ export default function Workspace(props: WorkspacePageProps) {
             refreshRef.current('workspace', 'realtime');
         });
 
-        echo.private('operations.safety').listen(
-            '.WorkStoppageChanged',
-            (event: {
-                action?: string;
-                notice_number?: string;
-                project_site?: string;
-            }) => {
-                refreshRef.current('workspace', 'realtime');
-
-                if (event.action !== 'issued' && event.action !== 'lifted') {
-                    return;
-                }
-
-                const notice = event.notice_number ?? 'Work-stoppage order';
-                const site = event.project_site
-                    ? ` at ${event.project_site}`
-                    : '';
-                setSafetyNotice({
-                    action: event.action,
-                    message:
-                        event.action === 'issued'
-                            ? `${notice} issued${site}. Work in the affected area must stop until an Operations Manager lifts the order.`
-                            : `${notice} lifted${site}. Follow the site restart instructions from the Operations Manager.`,
-                });
-            },
-        );
-
         return () => {
             window.clearTimeout(initialStateSync);
             unsubscribeConnection();
             echo.leave('operations.workspace');
             echo.leave('operations.sos');
-            echo.leave('operations.safety');
         };
     }, []);
 
@@ -762,11 +729,7 @@ export default function Workspace(props: WorkspacePageProps) {
     const trackingUnavailable =
         props.workspace.tracking?.service_available === false;
     const hasInlineNotices = Boolean(
-        inlineFlash ||
-        locationError ||
-        safetyNotice ||
-        showStaleNotice ||
-        trackingUnavailable,
+        inlineFlash || locationError || showStaleNotice || trackingUnavailable,
     );
 
     return (
@@ -805,17 +768,6 @@ export default function Workspace(props: WorkspacePageProps) {
                                 tone="error"
                                 message={locationError}
                                 onDismiss={() => setLocationError(null)}
-                            />
-                        )}
-                        {safetyNotice && (
-                            <StateNotice
-                                tone={
-                                    safetyNotice.action === 'issued'
-                                        ? 'warning'
-                                        : 'info'
-                                }
-                                message={safetyNotice.message}
-                                onDismiss={() => setSafetyNotice(null)}
                             />
                         )}
                         {showStaleNotice && (

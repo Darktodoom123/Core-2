@@ -20,8 +20,6 @@ final class ReportExportCatalog
         MaintenanceLogsExportDataset $maintenanceLogs,
         LocationAuditExportDataset $locationAudit,
         SystemAuditExportDataset $systemAudit,
-        DoleWairExportDataset $doleWair,
-        CshpSafeManHoursExportDataset $cshpSafeManHours,
         DailyAccomplishmentExportDataset $dailyAccomplishment,
     ) {
         $this->datasets = [
@@ -32,8 +30,6 @@ final class ReportExportCatalog
             $maintenanceLogs->type()->value => $maintenanceLogs,
             $locationAudit->type()->value => $locationAudit,
             $systemAudit->type()->value => $systemAudit,
-            $doleWair->type()->value => $doleWair,
-            $cshpSafeManHours->type()->value => $cshpSafeManHours,
             $dailyAccomplishment->type()->value => $dailyAccomplishment,
         ];
     }
