@@ -131,8 +131,10 @@ COPY --from=composer-builder /app/vendor ./apps/operations/vendor
 # Wayfinder invokes PHP during the Vite build. The application key here is a
 # disposable build-only value; no .env file, runtime secret, or generated key
 # is copied into the final image. The Reverb value is a public browser key.
+# Leave VITE_REVERB_HOST empty so browsers connect to whichever host served the
+# page (LAN IP, hostname, or domain); set it only when Reverb lives elsewhere.
 ARG VITE_PUBLIC_REVERB_IDENTIFIER=core2-local-key
-ARG VITE_REVERB_HOST=localhost
+ARG VITE_REVERB_HOST=
 ARG VITE_REVERB_PORT=8080
 ARG VITE_REVERB_SCHEME=http
 ARG VITE_MAP_PROVIDER=stadia

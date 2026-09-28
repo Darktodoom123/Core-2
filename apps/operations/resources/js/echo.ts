@@ -48,8 +48,10 @@ export function getEcho(): Echo<'reverb'> | null {
         window.Echo = new Echo<'reverb'>({
             broadcaster: 'reverb',
             key: import.meta.env.VITE_REVERB_APP_KEY ?? 'reverb-key',
+            // An empty build-time host means "the host serving this page", so
+            // one image works from phones, tablets, and other LAN devices.
             wsHost:
-                import.meta.env.VITE_REVERB_HOST ?? window.location.hostname,
+                import.meta.env.VITE_REVERB_HOST || window.location.hostname,
             wsPort: import.meta.env.VITE_REVERB_PORT
                 ? Number(import.meta.env.VITE_REVERB_PORT)
                 : 8080,
