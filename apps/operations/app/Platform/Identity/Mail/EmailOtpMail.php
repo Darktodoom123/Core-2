@@ -34,24 +34,36 @@ class EmailOtpMail extends Mailable
 
     public function content(): Content
     {
+        [$heading, $intro] = match ($this->purpose) {
+            EmailOneTimeCode::PURPOSE_LOGIN => [
+                'Your sign-in code',
+                'Someone is signing in to your Core-2 account from a new device. If that\'s you, enter this code to finish signing in:',
+            ],
+            EmailOneTimeCode::PURPOSE_ENABLE_OTP => [
+                'Turn on email codes',
+                'Enter this code in your account settings to start requiring an email code when you sign in from a new device:',
+            ],
+            EmailOneTimeCode::PURPOSE_DISABLE_OTP => [
+                'Turn off email codes',
+                'Enter this code in your account settings to stop requiring email codes at sign-in:',
+            ],
+            EmailOneTimeCode::PURPOSE_EMAIL_CHANGE => [
+                'Confirm your new email address',
+                'Enter this code in your account settings to confirm this is your new email address:',
+            ],
+            default => [
+                'Your verification code',
+                'Enter this code in Core-2 to continue:',
+            ],
+        };
+
         return new Content(
-            htmlString: <<<HTML
-            <div style="font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 540px; margin: 0 auto; padding: 28px; background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px;">
-                <div style="margin-bottom: 20px;">
-                    <span style="font-weight: 700; font-size: 18px; color: #18181b; letter-spacing: -0.02em;">CORE-2 Operations</span>
-                </div>
-                <h2 style="margin: 0 0 12px; font-size: 20px; font-weight: 600; color: #18181b;">Verification Code</h2>
-                <p style="margin: 0 0 20px; font-size: 14px; color: #52525b; line-height: 1.5;">
-                    Please use the following 6-digit code to complete your security verification. This code expires in {$this->expiresInMinutes} minutes.
-                </p>
-                <div style="background-color: #f4f4f5; border: 1px solid #e4e4e7; border-radius: 8px; padding: 18px; text-align: center; margin: 24px 0;">
-                    <span style="font-family: monospace; font-size: 32px; font-weight: 700; letter-spacing: 0.25em; color: #09090b;">{$this->code}</span>
-                </div>
-                <p style="margin: 20px 0 0; font-size: 12px; color: #71717a; line-height: 1.5;">
-                    If you did not initiate this request, please change your password immediately and notify your IT administrator. Never share this code with anyone.
-                </p>
-            </div>
-            HTML,
+            view: 'mail.email-otp',
+            with: [
+                'heading' => $heading,
+                'intro' => $intro,
+                'preheader' => "{$heading}. This code expires in {$this->expiresInMinutes} minutes.",
+            ],
         );
     }
 }
