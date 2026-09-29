@@ -200,6 +200,7 @@ These Build Configuration values are what made the first deployment succeed:
 | Port / Health check path | `80` / `/up` | `/up` does not touch the database. |
 | Release command | `su-exec www-data php artisan migrate --force --no-interaction` | Runs after the health check and before traffic switches; a failure keeps the previous release live. |
 | `RUN_MIGRATIONS` (env) | `false` | Migrations in the entrypoint delay Nginx past HostForge's ~30 s health check window. |
+| Auto deploy / Build cache | on / on | Pushes to `main` deploy through the GitHub push webhook registered under Source Control → Webhooks; without that webhook, auto deploy never fires. |
 
 Managed databases are reached on their standard internal ports (`5432`, `6379`); the ports shown on the Databases page are external mappings.
 
