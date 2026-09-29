@@ -12,6 +12,10 @@ final class AssetWeeklyReportCsvWriter
     public function write(array $report): string
     {
         $handle = fopen('php://temp', 'r+');
+        if ($handle === false) {
+            throw new \RuntimeException('Unable to open temporary stream for asset weekly CSV export.');
+        }
+
         fwrite($handle, "\xEF\xBB\xBF");
 
         $asset = $report['asset'];
@@ -129,7 +133,7 @@ final class AssetWeeklyReportCsvWriter
     /**
      * @param  resource  $handle
      * @param  list<string>  $headers
-     * @param  list<list<mixed>>  $rows
+     * @param  array<int, list<mixed>>  $rows
      */
     private function section($handle, string $title, array $headers, array $rows): void
     {

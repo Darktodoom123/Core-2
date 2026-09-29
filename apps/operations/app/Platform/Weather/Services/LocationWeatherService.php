@@ -35,6 +35,22 @@ class LocationWeatherService
         $cached = Cache::get($cacheKey);
 
         if (is_array($cached)) {
+            /** @var array{
+             *     latitude: float,
+             *     longitude: float,
+             *     location_name: string|null,
+             *     temperature_celsius: float|null,
+             *     wind_speed_kmh: float,
+             *     wind_gusts_kmh: float,
+             *     rain_intensity_mmh: float,
+             *     humidity_percent: int|null,
+             *     weather_description: string,
+             *     safety_level: 'safe_normal'|'warning_caution'|'critical_stop_work',
+             *     safety_message: string,
+             *     source: string,
+             *     fetched_at: string
+             * } $cached
+             */
             return $cached;
         }
 
@@ -90,7 +106,7 @@ class LocationWeatherService
                 return null;
             }
 
-            $windSpeedKmh = round((float) ($current['wind_speed_10m'] ?? 0.0), 1);
+            $windSpeedKmh = round((float) $current['wind_speed_10m'], 1);
             $windGustsKmh = round((float) ($current['wind_gusts_10m'] ?? $windSpeedKmh), 1);
             $temperature = isset($current['temperature_2m']) ? round((float) $current['temperature_2m'], 1) : null;
             $rainIntensity = round((float) ($current['precipitation'] ?? 0.0), 2);

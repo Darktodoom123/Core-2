@@ -62,8 +62,8 @@ final class JobReportsExportDataset extends AbstractReportExportDataset
 
             yield [
                 $report->id,
-                $report->job?->reference,
-                $report->job?->title,
+                $report->job->reference,
+                $report->job->title,
                 $report->author?->name,
                 $report->status->label(),
                 $report->started_at?->toIso8601String(),

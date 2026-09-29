@@ -326,9 +326,9 @@ final class AssetWeeklyReportBuilder
     ): array {
         $jobRefs = $jobs->pluck('reference', 'id');
         $names = $assignments->mapWithKeys(fn ($a) => [$a->user_id => $a->user?->name])
-            ->union($shiftsOnAsset->mapWithKeys(fn ($s) => [$s->user_id => $s->user?->name]));
+            ->union($shiftsOnAsset->mapWithKeys(fn ($s) => [$s->user_id => $s->user->name]));
 
-        return $personnelIds->map(function (int $userId) use ($assignments, $shiftsOnAsset, $weekShifts, $jobRefs, $names, $fromUtc, $toUtc): array {
+        return array_values($personnelIds->map(function (int $userId) use ($assignments, $shiftsOnAsset, $weekShifts, $jobRefs, $names, $fromUtc, $toUtc): array {
             $mine = $assignments->where('user_id', $userId);
             $onAsset = $shiftsOnAsset->where('user_id', $userId);
             $allWeek = $weekShifts->where('user_id', $userId);
@@ -350,7 +350,7 @@ final class AssetWeeklyReportBuilder
                 'week_standby_minutes' => (int) $allWeek->sum('standby_minutes'),
                 'week_break_minutes' => (int) $allWeek->sum('break_minutes'),
             ];
-        })->sortBy('name')->values()->all();
+        })->sortBy('name')->values()->all());
     }
 
     /** Minutes of [start, end ?? now] that fall inside [from, to]. */

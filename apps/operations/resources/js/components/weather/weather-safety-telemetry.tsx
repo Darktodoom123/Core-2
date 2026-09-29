@@ -243,7 +243,11 @@ export function WeatherSafetyTelemetry({
                                 longitude={targetLon}
                                 variant="inline"
                                 showIcon={!location}
-                                emptyLabel="Coordinates not recorded"
+                                emptyLabel={
+                                    isSite
+                                        ? 'Location unavailable'
+                                        : 'Coordinates not recorded'
+                                }
                             />
                         </div>
                     </div>

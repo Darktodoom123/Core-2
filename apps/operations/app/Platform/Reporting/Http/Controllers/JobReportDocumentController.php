@@ -24,7 +24,7 @@ class JobReportDocumentController extends Controller
         return $this->pdfResponse(
             $renderer,
             collect([$jobReport]),
-            ($jobReport->job?->reference ?? 'dispatch-'.$jobReport->dispatch_job_id).' job report '.$jobReport->id,
+            $jobReport->job->reference.' job report '.$jobReport->id,
             'job-report-'.$jobReport->id.'.pdf',
         );
     }

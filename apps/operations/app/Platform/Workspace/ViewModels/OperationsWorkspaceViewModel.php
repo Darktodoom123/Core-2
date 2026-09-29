@@ -405,7 +405,10 @@ final class OperationsWorkspaceViewModel
      */
     public static function loadDispatchOccupancies(Collection $assets): Collection
     {
-        $dispatchOccupancies = self::dispatchOccupancies($assets->modelKeys());
+        $assetIds = $assets
+            ->map(static fn (OperationalAsset $asset): int|string => $asset->getKey())
+            ->all();
+        $dispatchOccupancies = self::dispatchOccupancies($assetIds);
 
         return $assets->each(static function (OperationalAsset $asset) use ($dispatchOccupancies): void {
             $asset->setAttribute('dispatch_occupancy', $dispatchOccupancies[(int) $asset->getKey()] ?? null);

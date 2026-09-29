@@ -75,7 +75,7 @@ final class DefenseDemoSeeder extends Seeder
         }
 
         if (ServiceRequest::withTrashed()->where('reference', self::MARKER_REFERENCE)->exists()) {
-            $this->command?->warn('Defense demo already seeded. Existing demo records were left unchanged.');
+            $this->command->warn('Defense demo already seeded. Existing demo records were left unchanged.');
 
             return;
         }
@@ -107,7 +107,7 @@ final class DefenseDemoSeeder extends Seeder
             Model::unguard();
         }
 
-        $this->command?->info('Defense demo seeded. Log in as "dispatcher.linking" to present the dispatch desk.');
+        $this->command->info('Defense demo seeded. Log in as "dispatcher.linking" to present the dispatch desk.');
     }
 
     // ---------------------------------------------------------------------

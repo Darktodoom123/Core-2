@@ -48,8 +48,8 @@ final class DailyAccomplishmentExportDataset extends AbstractReportExportDataset
 
             yield [
                 $report->id,
-                $report->job?->reference,
-                $report->job?->site ?: 'Not recorded',
+                $report->job->reference,
+                $report->job->site ?: 'Not recorded',
                 $report->author?->name,
                 $hours > 0 ? "{$hours} hrs" : 'Not recorded',
                 $report->work_summary,

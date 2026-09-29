@@ -5,7 +5,6 @@ export type ResolvedTheme = 'light' | 'dark';
 
 const THEME_STORAGE_KEY = 'core2-theme-preference';
 const themeListeners = new Set<() => void>();
-let themePreferenceSnapshot: Theme | undefined;
 
 function isTheme(value: string | null): value is Theme {
     return value === 'light' || value === 'dark' || value === 'system';
@@ -26,9 +25,7 @@ function readStoredTheme(): Theme {
 }
 
 function getThemeSnapshot(): Theme {
-    themePreferenceSnapshot ??= readStoredTheme();
-
-    return themePreferenceSnapshot;
+    return readStoredTheme();
 }
 
 function getServerThemeSnapshot(): Theme {
@@ -52,7 +49,6 @@ function handleStorageChange(event: StorageEvent): void {
         return;
     }
 
-    themePreferenceSnapshot = readStoredTheme();
     notifyThemeListeners();
 }
 
@@ -139,8 +135,6 @@ export function useTheme() {
         theme === 'system' ? systemTheme : theme;
 
     const setTheme = useCallback((newTheme: Theme) => {
-        themePreferenceSnapshot = newTheme;
-
         if (typeof window !== 'undefined') {
             try {
                 window.localStorage.setItem(THEME_STORAGE_KEY, newTheme);
