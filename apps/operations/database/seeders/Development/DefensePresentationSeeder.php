@@ -129,6 +129,25 @@ final class DefensePresentationSeeder extends Seeder
         return trim($password);
     }
 
+    /** DEMO_OPERATORn_EMAIL when set; otherwise a plus-address that still reaches BJ's inbox. */
+    private function spareEmail(User $bj, int $number): string
+    {
+        $configured = config("auth.defense_demo.spare_emails.{$number}");
+        if (! is_string($configured) || trim($configured) === '') {
+            return $this->plusAddress((string) $bj->email, "operator{$number}");
+        }
+
+        $email = strtolower(trim($configured));
+        if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+            throw new LogicException("DEMO_OPERATOR{$number}_EMAIL must be a valid email address.");
+        }
+        if (User::query()->where('email', $email)->where('username', '!=', "operator{$number}")->exists()) {
+            throw new LogicException("DEMO_OPERATOR{$number}_EMAIL is already used by another account.");
+        }
+
+        return $email;
+    }
+
     /** Plus-addressing keeps each email unique while mail still reaches the original inbox. */
     private function plusAddress(string $email, string $tag): string
     {
@@ -148,7 +167,7 @@ final class DefensePresentationSeeder extends Seeder
                 ['username' => "operator{$number}"],
                 [
                     'name' => $names[$number - 1],
-                    'email' => $this->plusAddress((string) $bj->email, "operator{$number}"),
+                    'email' => $this->spareEmail($bj, $number),
                     'password' => Hash::make($this->sparePassword),
                     'email_verified_at' => now(),
                     'is_active' => true,

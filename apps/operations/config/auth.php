@@ -152,6 +152,14 @@ return [
     'defense_demo' => [
         'enabled' => (bool) env('DEMO_SEED', false),
         'operator_password' => env('DEMO_OPERATOR_PASSWORD'),
+        // Optional own email per spare operator (operator1 to operator5); empty keeps BJ's inbox.
+        'spare_emails' => [
+            1 => env('DEMO_OPERATOR1_EMAIL'),
+            2 => env('DEMO_OPERATOR2_EMAIL'),
+            3 => env('DEMO_OPERATOR3_EMAIL'),
+            4 => env('DEMO_OPERATOR4_EMAIL'),
+            5 => env('DEMO_OPERATOR5_EMAIL'),
+        ],
     ],
 
 ];

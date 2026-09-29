@@ -134,6 +134,24 @@ it('uses the configured password for spare operators on a live server', function
         ->and(ServiceRequest::query()->where('reference', 'like', DefensePresentationSeeder::SERVICE_REQUEST_PREFIX.'%')->count())->toBe(3);
 });
 
+it('gives a spare operator its own email when DEMO_OPERATORn_EMAIL is set', function (): void {
+    config(['auth.defense_demo.spare_emails' => [1 => 'Carlo.Demo@Example.com']]);
+
+    $this->seed(DefensePresentationSeeder::class);
+
+    $bj = User::query()->where('username', 'operator')->sole();
+    [$local, $domain] = explode('@', $bj->email);
+    expect(User::query()->where('username', 'operator1')->sole()->email)->toBe('carlo.demo@example.com')
+        ->and(User::query()->where('username', 'operator2')->sole()->email)->toBe("{$local}+operator2@{$domain}");
+});
+
+it('rejects a spare operator email that another account already uses', function (): void {
+    $bj = User::query()->where('username', 'operator')->sole();
+    config(['auth.defense_demo.spare_emails' => [1 => $bj->email]]);
+
+    expect(fn () => $this->seed(DefensePresentationSeeder::class))->toThrow(LogicException::class, 'DEMO_OPERATOR1_EMAIL is already used');
+});
+
 /** Live servers run the seeder with --force, which skips the production confirmation prompt. */
 function seedLive(object $test): void
 {

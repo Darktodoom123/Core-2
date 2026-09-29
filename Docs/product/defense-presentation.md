@@ -23,7 +23,7 @@ The local seed has **no** Core 1 service requests, no asset inspections, no flee
 | **Core 3** (equipment) | A passing safety inspection for every asset that lacks one, so every unit can be linked and activated. |
 | **Core 4** (documents) | Valid fleet permits for each asset's required categories (registration, insurance, emission, load test). Also 4 personal documents per operator (TESDA NC II, LTO professional licence, BOSH, medical). Every document gets a sample PDF watermarked as not valid. |
 | **Core HR** (people) | An employee number and **available** status for BJ and the spare operators. |
-| Spare operators | `operator1` to `operator5`. Their emails use plus-addressing on BJ's email (for example `name+operator1@gmail.com`), so any sign-in email reaches BJ's inbox. |
+| Spare operators | `operator1` to `operator5`. Set `DEMO_OPERATOR1_EMAIL` … `DEMO_OPERATOR5_EMAIL` to give one its own email. Otherwise it uses plus-addressing on BJ's email (for example `name+operator1@gmail.com`), so any sign-in email reaches BJ's inbox. Each email must be unique. |
 | BJ reset | Cancels the two sample jobs above, or any job still open for BJ or the spares, and ends their open shift. BJ's phone starts clean. |
 
 ## Run it
