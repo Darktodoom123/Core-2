@@ -133,6 +133,7 @@ COPY --from=composer-builder /app/vendor ./apps/operations/vendor
 # is copied into the final image. The Reverb value is a public browser key.
 # Leave VITE_REVERB_HOST empty so browsers connect to whichever host served the
 # page (LAN IP, hostname, or domain); set it only when Reverb lives elsewhere.
+ARG VITE_APP_NAME=Core-2
 ARG VITE_PUBLIC_REVERB_IDENTIFIER=core2-local-key
 ARG VITE_REVERB_HOST=
 ARG VITE_REVERB_PORT=8080
@@ -154,6 +155,7 @@ RUN set -eu; \
         APP_URL=http://localhost \
         DB_CONNECTION=sqlite \
         DB_DATABASE=apps/operations/database/database.sqlite \
+        VITE_APP_NAME="$VITE_APP_NAME" \
         VITE_REVERB_APP_KEY="$VITE_PUBLIC_REVERB_IDENTIFIER" \
         VITE_REVERB_HOST="$VITE_REVERB_HOST" \
         VITE_REVERB_PORT="$VITE_REVERB_PORT" \
