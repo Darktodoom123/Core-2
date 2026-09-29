@@ -2,6 +2,8 @@
 
 namespace App\Shared\Assets\Services;
 
+use App\Modules\Fleet\Services\AssetPermitCompliance;
+use App\Modules\Fleet\Services\AssetPreventiveMaintenance;
 use App\Shared\Assets\Contracts\AssetUsageConflictChecker;
 use App\Shared\Assets\Data\AssetUsageAssessment;
 use App\Shared\Assets\Data\AssetUsageConflict;
@@ -18,6 +20,8 @@ final class OperationalAssetAvailability
     public function __construct(
         private readonly iterable $checkers,
         private readonly AssetInspectionReadiness $inspectionReadiness,
+        private readonly AssetPermitCompliance $permits,
+        private readonly AssetPreventiveMaintenance $preventiveMaintenance,
     ) {}
 
     public function assess(AssetUsageRequest $request): AssetUsageAssessment
@@ -127,6 +131,37 @@ final class OperationalAssetAvailability
                     ? 'A completed passing workshop inspection is required before activation; a later defect removes clearance.'
                     : 'Recorded failed inspection or DVIR defects must be cleared before assignment.';
                 $conflicts[] = new AssetUsageConflict('asset.inspection_required', $message);
+            }
+
+            $permitIssues = $this->permits->blockingIssues($asset, $request->windowEnd);
+            if ($permitIssues !== []) {
+                $first = $permitIssues[0];
+                $conflicts[] = new AssetUsageConflict(
+                    'asset.permit_invalid',
+                    match ($first['state']) {
+                        'missing' => "{$first['label']} is missing.",
+                        'revoked' => "{$first['label']} was revoked.",
+                        default => "{$first['label']} expires {$first['expires_at']}, before this work ends.",
+                    }.(count($permitIssues) > 1 ? ' Other permits also need attention.' : ''),
+                    details: [
+                        'category' => $first['category'],
+                        'state' => $first['state'],
+                        'expires_at' => $first['expires_at'],
+                        'count' => count($permitIssues),
+                    ],
+                );
+            }
+
+            // Planning only warns about due preventive maintenance; activation is the hard stop.
+            $maintenanceDueAt = $request->usageType === AssetUsageType::DispatchActivate
+                ? $this->preventiveMaintenance->dueBefore($asset, $request->windowEnd)
+                : null;
+            if ($maintenanceDueAt !== null) {
+                $conflicts[] = new AssetUsageConflict(
+                    'asset.preventive_maintenance_due',
+                    'Preventive maintenance is due '.$this->preventiveMaintenance->describe($maintenanceDueAt).', before this work ends.',
+                    details: ['due_at' => $maintenanceDueAt->toIso8601String()],
+                );
             }
 
             return $conflicts;

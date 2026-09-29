@@ -16,6 +16,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $scheduled_at
  * @property Carbon|null $completed_at
  * @property Carbon|null $released_at
+ * @property Carbon|null $next_due_at
  * @property OperationalAsset $asset
  */
 class MaintenanceWorkOrder extends Model

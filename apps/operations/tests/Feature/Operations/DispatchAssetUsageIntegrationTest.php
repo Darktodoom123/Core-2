@@ -6,6 +6,7 @@ use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\ApprovalRequest;
 use App\Modules\Dispatch\Models\Client;
 use App\Modules\Dispatch\Models\DispatchJob;
+use App\Modules\Fleet\Models\AssetDocument;
 use App\Modules\Rental\Enums\RentalReservationStatus;
 use App\Modules\Rental\Models\RentalReservation;
 use App\Modules\Rental\Models\RentalReservationItem;
@@ -309,4 +310,23 @@ it('only excludes assignment rows being ended when reusing an asset on the same 
 
     expect($oldAssignment->fresh()->active_until)->not->toBeNull()
         ->and($job->assetAssignments()->whereNull('active_until')->count())->toBe(1);
+});
+
+it('rejects assigning equipment whose permit expires before the dispatch ends', function (): void {
+    $dispatcher = r4Dispatcher();
+    $asset = r4Asset('R4-PERMIT');
+    $job = r4DispatchJob($dispatcher, 'R4-PERMIT-DISPATCH');
+    AssetDocument::query()->create([
+        'operational_asset_id' => $asset->id, 'category' => 'insurance', 'document_type' => 'insurance',
+        'title' => 'Insurance', 'document_number' => 'INS-R4', 'issuing_authority' => 'Insurer',
+        'expires_at' => '2026-08-20', 'status' => 'active',
+    ]);
+
+    $response = $this->actingAs($dispatcher)->post("/operations/dispatch-jobs/{$job->id}/assignments", [
+        'assets' => [['operational_asset_id' => $asset->id, 'assignment_type' => 'equipment']],
+    ]);
+
+    $response->assertSessionHasErrors(['assets']);
+    expect($response->getSession()->get('errors')->get('assets')[0])->toContain('Insurance')
+        ->and($job->assetAssignments()->count())->toBe(0);
 });

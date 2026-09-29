@@ -539,6 +539,7 @@ export interface AssetViewModel {
     dvir_inspections_count?: number | null;
     maintenance_work_orders_count?: number | null;
     documents_count?: number | null;
+    permit_compliance?: AssetPermitComplianceViewModel | null;
     latest_status_change?: AssetStatusChangeViewModel | null;
     active_operator?: OperatorBindingViewModel | null;
     hos?: EquipmentHosViewModel | null;
@@ -548,6 +549,24 @@ export interface AssetViewModel {
     inspections: InspectionViewModel[];
     maintenance_work_orders: MaintenanceWorkOrderViewModel[];
     documents?: AssetDocumentViewModel[];
+}
+
+export type AssetPermitState = 'valid' | 'expired' | 'revoked' | 'missing';
+
+export interface AssetPermitItemViewModel {
+    category: string;
+    label: string;
+    state: AssetPermitState;
+    document_id: number | null;
+    expires_at: string | null;
+    days_left: number | null;
+    blocks_dispatch: boolean;
+}
+
+export interface AssetPermitComplianceViewModel {
+    state: 'not_required' | 'valid' | 'expiring' | 'missing' | 'expired';
+    blocks_dispatch: boolean;
+    items: AssetPermitItemViewModel[];
 }
 
 export interface AssetDocumentViewModel {

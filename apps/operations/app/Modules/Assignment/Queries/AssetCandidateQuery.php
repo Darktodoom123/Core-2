@@ -7,18 +7,25 @@ use App\Modules\Assignment\Http\Requests\ListDispatchCandidatesRequest;
 use App\Modules\Assignment\Models\DispatchAssetAssignment;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dvir\Models\DvirInspection;
+use App\Modules\Fleet\Services\AssetPermitCompliance;
+use App\Modules\Fleet\Services\AssetPreventiveMaintenance;
 use App\Modules\Rental\Enums\RentalReservationStatus;
 use App\Modules\Rental\Models\RentalReservationItem;
 use App\Shared\Assets\Models\Inspection;
 use App\Shared\Assets\Models\MaintenanceWorkOrder;
 use App\Shared\Assets\Models\OperationalAsset;
 use App\Shared\Assets\Services\AssetInspectionReadiness;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 final class AssetCandidateQuery
 {
-    public function __construct(private readonly AssetInspectionReadiness $inspectionReadiness) {}
+    public function __construct(
+        private readonly AssetInspectionReadiness $inspectionReadiness,
+        private readonly AssetPreventiveMaintenance $preventiveMaintenance,
+        private readonly AssetPermitCompliance $permits,
+    ) {}
 
     /** @return CandidatePage<array<string, mixed>> */
     public function page(DispatchJob $job, ListDispatchCandidatesRequest $filters): CandidatePage
@@ -39,7 +46,7 @@ final class AssetCandidateQuery
         );
         $assets = collect($results->items());
         $assetIds = array_values($assets->pluck('id')->map(static fn (mixed $id): int => (int) $id)->all());
-        $evidence = $this->evidence($assetIds, $job);
+        $evidence = $this->evidence($assetIds, $job, assets: $assets);
 
         $data = $assets
             ->map(fn (OperationalAsset $asset): array => $this->assess($asset, $job, $evidence))
@@ -62,7 +69,7 @@ final class AssetCandidateQuery
         $eligible = [];
         $this->query($filters)->reorder('operational_assets.id')->chunkById(100, function ($assets) use ($job, &$eligible): void {
             $ids = array_values($assets->pluck('id')->map(static fn (mixed $id): int => (int) $id)->all());
-            $evidence = $this->evidence($ids, $job);
+            $evidence = $this->evidence($ids, $job, assets: $assets);
 
             foreach ($assets as $asset) {
                 $candidate = $this->assess($asset, $job, $evidence);
@@ -81,9 +88,10 @@ final class AssetCandidateQuery
      * Batch the same evidence used by canonical dispatch assignment checks.
      *
      * @param  list<int>  $assetIds
-     * @return array<int, array{maintenance: int, inspections: Collection<int, Inspection>, dvir: DvirInspection|null, dispatch: Collection<int, DispatchAssetAssignment>, rentals: Collection<int, object>}>
+     * @param  iterable<OperationalAsset>|null  $assets  already loaded with their kind, to skip a lookup
+     * @return array<int, array{maintenance: int, inspections: Collection<int, Inspection>, dvir: DvirInspection|null, dispatch: Collection<int, DispatchAssetAssignment>, rentals: Collection<int, object>, preventive_maintenance_due_at: CarbonImmutable|null, activation: bool, permit_issues: list<array{category: string, label: string, state: string, document_id: int|null, expires_at: string|null, days_left: int|null}>}>
      */
-    public function evidence(array $assetIds, DispatchJob $job, bool $excludeCurrentJob = false): array
+    public function evidence(array $assetIds, DispatchJob $job, bool $excludeCurrentJob = false, ?iterable $assets = null): array
     {
         if ($assetIds === []) {
             return [];
@@ -155,6 +163,11 @@ final class AssetCandidateQuery
                 'rental_reservations.end_date',
             ])
             ->groupBy('operational_asset_id');
+        $maintenanceDue = $this->preventiveMaintenance->dueBeforeForAssets($assetIds, $job->scheduled_end);
+        $permitIssues = $this->permits->blockingIssuesForAssets(
+            $assets ?? OperationalAsset::query()->whereKey($assetIds)->get(['id', 'kind']),
+            $job->scheduled_end,
+        );
 
         return collect($assetIds)->mapWithKeys(fn (int $assetId): array => [$assetId => [
             'maintenance' => $maintenance->get($assetId, collect())->count(),
@@ -162,6 +175,9 @@ final class AssetCandidateQuery
             'dvir' => $dvirs->get($assetId, collect())->first(),
             'dispatch' => $dispatch->where('operational_asset_id', $assetId)->values(),
             'rentals' => $rentals->get($assetId, collect()),
+            'preventive_maintenance_due_at' => $maintenanceDue[$assetId] ?? null,
+            'activation' => $excludeCurrentJob,
+            'permit_issues' => $permitIssues[$assetId] ?? [],
         ]])->all();
     }
 
@@ -190,7 +206,7 @@ final class AssetCandidateQuery
     }
 
     /**
-     * @param  array<int, array{maintenance: int, inspections: Collection<int, Inspection>, dvir: DvirInspection|null, dispatch: Collection<int, DispatchAssetAssignment>, rentals: Collection<int, object>}>  $evidence
+     * @param  array<int, array{maintenance: int, inspections: Collection<int, Inspection>, dvir: DvirInspection|null, dispatch: Collection<int, DispatchAssetAssignment>, rentals: Collection<int, object>, preventive_maintenance_due_at: CarbonImmutable|null, activation: bool, permit_issues: list<array{category: string, label: string, state: string, document_id: int|null, expires_at: string|null, days_left: int|null}>}>  $evidence
      * @return array{id: int, code: string, name: string, subtype: string|null, capacity: string|null, assignment_type: string, assignment_label: string, eligible: bool, reasons: list<string>, activation_constraints: list<string>, readiness: array{value: string, label: string}, blocking_maintenance_count: int, schedule_conflicts: list<array{id: int, reference: string, scheduled_start: string|null, scheduled_end: string|null}>, already_assigned: bool}
      */
     public function assess(OperationalAsset $asset, DispatchJob $job, array $evidence): array
@@ -201,6 +217,9 @@ final class AssetCandidateQuery
             'dvir' => null,
             'dispatch' => collect(),
             'rentals' => collect(),
+            'preventive_maintenance_due_at' => null,
+            'activation' => false,
+            'permit_issues' => [],
         ];
         $reasons = [];
         $conflicts = [];
@@ -234,6 +253,24 @@ final class AssetCandidateQuery
         foreach ($facts['rentals'] as $rental) {
             $reasons[] = 'The asset is committed to another active rental reservation.';
         }
+        foreach ($facts['permit_issues'] as $permit) {
+            $reasons[] = match ($permit['state']) {
+                'missing' => "{$permit['label']} is missing.",
+                'revoked' => "{$permit['label']} was revoked.",
+                default => "{$permit['label']} expires {$permit['expires_at']}, before this work ends.",
+            };
+        }
+
+        $activationConstraints = $this->inspectionReadiness->lacksPassingClearance($facts['inspections'], $facts['dvir'])
+            ? ['A passing workshop inspection is still required.']
+            : [];
+        // Due preventive maintenance warns while planning and blocks activation.
+        $maintenanceDueAt = $facts['preventive_maintenance_due_at'];
+        if ($maintenanceDueAt !== null && $facts['activation']) {
+            $reasons[] = 'Preventive maintenance is due '.$this->preventiveMaintenance->describe($maintenanceDueAt).', before this work ends.';
+        } elseif ($maintenanceDueAt !== null) {
+            $activationConstraints[] = 'Preventive maintenance is due '.$this->preventiveMaintenance->describe($maintenanceDueAt).'; complete it before activation.';
+        }
 
         return [
             'id' => (int) $asset->getKey(),
@@ -255,9 +292,7 @@ final class AssetCandidateQuery
             },
             'eligible' => $reasons === [] && $conflicts === [],
             'reasons' => array_values(array_unique($reasons)),
-            'activation_constraints' => $this->inspectionReadiness->lacksPassingClearance($facts['inspections'], $facts['dvir'])
-                ? ['A passing workshop inspection is still required.']
-                : [],
+            'activation_constraints' => $activationConstraints,
             'readiness' => [
                 'value' => $asset->status->value,
                 'label' => $asset->status->label(),

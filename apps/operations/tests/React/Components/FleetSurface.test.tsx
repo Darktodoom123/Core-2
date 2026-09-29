@@ -18,6 +18,8 @@ import {
     SafetyLockoutBanner,
 } from '@/components/workspace/fleet';
 import type {
+    AssetPermitComplianceViewModel,
+    AssetPermitItemViewModel,
     AssetViewModel,
     LocationUpdateViewModel,
     WorkspaceCapabilities,
@@ -1103,7 +1105,7 @@ describe('FleetSurface & Modular Fleet Components', () => {
             fireEvent.keyDown(statusTab, { key: 'End' });
 
             expect(
-                screen.getByRole('tab', { name: /permits & docs/i }),
+                screen.getByRole('tab', { name: /permits & compliance/i }),
             ).toHaveAttribute('aria-selected', 'true');
         });
 
@@ -1472,7 +1474,7 @@ describe('FleetSurface & Modular Fleet Components', () => {
                 screen.getByRole('tab', { name: /work orders/i }),
             ).toHaveTextContent('14');
             expect(
-                screen.getByRole('tab', { name: /permits & docs/i }),
+                screen.getByRole('tab', { name: /permits & compliance/i }),
             ).toHaveTextContent('7');
 
             fireEvent.click(screen.getByRole('tab', { name: /inspections/i }));
@@ -1720,7 +1722,7 @@ describe('FleetSurface & Modular Fleet Components', () => {
             ).not.toBeInTheDocument();
 
             fireEvent.click(
-                screen.getByRole('tab', { name: /permits & docs/i }),
+                screen.getByRole('tab', { name: /permits & compliance/i }),
             );
             expect(screen.queryByText('Add Document')).not.toBeInTheDocument();
             expect(screen.getByText('Transit permit')).toBeInTheDocument();
@@ -2455,6 +2457,193 @@ describe('FleetSurface & Modular Fleet Components', () => {
                     name: /stale gps/i,
                 }),
             ).not.toBeInTheDocument();
+        });
+    });
+    describe('Equipment permits', () => {
+        const permitItem = (
+            overrides: Partial<AssetPermitItemViewModel>,
+        ): AssetPermitItemViewModel => ({
+            category: 'insurance',
+            label: 'Comprehensive / Third-Party Insurance',
+            state: 'valid',
+            document_id: 900,
+            expires_at: '2027-06-30',
+            days_left: 270,
+            blocks_dispatch: false,
+            ...overrides,
+        });
+        const withPermits = (
+            id: number,
+            code: string,
+            state: AssetPermitComplianceViewModel['state'],
+            items: AssetPermitItemViewModel[],
+        ) =>
+            createAsset(id, code, 'crane', 'available', {
+                is_dispatchable: !items.some((item) => item.blocks_dispatch),
+                permit_compliance: {
+                    state,
+                    blocks_dispatch: items.some((item) => item.blocks_dispatch),
+                    items,
+                },
+            });
+
+        const expiredAsset = withPermits(1, 'CRN-EXP', 'expired', [
+            permitItem({
+                category: 'registrations',
+                label: 'Registration / LTO',
+                state: 'expired',
+                expires_at: '2026-09-20',
+                days_left: -9,
+                blocks_dispatch: true,
+            }),
+            permitItem({}),
+        ]);
+        const expiringAsset = withPermits(2, 'CRN-SOON', 'expiring', [
+            permitItem({ expires_at: '2026-10-11', days_left: 12 }),
+        ]);
+        const missingAsset = withPermits(3, 'CRN-MISS', 'missing', [
+            permitItem({
+                state: 'missing',
+                document_id: null,
+                expires_at: null,
+                days_left: null,
+            }),
+        ]);
+        const validAsset = withPermits(4, 'CRN-OK', 'valid', [permitItem({})]);
+
+        it('shows the most urgent permit issue on each asset card', () => {
+            render(
+                <FleetSurface
+                    assets={[
+                        expiredAsset,
+                        expiringAsset,
+                        missingAsset,
+                        validAsset,
+                    ]}
+                    capabilities={createCapabilities()}
+                />,
+            );
+            const list = screen.getByRole('list', { name: 'Fleet assets' });
+
+            expect(
+                within(list).getByText('LTO registration expired'),
+            ).toBeInTheDocument();
+            expect(
+                within(list).getByText('Insurance expires in 12 days'),
+            ).toBeInTheDocument();
+            expect(
+                within(list).getByText('Insurance missing'),
+            ).toBeInTheDocument();
+            expect(within(list).queryByText(/CRN-OK.*expire/)).toBeNull();
+        });
+
+        it('filters the fleet list from the permit renewal counts', () => {
+            render(
+                <FleetSurface
+                    assets={[
+                        expiredAsset,
+                        expiringAsset,
+                        missingAsset,
+                        validAsset,
+                    ]}
+                    capabilities={createCapabilities()}
+                />,
+            );
+            const renewals = screen.getByRole('region', {
+                name: 'Permit renewals',
+            });
+
+            expect(renewals.textContent).toMatch(
+                /1 of 4 assets fully compliant/,
+            );
+
+            fireEvent.click(
+                within(renewals).getByRole('button', {
+                    name: /expired or revoked/i,
+                }),
+            );
+
+            const list = screen.getByRole('list', { name: 'Fleet assets' });
+            expect(within(list).getByText('CRN-EXP')).toBeInTheDocument();
+            expect(within(list).queryByText('CRN-SOON')).toBeNull();
+            expect(within(list).queryByText('CRN-OK')).toBeNull();
+        });
+
+        it('counts expired and expiring permits as needing attention but not missing ones that do not block', () => {
+            render(
+                <FleetSurface
+                    assets={[
+                        expiredAsset,
+                        expiringAsset,
+                        missingAsset,
+                        validAsset,
+                    ]}
+                    capabilities={createCapabilities()}
+                />,
+            );
+
+            expect(
+                screen.getByRole('button', { name: /needs attention \(2\)/i }),
+            ).toBeInTheDocument();
+        });
+
+        it('lists required permits and opens a renewal that supersedes the expired permit', () => {
+            const asset = {
+                ...expiredAsset,
+                documents: [
+                    {
+                        id: 900,
+                        category: 'registrations',
+                        category_label: 'Registration / LTO',
+                        title: 'LTO OR/CR',
+                        document_number: 'LTO-1',
+                        issuing_authority: 'Land Transportation Office',
+                        expires_at: '2026-09-20',
+                        status: 'active',
+                        validity_status: 'expired' as const,
+                        is_expired: true,
+                        expires_soon: false,
+                    },
+                ],
+                permit_compliance: {
+                    ...expiredAsset.permit_compliance!,
+                    items: [
+                        {
+                            ...expiredAsset.permit_compliance!.items[0],
+                            document_id: 900,
+                        },
+                    ],
+                },
+            };
+
+            render(
+                <FleetDetailPane
+                    asset={asset}
+                    capabilities={createCapabilities()}
+                />,
+            );
+            fireEvent.click(
+                screen.getByRole('tab', { name: /permits & compliance/i }),
+            );
+
+            const checklist = screen.getByRole('region', {
+                name: 'Required permits',
+            });
+            expect(
+                within(checklist).getByText("Can't be dispatched"),
+            ).toBeInTheDocument();
+
+            fireEvent.click(
+                within(checklist).getByRole('button', {
+                    name: 'Renew Registration / LTO',
+                }),
+            );
+
+            expect(
+                screen.getByRole('dialog', {
+                    name: 'Renew Registration / LTO',
+                }),
+            ).toBeInTheDocument();
         });
     });
 });

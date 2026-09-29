@@ -5,6 +5,7 @@ namespace App\Modules\Assignment\Services;
 use App\Modules\Assignment\Models\DispatchAssetAssignment;
 use App\Modules\Assignment\Models\DispatchPersonnelAssignment;
 use App\Modules\Dispatch\Models\DispatchJob;
+use App\Modules\Fleet\Services\AssetPreventiveMaintenance;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\PersonnelCredential;
 use App\Platform\Identity\Models\PersonnelProfile;
@@ -22,6 +23,7 @@ final class DispatchResourceEligibility
     public function __construct(
         private readonly OperationalAssetAvailability $availability,
         private readonly AssetInspectionReadiness $inspectionReadiness,
+        private readonly AssetPreventiveMaintenance $preventiveMaintenance,
     ) {}
 
     /**
@@ -182,12 +184,18 @@ final class DispatchResourceEligibility
                 : 'Recorded failed inspection or DVIR defects must be cleared before assignment.';
         }
 
+        $activationConstraints = $this->inspectionReadiness->lacksPassingClearance($asset->inspections, $asset->latestDvirInspection)
+            ? ['A passing workshop inspection is still required.']
+            : [];
+        $maintenanceDueAt = $excludeCurrentJob ? null : $this->preventiveMaintenance->dueBefore($asset, $job->scheduled_end);
+        if ($maintenanceDueAt !== null) {
+            $activationConstraints[] = 'Preventive maintenance is due '.$this->preventiveMaintenance->describe($maintenanceDueAt).'; complete it before activation.';
+        }
+
         return [
             'eligible' => $reasons === [] && $conflicts === [],
             'reasons' => $reasons,
-            'activation_constraints' => $this->inspectionReadiness->lacksPassingClearance($asset->inspections, $asset->latestDvirInspection)
-                ? ['A passing workshop inspection is still required.']
-                : [],
+            'activation_constraints' => $activationConstraints,
             'readiness' => [
                 'value' => $asset->status->value,
                 'label' => $asset->status->label(),

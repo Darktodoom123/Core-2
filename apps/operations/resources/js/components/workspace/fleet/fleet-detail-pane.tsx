@@ -211,9 +211,12 @@ export function FleetDetailPane({
         {
             id: 'documents',
             icon: FileText,
-            label: 'Documents',
-            fullLabel: 'Permits & Docs',
+            label: 'Permits',
+            fullLabel: 'Permits & Compliance',
             count: documentsCount,
+            countTone: asset.permit_compliance?.blocks_dispatch
+                ? 'danger'
+                : undefined,
         },
     ];
 

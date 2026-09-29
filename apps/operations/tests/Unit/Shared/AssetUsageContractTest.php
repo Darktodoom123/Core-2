@@ -1,5 +1,7 @@
 <?php
 
+use App\Modules\Fleet\Services\AssetPermitCompliance;
+use App\Modules\Fleet\Services\AssetPreventiveMaintenance;
 use App\Shared\Assets\Contracts\AssetUsageConflictChecker;
 use App\Shared\Assets\Data\AssetUsageConflict;
 use App\Shared\Assets\Data\AssetUsageRequest;
@@ -48,7 +50,7 @@ it('returns stable checker conflicts and lets callers choose the validation key'
         }
     };
 
-    $availability = new OperationalAssetAvailability([$checker], new AssetInspectionReadiness);
+    $availability = new OperationalAssetAvailability([$checker], new AssetInspectionReadiness, new AssetPermitCompliance, new AssetPreventiveMaintenance);
     $request = new AssetUsageRequest(1, AssetUsageType::AssetStatusChange);
 
     expect($availability->assess($request)->conflicts)->toHaveCount(1)

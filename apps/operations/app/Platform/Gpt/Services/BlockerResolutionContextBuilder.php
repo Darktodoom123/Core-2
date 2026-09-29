@@ -14,9 +14,15 @@ use App\Shared\Assets\Models\OperationalAsset;
 /**
  * Produces one actionable, server-vetted resource problem for the legacy
  * assignment workflow. Project shifts use their separate coverage workflow.
+ * Live jobs only get a replacement for an assigned resource that stopped
+ * being eligible; their coverage is not re-planned.
  */
 final class BlockerResolutionContextBuilder
 {
+    private const PLANNING_STATUSES = [DispatchStatus::Draft, DispatchStatus::PendingApproval, DispatchStatus::Scheduled];
+
+    private const LIVE_STATUSES = [DispatchStatus::Dispatched, DispatchStatus::Accepted, DispatchStatus::EnRoute, DispatchStatus::Arrived, DispatchStatus::Working];
+
     public function __construct(private readonly DispatchResourceEligibility $eligibility) {}
 
     /**
@@ -25,7 +31,8 @@ final class BlockerResolutionContextBuilder
     public function buildForDispatchJob(DispatchJob $job): ?array
     {
         $job = $job->fresh() ?? $job;
-        if ($job->trashed() || ! in_array($job->status, [DispatchStatus::Draft, DispatchStatus::PendingApproval, DispatchStatus::Scheduled], true)
+        $isLive = in_array($job->status, self::LIVE_STATUSES, true);
+        if ($job->trashed() || (! $isLive && ! in_array($job->status, self::PLANNING_STATUSES, true))
             || $job->scheduled_start === null || $job->scheduled_end === null || $job->scheduled_end->lte($job->scheduled_start)
             || ProjectShift::query()->where('dispatch_job_id', $job->id)->exists()) {
             return null;
@@ -42,7 +49,7 @@ final class BlockerResolutionContextBuilder
             $assessment = $user instanceof User
                 ? $this->eligibility->personnel($user, $assignment->assignment_type, $job, true)
                 : null;
-            if ($assignment->response_status === AssignmentResponse::Rejected || $assessment === null || ! $assessment['eligible']) {
+            if ($assignment->response_status === AssignmentResponse::Rejected || $assessment === null || $this->blocksAssignment($assessment, $isLive)) {
                 $blocker = [
                     'code' => $assignment->response_status === AssignmentResponse::Rejected ? 'personnel_rejected' : 'personnel_ineligible',
                     'resource_kind' => 'personnel',
@@ -69,7 +76,7 @@ final class BlockerResolutionContextBuilder
                 $assessment = $asset instanceof OperationalAsset
                     ? $this->eligibility->asset($asset, $assignment->assignment_type, $job, excludeCurrentJob: true)
                     : null;
-                if ($assessment === null || ! $assessment['eligible']) {
+                if ($assessment === null || $this->blocksAssignment($assessment, $isLive)) {
                     $blocker = [
                         'code' => 'asset_ineligible',
                         'resource_kind' => 'asset',
@@ -86,6 +93,10 @@ final class BlockerResolutionContextBuilder
                     break;
                 }
             }
+        }
+
+        if ($blocker === null && $isLive) {
+            return null;
         }
 
         $resourceRequirements = $job->resource_requirements;
@@ -145,6 +156,7 @@ final class BlockerResolutionContextBuilder
             'job' => [
                 'id' => (int) $job->id,
                 'version' => (int) $job->version,
+                'status' => $job->status->value,
                 'scheduled_start' => $job->scheduled_start->toIso8601String(),
                 'scheduled_end' => $job->scheduled_end->toIso8601String(),
             ],
@@ -164,6 +176,28 @@ final class BlockerResolutionContextBuilder
             ],
             'prompt_summary' => 'Resource blocker: '.$blocker['code'].'.',
         ];
+    }
+
+    /**
+     * A live job keeps its resources when they overlap a job that has not
+     * started yet; that overlap is resolved on the other job instead.
+     *
+     * @param  array{eligible: bool, reasons: list<string>, schedule_conflicts: list<array{id: int, reference: string, scheduled_start: string|null, scheduled_end: string|null}>}  $assessment
+     */
+    private function blocksAssignment(array $assessment, bool $isLive): bool
+    {
+        $conflictIds = array_column($assessment['schedule_conflicts'], 'id');
+        if ($assessment['eligible'] || ! $isLive || $conflictIds === []) {
+            return ! $assessment['eligible'];
+        }
+
+        $liveConflicts = DispatchJob::query()->whereKey($conflictIds)
+            ->whereIn('status', array_map(fn (DispatchStatus $status): string => $status->value, self::LIVE_STATUSES))
+            ->count();
+        $notStartedConflicts = count($conflictIds) - $liveConflicts;
+
+        // Each overlap contributes exactly one reason to the assessment.
+        return count($assessment['reasons']) > $notStartedConflicts;
     }
 
     /** @param list<int> $assignedIds

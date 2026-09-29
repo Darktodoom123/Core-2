@@ -13,6 +13,7 @@ use App\Modules\Dispatch\Models\ServiceRequest;
 use App\Modules\Dispatch\Planning\Services\PlanningAccess;
 use App\Modules\Dvir\Models\DvirInspection;
 use App\Modules\Fleet\Models\AssetDocument;
+use App\Modules\Fleet\Services\AssetPermitCompliance;
 use App\Modules\Fuel\Models\FuelRequest;
 use App\Modules\Fuel\ViewModels\FuelWorkspaceViewModel;
 use App\Modules\HoursOfService\Enums\DutyStatus;
@@ -454,7 +455,11 @@ final class OperationsWorkspaceViewModel
             $maintenanceOrders = $asset->relationLoaded('maintenanceWorkOrders') ? $asset->maintenanceWorkOrders : collect();
             $latestDvir = $asset->relationLoaded('latestDvirInspection') ? $asset->latestDvirInspection : null;
             $inspectionBlocked = app(AssetInspectionReadiness::class)->lacksPassingClearance($inspections, $latestDvir);
-            $isDispatchable = $asset->status->dispatchable() && $blockingCount === 0 && ! $inspectionBlocked;
+            $permitCompliance = $asset->relationLoaded('documents')
+                ? app(AssetPermitCompliance::class)->summary($asset, $asset->documents)
+                : null;
+            $permitBlocked = $permitCompliance['blocks_dispatch'] ?? false;
+            $isDispatchable = $asset->status->dispatchable() && $blockingCount === 0 && ! $inspectionBlocked && ! $permitBlocked;
             $dispatchabilityBlockers = [];
             if (! $asset->status->dispatchable()) {
                 $dispatchabilityBlockers[] = [
@@ -475,6 +480,13 @@ final class OperationsWorkspaceViewModel
                     'code' => 'inspection',
                     'label' => 'Workshop inspection required before activation',
                     'detail' => 'A completed passing workshop inspection is required before activation; a later failed inspection or defective DVIR removes clearance.',
+                ];
+            }
+            if ($permitBlocked) {
+                $dispatchabilityBlockers[] = [
+                    'code' => 'permit',
+                    'label' => 'Required permit is not valid',
+                    'detail' => 'Renew or upload the permit in Permits and compliance before dispatch.',
                 ];
             }
 
@@ -643,6 +655,7 @@ final class OperationsWorkspaceViewModel
                 'dvir_inspections_count' => $dvirInspectionsCount,
                 'maintenance_work_orders_count' => $maintenanceWorkOrdersCount,
                 'documents_count' => $documentsCount,
+                'permit_compliance' => $permitCompliance,
                 'latest_status_change' => $statusChange instanceof AuditEvent ? [
                     'from_status' => is_array($statusChange->before) ? ($statusChange->before['status'] ?? null) : null,
                     'to_status' => is_array($statusChange->after) ? ($statusChange->after['status'] ?? null) : null,

@@ -307,3 +307,89 @@ test('an edited selection saves normally but is not counted as AI adoption', fun
     expect($this->job->personnelAssignments()->open()->where('user_id', $chosen->id)->exists())->toBeTrue()
         ->and($rec->fresh()->status->value)->toBe('stale');
 });
+
+test('a live dispatch gets replacement advice when an assigned resource becomes ineligible', function (): void {
+    $this->job->update(['status' => DispatchStatus::Working]);
+    $old = User::factory()->create(['is_active' => true]);
+    $old->syncRoles([RoleName::CraneOperator->value]);
+    $assignment = $this->job->personnelAssignments()->create([
+        'user_id' => $old->id, 'assignment_type' => 'crane_operator',
+        'assigned_by' => $this->dispatcher->id, 'response_status' => 'accepted',
+    ]);
+    eligibleBlockerOperator();
+
+    $context = app(BlockerResolutionContextBuilder::class)->buildForDispatchJob($this->job);
+
+    expect($context['context']['blocker']['action'])->toBe('reassign')
+        ->and($context['context']['blocker']['replace_assignment_id'])->toBe($assignment->id)
+        ->and($context['context']['job']['status'])->toBe('working')
+        ->and($context['context']['options'])->toHaveCount(1);
+});
+
+test('a live dispatch is not re-planned for missing coverage', function (): void {
+    $this->job->update(['status' => DispatchStatus::EnRoute, 'resource_requirements' => [
+        'personnel' => ['driver' => 1],
+        'assets' => ['truck' => 1],
+    ]]);
+
+    expect(app(BlockerResolutionContextBuilder::class)->buildForDispatchJob($this->job))->toBeNull();
+    app()->call([new SweepProactiveGptRecommendationsJob, 'handle']);
+    expect(GptRecommendation::query()->count())->toBe(0);
+});
+
+test('live replacement advice goes stale when the dispatch moves to the next stage', function (): void {
+    $this->job->update(['status' => DispatchStatus::EnRoute]);
+    $old = User::factory()->create(['is_active' => true]);
+    $old->syncRoles([RoleName::CraneOperator->value]);
+    $this->job->personnelAssignments()->create([
+        'user_id' => $old->id, 'assignment_type' => 'crane_operator',
+        'assigned_by' => $this->dispatcher->id, 'response_status' => 'accepted',
+    ]);
+    eligibleBlockerOperator();
+    $rec = app(GenerateGptRecommendation::class)->handle($this->dispatcher, $this->job, 'dispatch_blocker_resolution');
+    $context = app(BlockerResolutionContextBuilder::class)->buildForDispatchJob($this->job);
+    app()->call([new GenerateGptRecommendationJob($rec->id, $context['context']), 'handle']);
+    expect(app(BlockerAdviceReview::class)->prefill($this->dispatcher, $this->job, $rec->id, 1))->not->toBeNull();
+
+    $this->job->update(['status' => DispatchStatus::Arrived]);
+
+    expect(app(BlockerAdviceReview::class)->prefill($this->dispatcher, $this->job->fresh(), $rec->id, 1))->toBeNull();
+});
+
+test('completed dispatches never get blocker advice', function (): void {
+    $this->job->update(['status' => DispatchStatus::Completed]);
+    $old = User::factory()->create(['is_active' => true]);
+    $old->syncRoles([RoleName::CraneOperator->value]);
+    $this->job->personnelAssignments()->create([
+        'user_id' => $old->id, 'assignment_type' => 'crane_operator',
+        'assigned_by' => $this->dispatcher->id, 'response_status' => 'accepted',
+    ]);
+
+    expect(app(BlockerResolutionContextBuilder::class)->buildForDispatchJob($this->job))->toBeNull();
+});
+
+test('a live crew member is kept when they overlap a job that has not started', function (): void {
+    $this->job->update(['status' => DispatchStatus::Working]);
+    $operator = eligibleBlockerOperator();
+    $this->job->personnelAssignments()->create([
+        'user_id' => $operator->id, 'assignment_type' => 'crane_operator',
+        'assigned_by' => $this->dispatcher->id, 'response_status' => 'accepted',
+    ]);
+    $other = DispatchJob::query()->create([
+        'reference' => 'BLOCKER-002', 'title' => 'Later lift', 'client' => 'Client', 'site' => 'South yard',
+        'scheduled_start' => $this->job->scheduled_start, 'scheduled_end' => $this->job->scheduled_end,
+        'priority' => DispatchPriority::Routine, 'status' => DispatchStatus::Scheduled,
+        'created_by' => $this->dispatcher->id, 'version' => 1,
+    ]);
+    $other->personnelAssignments()->create([
+        'user_id' => $operator->id, 'assignment_type' => 'crane_operator',
+        'assigned_by' => $this->dispatcher->id, 'response_status' => 'accepted',
+    ]);
+
+    expect(app(BlockerResolutionContextBuilder::class)->buildForDispatchJob($this->job))->toBeNull()
+        ->and(app(BlockerResolutionContextBuilder::class)->buildForDispatchJob($other)['context']['blocker']['action'])->toBe('reassign');
+
+    $other->update(['status' => DispatchStatus::Working]);
+
+    expect(app(BlockerResolutionContextBuilder::class)->buildForDispatchJob($this->job)['context']['blocker']['code'])->toBe('personnel_ineligible');
+});

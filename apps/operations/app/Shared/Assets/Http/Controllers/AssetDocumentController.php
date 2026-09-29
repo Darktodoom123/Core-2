@@ -32,6 +32,15 @@ final class AssetDocumentController extends Controller
             'expires_at' => ['nullable', 'date', 'after_or_equal:issued_at'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'file' => ['required', 'file', 'max:10240', 'mimetypes:application/pdf,image/jpeg,image/png,image/heic'],
+            // A renewal names the earlier permit it replaces; it must be the same asset and category.
+            'supersedes_document_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('asset_documents', 'id')
+                    ->where('operational_asset_id', $operationalAsset->id)
+                    ->where('category', (string) $request->input('category'))
+                    ->where('status', 'active'),
+            ],
         ]);
 
         $document = AssetDocument::query()->create([
@@ -60,7 +69,20 @@ final class AssetDocumentController extends Controller
             throw $e;
         }
 
-        $audit->handle($request->user(), $operationalAsset, 'asset.document_added', null, ['document_id' => $document->id, 'attachment_id' => $attachment->id]);
+        // Supersede only after the new file is stored, so a failed upload leaves the old permit in force.
+        $supersededId = isset($validated['supersedes_document_id']) ? (int) $validated['supersedes_document_id'] : null;
+        if ($supersededId !== null) {
+            AssetDocument::query()->whereKey($supersededId)->where('status', 'active')->update([
+                'status' => 'superseded',
+                'updated_by' => $request->user()->id,
+            ]);
+        }
+
+        $audit->handle($request->user(), $operationalAsset, 'asset.document_added', null, [
+            'document_id' => $document->id,
+            'attachment_id' => $attachment->id,
+            'supersedes_document_id' => $supersededId,
+        ]);
 
         if ($request->header('X-Inertia')) {
             return back()->with('status', 'Document added successfully.');

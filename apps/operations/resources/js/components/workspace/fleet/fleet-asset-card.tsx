@@ -1,4 +1,4 @@
-import { AlertTriangle, Radio, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, FileWarning, Radio, ShieldAlert } from 'lucide-react';
 import React from 'react';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import { DvirStatusBadge } from '@/components/workspace/fleet/dvir-status-badge';
@@ -8,6 +8,7 @@ import {
     getFleetLocationFreshnessLabel,
     hasLocationCoordinates,
 } from '@/components/workspace/fleet/fleet-location-labels';
+import { getFleetPermitBadge } from '@/components/workspace/fleet/fleet-permit-status';
 import { HosDutyBadge } from '@/components/workspace/fleet/hos-duty-badge';
 import { OperatorBindingChip } from '@/components/workspace/fleet/operator-binding-chip';
 import { resolveAssetDisplayStatus } from '@/components/workspace/resource-schedule-status';
@@ -42,6 +43,7 @@ export function FleetAssetCard({
         hasLocationCoordinates(location) &&
         location.freshness_status === 'fresh';
     const dispatchabilityState = getFleetDispatchabilityState(asset);
+    const permitBadge = getFleetPermitBadge(asset);
     const categoryLabel = getFleetAssetCategoryLabel(asset);
     const modelSummary = [asset.manufacturer, asset.model]
         .filter(Boolean)
@@ -156,6 +158,26 @@ export function FleetAssetCard({
                     Inspection required before dispatch
                 </div>
             ) : null}
+
+            {permitBadge && (
+                <div
+                    className={cn(
+                        'mt-1 inline-flex max-w-full items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-semibold',
+                        permitBadge.tone === 'danger' &&
+                            'border-danger/20 bg-danger-soft text-danger-strong',
+                        permitBadge.tone === 'warning' &&
+                            'border-warning/30 bg-warning-soft text-warning-strong',
+                        permitBadge.tone === 'neutral' &&
+                            'border-line bg-surface-subtle text-ink-soft',
+                    )}
+                >
+                    <FileWarning
+                        className="h-3 w-3 shrink-0"
+                        aria-hidden="true"
+                    />
+                    <span className="truncate">{permitBadge.label}</span>
+                </div>
+            )}
 
             {/* Parity Status: Operator, HoS & DVIR */}
             {!compact &&

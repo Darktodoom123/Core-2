@@ -108,8 +108,9 @@ it('keeps the candidate page query count fixed as the asset pool grows', functio
         );
     });
 
+    // One batched permit-document query per page joined the budget.
     expect($largeCount)->toBe($smallCount)
-        ->and($largeCount)->toBeLessThanOrEqual(8);
+        ->and($largeCount)->toBeLessThanOrEqual(9);
 });
 
 it('batches eligible-only evaluation across asset chunks', function (): void {
@@ -138,8 +139,10 @@ it('batches eligible-only evaluation across asset chunks', function (): void {
         );
     });
 
+    // Three 100-asset chunks each add one batched permit-document query and
+    // one batched preventive-maintenance query.
     expect($page->pagination['total'])->toBe(201)
-        ->and($queryCount)->toBeLessThanOrEqual(20);
+        ->and($queryCount)->toBeLessThanOrEqual(24);
 });
 
 it('validates bounded candidate filters at the request boundary', function (): void {

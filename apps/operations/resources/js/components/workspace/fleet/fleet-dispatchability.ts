@@ -1,7 +1,11 @@
 import type { AssetViewModel } from '@/types/workspace';
 
 export type FleetDispatchabilityState =
-    'ready' | 'blocking_work_orders' | 'inspection_required' | null;
+    | 'ready'
+    | 'blocking_work_orders'
+    | 'permit_invalid'
+    | 'inspection_required'
+    | null;
 
 /**
  * Mirrors the backend dispatchability calculation using fields already
@@ -16,6 +20,10 @@ export function getFleetDispatchabilityState(
 
     if (asset.blocking_work_orders_count > 0) {
         return 'blocking_work_orders';
+    }
+
+    if (asset.permit_compliance?.blocks_dispatch) {
+        return 'permit_invalid';
     }
 
     const statusCanBeDispatched =

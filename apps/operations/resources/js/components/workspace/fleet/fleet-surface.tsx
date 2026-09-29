@@ -14,6 +14,9 @@ import {
 } from '@/components/workspace/fleet/fleet-asset-classification';
 import { FleetDetailPane } from '@/components/workspace/fleet/fleet-detail-pane';
 import { FleetMapView } from '@/components/workspace/fleet/fleet-map-view';
+import { FleetPermitRenewals } from '@/components/workspace/fleet/fleet-permit-renewals';
+import type { FleetPermitIssue } from '@/components/workspace/fleet/fleet-permit-status';
+import { getFleetPermitIssue } from '@/components/workspace/fleet/fleet-permit-status';
 import type { FleetCategoryFilter } from '@/components/workspace/fleet/fleet-queue';
 import { FleetQueue } from '@/components/workspace/fleet/fleet-queue';
 import type { FleetTriageException } from '@/components/workspace/fleet/fleet-triage-bar';
@@ -50,6 +53,12 @@ const FLEET_FILTER_VALUES: readonly FleetCategoryFilter[] = [
     'maintenance',
     'inspection',
 ];
+
+const PERMIT_FILTER_ISSUE = {
+    permit_expired: 'expired',
+    permit_expiring: 'expiring',
+    permit_missing: 'missing',
+} as const satisfies Partial<Record<FleetTriageException, FleetPermitIssue>>;
 
 interface FleetFilterUrlState {
     search: string;
@@ -226,8 +235,21 @@ export function FleetSurface({
         let blocking_orders = 0;
         let dvir_defects = 0;
         let stale_gps = 0;
+        let permit_expired = 0;
+        let permit_expiring = 0;
+        let permit_missing = 0;
 
         for (const asset of assets) {
+            const permitIssue = getFleetPermitIssue(asset);
+
+            if (permitIssue === 'expired') {
+                permit_expired += 1;
+            } else if (permitIssue === 'expiring') {
+                permit_expiring += 1;
+            } else if (permitIssue === 'missing') {
+                permit_missing += 1;
+            }
+
             if (asset.lockout?.is_locked_out) {
                 lockouts += 1;
             }
@@ -261,7 +283,10 @@ export function FleetSurface({
                         asset.latest_dvir.critical_defects_count > 0 ||
                         asset.latest_dvir.status === 'critical_defect' ||
                         asset.latest_dvir.status === 'defect_flagged')) ||
-                isStale
+                isStale ||
+                permitIssue === 'expired' ||
+                permitIssue === 'expiring' ||
+                asset.permit_compliance?.blocks_dispatch
             ) {
                 needs_attention += 1;
             }
@@ -273,6 +298,9 @@ export function FleetSurface({
             blocking_orders,
             dvir_defects,
             stale_gps,
+            permit_expired,
+            permit_expiring,
+            permit_missing,
         };
     }, [assets, locations]);
 
@@ -349,6 +377,17 @@ export function FleetSurface({
                 const isStale = loc?.freshness_status === 'stale';
 
                 if (!isStale) {
+                    return false;
+                }
+            } else if (
+                triageFilter === 'permit_expired' ||
+                triageFilter === 'permit_expiring' ||
+                triageFilter === 'permit_missing'
+            ) {
+                if (
+                    getFleetPermitIssue(asset) !==
+                    PERMIT_FILTER_ISSUE[triageFilter]
+                ) {
                     return false;
                 }
             }
@@ -446,6 +485,12 @@ export function FleetSurface({
                         search field to find a specific asset.
                     </InlineNotice>
                 )}
+
+                <FleetPermitRenewals
+                    assets={assets}
+                    activeFilter={triageFilter}
+                    onFilterChange={setTriageFilter}
+                />
 
                 {assets.length === 0 ? (
                     <Panel>

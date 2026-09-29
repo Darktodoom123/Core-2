@@ -2,6 +2,9 @@ import {
     AlertCircle,
     AlertTriangle,
     ChevronDown,
+    FileClock,
+    FileQuestionMark,
+    FileX,
     Radio,
     ShieldAlert,
     Wrench,
@@ -11,7 +14,13 @@ import React, { useEffect, useId, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 export type FleetTriageException =
-    'lockouts' | 'blocking_orders' | 'dvir_defects' | 'stale_gps';
+    | 'lockouts'
+    | 'blocking_orders'
+    | 'dvir_defects'
+    | 'stale_gps'
+    | 'permit_expired'
+    | 'permit_expiring'
+    | 'permit_missing';
 
 export interface FleetTriageCounts {
     needs_attention: number;
@@ -19,6 +28,9 @@ export interface FleetTriageCounts {
     blocking_orders: number;
     dvir_defects: number;
     stale_gps: number;
+    permit_expired: number;
+    permit_expiring: number;
+    permit_missing: number;
 }
 
 export interface FleetTriageBarProps {
@@ -103,6 +115,24 @@ export function FleetTriageBar({
             label: 'Stale GPS',
             count: counts.stale_gps,
             Icon: Radio,
+        },
+        {
+            key: 'permit_expired' as const,
+            label: 'Permit expired',
+            count: counts.permit_expired,
+            Icon: FileX,
+        },
+        {
+            key: 'permit_expiring' as const,
+            label: 'Permit expiring',
+            count: counts.permit_expiring,
+            Icon: FileClock,
+        },
+        {
+            key: 'permit_missing' as const,
+            label: 'Permit missing',
+            count: counts.permit_missing,
+            Icon: FileQuestionMark,
         },
     ].filter((option) => option.count > 0 || activeFilter === option.key);
 

@@ -22,9 +22,14 @@ import {
     FleetSectionHeader,
 } from '@/components/workspace/fleet/fleet-detail-primitives';
 import { FleetInput } from '@/components/workspace/fleet/fleet-input';
+import { FleetPermitChecklist } from '@/components/workspace/fleet/fleet-permit-checklist';
 import { formatDate } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
-import type { AssetDocumentViewModel, AssetViewModel } from '@/types/workspace';
+import type {
+    AssetDocumentViewModel,
+    AssetPermitItemViewModel,
+    AssetViewModel,
+} from '@/types/workspace';
 
 export interface FleetDocumentsSectionProps {
     asset: AssetViewModel;
@@ -78,11 +83,24 @@ export function FleetDocumentsSection({
     const [replacingDoc, setReplacingDoc] =
         useState<AssetDocumentViewModel | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [renewing, setRenewing] = useState<AssetPermitItemViewModel | null>(
+        null,
+    );
 
     const documents = asset.documents ?? [];
+    // Superseded permits are history: listed last and left out of the alerts.
+    const currentDocuments = documents.filter(
+        (doc) => doc.status !== 'superseded',
+    );
     const sortedDocuments = [...documents].sort((a, b) => {
         const priority = (document: AssetDocumentViewModel) =>
-            document.is_expired ? 0 : document.expires_soon ? 1 : 2;
+            document.status === 'superseded'
+                ? 3
+                : document.is_expired
+                  ? 0
+                  : document.expires_soon
+                    ? 1
+                    : 2;
         const priorityDifference = priority(a) - priority(b);
 
         if (priorityDifference !== 0) {
@@ -113,6 +131,7 @@ export function FleetDocumentsSection({
         expires_at: string;
         notes: string;
         file: File | null;
+        supersedes_document_id: number | null;
     }>({
         category: 'road_permits',
         title: '',
@@ -122,6 +141,7 @@ export function FleetDocumentsSection({
         expires_at: '',
         notes: '',
         file: null,
+        supersedes_document_id: null,
     });
 
     const editForm = useForm<{
@@ -163,7 +183,12 @@ export function FleetDocumentsSection({
             onSuccess: () => {
                 setShowUploadForm(false);
                 form.reset();
-                setSuccessMessage('Document uploaded.');
+                setSuccessMessage(
+                    renewing
+                        ? `${renewing.label} renewed. The earlier permit is kept as superseded.`
+                        : 'Document uploaded.',
+                );
+                setRenewing(null);
             },
         });
     };
@@ -260,6 +285,42 @@ export function FleetDocumentsSection({
         setShowUploadForm(false);
     };
 
+    const openBlankUpload = () => {
+        setRenewing(null);
+        form.setData('supersedes_document_id', null);
+        openUploadDialog();
+    };
+
+    const openPermitUpload = (item: AssetPermitItemViewModel) => {
+        setRenewing(null);
+        form.setData({
+            ...form.data,
+            category: item.category,
+            title: item.label,
+            supersedes_document_id: null,
+        });
+        openUploadDialog();
+    };
+
+    // A renewal is a new permit record; the one it replaces becomes superseded.
+    const openPermitRenewal = (item: AssetPermitItemViewModel) => {
+        const current = documents.find((doc) => doc.id === item.document_id);
+        setRenewing(item);
+        form.setData({
+            category: item.category,
+            title: current?.title ?? item.label,
+            document_number: '',
+            issuing_authority: current?.issuing_authority ?? '',
+            issued_at: '',
+            expires_at: '',
+            notes: '',
+            file: null,
+            supersedes_document_id:
+                current && current.status === 'active' ? current.id : null,
+        });
+        openUploadDialog();
+    };
+
     const renderValidityBadge = (doc: AssetDocumentViewModel) => {
         switch (doc.validity_status) {
             case 'valid':
@@ -291,11 +352,16 @@ export function FleetDocumentsSection({
         }
     };
 
-    const expiredCount = documents.filter((doc) => doc.is_expired).length;
-    const expiringCount = documents.filter(
+    const expiredCount = currentDocuments.filter(
+        (doc) => doc.is_expired,
+    ).length;
+    const expiringCount = currentDocuments.filter(
         (doc) => !doc.is_expired && doc.expires_soon,
     ).length;
-    const missingFileCount = documents.filter((doc) => !doc.attachment).length;
+    const missingFileCount = currentDocuments.filter(
+        (doc) => !doc.attachment,
+    ).length;
+    const permitCompliance = asset.permit_compliance;
 
     return (
         <div className="space-y-5">
@@ -307,7 +373,7 @@ export function FleetDocumentsSection({
                         <Button
                             variant="primary"
                             size="sm"
-                            onClick={openUploadDialog}
+                            onClick={openBlankUpload}
                         >
                             <Plus className="h-3.5 w-3.5" />
                             Add Document
@@ -315,6 +381,16 @@ export function FleetDocumentsSection({
                     )
                 }
             />
+
+            {permitCompliance && permitCompliance.items.length > 0 && (
+                <FleetPermitChecklist
+                    assetCode={asset.code}
+                    compliance={permitCompliance}
+                    canManage={canManage}
+                    onUpload={openPermitUpload}
+                    onRenew={openPermitRenewal}
+                />
+            )}
 
             {documents.length > 0 && (
                 <div className="flex flex-wrap items-center gap-1.5 text-xs text-ink-soft">
@@ -355,7 +431,11 @@ export function FleetDocumentsSection({
             <Modal
                 open={showUploadForm && canManage}
                 onClose={closeUploadDialog}
-                title="Add compliance document"
+                title={
+                    renewing
+                        ? `Renew ${renewing.label}`
+                        : 'Add compliance document'
+                }
                 description={`${asset.code} · ${asset.name ?? 'Fleet asset'}`}
                 size="lg"
                 closeOnBackdrop={false}
@@ -699,7 +779,7 @@ export function FleetDocumentsSection({
                             <Button
                                 variant="secondary"
                                 size="sm"
-                                onClick={openUploadDialog}
+                                onClick={openBlankUpload}
                             >
                                 <Upload className="h-3.5 w-3.5" />
                                 Upload the first document
