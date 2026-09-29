@@ -573,3 +573,129 @@ it('cleans up OTP state and rate limits gracefully when mail delivery fails', fu
     expect(EmailOneTimeCode::where('user_id', $user->id)->count())->toBe(0)
         ->and(RateLimiter::tooManyAttempts('email-otp-cooldown:'.$user->id.':'.EmailOneTimeCode::PURPOSE_LOGIN, 1))->toBeFalse();
 });
+
+it('ignores an existing trust cookie and requires the OTP challenge for system administrators', function (): void {
+    $user = User::factory()->create([
+        'username' => 'system.admin',
+        'email' => 'admin@example.com',
+        'email_otp_enabled' => true,
+        'email_verified_at' => now(),
+        'is_active' => true,
+    ]);
+    $user->syncRoles([RoleName::SystemAdministrator->value]);
+
+    $plainToken = 'admin-plain-trust-token-1234567890abcdef';
+    TrustedDevice::create([
+        'user_id' => $user->id,
+        'device_id' => (string) Str::uuid(),
+        'device_key_hash' => hash('sha256', $plainToken),
+        'device_label' => 'Chrome on Windows',
+        'platform' => 'web',
+        'ip_address' => '127.0.0.1',
+        'last_used_at' => now(),
+        'expires_at' => now()->addDays(30),
+    ]);
+
+    $response = $this->withCookie(DeviceTrustService::COOKIE_NAME, $plainToken)
+        ->post('/login', [
+            'username' => 'system.admin',
+            'password' => 'password',
+        ]);
+
+    $response->assertRedirect(route('login.challenge'));
+    $this->assertGuest();
+});
+
+it('does not issue a device trust cookie to system administrators even when trust_device is requested', function (): void {
+    $user = User::factory()->create([
+        'username' => 'system.admin',
+        'email' => 'admin@example.com',
+        'email_otp_enabled' => true,
+        'email_verified_at' => now(),
+        'is_active' => true,
+    ]);
+    $user->syncRoles([RoleName::SystemAdministrator->value]);
+
+    $code = '654321';
+    EmailOneTimeCode::create([
+        'user_id' => $user->id,
+        'purpose' => EmailOneTimeCode::PURPOSE_LOGIN,
+        'code_hash' => hash_hmac('sha256', $code, (string) config('app.key')),
+        'challenge_id' => 'ch-web-admin-trust',
+        'expires_at' => now()->addMinutes(5),
+        'attempts' => 0,
+        'max_attempts' => 5,
+        'resend_count' => 0,
+    ]);
+
+    $response = $this->withSession([
+        'login.two_factor' => [
+            'user_id' => $user->id,
+            'challenge_id' => 'ch-web-admin-trust',
+            'expires_at' => now()->addMinutes(5)->timestamp,
+        ],
+    ])->post('/login/challenge', [
+        'code' => $code,
+        'trust_device' => true,
+    ]);
+
+    $response->assertRedirect('/');
+    $this->assertAuthenticatedAs($user);
+    $response->assertCookieMissing(DeviceTrustService::COOKIE_NAME);
+    expect($user->trustedDevices()->count())->toBe(0);
+});
+
+it('does not issue an API device trust token to system administrators', function (): void {
+    $user = User::factory()->create([
+        'username' => 'system.admin',
+        'email' => 'admin@example.com',
+        'email_otp_enabled' => true,
+        'email_verified_at' => now(),
+        'is_active' => true,
+    ]);
+    $user->syncRoles([RoleName::SystemAdministrator->value]);
+
+    $code = '889900';
+    EmailOneTimeCode::create([
+        'user_id' => $user->id,
+        'purpose' => EmailOneTimeCode::PURPOSE_LOGIN,
+        'code_hash' => hash_hmac('sha256', $code, (string) config('app.key')),
+        'challenge_id' => 'ch-api-admin-trust',
+        'expires_at' => now()->addMinutes(5),
+        'attempts' => 0,
+        'max_attempts' => 5,
+        'resend_count' => 0,
+    ]);
+
+    $response = $this->postJson('/api/v1/auth/challenge/verify', [
+        'challenge_id' => 'ch-api-admin-trust',
+        'code' => $code,
+        'trust_device' => true,
+    ]);
+
+    $response->assertOk()->assertJsonPath('data.device_trust_token', null);
+    expect($user->trustedDevices()->count())->toBe(0);
+});
+
+it('exposes whether the trust option is offered on the web challenge page', function (RoleName $role, bool $expected): void {
+    $user = User::factory()->create([
+        'email_otp_enabled' => true,
+        'email_verified_at' => now(),
+        'is_active' => true,
+    ]);
+    $user->syncRoles([$role->value]);
+
+    $this->withSession([
+        'login.two_factor' => [
+            'user_id' => $user->id,
+            'challenge_id' => 'ch-web-page-props',
+            'expires_at' => now()->addMinutes(5)->timestamp,
+        ],
+    ])->get('/login/challenge')
+        ->assertInertia(fn ($page) => $page
+            ->component('auth/two-factor-challenge')
+            ->where('can_trust_device', $expected));
+})->with([
+    'system administrator' => [RoleName::SystemAdministrator, false],
+    'operations manager' => [RoleName::OperationsManager, true],
+]);

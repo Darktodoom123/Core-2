@@ -20,7 +20,7 @@ class DeviceTrustService
      */
     public function verifyTrust(User $user, ?string $token): ?TrustedDevice
     {
-        if ($token === null || trim($token) === '') {
+        if ($token === null || trim($token) === '' || ! $user->canTrustDevice()) {
             return null;
         }
 

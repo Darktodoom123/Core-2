@@ -214,7 +214,7 @@ final class AuthController extends Controller
             : 'React Native Field Mobile';
 
         $trustToken = null;
-        if ($request->boolean('trust_device')) {
+        if ($request->boolean('trust_device') && $user->canTrustDevice()) {
             $issued = $trustService->issueTrust($user, $request, 'mobile', $deviceName);
             $trustToken = $issued['token'];
         }

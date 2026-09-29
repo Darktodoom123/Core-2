@@ -8,6 +8,7 @@ import { AuthShell } from './auth-shell';
 interface TwoFactorChallengeProps {
     email_obfuscated: string;
     expires_in_seconds?: number;
+    can_trust_device?: boolean;
     status?: string;
     errors?: Record<string, string>;
 }
@@ -15,6 +16,7 @@ interface TwoFactorChallengeProps {
 export default function TwoFactorChallenge({
     email_obfuscated,
     expires_in_seconds = 300,
+    can_trust_device = false,
     status,
     errors,
 }: TwoFactorChallengeProps) {
@@ -146,26 +148,28 @@ export default function TwoFactorChallenge({
                     )}
                 </label>
 
-                <div className="bg-surface-muted/40 flex items-start gap-3 rounded-lg border border-line p-3">
-                    <input
-                        type="checkbox"
-                        id="trust_device"
-                        checked={form.data.trust_device}
-                        onChange={(e) =>
-                            form.setData('trust_device', e.target.checked)
-                        }
-                        className="mt-0.5 h-4 w-4 rounded border-line text-brand-strong focus-visible:outline-2 focus-visible:outline-brand"
-                    />
-                    <label
-                        htmlFor="trust_device"
-                        className="cursor-pointer text-sm font-medium text-ink"
-                    >
-                        <span>Trust this device for 30 days.</span>
-                        <span className="block text-xs font-normal text-ink-soft">
-                            Only on a device you control.
-                        </span>
-                    </label>
-                </div>
+                {can_trust_device && (
+                    <div className="bg-surface-muted/40 flex items-start gap-3 rounded-lg border border-line p-3">
+                        <input
+                            type="checkbox"
+                            id="trust_device"
+                            checked={form.data.trust_device}
+                            onChange={(e) =>
+                                form.setData('trust_device', e.target.checked)
+                            }
+                            className="mt-0.5 h-4 w-4 rounded border-line text-brand-strong focus-visible:outline-2 focus-visible:outline-brand"
+                        />
+                        <label
+                            htmlFor="trust_device"
+                            className="cursor-pointer text-sm font-medium text-ink"
+                        >
+                            <span>Trust this device for 30 days.</span>
+                            <span className="block text-xs font-normal text-ink-soft">
+                                Only on a device you control.
+                            </span>
+                        </label>
+                    </div>
+                )}
 
                 <Button
                     type="submit"

@@ -119,4 +119,12 @@ class User extends Authenticatable implements MustVerifyEmail
 
         return $this->hasVerifiedEmail();
     }
+
+    /**
+     * Privileged accounts must pass device verification on every sign-in.
+     */
+    public function canTrustDevice(): bool
+    {
+        return ! $this->hasRole(RoleName::SystemAdministrator->value);
+    }
 }

@@ -55,6 +55,7 @@ final class TwoFactorChallengeController extends Controller
         return Inertia::render('auth/two-factor-challenge', [
             'email_obfuscated' => $obfuscatedEmail,
             'expires_in_seconds' => max(0, ((int) $twoFactorData['expires_at']) - time()),
+            'can_trust_device' => $user->canTrustDevice(),
             'status' => session('status'),
         ]);
     }
@@ -112,7 +113,7 @@ final class TwoFactorChallengeController extends Controller
         ValidateActiveSession::track($user, $request);
 
         $trustToken = null;
-        if ($request->boolean('trust_device')) {
+        if ($request->boolean('trust_device') && $user->canTrustDevice()) {
             $issued = $trustService->issueTrust($user, $request, 'web');
             $trustToken = $issued['token'];
         }
