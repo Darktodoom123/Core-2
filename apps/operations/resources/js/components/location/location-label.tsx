@@ -77,7 +77,10 @@ export function LocationLabel({
     if (variant === 'compact') {
         return (
             <span
-                className={cn('inline-flex min-w-0 items-start gap-1', className)}
+                className={cn(
+                    'inline-flex min-w-0 items-start gap-1',
+                    className,
+                )}
                 title={`${coordinates}${accuracy}`}
             >
                 {icon}
@@ -113,7 +116,10 @@ export function LocationLabel({
             {icon}
             <span className="min-w-0">
                 <span
-                    className={cn('block font-medium break-words', headlineTone)}
+                    className={cn(
+                        'block font-medium break-words',
+                        headlineTone,
+                    )}
                     aria-live="polite"
                 >
                     {headline}

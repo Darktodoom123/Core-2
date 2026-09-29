@@ -269,8 +269,7 @@ function mapHosCycleHistory(data: {
                 const observedAt = historyString(row, 'location_observed_at');
                 const acceptedAt = historyString(row, 'accepted_at');
                 const freshness = historyString(row, 'location_freshness');
-                const serverPlace = (row as { place?: PlaceName | null })
-                    .place;
+                const serverPlace = (row as { place?: PlaceName | null }).place;
                 // Nearest address from the server, else the name the device
                 // stored when the status was logged.
                 const locationName =

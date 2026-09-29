@@ -42,8 +42,8 @@ import {
     hasLocationCoordinates,
 } from '@/components/workspace/fleet/fleet-location-labels';
 import { formatCoordinates } from '@/lib/coordinates';
-import { cn } from '@/lib/utils';
 import { useTheme } from '@/lib/use-theme';
+import { cn } from '@/lib/utils';
 import {
     primePlace,
     reverseGeocode,
@@ -154,9 +154,9 @@ export function LiveTrackingMap({
     const [internalSelectedId, setInternalSelectedId] = useState<number | null>(
         null,
     );
-    const [styleVariant, setStyleVariant] = useState<MapStyleVariant>(
-        resolvedTheme,
-    );
+    const [styleVariantOverride, setStyleVariant] =
+        useState<MapStyleVariant | null>(null);
+    const styleVariant = styleVariantOverride ?? resolvedTheme;
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [mobileView, setMobileView] = useState<'map' | 'list'>('map');
@@ -166,10 +166,6 @@ export function LiveTrackingMap({
     const mapActionsRef = useRef<MapActions | null>(null);
     const fullscreenSurfaceRef = useRef<HTMLDivElement>(null);
     const locationListId = useId();
-
-    useEffect(() => {
-        setStyleVariant(resolvedTheme);
-    }, [resolvedTheme]);
 
     useEffect(() => {
         if (!isFullscreen) {
@@ -269,7 +265,11 @@ export function LiveTrackingMap({
         for (const location of mappedLocations) {
             if (location.latitude !== null && location.longitude !== null) {
                 // Server-sent places need no request; misses resolve once.
-                primePlace(location.latitude, location.longitude, location.place);
+                primePlace(
+                    location.latitude,
+                    location.longitude,
+                    location.place,
+                );
                 void reverseGeocode(location.latitude, location.longitude);
             }
         }
@@ -1407,6 +1407,7 @@ function TrackingMapContent({
         maplibregl,
         onSelect,
         prefersReducedMotion,
+        sosLocations,
     ]);
 
     useEffect(() => {

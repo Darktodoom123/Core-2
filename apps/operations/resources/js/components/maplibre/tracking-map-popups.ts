@@ -3,8 +3,8 @@ import {
     FLEET_ASSET_CATEGORY_LABELS,
 } from '@/components/workspace/fleet/fleet-asset-classification';
 import { getFleetLocationFreshnessLabel } from '@/components/workspace/fleet/fleet-location-labels';
-import { formatCoordinates } from '@/lib/coordinates';
 import { resolveLocationName } from '@/lib/asset-kind';
+import { formatCoordinates } from '@/lib/coordinates';
 import {
     getCoordinatesCacheKey,
     onLocationResolved,
@@ -238,9 +238,7 @@ export function createTrackingSosPopup(
             { label: 'Received', value: timestamp(incident.received_at) },
         ],
         locationName,
-        coordinateText: hasCoords
-            ? formatCoordinates(lat, lon)
-            : undefined,
+        coordinateText: hasCoords ? formatCoordinates(lat, lon) : undefined,
         onCopyCoordinates,
     });
 

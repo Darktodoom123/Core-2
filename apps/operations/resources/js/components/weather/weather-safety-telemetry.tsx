@@ -260,8 +260,8 @@ export function WeatherSafetyTelemetry({
                         className="size-4 shrink-0"
                         aria-hidden="true"
                     />
-                    Site weather unavailable. Pin the job site coordinates to
-                    request a forecast.
+                    Site weather unavailable because coordinates not recorded.
+                    Pin the job site coordinates to request a forecast.
                 </p>
             ) : state === 'loading' ? (
                 <p

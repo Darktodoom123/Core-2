@@ -390,7 +390,8 @@ it('exposes open dispatch commitments as asset occupancy without changing the fl
     $assign($makeJob('DSP-OCC-DONE', DispatchStatus::Completed, 1), $finishedAsset);
     $assign($makeJob('DSP-OCC-RELEASED', DispatchStatus::Scheduled, 1), $finishedAsset, ['active_until' => now()->subMinute()]);
 
-    $viewModels = collect(OperationsWorkspaceViewModel::assets(OperationalAsset::query()->get()))->keyBy('code');
+    $assets = OperationsWorkspaceViewModel::loadDispatchOccupancies(OperationalAsset::query()->get());
+    $viewModels = collect(OperationsWorkspaceViewModel::assets($assets))->keyBy('code');
 
     expect($viewModels['CRN-DRAFT']['status']['value'])->toBe('available')
         ->and($viewModels['CRN-DRAFT']['dispatch_occupancy']['state'])->toBe('tentative')

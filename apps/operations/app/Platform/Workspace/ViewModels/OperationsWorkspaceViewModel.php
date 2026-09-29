@@ -401,6 +401,19 @@ final class OperationsWorkspaceViewModel
 
     /**
      * @param  Collection<int, OperationalAsset>  $assets
+     * @return Collection<int, OperationalAsset>
+     */
+    public static function loadDispatchOccupancies(Collection $assets): Collection
+    {
+        $dispatchOccupancies = self::dispatchOccupancies($assets->modelKeys());
+
+        return $assets->each(static function (OperationalAsset $asset) use ($dispatchOccupancies): void {
+            $asset->setAttribute('dispatch_occupancy', $dispatchOccupancies[(int) $asset->getKey()] ?? null);
+        });
+    }
+
+    /**
+     * @param  Collection<int, OperationalAsset>  $assets
      * @return array<int, array<string, mixed>>
      */
     public static function assets(Collection $assets): array
@@ -425,9 +438,7 @@ final class OperationsWorkspaceViewModel
                     ->groupBy('subject_id')
                     ->map(static fn (Collection $events): ?AuditEvent => $events->first()));
 
-        $dispatchOccupancies = self::dispatchOccupancies($assetIds->all());
-
-        return $assets->map(static function (OperationalAsset $asset) use ($latestStatusChanges, $dispatchOccupancies): array {
+        return $assets->map(static function (OperationalAsset $asset) use ($latestStatusChanges): array {
             $blockingCount = (int) $asset->getAttribute('blocking_work_orders_count');
             $inspectionsCount = $asset->getAttribute('inspections_count');
             $dvirInspectionsCount = $asset->getAttribute('dvir_inspections_count');
@@ -620,7 +631,7 @@ final class OperationsWorkspaceViewModel
                     'label' => $asset->status->label(),
                 ],
                 'blocking_work_orders_count' => $blockingCount,
-                'dispatch_occupancy' => $dispatchOccupancies[(int) $asset->getKey()] ?? null,
+                'dispatch_occupancy' => $asset->getAttribute('dispatch_occupancy'),
                 'is_dispatchable' => $isDispatchable,
                 'dispatchability' => [
                     'is_dispatchable' => $isDispatchable,

@@ -89,6 +89,7 @@ test.describe('Pure Site-Based Location Picker & Pinning Workflow', () => {
         const locateButton = page.getByTestId('locate-site-button');
         await expect(locateButton).toBeVisible();
         await locateButton.click();
+        await expect(locateButton).toBeEnabled();
 
         // 7. Verify coordinates auto-populate from the resolved catalog
         const latInput = page.getByTestId('site-lat-input');
@@ -113,6 +114,6 @@ test.describe('Pure Site-Based Location Picker & Pinning Workflow', () => {
         // 11. Verify coordinates overlay displays on map
         const coordOverlay = page.getByTestId('coordinates-overlay');
         await expect(coordOverlay).toBeVisible();
-        await expect(coordOverlay).toContainText('14.55030° N, 121.05050° E');
+        await expect(coordOverlay).toContainText('14.550300, 121.050500');
     });
 });

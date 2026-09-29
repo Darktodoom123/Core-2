@@ -232,10 +232,12 @@ test('legacy coverage links open operational coverage and restore the selected s
         `/?view=dispatch&dispatch_view=schedule&dispatch_mode=list&dispatch_date=${coverageDate}&dispatch_job=${jobId}`,
     );
     await page.locator(`a[href^="${href.pathname}?"]`).first().click();
-    const coverageLink = page.getByRole('link', {
-        name: 'Return to resource coverage',
-        exact: true,
-    });
+    const coverageLink = page
+        .getByRole('link', {
+            name: 'Return to resource coverage',
+            exact: true,
+        })
+        .first();
     const coverageTarget = new URL(
         (await coverageLink.getAttribute('href'))!,
         'http://localhost',

@@ -87,6 +87,7 @@ test.describe('Contract-Driven Crane Slots & Multi-Slot Site Layout Workflow', (
         const locateButton = page.getByTestId('locate-site-button');
         await expect(locateButton).toBeVisible();
         await locateButton.click();
+        await expect(locateButton).toBeEnabled();
 
         // 5. Configure Slot 1 (TC-1) coordinates and jib length
         const slot1NameInput = page.getByTestId('slot-name-input');

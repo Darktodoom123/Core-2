@@ -81,7 +81,7 @@ final class AssetWeeklyReportBuilder
 
         $jobIds = $assignedJobIds
             ->merge($shiftsOnAsset->pluck('dispatch_job_id'))
-            ->merge($fuelLogs->map(fn (FuelLog $log) => $log->request?->dispatch_job_id))
+            ->merge($fuelLogs->map(fn (FuelLog $log) => $log->request->dispatch_job_id))
             ->filter()
             ->unique()
             ->values();
@@ -141,9 +141,9 @@ final class AssetWeeklyReportBuilder
         $fuelRows = $fuelLogs->map(fn (FuelLog $log): array => [
             'id' => $log->id,
             'recorded_at' => $this->iso($log->recorded_at),
-            'job_reference' => $log->request?->job?->reference,
-            'fuel_type' => $log->request?->fuel_type,
-            'requested_litres' => $this->num($log->request?->quantity_litres),
+            'job_reference' => $log->request->job?->reference,
+            'fuel_type' => $log->request->fuel_type,
+            'requested_litres' => $this->num($log->request->quantity_litres),
             'actual_litres' => $this->num($log->quantity_litres),
             'variance_litres' => $this->num($log->variance_litres),
             'price_per_litre' => $this->num($log->price_per_litre),
@@ -153,12 +153,12 @@ final class AssetWeeklyReportBuilder
             'is_anomaly' => (bool) $log->is_anomaly,
             'anomaly_reason' => $log->anomaly_reason,
             'station' => $log->fuel_station,
-            'recorded_by' => $log->recorder?->name,
+            'recorded_by' => $log->recorder->name,
         ])->values();
 
         $shiftRows = $shiftsOnAsset->map(fn (OperatorShift $shift): array => [
             'id' => $shift->id,
-            'operator' => $shift->user?->name,
+            'operator' => $shift->user->name,
             'job_reference' => $shift->dispatchJob?->reference,
             'status' => $this->enumLabel($shift->status),
             'started_at' => $this->iso($shift->started_at),
@@ -178,7 +178,7 @@ final class AssetWeeklyReportBuilder
 
             return [
                 'id' => $report->id,
-                'job_reference' => $report->job?->reference,
+                'job_reference' => $report->job->reference,
                 'author' => $report->author?->name,
                 'status' => $report->status->label(),
                 'started_at' => $this->iso($report->started_at),
@@ -257,7 +257,7 @@ final class AssetWeeklyReportBuilder
                 'id' => $inspection->id,
                 'reference' => $inspection->reference,
                 'type' => $this->enumLabel($inspection->inspection_type),
-                'inspector' => $inspection->user?->name,
+                'inspector' => $inspection->user->name,
                 'completed_at' => $this->iso($inspection->completed_at),
                 'has_defects' => (bool) $inspection->has_defects,
                 'critical_defects_count' => (int) $inspection->critical_defects_count,
@@ -299,7 +299,7 @@ final class AssetWeeklyReportBuilder
                 'date' => $dayStart->toDateString(),
                 'label' => $dayStart->format('D, M j'),
                 'jobs' => $dayJobs->pluck('reference')->values()->all(),
-                'operators' => $dayShifts->map(fn (OperatorShift $s) => $s->user?->name)->filter()->unique()->values()->all(),
+                'operators' => $dayShifts->map(fn (OperatorShift $s) => $s->user->name)->filter()->unique()->values()->all(),
                 'on_duty_minutes' => $dayShifts->sum(fn (OperatorShift $s) => $this->minutesWithin($s->started_at, $s->ended_at, $fromUtc, $toUtc)),
             ];
         }

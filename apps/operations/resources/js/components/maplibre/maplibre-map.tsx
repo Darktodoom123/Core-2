@@ -135,14 +135,24 @@ export function MapLibreMap({
         const styleUrl = getMapStyleUrl(effectiveStyleVariant);
 
         if (!styleUrl) {
-            setStatus('error');
-            setErrorMessage('Map provider configuration is missing.');
+            queueMicrotask(() => {
+                if (!disposed) {
+                    setStatus('error');
+                    setErrorMessage('Map provider configuration is missing.');
+                }
+            });
 
-            return () => undefined;
+            return () => {
+                disposed = true;
+            };
         }
 
-        setStatus('loading');
-        setErrorMessage(null);
+        queueMicrotask(() => {
+            if (!disposed) {
+                setStatus('loading');
+                setErrorMessage(null);
+            }
+        });
 
         void import('maplibre-gl')
             .then((maplibregl) => {

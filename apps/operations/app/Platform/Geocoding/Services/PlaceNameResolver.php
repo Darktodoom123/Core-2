@@ -51,8 +51,18 @@ final class PlaceNameResolver
         $cacheKey = 'geocoding:search:'.sha1(mb_strtolower($query).'|'.$this->searchCountry);
         $cached = Cache::get($cacheKey);
 
-        if (is_array($cached)) {
-            return $cached;
+        if (is_array($cached)
+            && is_numeric($cached['latitude'] ?? null)
+            && is_numeric($cached['longitude'] ?? null)
+            && is_array($cached['place'] ?? null)) {
+            /** @var array<string, mixed> $place */
+            $place = $cached['place'];
+
+            return [
+                'latitude' => (float) $cached['latitude'],
+                'longitude' => (float) $cached['longitude'],
+                'place' => $place,
+            ];
         }
 
         foreach ($this->searchProviders as $provider) {

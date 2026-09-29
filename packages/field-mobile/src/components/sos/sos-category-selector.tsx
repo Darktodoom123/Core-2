@@ -261,7 +261,10 @@ export const SosCategorySelector: React.FC<SosCategorySelectorProps> = ({
                                 />
                             </View>
 
-                            <View pointerEvents="none" style={styles.optionCopy}>
+                            <View
+                                pointerEvents="none"
+                                style={styles.optionCopy}
+                            >
                                 <Text
                                     numberOfLines={2}
                                     style={[

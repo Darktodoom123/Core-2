@@ -108,7 +108,12 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await expect(
             page.getByRole('heading', { name: /Job reports/i }),
         ).toBeVisible();
-        const restrictedExportRow = page
+        await page.getByRole('button', { name: /Export Records/i }).click();
+        const exportDialog = page.getByRole('dialog', {
+            name: 'Export Operational Records',
+        });
+        await expect(exportDialog).toBeVisible();
+        const restrictedExportRow = exportDialog
             .getByRole('row')
             .filter({ hasText: 'XLSX' });
         await expect(

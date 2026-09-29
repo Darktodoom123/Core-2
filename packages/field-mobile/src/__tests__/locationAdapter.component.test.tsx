@@ -92,26 +92,29 @@ describe('NativeLocationAdapter duty snapshots', () => {
             timestamp: Date.now() - 10 * 1000,
             coords: { latitude: 14.6, longitude: 120.98, accuracy: 12 },
         });
-        await expect(adapter.getCurrentLocation(false)).resolves.toMatchObject(
-            { latitude: 14.6, source: 'last_known' },
-        );
+        await expect(adapter.getCurrentLocation(false)).resolves.toMatchObject({
+            latitude: 14.6,
+            source: 'last_known',
+        });
         expect(currentPosition).not.toHaveBeenCalled();
 
         lastKnownPosition.mockResolvedValueOnce({
             timestamp: Date.now() - (CURRENT_FIX_MAX_CACHE_AGE_MS + 1000),
             coords: { latitude: 14.6, longitude: 120.98, accuracy: 12 },
         });
-        await expect(adapter.getCurrentLocation(false)).resolves.toMatchObject(
-            { latitude: 14.5995, source: 'gps' },
-        );
+        await expect(adapter.getCurrentLocation(false)).resolves.toMatchObject({
+            latitude: 14.5995,
+            source: 'gps',
+        });
 
         lastKnownPosition.mockResolvedValueOnce({
             timestamp: Date.now() - 10 * 1000,
             coords: { latitude: 14.6, longitude: 120.98, accuracy: 800 },
         });
-        await expect(adapter.getCurrentLocation(false)).resolves.toMatchObject(
-            { latitude: 14.5995, source: 'gps' },
-        );
+        await expect(adapter.getCurrentLocation(false)).resolves.toMatchObject({
+            latitude: 14.5995,
+            source: 'gps',
+        });
     });
 
     it('rejects mocked fixes from test providers and fake-GPS apps', async () => {
@@ -130,9 +133,10 @@ describe('NativeLocationAdapter duty snapshots', () => {
         await expect(adapter.getTrackingLocation()).rejects.toThrow(
             'unavailable',
         );
-        await expect(adapter.getDutyLocationSnapshot()).resolves.toMatchObject(
-            { latitude: null, source: 'unavailable' },
-        );
+        await expect(adapter.getDutyLocationSnapshot()).resolves.toMatchObject({
+            latitude: null,
+            source: 'unavailable',
+        });
     });
 
     it('never falls back to a last known fix older than the fallback window', async () => {

@@ -553,10 +553,14 @@ export default function DispatchDetail({
                                                             <a
                                                                 href="#assignment-summary"
                                                                 onClick={() => {
-                                                                    setActiveStep(2);
+                                                                    setActiveStep(
+                                                                        2,
+                                                                    );
 
                                                                     if (
-                                                                        window.location.hash ===
+                                                                        window
+                                                                            .location
+                                                                            .hash ===
                                                                         '#assignment-summary'
                                                                     ) {
                                                                         document
@@ -565,7 +569,8 @@ export default function DispatchDetail({
                                                                             )
                                                                             ?.scrollIntoView(
                                                                                 {
-                                                                                    behavior: 'smooth',
+                                                                                    behavior:
+                                                                                        'smooth',
                                                                                     block: 'start',
                                                                                 },
                                                                             );

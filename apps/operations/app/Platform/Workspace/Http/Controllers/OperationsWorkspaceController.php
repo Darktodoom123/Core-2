@@ -212,9 +212,10 @@ final class OperationsWorkspaceController extends Controller
             })(),
             'assets' => (function () use ($user, $assetFilters): array {
                 $assetPaginator = app(WorkspaceAssetsQuery::class)->paginate($user, $assetFilters);
+                $assets = OperationsWorkspaceViewModel::loadDispatchOccupancies($assetPaginator->getCollection());
 
                 return [
-                    'assets' => OperationsWorkspaceViewModel::assets($assetPaginator->getCollection()),
+                    'assets' => OperationsWorkspaceViewModel::assets($assets),
                     'assets_total' => $assetPaginator->total(),
                     'assets_pagination' => [
                         'current_page' => $assetPaginator->currentPage(),
@@ -687,6 +688,8 @@ final class OperationsWorkspaceController extends Controller
             ->orderBy('code')
             ->limit($limit)
             ->get();
+
+        OperationsWorkspaceViewModel::loadDispatchOccupancies($assets);
 
         return [$assets, $total];
     }

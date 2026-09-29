@@ -81,7 +81,10 @@ function store(key: string, place: PlaceViewModel): void {
     }
 }
 
-export function getCachedPlace(lat: number, lon: number): PlaceViewModel | null {
+export function getCachedPlace(
+    lat: number,
+    lon: number,
+): PlaceViewModel | null {
     return placeCache.get(getCoordinatesCacheKey(lat, lon)) ?? null;
 }
 
@@ -303,7 +306,8 @@ export const ADDRESS_UNAVAILABLE_LABEL = 'Address unavailable';
  * is never mistaken for a live position.
  */
 export function usePreciseLocation(
-    location?: (LocationResolutionInput & { place?: PlaceViewModel | null }) | null,
+    location?:
+        (LocationResolutionInput & { place?: PlaceViewModel | null }) | null,
 ): string {
     const place = usePlace(
         location?.latitude,
