@@ -17,7 +17,6 @@ use App\Shared\Assets\Models\OperationalAsset;
 use Database\Seeders\Development\DefensePresentationSeeder;
 use Database\Seeders\Development\LocalDevelopmentSeeder;
 use Database\Seeders\RolePermissionSeeder;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -53,7 +52,6 @@ it('releases BJ, clears the fleet, and lets the manager dispatch BJ from a Core 
         ->and(AssetDocument::query()->whereDoesntHave('attachments')->exists())->toBeFalse();
 
     // The live walkthrough: convert, assign BJ + crane, activate.
-    Model::reguard();
     $manager = User::query()->where('username', 'manager')->sole();
     $request = $waiting->first();
     $job = app(ConvertServiceRequestToDispatch::class)->handle($request->id, $manager, [
@@ -72,7 +70,6 @@ it('releases BJ, clears the fleet, and lets the manager dispatch BJ from a Core 
     // The same Operations Manager approves their own dispatch.
     app(DecideApprovalRequest::class)->handle($manager, $approval, ApprovalStatus::Approved, 'Crew credentials and crane readiness verified.');
     $job = app(ActivateDispatchJob::class)->handle($manager, $job->refresh(), $job->refresh()->version);
-    Model::unguard();
 
     expect($job->status)->toBe(DispatchStatus::Dispatched);
 });
