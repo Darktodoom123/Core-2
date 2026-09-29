@@ -9,9 +9,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'active', 'verified', 'throttle:120,1'])->group(function (): void {
     Route::middleware('throttle:exports')->group(function (): void {
-        Route::get('/reports/exports', fn () => redirect()->route('operations', ['section' => 'reports']));
+        Route::get('/reports/exports', fn () => redirect()->route('operations', ['section' => 'exports']));
         Route::post('/reports/exports', [ReportExportController::class, 'store']);
-        Route::get('/exports', fn () => redirect()->route('operations', ['section' => 'reports']));
+        Route::get('/exports', fn () => redirect()->route('operations', ['section' => 'exports']));
         Route::post('/exports', [ReportExportController::class, 'store']);
     });
 
@@ -32,9 +32,9 @@ Route::middleware(['auth', 'active', 'verified', 'throttle:120,1'])->group(funct
         Route::get('/reports/weekly-fuel-summary', [OperationsSummaryController::class, 'weeklyFuelSummary']);
 
         Route::middleware('throttle:exports')->group(function (): void {
-            Route::get('/reports/exports', fn () => redirect()->route('operations', ['section' => 'reports']));
+            Route::get('/reports/exports', fn () => redirect()->route('operations', ['section' => 'exports']));
             Route::post('/reports/exports', [ReportExportController::class, 'store'])->name('operations.reports.exports.store');
-            Route::get('/exports', fn () => redirect()->route('operations', ['section' => 'reports']));
+            Route::get('/exports', fn () => redirect()->route('operations', ['section' => 'exports']));
             Route::post('/exports', [ReportExportController::class, 'store']);
             Route::get('/reports/exports/{export}/download', [ReportExportController::class, 'download'])
                 ->name('operations.exports.download')

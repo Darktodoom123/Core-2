@@ -41,7 +41,6 @@ const SECTION_PROPS: Record<WorkspaceSection, string[]> = {
         'locations',
         'approvals',
         'users',
-        'auditEvents',
         'gptRecommendations',
     ],
     dispatch: [
@@ -88,8 +87,8 @@ const SECTION_PROPS: Record<WorkspaceSection, string[]> = {
         'gptSelectedRecommendation',
         'jobs',
     ],
-    users: ['users', 'auditEvents'],
-    audit: ['auditEvents'],
+    users: ['users'],
+    audit: ['reportExports'],
     sos: [],
 };
 
@@ -492,12 +491,20 @@ export default function Workspace(props: WorkspacePageProps) {
 
     const changeSection = (
         nextSection: WorkspaceSection,
-        options?: { serviceRequestId?: number },
+        options?: { serviceRequestId?: number; tab?: string },
     ) => {
         setSection(nextSection);
         setSelectedServiceRequestId(options?.serviceRequestId ?? null);
         const url = new URL(window.location.href);
         url.searchParams.set('view', nextSection);
+
+        // A tab only applies to the section it was opened with.
+        if (options?.tab) {
+            url.searchParams.set('tab', options.tab);
+        } else {
+            url.searchParams.delete('tab');
+        }
+
         const navigationId = ++navigationSequence.current;
         navigationPending.current = true;
         fallbackPollControls.current.stop();
@@ -852,7 +859,6 @@ export default function Workspace(props: WorkspacePageProps) {
                         activeSosIncidents={props.activeSosIncidents}
                         approvals={props.approvals ?? []}
                         users={props.users ?? []}
-                        auditEvents={props.auditEvents ?? []}
                         gptRecommendations={props.gptRecommendations ?? []}
                         capabilities={props.capabilities}
                         availableSections={props.navigation.map(
@@ -892,7 +898,6 @@ export default function Workspace(props: WorkspacePageProps) {
                         fuelRequestsPagination={props.fuelRequests_pagination}
                         locations={props.locations ?? []}
                         approvals={props.approvals ?? []}
-                        auditEvents={props.auditEvents ?? []}
                         capabilities={props.capabilities}
                         jobReports={props.jobReports}
                         jobReportsTotal={props.jobReports_total}

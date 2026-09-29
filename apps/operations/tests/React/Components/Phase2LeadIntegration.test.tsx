@@ -302,7 +302,6 @@ describe('Phase 2 Lead Integration: LiveWorkspaceSection Screen Coordination', (
                 fuelRequests={[]}
                 locations={[loc]}
                 approvals={[]}
-                auditEvents={[]}
                 capabilities={createCapabilities()}
             />,
         );
@@ -343,7 +342,6 @@ describe('Phase 2 Lead Integration: LiveWorkspaceSection Screen Coordination', (
                 fuelRequests={[]}
                 locations={[loc]}
                 approvals={[]}
-                auditEvents={[]}
                 capabilities={createCapabilities()}
             />,
         );
@@ -374,7 +372,6 @@ describe('Phase 2 Lead Integration: LiveWorkspaceSection Screen Coordination', (
                 fuelRequests={[fuelReq]}
                 locations={[]}
                 approvals={[]}
-                auditEvents={[]}
                 capabilities={createCapabilities()}
             />,
         );
@@ -433,7 +430,6 @@ describe('Phase 2 Lead Integration: LiveWorkspaceSection Screen Coordination', (
                 fuelRequests={[]}
                 locations={[]}
                 approvals={[]}
-                auditEvents={[]}
                 jobReports={[report]}
                 jobs={jobs}
                 capabilities={createCapabilities()}
@@ -472,7 +468,6 @@ describe('Phase 2 Lead Integration: LiveWorkspaceSection Screen Coordination', (
                 fuelRequests={[fuelReq]}
                 locations={[]}
                 approvals={[]}
-                auditEvents={[]}
                 jobReports={[report]}
                 capabilities={createCapabilities()}
             />,
@@ -494,7 +489,6 @@ describe('Phase 2 Lead Integration: LiveWorkspaceSection Screen Coordination', (
                 fuelRequests={[fuelReq]}
                 locations={[]}
                 approvals={[]}
-                auditEvents={[]}
                 jobReports={[report]}
                 capabilities={createCapabilities()}
             />,
@@ -517,7 +511,6 @@ describe('Phase 2 Lead Integration: LiveWorkspaceSection Screen Coordination', (
                 fuelRequests={[fuelReq]}
                 locations={[]}
                 approvals={[]}
-                auditEvents={[]}
                 jobReports={[report]}
                 capabilities={createCapabilities()}
             />,

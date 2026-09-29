@@ -935,19 +935,19 @@ it('creates a system audit export via POST /operations/reports/exports and redir
     ]);
 });
 
-it('redirects GET /operations/reports/exports to the reports workspace section', function (): void {
+it('redirects GET /operations/reports/exports to the exports alias, which each role resolves', function (): void {
     $admin = createExportUser(RoleName::SystemAdministrator);
 
     $response = $this->actingAs($admin)
         ->get('/operations/reports/exports');
 
-    $response->assertRedirect('/operations?section=reports');
+    $response->assertRedirect('/operations?section=exports');
 });
 
 it('normalizes section=exports and view=exports to reports initial_section on workspace', function (string $queryParam): void {
-    $admin = createExportUser(RoleName::SystemAdministrator);
+    $manager = createExportUser(RoleName::OperationsManager);
 
-    $response = $this->actingAs($admin)
+    $response = $this->actingAs($manager)
         ->get('/operations?'.$queryParam.'=exports');
 
     $response->assertOk()
@@ -956,6 +956,15 @@ it('normalizes section=exports and view=exports to reports initial_section on wo
             ->where('initial_section', 'reports')
         );
 })->with(['section', 'view']);
+
+it('sends administrators asking for exports to the audit trail, where their exports are listed', function (): void {
+    $admin = createExportUser(RoleName::SystemAdministrator);
+
+    $this->actingAs($admin)
+        ->get('/operations?view=exports')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('initial_section', 'audit'));
+});
 
 it('rejects invalid export dataset types such as assets with validation error', function (): void {
     Queue::fake();

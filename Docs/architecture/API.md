@@ -1,6 +1,6 @@
 # Core Transaction 2 — HTTP API
 
-**Last updated:** 2026-09-25  
+**Last updated:** 2026-09-29  
 **Current style:** Inertia page delivery with redirect/error/typed-flash mutations for the live workspace slice; REST API v2 (`/api/v2`) for next-gen dispatch domain commands; REST API v1 (`/api/v1`) for field mobile clients; Rental unrouted `/operations` controllers are transitional session-authenticated JSON-only boundaries.
 
 ## Conventions
@@ -277,8 +277,10 @@ change.
 | POST | `/operations/gpt-recommendations/{recommendation}/accept` | Revalidate and accept a recommendation | Redirect/flash |
 | POST | `/operations/gpt-recommendations/{recommendation}/reject` | Reject a recommendation with an optional reason | Redirect/flash |
 | POST | `/operations/gpt-recommendations/{recommendation}/retry` | Atomically create one authorized retry | Redirect/flash |
-| POST | `/operations/gpt-circuit-breaker/toggle` | Toggle GPT recommendation circuit breaker | Redirect/flash |
-| GET | `/operations/gpt-governance/telemetry` | Operational GPT cost, token, latency, and decision metrics (`acceptance_rate` is `null` when no decisions exist) | Transitional JSON |
+| PUT | `/operations/gpt-circuit-breaker` | Pause or resume GPT advice explicitly (`paused`, plus a required `reason` when pausing); repeating the current state is a no-op, and each change is audited as `gpt.circuit_breaker_paused` or `gpt.circuit_breaker_resumed` | JSON |
+| POST | `/operations/gpt-circuit-breaker/toggle` | Legacy flip of the same audited state; clients should use `PUT` | JSON |
+| GET | `/operations/gpt-governance/telemetry` | Operational GPT cost, token, latency, and decision metrics (`acceptance_rate` is `null` when no decisions exist; `monthly_budget_ceiling_usd` comes from `OPENAI_MONTHLY_BUDGET_USD`) | Transitional JSON |
+| GET | `/operations/audit-events` | Paged, server-filtered audit trail (`category`, `actor` id or `system`, `from`/`to` dates or ISO timestamps, `q` over action, reason and request ID, `page`, `per_page` ≤ 100) with per-category counts, actors, and the last-24-hour total; requires `audit.view` | JSON |
 
 ### SOS Emergency Response Operations
 
@@ -321,8 +323,9 @@ AI resource recommendation engine and governance telemetry. Throttled at `thrott
 | POST | `/operations/gpt-recommendations/{recommendation}/accept` | `gpt.use_dispatch` | Review, revalidate, and apply proposed crew/assets |
 | POST | `/operations/gpt-recommendations/{recommendation}/reject` | `gpt.use_dispatch` | Reject recommendation with structured rationale |
 | POST | `/operations/gpt-recommendations/{recommendation}/retry` | `gpt.use_dispatch` | Retry failed recommendation |
-| POST | `/operations/gpt-circuit-breaker/toggle` | `system.configure` | Toggle circuit breaker to temporarily bypass OpenAI API |
-| GET | `/operations/gpt-governance/telemetry` | `system.configure` | Monitor API token consumption, costs, and response latencies |
+| PUT | `/operations/gpt-circuit-breaker` | System Administrator or `gpt.configure` | Pause (with reason) or resume all new AI requests; audited |
+| POST | `/operations/gpt-circuit-breaker/toggle` | System Administrator or `gpt.configure` | Legacy toggle of the same audited state |
+| GET | `/operations/gpt-governance/telemetry` | System Administrator or `gpt.configure` | Monitor spend against the configured monthly budget, tokens, and response latencies |
 
 ### Admin Overrides and System Health
 
@@ -330,7 +333,7 @@ AI resource recommendation engine and governance telemetry. Throttled at `thrott
 | --- | --- | --- | --- |
 | POST | `/operations/admin/dispatch-jobs/{dispatchJob}/emergency-abort` | `system.configure` | Break-glass emergency abort of active dispatch |
 | POST | `/operations/admin/assets/{asset}/safety-lockdown` | `system.configure` or `OperationsManager` | Immediate safety lockdown of compromised asset |
-| GET | `/operations/admin/health` | `system.configure` | System health check (DB, cache, queue, storage, Reverb) |
+| GET | `/operations/admin/health` | System Administrator | Database, cache, dispatch outbox, failed jobs, and Tracking readiness; broadcasting reports only `configured` or `disabled` because each browser reports its own live connection |
 
 ## Dispatch Backend V2 REST API (`/api/v2`)
 

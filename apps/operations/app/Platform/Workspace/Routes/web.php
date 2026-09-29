@@ -1,5 +1,6 @@
 <?php
 
+use App\Platform\Audit\Http\Controllers\AuditEventIndexController;
 use App\Platform\Workspace\Http\Controllers\AdminOverrideController;
 use App\Platform\Workspace\Http\Controllers\DispatchDeskIncomingController;
 use App\Platform\Workspace\Http\Controllers\DispatchDeskJobsController;
@@ -13,6 +14,10 @@ Route::middleware(['auth', 'active', 'verified', 'throttle:120,1'])
 Route::middleware(['auth', 'active', 'verified', 'throttle:120,1'])
     ->get('/operations/dispatch-desk/incoming', DispatchDeskIncomingController::class)
     ->name('operations.dispatch-desk.incoming');
+
+Route::middleware(['auth', 'active', 'verified', 'throttle:120,1'])
+    ->get('/operations/audit-events', AuditEventIndexController::class)
+    ->name('operations.audit-events.index');
 
 Route::middleware(['auth', 'active', 'verified', 'throttle:120,1'])->prefix('operations/admin')->group(function (): void {
     Route::post('/dispatch-jobs/{dispatchJob}/emergency-abort', [AdminOverrideController::class, 'emergencyAbortDispatch']);

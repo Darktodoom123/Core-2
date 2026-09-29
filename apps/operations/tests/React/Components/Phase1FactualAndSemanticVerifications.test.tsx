@@ -256,7 +256,6 @@ describe('Phase 1 Empirical Challenger: Factual and Semantic Verifications', () 
                     fuelRequests={[]}
                     locations={[staleLoc]}
                     approvals={[]}
-                    auditEvents={[]}
                     capabilities={createCapabilities()}
                 />,
             );
@@ -307,7 +306,6 @@ describe('Phase 1 Empirical Challenger: Factual and Semantic Verifications', () 
                     fuelRequests={[]}
                     locations={[]}
                     approvals={[]}
-                    auditEvents={[]}
                     capabilities={createCapabilities()}
                 />,
             );
@@ -382,7 +380,6 @@ describe('Phase 1 Empirical Challenger: Factual and Semantic Verifications', () 
                     fuelRequests={[]}
                     locations={[]}
                     approvals={[]}
-                    auditEvents={[]}
                     capabilities={createCapabilities()}
                 />,
             );
@@ -407,7 +404,6 @@ describe('Phase 1 Empirical Challenger: Factual and Semantic Verifications', () 
                     fuelRequests={[]}
                     locations={[]}
                     approvals={[]}
-                    auditEvents={[]}
                     capabilities={createCapabilities()}
                 />,
             );

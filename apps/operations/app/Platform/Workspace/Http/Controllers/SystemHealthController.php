@@ -81,9 +81,11 @@ final class SystemHealthController extends Controller
                     'status' => $failedJobsCount > 0 ? 'failed_jobs_detected' : 'operational',
                     'failed_jobs' => $failedJobsCount,
                 ],
+                // The server only knows whether broadcasting is configured; each
+                // browser reports its own live connection.
                 'websockets' => [
                     'driver' => config('broadcasting.default'),
-                    'status' => 'operational',
+                    'status' => in_array(config('broadcasting.default'), [null, 'null', 'log'], true) ? 'disabled' : 'configured',
                 ],
                 'tracking' => $tracking,
             ],

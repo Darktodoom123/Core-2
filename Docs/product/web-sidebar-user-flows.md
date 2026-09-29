@@ -1,6 +1,6 @@
 # Whole-web sidebar and user flows
 
-Last reviewed: 2026-09-27.
+Last reviewed: 2026-09-29.
 
 This maps the **routed** Core 2 web workspace at `/` and `/operations`, including every standard sidebar item and shared header destination for the three interactive users: System Administrator, Operations Manager, and Operator. Riggers are non-software workforce crew: they have no web or mobile login journey. The separate [Operations Manager web audit](operations-manager-web-user-flow.md) gives the deeper dispatch-to-closeout journey and manager findings.
 
@@ -41,11 +41,11 @@ The table reflects the **three interactive product roles**, not custom permissio
 | Dispatch workspace / Today's work | ✓ | ✓ | ✓ | Office dispatch desk for Administrator/Manager; assigned-work view for Operator. |
 | Fleet & Equipment / assigned asset label | ✓ | ✓ | ✓ | Asset list/map/detail scoped by permissions. |
 | Fuel Management | ✓ | ✓ | ✓ | Office review for Administrator/Manager; own requests and recording for Operator. |
-| Job reports | ✓ | ✓ | ✓ | All/dispatch/own reports as permitted; manager review and export only where granted. |
+| Job reports | — | ✓ | ✓ | Manager reviews (approves or sends back) all reports; Operator files and follows own reports. Administrators have no Job reports item and cannot file, edit, or review reports (`JobReportPolicy`). |
 | Archived dispatches | ✓ | — | — | Search and inspect archived/cancelled jobs; authorized restore. |
 | GPT AI Advisory | ✓ | — | — | Recommendation lifecycle, governance telemetry and circuit-breaker controls. |
 | Users & access | ✓ | — | — | Account management and personnel credentials. |
-| Audit trail | ✓ | — | — | Audit event search, detail and permitted export. |
+| Audit trail | ✓ | — | — | Audit event search, detail, export, and the administrator's own audit export downloads. |
 
 **Not permanent sidebar items:** Notifications opens from the header. The SOS responder queue opens from the active banner or dashboard action for a user with `sos.view`/`sos.respond`; the standard Administrator can view but not respond, and the Manager can respond. Tracking uses the Fleet & Equipment map, so there is no separate standard Tracking item. The approval renderer exists, but standard manager approvals are entered from the dashboard or dispatch detail rather than an Approvals sidebar item. Account settings is reached from the account menu, not the sidebar.
 
@@ -58,11 +58,11 @@ The table reflects the **three interactive product roles**, not custom permissio
 | **Today's work** → assigned job | Operator reviews assigned dispatch, responds and performs the next permitted field step. | Return to assigned list; rejected assignment returns to office attention. Rigger checks are confirmed with the crew and recorded by an Operator or Manager. |
 | **Fleet & Equipment** → asset list/map → asset detail | Inspect recorded location freshness, DVIR, inspections, maintenance and dispatch readiness; authorized users can record maintenance or release after clearance. | Back to fleet list on narrow screens; search/category live in URL. Missing location is labelled unavailable. A dashboard blocked-unit action does not preselect the asset. |
 | **Fuel Management** → Requests & Approvals / Fuel Logs / Consumption | Review/approve/reject/verify as permitted, record refueling if permitted, inspect anomalies and receipt exceptions. | Contextual Back to queue/logs/consumption within the section. Validation errors stay on the form. A dashboard fuel action does not preselect its request. |
-| **Job reports** → report queue → report detail | Office reviewer approves or rejects a submitted report with reason, or exports permitted records; field role sees own permitted reports. | Back to reports queue on narrow screens; search and status filters remain within the section. Rejected reports retain the reason for resubmission. |
+| **Job reports** → report queue → report detail | Operations Manager approves or rejects a submitted report with reason (administrators are refused by `JobReportPolicy`), or exports permitted records; field role sees own permitted reports. | Back to reports queue on narrow screens; search and status filters remain within the section. Rejected reports retain the reason for resubmission. |
 | **Archived dispatches** → archived row | Administrator reviews reference, client, status, cancellation/archive reason and timestamp; restores when permitted. | Remain in archive after action. Search is local to the loaded archive sample; see W2. |
 | **GPT AI Advisory** → recommendation history/detail or governance | Administrator inspects pending, accepted, rejected, stale or failed recommendations; can retry permitted failures and review governance telemetry/circuit breaker. | Stay in governance list/detail. A selected recommendation ID supports deep linking; failed telemetry fetch shows retry before circuit-breaker action. Advice never directly changes dispatch without normal validation. |
 | **Users & access** → Accounts / Personnel credentials | Administrator searches software accounts, creates one of the three interactive roles, changes role or active state, resets password, reviews sign-in activity; credentials are managed in the other tab. | Return to account list or switch tabs. Riggers should appear as workforce personnel profiles, without an account; current candidate/credential paths are partly user-linked (W3). |
-| **Audit trail** → event row/detail/export | Administrator filters by action, actor, date and text, inspects before/after and request ID, and requests permitted CSV/PDF export. | Close detail to the loaded event list. The list is capped at the most recent 100 records; see W2. |
+| **Audit trail** → event row/detail/export | Administrator filters by category, person, date range and text (action, reason or request ID) on the server, pages through every recorded event, inspects the field-level before/after and request ID, and queues a CSV/PDF export for a date range. | Close detail to the same filtered page. "Show everything from this request" searches by the event's request ID. Exports cover the whole date range and leave out free-text reasons. |
 | **Header → Notifications** → alert | Mark/read the alert and open its destination section, or load older notifications. | Use sidebar or browser Back. Alert navigation currently carries section only, not the specific record; see manager finding A3. |
 | **Banner/header → SOS queue** → incident | Authorized office responder acknowledges, coordinates and resolves/cancels with an audited outcome. | Return by sidebar; response is feature-gated in production per the [SOS runbook](../runbooks/field-emergency-sos.md). |
 | **Account menu → My Account** | Update profile/password, email verification-code two-step sign-in, sessions and trusted devices; choose light/dark/system theme or sign out. | Return to workspace with browser Back or app navigation. Logout ends the session. |
@@ -71,7 +71,7 @@ The table reflects the **three interactive product roles**, not custom permissio
 
 ### System Administrator
 
-Sign in → **Operation Dashboard** service health and governance indicators → **Users & access** account/credential work → **Audit trail** to verify access changes → **GPT AI Advisory** for advisory governance → **Archived dispatches** for restore/history → operational sections for oversight → Notifications/My Account → sign out. Administrator has broad read and governance permissions but does not receive the standard manager's SOS response, field fuel recording, own tracking sharing or field SOS trigger permission.
+Sign in → **Operation Dashboard** "Needs your attention" list (degraded subsystems with their cause, expired or missing operator credentials, suspended accounts, paused AI advice, AI spend near the configured budget), live subsystem checks, and recent audit activity → **Users & access** account/credential work → **Audit trail** to verify access changes → **GPT AI Advisory** for advisory governance → **Archived dispatches** for restore/history → operational sections for oversight → Notifications/My Account → sign out. Administrator has broad read and governance permissions but does not receive the standard manager's SOS response, field fuel recording, own tracking sharing or field SOS trigger permission.
 
 ### Operations Manager
 
@@ -90,7 +90,7 @@ Core-2 has no Rigger role or rigger crew slot (removed 2026-09-29). Crews are st
 | ID / priority | Evidence and effect | Recommended acceptance outcome |
 | --- | --- | --- |
 | **W1 / P1 — resolved** | Resolved 2026-09-29: migration `2026_09_29_120000_remove_rigger_role_and_crew_slot` deleted the `rigger` role and its permissions, deactivated rigger-only accounts and revoked their API tokens. | None. `RoleName` no longer defines a rigger role, and user management rejects it. |
-| **W2 / P2** | Administrator **Audit trail** loads the latest 100 events and **Archived dispatches** loads 100 jobs. Both surfaces filter only their loaded arrays, while archive's empty/search copy reads as if it covers the full history. | Add server pagination/search and clear result scope, or label both as recent/loaded records and link to a complete authorized query. Verify record 101 can be found. |
+| **W2 / P2** | Resolved for **Audit trail** on 2026-09-29 (server paging and filtering through `/operations/audit-events`). **Archived dispatches** still loads 100 jobs and filters only that array, while its empty/search copy reads as if it covers the full history. | Add server pagination/search and clear result scope, or label both as recent/loaded records and link to a complete authorized query. Verify record 101 can be found. |
 | **W3 / P1 — resolved** | Resolved 2026-09-29 by removing the rigger crew slot from dispatch requirements, crew assignment, and project planning coverage. Crews are Operators only. | None. |
 | **W4 / P2** | Cross-section navigation generally passes a section ID. The manager audit identifies lost asset/fuel record context, and notifications also open only the destination section. The same navigation contract is shared across roles. | Use typed destinations carrying record identity, permissions, return URL and missing-record fallback. Test each sidebar-adjacent alert/card jump. |
 | **W5 / P2** | Partial section visits show a loading placeholder while required props are absent, but navigation has no local visit-error state/retry. This affects every sidebar item, not only Manager screens. | Provide a section-load error and Retry/Back, preserving the prior usable section. Exercise failure for each data-heavy destination. |

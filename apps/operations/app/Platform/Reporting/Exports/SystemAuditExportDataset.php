@@ -24,14 +24,17 @@ final class SystemAuditExportDataset extends AbstractReportExportDataset
 
     public function headers(): array
     {
-        return ['Event ID', 'Actor ID', 'Action', 'Subject Type', 'Subject ID', 'Occurred At'];
+        return ['Event ID', 'Actor ID', 'Action', 'Subject Type', 'Subject ID', 'Occurred At', 'Actor', 'Request ID'];
     }
 
     public function rows(User $actor, array $filters): Generator
     {
-        $query = $this->applyDateFilters(AuditEvent::query(), $filters, 'occurred_at');
+        $query = $this->applyDateFilters(AuditEvent::query()->with('actor:id,name'), $filters, 'occurred_at');
         foreach ($query->orderBy('id')->lazyById(500) as $event) {
-            yield [$event->id, $event->actor_id, $event->action, $event->subject_type, $event->subject_id, $event->occurred_at?->toIso8601String()];
+            yield [
+                $event->id, $event->actor_id, $event->action, $event->subject_type, $event->subject_id, $event->occurred_at?->toIso8601String(),
+                $event->actor === null ? 'System' : $event->actor->name, $event->request_id,
+            ];
         }
     }
 }

@@ -213,3 +213,87 @@ it('allows crane operator to view navigation and submit job report for assigned 
         ->and($report->dispatch_job_id)->toBe($job->id)
         ->and($report->status)->toBe(JobReportStatus::Submitted);
 });
+
+it('leaves job report review to operations managers, not system administrators', function (): void {
+    $admin = createReportUser(RoleName::SystemAdministrator);
+    $driver = createReportUser(RoleName::CraneOperator);
+    $job = createReportJob($driver);
+
+    $report = JobReport::query()->create([
+        'dispatch_job_id' => $job->id,
+        'author_id' => $driver->id,
+        'started_at' => now()->subHour(),
+        'ended_at' => now(),
+        'work_summary' => 'Finished work',
+        'status' => JobReportStatus::Submitted,
+        'submitted_at' => now(),
+    ]);
+
+    $this->actingAs($admin)
+        ->post("/operations/job-reports/{$report->id}/review", ['status' => 'approved'])
+        ->assertForbidden();
+
+    expect($report->refresh()->status)->toBe(JobReportStatus::Submitted)
+        ->and(AuditEvent::query()->where('action', 'job_report.reviewed')->exists())->toBeFalse()
+        // Administrators keep read access for oversight.
+        ->and($admin->can('view', $report))->toBeTrue();
+
+    $this->actingAs($admin)->get('/?view=reports')
+        ->assertInertia(fn ($page) => $page->where('capabilities.review_job_report', false));
+});
+
+it('keeps job reports out of the administrator workspace', function (): void {
+    $admin = createReportUser(RoleName::SystemAdministrator);
+    $manager = createReportUser(RoleName::OperationsManager);
+
+    $this->actingAs($admin)->get('/?view=reports')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('navigation', fn ($navigation): bool => ! collect($navigation)->contains('id', 'reports'))
+            ->where('initial_section', 'overview')
+            ->where('capabilities.create_job_report', false));
+
+    $this->actingAs($manager)->get('/?view=reports')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('navigation', fn ($navigation): bool => collect($navigation)->contains('id', 'reports')));
+});
+
+it('does not let administrators file or rewrite job reports', function (): void {
+    $admin = createReportUser(RoleName::SystemAdministrator);
+    $driver = createReportUser(RoleName::CraneOperator);
+    $job = createReportJob($driver);
+
+    $this->actingAs($admin)
+        ->post('/operations/job-reports', [
+            'dispatch_job_id' => $job->id,
+            'started_at' => now()->subHour()->toIso8601String(),
+            'ended_at' => now()->toIso8601String(),
+            'work_summary' => 'Filed by an administrator.',
+        ])
+        ->assertForbidden();
+
+    $report = JobReport::query()->create([
+        'dispatch_job_id' => $job->id,
+        'author_id' => $driver->id,
+        'started_at' => now()->subHour(),
+        'ended_at' => now(),
+        'work_summary' => 'Needs rework',
+        'status' => JobReportStatus::Rejected,
+        'submitted_at' => now(),
+    ]);
+
+    expect($admin->can('resubmit', $report))->toBeFalse()
+        ->and($admin->can('update', $report))->toBeFalse()
+        ->and(JobReport::query()->count())->toBe(1);
+});
+
+it('lists the administrator\'s own exports on the audit trail', function (): void {
+    $admin = createReportUser(RoleName::SystemAdministrator);
+
+    $this->actingAs($admin)->get('/?view=audit')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('initial_section', 'audit')
+            ->loadDeferredProps('workspace-audit', fn ($section) => $section->has('reportExports')));
+});

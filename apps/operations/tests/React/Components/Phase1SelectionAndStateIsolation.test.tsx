@@ -229,7 +229,6 @@ describe('Phase 1 Empirical Challenge: Selection Invariants & State Isolation', 
                     fuelRequests={[]}
                     locations={[]}
                     approvals={[]}
-                    auditEvents={[]}
                     capabilities={createCapabilities()}
                 />,
             );
@@ -292,7 +291,6 @@ describe('Phase 1 Empirical Challenge: Selection Invariants & State Isolation', 
                     fuelRequests={[]}
                     locations={[]}
                     approvals={[]}
-                    auditEvents={[]}
                     capabilities={createCapabilities()}
                 />,
             );
@@ -680,7 +678,6 @@ describe('Phase 1 Empirical Challenge: Selection Invariants & State Isolation', 
                     fuelRequests={[]}
                     locations={[]}
                     approvals={[]}
-                    auditEvents={[]}
                     capabilities={createCapabilities()}
                 />,
             );
@@ -710,7 +707,6 @@ describe('Phase 1 Empirical Challenge: Selection Invariants & State Isolation', 
                     fuelRequests={[]}
                     locations={[]}
                     approvals={[]}
-                    auditEvents={[]}
                     capabilities={createCapabilities()}
                 />,
             );
@@ -853,7 +849,6 @@ describe('Phase 1 Empirical Challenge: Selection Invariants & State Isolation', 
                     fuelRequests={[]}
                     locations={[]}
                     approvals={[]}
-                    auditEvents={[]}
                     capabilities={createCapabilities()}
                 />,
             );

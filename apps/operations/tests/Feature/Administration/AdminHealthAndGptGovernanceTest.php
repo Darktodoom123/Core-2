@@ -1,5 +1,6 @@
 <?php
 
+use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
 use Database\Seeders\RolePermissionSeeder;
@@ -137,4 +138,76 @@ it('returns governance telemetry to authorized users', function (): void {
         'acceptance_rate',
     ]);
     expect($response->json('acceptance_rate'))->toBeNull();
+});
+
+it('pauses and resumes AI advice explicitly and records who did it and why', function (): void {
+    $admin = User::factory()->create();
+    $admin->syncRoles([RoleName::SystemAdministrator->value]);
+    Cache::forget('gpt_circuit_breaker_disabled');
+
+    $this->actingAs($admin)
+        ->putJson('/operations/gpt-circuit-breaker', ['paused' => true, 'reason' => 'Spend spike under review'])
+        ->assertOk()
+        ->assertJsonPath('circuit_breaker_active', true);
+
+    // Repeating the same request is harmless and does not add another record.
+    $this->actingAs($admin)
+        ->putJson('/operations/gpt-circuit-breaker', ['paused' => true, 'reason' => 'Spend spike under review'])
+        ->assertOk()
+        ->assertJsonPath('circuit_breaker_active', true);
+
+    $this->actingAs($admin)
+        ->putJson('/operations/gpt-circuit-breaker', ['paused' => false])
+        ->assertOk()
+        ->assertJsonPath('circuit_breaker_active', false);
+
+    expect(Cache::get('gpt_circuit_breaker_disabled'))->toBeFalse();
+
+    $events = AuditEvent::query()->where('action', 'like', 'gpt.circuit_breaker_%')->orderBy('id')->get();
+    expect($events->pluck('action')->all())->toBe(['gpt.circuit_breaker_paused', 'gpt.circuit_breaker_resumed'])
+        ->and($events->first()->reason)->toBe('Spend spike under review')
+        ->and($events->first()->actor_id)->toBe($admin->id);
+});
+
+it('requires a reason to pause AI advice', function (): void {
+    $admin = User::factory()->create();
+    $admin->syncRoles([RoleName::SystemAdministrator->value]);
+
+    $this->actingAs($admin)
+        ->putJson('/operations/gpt-circuit-breaker', ['paused' => true])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['reason']);
+});
+
+it('forbids operations managers from pausing AI advice or reading governance telemetry', function (): void {
+    $manager = User::factory()->create();
+    $manager->syncRoles([RoleName::OperationsManager->value]);
+
+    $this->actingAs($manager)
+        ->putJson('/operations/gpt-circuit-breaker', ['paused' => true, 'reason' => 'x'])
+        ->assertForbidden();
+    $this->actingAs($manager)->getJson('/operations/gpt-governance/telemetry')->assertForbidden();
+});
+
+it('reports the configured monthly AI budget instead of a fixed figure', function (): void {
+    config(['services.openai.monthly_budget_usd' => 75.5]);
+    $admin = User::factory()->create();
+    $admin->syncRoles([RoleName::SystemAdministrator->value]);
+
+    $this->actingAs($admin)
+        ->getJson('/operations/gpt-governance/telemetry')
+        ->assertOk()
+        ->assertJsonPath('monthly_budget_ceiling_usd', 75.5)
+        ->assertJsonPath('circuit_breaker_active', false);
+});
+
+it('does not claim realtime delivery is operational when broadcasting is off', function (): void {
+    config(['broadcasting.default' => 'null']);
+    $admin = User::factory()->create();
+    $admin->syncRoles([RoleName::SystemAdministrator->value]);
+
+    $this->actingAs($admin)
+        ->getJson('/operations/admin/health')
+        ->assertOk()
+        ->assertJsonPath('services.websockets.status', 'disabled');
 });

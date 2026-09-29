@@ -8,16 +8,17 @@ use App\Platform\Gpt\Actions\AcceptGptRecommendation;
 use App\Platform\Gpt\Actions\GenerateGptRecommendation;
 use App\Platform\Gpt\Actions\RejectGptRecommendation;
 use App\Platform\Gpt\Actions\RetryGptRecommendation;
+use App\Platform\Gpt\Actions\SetGptCircuitBreaker;
 use App\Platform\Gpt\Enums\GptRecommendationStatus;
 use App\Platform\Gpt\Http\Requests\AcceptGptRecommendationRequest;
 use App\Platform\Gpt\Models\GptRecommendation;
 use App\Platform\Gpt\Models\GptRecommendationMetric;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Enums\RoleName;
+use App\Platform\Identity\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -95,27 +96,31 @@ final class GptRecommendationController extends Controller
         ]);
     }
 
-    public function toggleCircuitBreaker(Request $request): JsonResponse
+    /** Kept for older clients; flips the current state through the same audited action. */
+    public function toggleCircuitBreaker(Request $request, SetGptCircuitBreaker $breaker): JsonResponse
     {
         $actor = $request->user();
-        abort_unless($actor->hasRole(RoleName::SystemAdministrator->value) || $actor->can(PermissionName::GptConfigure->value), 403);
+        $this->authorizeGovernance($actor);
 
-        $currentState = (bool) Cache::get('gpt_circuit_breaker_disabled', false);
-        $newState = ! $currentState;
-        Cache::forever('gpt_circuit_breaker_disabled', $newState);
+        return $this->circuitBreakerResponse($breaker->handle($actor, ! SetGptCircuitBreaker::isPaused()));
+    }
 
-        return response()->json([
-            'circuit_breaker_active' => $newState,
-            'message' => $newState
-                ? 'GPT Advisory circuit breaker activated. AI requests paused.'
-                : 'GPT Advisory resumed successfully.',
+    public function setCircuitBreaker(Request $request, SetGptCircuitBreaker $breaker): JsonResponse
+    {
+        $actor = $request->user();
+        $this->authorizeGovernance($actor);
+
+        $validated = $request->validate([
+            'paused' => ['required', 'boolean'],
+            'reason' => ['required_if:paused,true', 'nullable', 'string', 'max:255'],
         ]);
+
+        return $this->circuitBreakerResponse($breaker->handle($actor, (bool) $validated['paused'], $validated['reason'] ?? null));
     }
 
     public function governanceTelemetry(Request $request): JsonResponse
     {
-        $actor = $request->user();
-        abort_unless($actor->hasRole(RoleName::SystemAdministrator->value) || $actor->can(PermissionName::GptConfigure->value), 403);
+        $this->authorizeGovernance($request->user());
 
         $monthlyMetrics = GptRecommendationMetric::query()
             ->where('occurred_at', '>=', now()->startOfMonth())
@@ -147,7 +152,7 @@ final class GptRecommendationController extends Controller
 
         return response()->json([
             'monthly_spend_usd' => $monthlySpend,
-            'monthly_budget_ceiling_usd' => 250.0,
+            'monthly_budget_ceiling_usd' => (float) config('services.openai.monthly_budget_usd'),
             'total_tokens' => $totalTokens,
             'avg_latency_ms' => $avgLatencyMs,
             'acceptance_rate' => $acceptanceRate,
@@ -165,7 +170,22 @@ final class GptRecommendationController extends Controller
                 'ready_after_save' => $blockerMetrics->where('event', 'job_ready')->count(),
                 'average_seconds_to_resolution' => $resolutionSeconds->isEmpty() ? null : (int) round($resolutionSeconds->avg()),
             ],
-            'circuit_breaker_active' => (bool) Cache::get('gpt_circuit_breaker_disabled', false),
+            'circuit_breaker_active' => SetGptCircuitBreaker::isPaused(),
+        ]);
+    }
+
+    private function authorizeGovernance(User $actor): void
+    {
+        abort_unless($actor->hasRole(RoleName::SystemAdministrator->value) || $actor->can(PermissionName::GptConfigure->value), 403);
+    }
+
+    private function circuitBreakerResponse(bool $paused): JsonResponse
+    {
+        return response()->json([
+            'circuit_breaker_active' => $paused,
+            'message' => $paused
+                ? 'GPT advice is paused. No new AI requests will be sent.'
+                : 'GPT advice resumed.',
         ]);
     }
 }

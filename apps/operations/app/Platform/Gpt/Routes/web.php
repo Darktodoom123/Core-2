@@ -9,5 +9,6 @@ Route::middleware(['auth', 'active', 'verified', 'throttle:gpt'])->prefix('opera
     Route::post('/gpt-recommendations/{recommendation}/reject', [GptRecommendationController::class, 'reject']);
     Route::post('/gpt-recommendations/{recommendation}/retry', [GptRecommendationController::class, 'retry']);
     Route::post('/gpt-circuit-breaker/toggle', [GptRecommendationController::class, 'toggleCircuitBreaker']);
+    Route::put('/gpt-circuit-breaker', [GptRecommendationController::class, 'setCircuitBreaker']);
     Route::get('/gpt-governance/telemetry', [GptRecommendationController::class, 'governanceTelemetry']);
 });

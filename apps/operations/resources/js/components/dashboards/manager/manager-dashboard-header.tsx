@@ -69,7 +69,7 @@ export function ManagerDashboardHeader({
 }
 
 /** Connection state and data age are reported separately on purpose. */
-function DataFreshness({
+export function DataFreshness({
     realtimeConnected,
     refresh,
     now,

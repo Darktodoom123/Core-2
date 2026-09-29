@@ -1809,6 +1809,18 @@ function AccountManagementSection({ canViewAudit }: { canViewAudit: boolean }) {
     );
 }
 
+/** The dashboard links straight to credentials with `?tab=credentials`. */
+function initialUsersView(): 'accounts' | 'credentials' {
+    if (typeof window === 'undefined') {
+        return 'accounts';
+    }
+
+    return new URLSearchParams(window.location.search).get('tab') ===
+        'credentials'
+        ? 'credentials'
+        : 'accounts';
+}
+
 export function UserManagementWorkspaceSection({
     users,
     capabilities,
@@ -1816,9 +1828,22 @@ export function UserManagementWorkspaceSection({
     users: WorkspaceUserViewModel[];
     capabilities: WorkspaceCapabilities;
 }) {
-    const [activeView, setActiveView] = useState<'accounts' | 'credentials'>(
-        'accounts',
+    const [activeView, setView] = useState<'accounts' | 'credentials'>(
+        initialUsersView,
     );
+    // Keep the address in step so a reload or shared link opens the same tab.
+    const setActiveView = (view: 'accounts' | 'credentials') => {
+        setView(view);
+        const url = new URL(window.location.href);
+
+        if (view === 'credentials') {
+            url.searchParams.set('tab', 'credentials');
+        } else {
+            url.searchParams.delete('tab');
+        }
+
+        window.history.replaceState(window.history.state, '', url);
+    };
     const canManage = capabilities.manage_users ?? false;
     const canViewAudit = capabilities.view_audit ?? false;
     const handleViewKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {

@@ -33,6 +33,7 @@ use App\Platform\Identity\Models\User;
 use App\Platform\Notifications\Models\Notification;
 use App\Platform\Reporting\Models\JobReport;
 use App\Platform\Reporting\Models\ReportExport;
+use App\Platform\Reporting\Policies\JobReportPolicy;
 use App\Platform\Tracking\Data\LatestLocationDto;
 use App\Platform\Tracking\Models\LocationUpdate;
 use App\Shared\Assets\Enums\AssetCategory;
@@ -1052,6 +1053,8 @@ final class OperationsWorkspaceViewModel
                     PermissionName::ReportsViewDispatch,
                     PermissionName::ReportsViewOwn,
                 ],
+                // Managers review field reports; administrators stay out of that workflow.
+                'hidden_for' => [RoleName::SystemAdministrator],
             ],
             [
                 'id' => 'archive',
@@ -1076,6 +1079,10 @@ final class OperationsWorkspaceViewModel
 
         return collect($items)
             ->filter(static function (array $item) use ($user): bool {
+                if (collect($item['hidden_for'] ?? [])->contains(static fn (RoleName $role): bool => $user->hasRole($role->value))) {
+                    return false;
+                }
+
                 return collect($item['permissions'])
                     ->contains(static fn (PermissionName $permission): bool => $user->can($permission->value));
             })
@@ -1118,7 +1125,8 @@ final class OperationsWorkspaceViewModel
             'edit_project_plan' => PlanningAccess::edit($user),
             'decide_gpt_recommendation' => $user->can(PermissionName::GptUseDispatch->value) || $user->can(PermissionName::GptUseOperations->value),
             'retry_gpt_recommendation' => $user->can(PermissionName::GptUseDispatch->value) || $user->can(PermissionName::GptUseOperations->value),
-            'create_job_report' => $user->can(PermissionName::DispatchUpdateOwnStatus->value) || $user->can(PermissionName::ReportsViewOwn->value),
+            'create_job_report' => ! JobReportPolicy::isAdministrator($user)
+                && ($user->can(PermissionName::DispatchUpdateOwnStatus->value) || $user->can(PermissionName::ReportsViewOwn->value)),
             'attachment_upload' => $user->can(PermissionName::DispatchUpdateOwnStatus->value) || $user->can(PermissionName::ReportsViewOwn->value),
             'attachment_policy' => [
                 'owner_type' => 'job_report',
@@ -1126,7 +1134,7 @@ final class OperationsWorkspaceViewModel
                 'max_count' => (int) config('attachments.max_count_per_owner'),
                 'accepted_mime_types' => array_keys(config('attachments.mime_extensions', [])),
             ],
-            'review_job_report' => $user->can(PermissionName::ReportsViewAll->value),
+            'review_job_report' => JobReportPolicy::canReviewReports($user),
             'export_reports' => $user->can(PermissionName::ReportsExport->value),
             'manage_notifications' => true,
             'view_archive' => $user->can(PermissionName::ArchiveManage->value),

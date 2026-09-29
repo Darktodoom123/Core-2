@@ -42,6 +42,8 @@ return [
         'fake' => (bool) env('OPENAI_FAKE', false),
         'max_input_tokens' => (int) env('OPENAI_MAX_INPUT_TOKENS', 32000),
         'max_cost_usd' => (float) env('OPENAI_MAX_COST_USD', 0.05),
+        // Monthly spend the admin dashboard measures AI usage against.
+        'monthly_budget_usd' => (float) env('OPENAI_MONTHLY_BUDGET_USD', 250),
         'proactive_enabled' => (bool) env('OPENAI_PROACTIVE_ENABLED', true),
         'blocker_resolution_enabled' => (bool) env('OPENAI_BLOCKER_RESOLUTION_ENABLED', false),
         'proactive_batch_size' => 10,

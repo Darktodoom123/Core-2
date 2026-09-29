@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
+import { PauseAiDialog } from '@/components/dashboards/admin/pause-ai-dialog';
 import { Button, Modal, PageHeading, Panel } from '@/components/ui';
 import {
     formatDateTime,
@@ -122,6 +123,7 @@ export function GptRecommendationsSurface({
     const [circuitBreakerError, setCircuitBreakerError] = useState<
         string | null
     >(null);
+    const [confirmingPause, setConfirmingPause] = useState(false);
 
     const refreshTelemetry = useCallback(async () => {
         setTelemetryLoading(true);
@@ -162,19 +164,11 @@ export function GptRecommendationsSurface({
         };
     }, []);
 
-    const handleToggleCircuitBreaker = async () => {
-        const isCurrentlyActive = telemetry?.circuit_breaker_active ?? false;
-
-        if (
-            !confirm(
-                isCurrentlyActive
-                    ? 'Resume AI Advisory services platform-wide?'
-                    : 'Emergency Pause: Temporarily halt all AI recommendations and automated evaluations platform-wide?',
-            )
-        ) {
-            return;
-        }
-
+    /** Sets an explicit state so a double click or retry cannot flip it back. */
+    const setCircuitBreaker = async (
+        paused: boolean,
+        reason?: string,
+    ): Promise<boolean> => {
         setTogglingCircuitBreaker(true);
         setCircuitBreakerError(null);
         const csrfToken =
@@ -183,12 +177,14 @@ export function GptRecommendationsSurface({
                 ?.getAttribute('content') ?? '';
 
         try {
-            const res = await fetch('/operations/gpt-circuit-breaker/toggle', {
-                method: 'POST',
+            const res = await fetch('/operations/gpt-circuit-breaker', {
+                method: 'PUT',
                 headers: {
                     Accept: 'application/json',
+                    'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': csrfToken,
                 },
+                body: JSON.stringify({ paused, reason: reason ?? null }),
             });
             const data = await res.json().catch(() => null);
 
@@ -197,25 +193,30 @@ export function GptRecommendationsSurface({
                     prev
                         ? {
                               ...prev,
-                              circuit_breaker_active:
+                              circuit_breaker_active: Boolean(
                                   data.circuit_breaker_active,
+                              ),
                           }
                         : null,
                 );
-            } else {
-                setCircuitBreakerError(
-                    data?.message ??
-                        data?.error ??
-                        'Failed to toggle AI circuit breaker. Please try again.',
-                );
+                setConfirmingPause(false);
+
+                return true;
             }
+
+            setCircuitBreakerError(
+                data?.message ??
+                    `AI advice could not be ${paused ? 'paused' : 'resumed'}. Please try again.`,
+            );
         } catch {
             setCircuitBreakerError(
-                'Network error toggling AI circuit breaker. Please check your connection.',
+                'The server could not be reached. Check your connection and try again.',
             );
         } finally {
             setTogglingCircuitBreaker(false);
         }
+
+        return false;
     };
 
     const pending = useMemo(
@@ -345,16 +346,22 @@ export function GptRecommendationsSurface({
                         <Button
                             variant={
                                 telemetry.circuit_breaker_active
-                                    ? 'danger'
+                                    ? 'primary'
                                     : 'secondary'
                             }
-                            onClick={handleToggleCircuitBreaker}
+                            onClick={() =>
+                                telemetry.circuit_breaker_active
+                                    ? void setCircuitBreaker(false)
+                                    : setConfirmingPause(true)
+                            }
                             disabled={togglingCircuitBreaker}
                         >
-                            <Power className="h-4 w-4" />
+                            <Power className="h-4 w-4" aria-hidden="true" />
                             {telemetry.circuit_breaker_active
-                                ? 'AI Paused (Click to Resume)'
-                                : 'Emergency AI Circuit Breaker'}
+                                ? togglingCircuitBreaker
+                                    ? 'Resuming…'
+                                    : 'Resume AI advice'
+                                : 'Pause AI advice'}
                         </Button>
                     )
                 }
@@ -383,9 +390,9 @@ export function GptRecommendationsSurface({
                     <div className="flex items-center gap-3 rounded-xl border border-danger/40 bg-danger-soft/60 p-4 text-xs font-medium text-danger-strong">
                         <ShieldAlert className="h-5 w-5 shrink-0" />
                         <div>
-                            <strong>Emergency Circuit Breaker Engaged:</strong>{' '}
-                            Automated AI recommendation generation is currently
-                            paused platform-wide by Administrator instruction.
+                            <strong>AI advice is paused.</strong> No new AI
+                            requests are sent until an administrator resumes it.
+                            Existing proposals can still be reviewed.
                         </div>
                     </div>
                 )}
@@ -511,13 +518,12 @@ export function GptRecommendationsSurface({
                     <Bot className="mt-0.5 h-5 w-5 shrink-0 text-brand-strong" />
                     <div className="text-xs text-ink">
                         <span className="font-semibold text-brand-strong">
-                            Advisory Safety Protocol:
+                            How AI advice works:
                         </span>{' '}
-                        AI suggestions analyze personnel certifications, asset
-                        telemetry, and scheduling conflicts. No automated
-                        assignment or state changes occur without human manager
-                        sign-off. Each proposal is bound to a strict 15-minute
-                        re-evaluation window and a $0.05 cost ceiling.
+                        it suggests crews and equipment from credentials,
+                        availability, and schedule conflicts. Nothing is
+                        assigned until a manager accepts it. Proposals expire
+                        after 15 minutes, and every request has a cost cap.
                     </div>
                 </div>
 
@@ -877,8 +883,10 @@ export function GptRecommendationsSurface({
                                                             )}
                                                         >
                                                             {rec.is_expired
-                                                                ? 'Expired (15m window)'
-                                                                : rec.status}
+                                                                ? 'Expired'
+                                                                : humanize(
+                                                                      rec.status,
+                                                                  )}
                                                         </span>
                                                         {rec.error_message && (
                                                             <p
@@ -1102,6 +1110,14 @@ export function GptRecommendationsSurface({
                     returnFocusTo={modalTrigger}
                 />
             )}
+
+            <PauseAiDialog
+                open={confirmingPause}
+                saving={togglingCircuitBreaker}
+                error={confirmingPause ? circuitBreakerError : null}
+                onCancel={() => setConfirmingPause(false)}
+                onConfirm={(reason) => setCircuitBreaker(true, reason)}
+            />
         </div>
     );
 }
@@ -1122,6 +1138,9 @@ function PendingRecommendationCard({
         auth?.role === 'system_administrator' ||
         auth?.role === 'admin' ||
         auth?.prototype_role === 'system_administrator';
+    const hasProposedResources =
+        (rec.proposed_personnel?.length ?? 0) > 0 ||
+        (rec.proposed_assets?.length ?? 0) > 0;
 
     if (rec.purpose === 'dispatch_blocker_resolution') {
         return (
@@ -1191,6 +1210,12 @@ function PendingRecommendationCard({
                 <h5 className="font-semibold text-ink">
                     Proposed Resource Plan:
                 </h5>
+
+                {!hasProposedResources && (
+                    <p className="rounded-lg border border-dashed border-line bg-surface p-2.5 text-ink-soft">
+                        No crew or equipment was proposed.
+                    </p>
+                )}
 
                 {rec.proposed_personnel &&
                     rec.proposed_personnel.length > 0 && (
@@ -1280,15 +1305,15 @@ function PendingRecommendationCard({
                         </ul>
                     </div>
                 </div>
-            ) : (
+            ) : hasProposedResources ? (
                 <div className="flex items-center gap-2 rounded-lg border border-success/30 bg-success-soft/30 px-3 py-2 text-xs text-success-strong">
                     <ShieldCheck className="h-4 w-4 shrink-0" />
                     <span>
-                        Zero scheduling overlaps or safety certification
-                        conflicts detected.
+                        No schedule overlaps or credential conflicts were found
+                        for the proposed crew and equipment.
                     </span>
                 </div>
-            )}
+            ) : null}
 
             {/* Footer / Actions */}
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3 text-xs">
@@ -1516,7 +1541,7 @@ function Gpt15MinCountdown({
     expiresAt: string | null;
     expiresInSeconds?: number;
 }) {
-    const [remainingSec, setRemainingSec] = useState<number>(() => {
+    const [remainingSec, setRemainingSec] = useState<number | null>(() => {
         if (typeof expiresInSeconds === 'number') {
             return Math.max(0, expiresInSeconds);
         }
@@ -1529,25 +1554,36 @@ function Gpt15MinCountdown({
             return Math.max(0, diff);
         }
 
-        return 900; // default 15 mins
+        // No recorded expiry: show nothing rather than an invented timer.
+        return null;
     });
 
     useEffect(() => {
-        if (remainingSec <= 0) {
+        if (remainingSec === null || remainingSec <= 0) {
             return;
         }
 
         const interval = window.setInterval(() => {
-            setRemainingSec((prev) => Math.max(0, prev - 1));
+            setRemainingSec((prev) =>
+                prev === null ? null : Math.max(0, prev - 1),
+            );
         }, 1000);
 
         return () => window.clearInterval(interval);
     }, [remainingSec]);
 
-    const isUrgent = remainingSec < 180; // under 3 mins
+    if (remainingSec === null) {
+        return null;
+    }
 
-    const mins = Math.floor(remainingSec / 60);
+    const isUrgent = remainingSec < 180; // under 3 mins
+    const hours = Math.floor(remainingSec / 3600);
+    const mins = Math.floor((remainingSec % 3600) / 60);
     const secs = remainingSec % 60;
+    const remaining =
+        hours > 0
+            ? `${hours} h ${mins} m`
+            : `${mins}:${secs < 10 ? `0${secs}` : secs}`;
 
     if (remainingSec === 0) {
         return (
@@ -1563,15 +1599,13 @@ function Gpt15MinCountdown({
             className={cn(
                 'flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold shadow-2xs',
                 isUrgent
-                    ? 'animate-pulse bg-danger-soft text-danger-strong'
+                    ? 'bg-danger-soft text-danger-strong'
                     : 'bg-warning-soft text-warning-strong',
             )}
-            title="15-minute advisory proposal validity window"
+            title="Proposals must be decided before they expire"
         >
-            <Clock className="h-3.5 w-3.5" />
-            <span>
-                {mins}m {secs < 10 ? `0${secs}` : secs}s window
-            </span>
+            <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+            <span className="tabular-nums">Expires in {remaining}</span>
         </div>
     );
 }

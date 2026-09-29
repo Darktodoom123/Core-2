@@ -119,6 +119,8 @@ function renderSection(overrides: Partial<WorkspaceCapabilities> = {}) {
 
 describe('UserManagementWorkspaceSection', () => {
     beforeEach(() => {
+        // The selected tab is kept in the URL; start every test on Accounts.
+        window.history.replaceState({}, '', '/');
         mockFetch.mockReset();
         mockClipboardWrite.mockReset();
         mockFetch.mockResolvedValue(jsonResponse(paginated([account])));

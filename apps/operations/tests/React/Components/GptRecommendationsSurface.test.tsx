@@ -92,7 +92,7 @@ describe('GPT recommendations surface', () => {
         expect(await screen.findByText('No decisions')).toBeInTheDocument();
         expect(
             screen.getByRole('button', {
-                name: 'Emergency AI Circuit Breaker',
+                name: 'Pause AI advice',
             }),
         ).toBeInTheDocument();
         expect(fetchMock).toHaveBeenCalledTimes(2);

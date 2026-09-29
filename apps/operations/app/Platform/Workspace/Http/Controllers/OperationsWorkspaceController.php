@@ -13,7 +13,6 @@ use App\Modules\Dispatch\Planning\Queries\ProjectPlanningQuery;
 use App\Modules\Fuel\Models\FuelRequest;
 use App\Modules\Rental\Enums\RentalFulfillmentMode;
 use App\Modules\Rental\Models\RentalReservation;
-use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Gpt\Models\GptRecommendation;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
@@ -50,7 +49,7 @@ final class OperationsWorkspaceController extends Controller
 
     /** @var array<string, list<string>> */
     private const SECTION_PROPS = [
-        'overview' => ['jobs', 'clients', 'serviceRequests', 'assets', 'assets_total', 'fuelRequests', 'locations', 'approvals', 'users', 'auditEvents', 'gptRecommendations'],
+        'overview' => ['jobs', 'clients', 'serviceRequests', 'assets', 'assets_total', 'fuelRequests', 'locations', 'approvals', 'users', 'gptRecommendations'],
         'dispatch' => ['jobs', 'clients', 'serviceRequests', 'rentalHandoffs', 'incoming_total', 'assets', 'assets_total', 'approvals', 'dispatchResourceUsers', 'gptRecommendations', 'projectPlanning'],
         'assets' => ['assets', 'assets_total', 'assets_pagination', 'locations'],
         'tracking' => ['assets', 'assets_total', 'locations'],
@@ -60,8 +59,10 @@ final class OperationsWorkspaceController extends Controller
         'notifications' => ['notifications', 'notifications_total', 'notifications_has_more'],
         'archive' => ['archivedJobs'],
         'gpt-recommendations' => ['gptRecommendations', 'gptRecommendationHistory_pagination', 'gptSelectedRecommendation', 'jobs'],
-        'users' => ['users', 'auditEvents'],
-        'audit' => ['auditEvents'],
+        'users' => ['users'],
+        // The audit trail pages its own events from /operations/audit-events;
+        // the export list is where administrators collect audit exports.
+        'audit' => ['reportExports'],
         'sos' => [],
     ];
 
@@ -139,9 +140,8 @@ final class OperationsWorkspaceController extends Controller
             $belongsToInitialSection = in_array($prop, self::SECTION_PROPS[$initialSection] ?? [], true);
             $isNotificationSectionProp = $initialSection === 'notifications'
                 && in_array($prop, ['notifications', 'notifications_total', 'notifications_has_more'], true);
-            $isAuditTrailProp = $initialSection === 'audit' && $prop === 'auditEvents';
             $props[$prop] = $belongsToInitialSection
-                ? ($hasErrors || $isNotificationSectionProp || $isAuditTrailProp
+                ? ($hasErrors || $isNotificationSectionProp
                     ? $resolver()
                     : Inertia::defer($resolver, 'workspace-'.($initialSection ?? 'none')))
                 : Inertia::optional($resolver);
@@ -189,8 +189,7 @@ final class OperationsWorkspaceController extends Controller
                     'fuelRequests' => OperationsWorkspaceViewModel::fuelRequests($this->fetchFuelRequests($user)),
                     'locations' => OperationsWorkspaceViewModel::locations($this->fetchLocations($user)),
                     'approvals' => OperationsWorkspaceViewModel::approvals($this->fetchApprovals($user), $user),
-                    'users' => OperationsWorkspaceViewModel::users($this->fetchUsers($user, 50)),
-                    'auditEvents' => OperationsWorkspaceViewModel::auditEvents($this->fetchAuditEvents($user)),
+                    'users' => OperationsWorkspaceViewModel::users($this->fetchUsers($user)),
                     'gptRecommendations' => OperationsWorkspaceViewModel::gptRecommendations($this->fetchGptRecommendations($user)),
                 ];
             })(),
@@ -306,9 +305,10 @@ final class OperationsWorkspaceController extends Controller
             })(),
             'users' => [
                 'users' => OperationsWorkspaceViewModel::users($this->fetchUsers($user)),
-                'auditEvents' => OperationsWorkspaceViewModel::auditEvents($this->fetchAuditEvents($user)),
             ],
-            'audit' => ['auditEvents' => OperationsWorkspaceViewModel::auditEvents($this->fetchAuditEvents($user))],
+            'audit' => [
+                'reportExports' => OperationsWorkspaceViewModel::reportExports($this->fetchReportExports($user), $user),
+            ],
             'sos' => [],
             default => [],
         };
@@ -380,7 +380,6 @@ final class OperationsWorkspaceController extends Controller
             'approvals' => OperationsWorkspaceViewModel::approvals($this->fetchApprovals($user), $user),
             'dispatchResourceUsers' => OperationsWorkspaceViewModel::dispatchResourceUsers($this->fetchDispatchResourceUsers($user)),
             'users' => OperationsWorkspaceViewModel::users($this->fetchUsers($user)),
-            'auditEvents' => OperationsWorkspaceViewModel::auditEvents($this->fetchAuditEvents($user)),
             'gptRecommendations' => OperationsWorkspaceViewModel::gptRecommendations($this->fetchGptRecommendations($user)),
             'jobReports' => OperationsWorkspaceViewModel::jobReports($this->fetchJobReports($user)),
             'jobReports_total' => app(WorkspaceJobReportsQuery::class)->stats($user, $reportFilters)['total'],
@@ -409,7 +408,8 @@ final class OperationsWorkspaceController extends Controller
         $requested = $request->query('view') ?? $request->query('section');
 
         if ($requested === 'exports') {
-            $requested = 'reports';
+            // Administrators have no Job reports section; their exports are on the audit trail.
+            $requested = collect($navigation)->contains('id', 'reports') ? 'reports' : 'audit';
         }
 
         if ($requested === 'sos' && ($user->can('sos.view') || $user->can('sos.respond') || count($activeSos) > 0)) {
@@ -846,16 +846,6 @@ final class OperationsWorkspaceController extends Controller
             'pending_fuel' => $pendingFuel,
             'active_sos' => $activeSosCount,
         ];
-    }
-
-    /** @return Collection<int, AuditEvent> */
-    private function fetchAuditEvents(User $user): Collection
-    {
-        if (! $user->can(PermissionName::AuditView->value)) {
-            return collect();
-        }
-
-        return AuditEvent::query()->with('actor:id,name')->latest('occurred_at')->limit(100)->get();
     }
 
     /** @return Collection<int, Client> */

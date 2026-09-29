@@ -213,7 +213,7 @@ it('serves operational overview workspace for Operations Manager and System Admi
             ->where('navigation', fn ($nav): bool => collect($nav)->contains('id', 'gpt-recommendations'))
             ->loadDeferredProps('workspace-overview', fn (Assert $section) => $section
                 ->has('users')
-                ->has('auditEvents'))
+                ->missing('auditEvents'))
         );
 });
 
@@ -236,7 +236,7 @@ it('exposes the live users workspace only to accounts with user-management permi
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->where('initial_section', 'audit')
-            ->has('auditEvents', 0));
+            ->missing('auditEvents'));
 
     $manager = User::factory()->create();
     $manager->syncRoles([RoleName::OperationsManager->value]);
