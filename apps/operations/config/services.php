@@ -59,6 +59,14 @@ return [
         'search_country' => env('GEOCODING_SEARCH_COUNTRY', 'PH'),
     ],
 
+    // Public Reverb endpoint for browsers, rendered into the page at runtime.
+    // Empty values fall back to the build-time VITE_REVERB_* settings.
+    'reverb_client' => [
+        'host' => env('REVERB_CLIENT_HOST'),
+        'port' => env('REVERB_CLIENT_PORT'),
+        'scheme' => env('REVERB_CLIENT_SCHEME'),
+    ],
+
     'tracking' => [
         'driver' => env('TRACKING_SERVICE_DRIVER', 'database'),
         'url' => env('TRACKING_SERVICE_URL', 'http://localhost:8001'),

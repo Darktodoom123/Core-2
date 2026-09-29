@@ -6,7 +6,9 @@
 **Apex Domain:** `alibaton-ph.com`  
 **Core-2 Subdomain:** `core-2.alibaton-ph.com`  
 
-**Verification status:** The user confirmed that Core-2 is not deployed. HostForge is the intended first-deployment platform. The topology below describes the containerized 2-service monorepo architecture (Operations + Tracking), not verified hosting capabilities. The [microservice restructuring handoff](../microservice/README.md) defines the authoritative service boundary; local verification (Tasks 1–7) is complete. Platform capacity, backup/restore, and independent-release evidence is required before production deployment. The locally configured Cloudflare R2 storage account was checked during the bucket-isolation work; no HostForge account or production database was accessed.
+**Deployment status (2026-09-29):** Operations is live on HostForge at `https://core-2.alibaton-ph.com` as a single application with Tracking running in-process (`TRACKING_SERVICE_DRIVER=database`) against the one `core2-postgres` database. See [HostForge application settings](#hostforge-application-settings) for the configuration that works. The separate Tracking service and database described below are not deployed yet.
+
+**Original verification status:** HostForge is the intended first-deployment platform. The topology below describes the containerized 2-service monorepo architecture (Operations + Tracking), not verified hosting capabilities. The [microservice restructuring handoff](../microservice/README.md) defines the authoritative service boundary; local verification (Tasks 1–7) is complete. Platform capacity, backup/restore, and independent-release evidence is required before production deployment. The locally configured Cloudflare R2 storage account was checked during the bucket-isolation work; no HostForge account or production database was accessed.
 
 ---
 
@@ -43,7 +45,7 @@ The application is deployed as a two-service containerized architecture orchestr
 - **Operations Database (`db`)**: Managed PostgreSQL 16 database (`core2_production`) or Supabase PostgreSQL with Supavisor connection pooler (port 6543).
 - **Tracking Database (`tracking-db`)**: Isolated PostgreSQL 16 database (`core2_tracking_production`) with monthly partitioning for append-only location samples.
 - **In-Memory Cache / Key-Value Store (`redis`)**: Redis 7 instance for distributed sessions, atomic rate limiting, and real-time pub/sub brokering for Operations.
-- **Edge Reverse Proxy & SSL/TLS**: HostForge ingress edge terminates TLS with automated Let's Encrypt certificates for `core-2.alibaton-ph.com`, proxying HTTP/HTTPS to Operations port 80 and WebSocket upgrades (`Upgrade: websocket`) to port 8080. Tracking is internal-only and not exposed to the public Internet.
+- **Edge Reverse Proxy & SSL/TLS**: HostForge ingress edge terminates TLS with automated Let's Encrypt certificates for `core-2.alibaton-ph.com`, proxying HTTP/HTTPS to Operations port 80. HostForge publishes only that port, so the container's Nginx proxies Reverb's WebSocket path (`/app/`) to Reverb on `127.0.0.1:8080`. Tracking is internal-only and not exposed to the public Internet.
 
 ```mermaid
 flowchart TD
@@ -100,9 +102,12 @@ DB_PORT=5432
 DB_DATABASE=core2_production
 DB_USERNAME=<production-db-user>
 DB_PASSWORD=<strong-db-password>
-DB_SSLMODE=require
+# HostForge's managed PostgreSQL does not offer SSL on its internal network;
+# "require" fails with "server does not support SSL". Use "require" on hosts that support it.
+DB_SSLMODE=prefer
 
-# Redis Cache & Queue
+# Redis Cache & Queue (HostForge Redis authenticates with a password only;
+# do not set REDIS_USERNAME or a REDIS_URL)
 REDIS_CLIENT=phpredis
 REDIS_HOST=<production-redis-host>
 REDIS_PORT=6379
@@ -110,21 +115,19 @@ REDIS_PASSWORD=<strong-redis-password>
 CACHE_STORE=redis
 QUEUE_CONNECTION=redis
 
-# Laravel Reverb (WebSockets on Subdomain)
+# Laravel Reverb. The server publishes to the Reverb process in the same
+# container; browsers connect through the public HTTPS port, and Nginx proxies
+# /app/ to Reverb. The page renders these browser settings at runtime, so they
+# do not need to be compiled into the Vite assets.
 BROADCAST_CONNECTION=reverb
 REVERB_APP_ID=core2-prod
 REVERB_APP_KEY=<public-reverb-key>
 REVERB_APP_SECRET=<server-only-secret>
-REVERB_HOST=0.0.0.0
+REVERB_HOST=127.0.0.1
 REVERB_PORT=8080
-REVERB_SCHEME=https
-
-# Public Frontend Variables (Compiled into Vite Assets)
-VITE_APP_NAME="Alibaton Core-2"
-VITE_REVERB_APP_KEY=<public-reverb-key>
-VITE_REVERB_HOST=core-2.alibaton-ph.com
-VITE_REVERB_PORT=443
-VITE_REVERB_SCHEME=https
+REVERB_SCHEME=http
+REVERB_CLIENT_PORT=443
+REVERB_CLIENT_SCHEME=https
 
 # MapLibre GIS Production Credentials
 VITE_MAP_PROVIDER=stadia
@@ -184,6 +187,21 @@ PUSH_QUEUE=default
 RUN_MIGRATIONS=true
 CACHE_CONFIG=true
 ```
+
+### HostForge Application Settings
+
+These Build Configuration values are what made the first deployment succeed:
+
+| Setting | Value | Why |
+| :--- | :--- | :--- |
+| Dockerfile | `Dockerfile` at the repository root | HostForge ignores a custom Dockerfile path and generates its own PHP image unless a root `Dockerfile` exists. It builds the last stage (`runtime`, Operations). |
+| Runtime / Framework | `docker` / `custom` | Stops framework auto-detection from replacing the start command. |
+| Start command | empty | The image's own entrypoint and Supervisor command are used. |
+| Port / Health check path | `80` / `/up` | `/up` does not touch the database. |
+| Release command | `su-exec www-data php artisan migrate --force --no-interaction` | Runs after the health check and before traffic switches; a failure keeps the previous release live. |
+| `RUN_MIGRATIONS` (env) | `false` | Migrations in the entrypoint delay Nginx past HostForge's ~30 s health check window. |
+
+Managed databases are reached on their standard internal ports (`5432`, `6379`); the ports shown on the Databases page are external mappings.
 
 ### R2 Bucket Isolation and Existing Files
 

@@ -5,6 +5,12 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <meta name="broadcasting-enabled" content="{{ config('broadcasting.default') === 'reverb' ? 'true' : 'false' }}">
+        @if (config('broadcasting.default') === 'reverb')
+            <meta name="reverb-key" content="{{ config('broadcasting.connections.reverb.key') }}">
+            <meta name="reverb-host" content="{{ config('services.reverb_client.host') }}">
+            <meta name="reverb-port" content="{{ config('services.reverb_client.port') }}">
+            <meta name="reverb-scheme" content="{{ config('services.reverb_client.scheme') }}">
+        @endif
 
         <script>
             (() => {

@@ -31,6 +31,14 @@ export function reconnectEcho(): void {
     pusher.connect();
 }
 
+function runtimeSetting(name: string): string {
+    return (
+        document
+            .querySelector<HTMLMetaElement>(`meta[name="${name}"]`)
+            ?.content.trim() ?? ''
+    );
+}
+
 export function getEcho(): Echo<'reverb'> | null {
     if (typeof window === 'undefined') {
         return null;
@@ -45,21 +53,28 @@ export function getEcho(): Echo<'reverb'> | null {
     }
 
     if (!window.Echo) {
+        const port =
+            runtimeSetting('reverb-port') || import.meta.env.VITE_REVERB_PORT;
+        const scheme =
+            runtimeSetting('reverb-scheme') ||
+            import.meta.env.VITE_REVERB_SCHEME ||
+            'http';
+
         window.Echo = new Echo<'reverb'>({
             broadcaster: 'reverb',
-            key: import.meta.env.VITE_REVERB_APP_KEY ?? 'reverb-key',
-            // An empty build-time host means "the host serving this page", so
-            // one image works from phones, tablets, and other LAN devices.
+            key:
+                runtimeSetting('reverb-key') ||
+                import.meta.env.VITE_REVERB_APP_KEY ||
+                'reverb-key',
+            // An empty host means "the host serving this page", so one image
+            // works from phones, tablets, and other LAN devices.
             wsHost:
-                import.meta.env.VITE_REVERB_HOST || window.location.hostname,
-            wsPort: import.meta.env.VITE_REVERB_PORT
-                ? Number(import.meta.env.VITE_REVERB_PORT)
-                : 8080,
-            wssPort: import.meta.env.VITE_REVERB_PORT
-                ? Number(import.meta.env.VITE_REVERB_PORT)
-                : 443,
-            forceTLS:
-                (import.meta.env.VITE_REVERB_SCHEME ?? 'http') === 'https',
+                runtimeSetting('reverb-host') ||
+                import.meta.env.VITE_REVERB_HOST ||
+                window.location.hostname,
+            wsPort: port ? Number(port) : 8080,
+            wssPort: port ? Number(port) : 443,
+            forceTLS: scheme === 'https',
             enabledTransports: ['ws', 'wss'],
         });
     }
