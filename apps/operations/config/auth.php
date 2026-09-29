@@ -133,4 +133,15 @@ return [
         'operator' => ['name' => env('LOCAL_OPERATOR_NAME'), 'email' => env('LOCAL_OPERATOR_EMAIL')],
     ],
 
+    /*
+    | Production counterparts of the quick-login accounts, keyed by username and
+    | created by DatabaseSeeder outside local. An account is skipped when its
+    | email is empty; the admin keeps ADMIN_PASSWORD from the bootstrap step.
+    */
+    'production_accounts' => [
+        'admin' => ['name' => env('ADMIN_NAME'), 'email' => env('ADMIN_EMAIL')],
+        'manager' => ['name' => env('MANAGER_NAME'), 'email' => env('MANAGER_EMAIL'), 'password' => env('MANAGER_PASSWORD')],
+        'operator' => ['name' => env('OPERATOR_NAME'), 'email' => env('OPERATOR_EMAIL'), 'password' => env('OPERATOR_PASSWORD')],
+    ],
+
 ];

@@ -29,20 +29,24 @@ class DatabaseSeeder extends Seeder
 
         $localAccountOverrides = app()->environment('local') ? LocalAccountOverrides::fromConfig() : null;
         $localAccountOverrides?->restoreFixtureEmails();
+        $productionAccounts = app()->environment('local') ? null : ProductionAccounts::fromConfig();
 
         $this->call(RolePermissionSeeder::class);
 
-        $administrator = User::query()->firstOrCreate(
-            ['email' => 'admin@example.com'],
-            [
-                'name' => 'System Administrator',
-                'username' => Username::fromEmail('admin@example.com'),
-                'email_verified_at' => now(),
-                'password' => Hash::make(is_string($bootstrapPassword) ? $bootstrapPassword : 'password'),
-                'is_active' => true,
-            ],
-        );
+        // Look the admin up by username: production may have moved it to a real email.
+        $administrator = User::query()->where('username', Username::fromEmail('admin@example.com'))->first()
+            ?? User::query()->firstOrCreate(
+                ['email' => 'admin@example.com'],
+                [
+                    'name' => 'System Administrator',
+                    'username' => Username::fromEmail('admin@example.com'),
+                    'email_verified_at' => now(),
+                    'password' => Hash::make(is_string($bootstrapPassword) ? $bootstrapPassword : 'password'),
+                    'is_active' => true,
+                ],
+            );
         $administrator->syncRoles([RoleName::SystemAdministrator->value]);
+        $productionAccounts?->apply();
 
         if (app()->environment('local')) {
             $this->call(LocalDevelopmentSeeder::class);

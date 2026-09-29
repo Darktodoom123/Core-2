@@ -204,6 +204,18 @@ These Build Configuration values are what made the first deployment succeed:
 
 Managed databases are reached on their standard internal ports (`5432`, `6379`); the ports shown on the Databases page are external mappings.
 
+### Production Accounts
+
+`php artisan db:seed --force` creates roles, permissions, and the `admin` login (password `ADMIN_PASSWORD`, at least 12 characters). Outside `APP_ENV=local` it also creates the `manager` and `operator` logins, mirroring the local quick-login accounts, from these variables:
+
+| Variable | Used for |
+| :--- | :--- |
+| `ADMIN_EMAIL`, `ADMIN_NAME` | Moves the `admin` login off `admin@example.com`. Its password stays `ADMIN_PASSWORD`. |
+| `MANAGER_EMAIL`, `MANAGER_NAME`, `MANAGER_PASSWORD` | Operations Manager login `manager`. |
+| `OPERATOR_EMAIL`, `OPERATOR_NAME`, `OPERATOR_PASSWORD` | Operator login `operator`. |
+
+An account is skipped when its email is empty. Passwords must be at least 12 characters, and the seeder validates every value before writing. Re-running the seeder updates names, emails, and roles but never changes an existing password. Mark the password variables Secret, and remove them after the accounts exist.
+
 ### R2 Bucket Isolation and Existing Files
 
 The public media and protected document disk names must point to **different R2 buckets**. Keep both public access methods (`r2.dev` and custom domains) disabled on the private bucket. Cloudflare exposes a public bucket's objects through its public URL, regardless of the `url` value on Laravel's private disk configuration. See [Cloudflare's public bucket documentation](https://developers.cloudflare.com/r2/buckets/public-buckets/).
