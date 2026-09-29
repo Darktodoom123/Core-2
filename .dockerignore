@@ -21,6 +21,15 @@ public/build
 .npm-cache
 nimbalyst-local
 
+# Local tool state: agent worktrees alone are gigabytes of repo copies.
+.claude
+.nx
+graphify-out
+test-results
+output
+dist
+tmp
+
 .env
 .env.*
 !.env.example
