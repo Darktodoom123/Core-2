@@ -31,11 +31,14 @@ apps/operations/.env
 apps/operations/.env.*
 !apps/operations/.env.example
 apps/operations/vendor/
+apps/operations/node_modules/
 apps/operations/storage/
 apps/operations/database/*.sqlite
 apps/operations/database/*.sqlite-journal
 apps/operations/bootstrap/cache/*.php
 apps/operations/public/build/
+# A leftover Vite dev-server marker makes the image load assets from :5173.
+apps/operations/public/hot
 apps/tracking/.env
 apps/tracking/.env.*
 !apps/tracking/.env.example
@@ -45,6 +48,7 @@ apps/tracking/database/*.sqlite
 apps/tracking/database/*.sqlite-journal
 apps/tracking/bootstrap/cache/*.php
 apps/tracking/public/build/
+apps/tracking/public/hot
 
 npm-debug.log
 yarn-error.log
