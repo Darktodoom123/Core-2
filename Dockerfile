@@ -207,6 +207,9 @@ RUN set -eux; \
         pdo_pgsql \
         pdo_sqlite \
         zip; \
+    pecl install redis-6.2.0; \
+    docker-php-ext-enable redis; \
+    rm -rf /tmp/pear; \
     apk del .build-deps; \
     sed -i 's/^user nginx;/user www-data;/' /etc/nginx/nginx.conf; \
     update-ca-certificates
