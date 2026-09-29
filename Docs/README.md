@@ -65,6 +65,8 @@ Authoritative product specifications defining commercial boundaries, business ru
 | [core-hr-workforce-boundary.md](product/core-hr-workforce-boundary.md) | Upstream HR employee master vs. Core-2 operational personnel profiles and credentials. |
 | [userflow.md](product/userflow.md) | End-to-end user journey flows across System Administrator, Operations Manager, and Operator roles. |
 | [operations-manager-web-user-flow.md](product/operations-manager-web-user-flow.md) | Current Operations Manager journey across the complete web workspace, with section map, dispatch path, and permission boundaries. |
+| [defense-presentation.md](product/defense-presentation.md) | Opt-in seeder and live script for the defense: Core 1 request → dispatch → BJ completes on the field app, with Core 3 inspections and Core 4 documents. |
+| [click-by-click-user-flows.md](product/click-by-click-user-flows.md) | Step-by-step clicks for the Operations Manager (web) and Operator (mobile), using the app's button labels. |
 | [web-sidebar-user-flows.md](product/web-sidebar-user-flows.md) | Whole routed web sidebar for Administrator, Manager, and Operator, with cross-role audit findings. |
 
 ### 3. Native Field Mobile Client (`Docs/prds/`)

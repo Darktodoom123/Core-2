@@ -144,4 +144,14 @@ return [
         'operator' => ['name' => env('OPERATOR_NAME'), 'email' => env('OPERATOR_EMAIL'), 'password' => env('OPERATOR_PASSWORD')],
     ],
 
+    /*
+    | Opt-in switch for DefensePresentationSeeder outside local and testing.
+    | Off by default. Outside local the spare demo operators need a password
+    | of at least 12 characters; mark it Secret and remove both after the demo.
+    */
+    'defense_demo' => [
+        'enabled' => (bool) env('DEMO_SEED', false),
+        'operator_password' => env('DEMO_OPERATOR_PASSWORD'),
+    ],
+
 ];
