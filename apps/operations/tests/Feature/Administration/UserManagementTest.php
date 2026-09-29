@@ -91,29 +91,14 @@ it('filters the account list and returns only account management fields', functi
         ->assertJsonPath('data.data.0.id', $suspendedManager->id);
 });
 
-it('keeps existing Rigger sign-in accounts visible and filterable in the account directory', function (): void {
+it('rejects rigger as a role filter now that the role is gone', function (): void {
     $admin = User::factory()->create();
     $admin->syncRoles([RoleName::SystemAdministrator->value]);
-    $operator = User::factory()->create();
-    $operator->syncRoles([RoleName::CraneOperator->value]);
-    $rigger = User::factory()->create();
-    $rigger->syncRoles([RoleName::Rigger->value]);
-
-    $response = $this->actingAs($admin)
-        ->getJson('/operations/users')
-        ->assertOk();
-
-    expect(collect($response->json('data.data'))->pluck('id')->all())
-        ->toEqualCanonicalizing([$admin->id, $operator->id, $rigger->id]);
 
     $this->actingAs($admin)
         ->getJson('/operations/users?role=rigger')
-        ->assertOk()
-        ->assertJsonPath('data.total', 1)
-        ->assertJsonPath('data.data.0.id', $rigger->id)
-        ->assertJsonPath('data.data.0.roles.0.name', RoleName::Rigger->value);
-
-    expect($rigger->hasRole(RoleName::Rigger->value))->toBeTrue();
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['role']);
 });
 
 it('paginates user accounts and preserves list filters in pagination links', function (): void {
@@ -224,25 +209,25 @@ it('prevents duplicate usernames after normalization', function (): void {
 it('rejects rigger as an account creation or role assignment', function (): void {
     $admin = User::factory()->create();
     $admin->syncRoles([RoleName::SystemAdministrator->value]);
-    $rigger = User::factory()->create();
-    $rigger->syncRoles([RoleName::Rigger->value]);
+    $operator = User::factory()->create();
+    $operator->syncRoles([RoleName::CraneOperator->value]);
 
     $this->actingAs($admin)
         ->postJson('/operations/users', [
             'name' => 'New Rigger',
             'username' => 'new.rigger',
             'email' => 'new.rigger@core.test',
-            'role' => RoleName::Rigger->value,
+            'role' => 'rigger',
         ])
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['role']);
 
     $this->actingAs($admin)
-        ->patchJson("/operations/users/{$rigger->id}", ['role' => RoleName::Rigger->value])
+        ->patchJson("/operations/users/{$operator->id}", ['role' => 'rigger'])
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['role']);
 
-    expect($rigger->refresh()->hasRole(RoleName::Rigger->value))->toBeTrue();
+    expect($operator->refresh()->hasRole(RoleName::CraneOperator->value))->toBeTrue();
 });
 
 it('prevents removal of the last active system administrator', function () {

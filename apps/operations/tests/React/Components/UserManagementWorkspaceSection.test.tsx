@@ -160,56 +160,27 @@ describe('UserManagementWorkspaceSection', () => {
         );
     });
 
-    it('keeps existing Rigger accounts filterable without offering Rigger for assignment', async () => {
-        const riggerAccount = {
-            ...account,
-            id: 2,
-            name: 'Rigger Account',
-            username: 'rigger.account',
-            email: 'rigger@example.test',
-            roles: [{ id: 4, name: 'rigger' }],
-        };
-        mockFetch.mockResolvedValue(
-            jsonResponse(paginated([account, riggerAccount])),
-        );
-
+    it('offers no Rigger role in the account filter or role assignment', async () => {
         renderSection();
-
-        expect(
-            await screen.findByRole('row', { name: /Rigger Account/ }),
-        ).toBeInTheDocument();
-
-        fireEvent.click(
-            screen.getAllByRole('button', { name: /Rigger Account/ })[0],
-        );
-        expect(
-            await screen.findByRole('option', {
-                name: 'Current role: Rigger',
-            }),
-        ).toBeInTheDocument();
+        await screen.findByRole('heading', { name: 'Alex Admin' });
 
         const roleFilter = screen.getByRole('combobox', {
             name: 'Filter accounts by role',
         });
         expect(
-            within(roleFilter).getByRole('option', { name: 'Rigger' }),
+            within(roleFilter).queryByRole('option', { name: /Rigger/i }),
+        ).not.toBeInTheDocument();
+        expect(
+            within(roleFilter).getByRole('option', { name: 'Operator' }),
         ).toBeInTheDocument();
 
-        fireEvent.change(roleFilter, { target: { value: 'rigger' } });
-        await waitFor(() =>
-            expect(mockFetch).toHaveBeenLastCalledWith(
-                '/operations/users?role=rigger&page=1',
-                expect.objectContaining({ method: 'GET' }),
-            ),
-        );
-
         fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
-        const dialog = screen.getByRole('dialog');
-        const assignmentRole = within(dialog).getByRole('combobox', {
-            name: 'Account role',
-        });
+        const assignmentRole = within(screen.getByRole('dialog')).getByRole(
+            'combobox',
+            { name: 'Account role' },
+        );
         expect(
-            within(assignmentRole).queryByRole('option', { name: 'Rigger' }),
+            within(assignmentRole).queryByRole('option', { name: /Rigger/i }),
         ).not.toBeInTheDocument();
     });
 

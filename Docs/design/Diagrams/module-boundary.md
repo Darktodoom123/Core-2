@@ -183,9 +183,6 @@ flowchart LR
     OM[Operations Manager] --> W
     CO[Operator] --> M
 
-    RG[Rigger Workforce\nNon-Software User] -. verified qualifications & on-site co-signature .-> CO
-    RG -. roster scheduling .-> OM
-
     W -. richer fixture-based prototype .-> P[operations.tsx role surfaces]
     M -. focused native implementation .-> RN[React Native field app]
 ```

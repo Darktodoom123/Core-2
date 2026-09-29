@@ -14,7 +14,7 @@ for Core 1 commercial transaction boundaries.
 - **BR-001:** Only authenticated, active, non-suspended users may enter operational routes.
 - **BR-002:** Operational access is expressed through roles and permissions; frontend visibility is not authorization.
 - **BR-003:** A normal software user has one active operational role from the 3 canonical system user roles (`system_administrator`, `operations_manager`, `crane_operator` [Operator]). Supervisory governance, approvals, and emergency triage are consolidated into `operations_manager`, while equipment operation and field reporting are governed by `crane_operator` [Operator].
-- **BR-003A:** Field personnel without direct software interaction duties (specifically **Riggers**) are registered as employees with [`PersonnelProfile`](../../apps/operations/app/Platform/Identity/Models/PersonnelProfile.php) and [`PersonnelCredential`](../../apps/operations/app/Platform/Identity/Models/PersonnelCredential.php) for crew assignment, DOLE/TESDA certification compliance, but are not provisioned with [`User`](../../apps/operations/app/Platform/Identity/Models/User.php) login accounts, web sessions, or mobile Sanctum API tokens.
+- **BR-003A:** Core-2 has no Rigger role or rigger crew slot. Crews are staffed by Operators only, as crane operators or drivers.
 - **BR-004:** “Own” means the authenticated user is the requester or has an active assignment; it is never accepted from a client-supplied user ID.
 - **BR-005:** The last active System Administrator cannot be suspended or demoted.
 - **BR-006:** Role or activation changes revoke existing sessions for the affected user.
@@ -44,7 +44,7 @@ for Core 1 commercial transaction boundaries.
   allowed while it remains `dispatching`, and dispatch references remain
   globally unique.
 - **BR-013:** Personnel must be active, not suspended, and not unavailable or on leave.
-- **BR-014:** Operators require a valid operator certification and commercial driving license at scheduled start; assigned riggers require valid rigging credentials (e.g., TESDA Rigging NC II, DOLE-BOSH).
+- **BR-014:** Operators require a valid operator certification and commercial driving license at scheduled start.
 - **BR-015:** Assets are assignable only when `available` or `ready_for_service`.
 - **BR-016:** An asset with unreleased dispatch-blocking maintenance cannot be assigned or activated.
 - **BR-017:** An asset cannot have an overlapping active dispatch assignment.
@@ -240,7 +240,7 @@ for Core 1 commercial transaction boundaries.
 - **BR-124:** Real-time fatigue risk scoring evaluates shift duration and rest intervals; critical fatigue thresholds trigger automated warnings to the operator and Operations Manager.
 - **BR-125:** Duty log edits maintain full audit history with mandatory edit remarks, original values, and electronic certification signatures.
 
-- **BR-135:** Crane crew members must hold verified certifications (TESDA Crane Rigging NC II for Riggers, DOLE Heavy Equipment Operator Accreditation for Operators) before assignment.
+- **BR-135:** Crane crew members must hold verified certifications (DOLE Heavy Equipment Operator Accreditation for Operators) before assignment.
 
 ## Dispatch Project Planning & Multi-Crane Allocations
 

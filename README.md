@@ -17,7 +17,7 @@ The platform strictly serves **3 User Roles**:
 - **Operations Manager** (`operations_manager`) — Central dispatch authority, schedule boards, resource assignments, approvals, fleet readiness, and operations oversight.
 - **Operator** (`operator` / `crane_operator`) — Field mobile user advancing dispatch milestones, vehicle inspections, duty logging, and real-time GPS tracking.
 
-*(Non-software field workforce like Riggers are tracked via `PersonnelProfile` and credentials without direct login accounts).*
+*(Crews are staffed by Operators only; Core-2 has no Rigger role or rigger crew slot.)*
 
 See the [Alibaton business context and CT2 capstone scope](Docs/product/alibaton-business-scope.md) for the commercial transaction boundary.
 

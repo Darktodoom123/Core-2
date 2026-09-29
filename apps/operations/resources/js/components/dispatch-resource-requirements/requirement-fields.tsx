@@ -3,7 +3,6 @@ import type { DispatchResourceRequirements } from '@/types/workspace';
 const PERSONNEL_FIELDS = [
     ['driver', 'Drivers'],
     ['crane_operator', 'Crane operators'],
-    ['rigger', 'Riggers / signalpersons'],
 ] as const;
 
 const ASSET_FIELDS = [

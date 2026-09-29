@@ -660,7 +660,7 @@ STRICT CONSTRAINTS:
 3. For proposed_personnel, you MUST identify the candidate from personnel_candidates and provide:
    - "user_id": exact integer user_id from the candidate
    - "name": candidate's exact full name
-   - "role": candidate's role (e.g. "crane_operator", "driver", "rigger")
+   - "role": candidate's role (e.g. "crane_operator", "driver")
    - "assignment_type": the role for this assignment (e.g. "crane_operator", "driver", "crew")
 4. For proposed_assets, you MUST identify the candidate from asset_candidates and provide:
    - "operational_asset_id": exact integer asset_id from the candidate

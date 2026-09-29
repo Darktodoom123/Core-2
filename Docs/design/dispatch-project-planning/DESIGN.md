@@ -133,7 +133,7 @@ Baseline approval, asset allocations, and weekly crew coverage are grouped into 
 
 ### Coverage editor
 
-Operators, riggers, and drivers appear as requirement selectors above selected crew and eligible candidates. Counts compare selected people to required coverage. Switching roles immediately hides candidates belonging to the previous request. Loading and empty states occupy the candidate region. Recorded commitments are inspectable, and crew changes show the proposed change and approval consequence before confirmation.
+Operators and drivers appear as requirement selectors above selected crew and eligible candidates. Counts compare selected people to required coverage. Switching roles immediately hides candidates belonging to the previous request. Loading and empty states occupy the candidate region. Recorded commitments are inspectable, and crew changes show the proposed change and approval consequence before confirmation.
 
 ### Timeline and previews
 

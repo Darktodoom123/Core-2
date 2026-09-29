@@ -51,7 +51,7 @@ secured receiving boundary for upstream handoffs.
 ## Core HR and Workforce Management boundary
 
 Core 2 does not serve as the enterprise Human Resources Information System (HRIS) or payroll engine:
-- **Core HR (Core HCM, Employee Self-Service, Employee Records Management)**: External master of record for personnel identity, legal names, `employee_number`, emergency contacts, job titles, and employment status (Active, Resigned, Terminated). Core 2 ingests employee records to auto-provision user accounts for software users and maintain personnel profiles for non-software employees (such as Riggers), while enforcing automated session and token lockouts upon HR termination.
+- **Core HR (Core HCM, Employee Self-Service, Employee Records Management)**: External master of record for personnel identity, legal names, `employee_number`, emergency contacts, job titles, and employment status (Active, Resigned, Terminated). Core 2 ingests employee records to auto-provision user accounts for software users and maintain their personnel profiles, while enforcing automated session and token lockouts upon HR termination.
 - **Workforce Management (Time & Attendance, Shift & Schedule Management, Timesheets, Leave Management, Workforce Analytics)**: External master of record for worker leave approvals (vacation, sick leave) and shift schedules. Core 2 ingests leave periods to set `availability_status = 'on_leave'`, preventing dispatch conflicts, and exports completed field work hours back to Timesheet Management.
 
 See [Core HR & Workforce Management Integration Architecture](../architecture/hr-workforce-integration.md) and [Core HR & Workforce Boundary](./core-hr-workforce-boundary.md).

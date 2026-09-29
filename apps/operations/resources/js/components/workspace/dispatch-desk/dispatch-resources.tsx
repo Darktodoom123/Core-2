@@ -93,12 +93,9 @@ export function DispatchResources({
         const people = users
             .filter(
                 (user) =>
-                    [
-                        'driver',
-                        'crane_operator',
-                        'rigger',
-                        'field_foreman',
-                    ].includes(user.role ?? '') ||
+                    ['driver', 'crane_operator', 'field_foreman'].includes(
+                        user.role ?? '',
+                    ) ||
                     user.availability_status !== null ||
                     user.has_credentials,
             )

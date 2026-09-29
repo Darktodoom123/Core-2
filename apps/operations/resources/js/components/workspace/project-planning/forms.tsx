@@ -109,7 +109,6 @@ export function PhaseForm({
         coverage: phase?.coverage ?? {
             driver: 0,
             crane_operator: 1,
-            rigger: 2,
         },
     });
     const [review, setReview] = useState(false);

@@ -10,7 +10,7 @@ Status: Accepted & Implemented
 Core-2 operates across three tightly integrated deployment surfaces:
 1. **Web Dispatch Monolith (`apps/operations`)**: Internal dispatchers, operations managers, and administrators accessing the web application via browser sessions (Laravel Session Guard + Inertia.js React 19).
 2. **REST API Gateway (`api/v1`)**: Secure RESTful interface for headless clients and field operations.
-3. **Field Mobile Client (`packages/field-mobile`)**: React Native (Expo) application used by crane operators, riggers, and field technicians operating under variable cellular connectivity.
+3. **Field Mobile Client (`packages/field-mobile`)**: React Native (Expo) application used by Operators (crane operators and drivers) operating under variable cellular connectivity.
 
 ### Threat Model & Boundaries
 - **Email OTP as Device Verification, Not Strong MFA**: Email-based one-time passcodes (OTP) provide an essential defense-in-depth layer against credential stuffing, stolen passwords, and unrecognized browser/device access. However, email is treated as an *additional verification mechanism* rather than cryptographic, hardware-backed multi-factor authentication (e.g. WebAuthn/FIDO2).

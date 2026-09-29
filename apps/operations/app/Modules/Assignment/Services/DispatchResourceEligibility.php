@@ -202,7 +202,6 @@ final class DispatchResourceEligibility
     {
         return match (true) {
             $user->hasRole(RoleName::CraneOperator->value) => RoleName::CraneOperator->value,
-            $user->hasRole(RoleName::Rigger->value) => RoleName::Rigger->value,
             default => null,
         };
     }
@@ -212,7 +211,6 @@ final class DispatchResourceEligibility
         return match ($assignmentType) {
             'driver' => 'Driver',
             'crane_operator', 'operator', 'lead', 'foreman', 'field_foreman' => 'Crane operator',
-            'rigger', 'signalperson' => 'Rigger / Signalperson',
             default => 'Personnel',
         };
     }
@@ -234,7 +232,6 @@ final class DispatchResourceEligibility
     {
         return match ($assignmentType) {
             'crane_operator', 'operator', 'driver', 'lead', 'foreman', 'field_foreman' => RoleName::CraneOperator,
-            'rigger', 'signalperson' => RoleName::Rigger,
             default => null,
         };
     }
@@ -245,7 +242,6 @@ final class DispatchResourceEligibility
         $kind = match ($assignmentType) {
             'driver' => 'driver_license',
             'crane_operator', 'field_foreman', 'foreman', 'lead' => 'operator_certification',
-            'rigger', 'signalperson' => 'rigger_certification',
             default => null,
         };
 
@@ -268,7 +264,6 @@ final class DispatchResourceEligibility
             && ($credential->expires_at === null || $credential->expires_at->toDateString() >= $scheduledDate));
         $label = match ($kind) {
             'driver_license' => 'Driver license',
-            'rigger_certification' => 'Rigger certification',
             default => 'Operator certification',
         };
 

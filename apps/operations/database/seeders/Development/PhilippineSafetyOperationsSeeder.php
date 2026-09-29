@@ -64,7 +64,7 @@ final class PhilippineSafetyOperationsSeeder extends Seeder
             [
                 'user_id' => $foreman->id,
                 'kind' => 'operator_certification',
-                'credential_type' => 'TESDA NC-II Heavy Equipment / Master Rigger',
+                'credential_type' => 'TESDA NC-II Heavy Equipment Operation',
                 'status' => 'active',
                 'issued_at' => Carbon::now()->subMonths(6),
                 'expires_at' => Carbon::now()->addYears(2),

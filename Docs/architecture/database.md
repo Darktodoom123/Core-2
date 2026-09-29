@@ -98,7 +98,7 @@ the username migration does not replace or rewrite it.
 
 - `users`: identity, normalized username, email, phone, activation, and suspension metadata for interactive web and mobile software users. Username is unique and non-null after migration; email remains unique and is not replaced.
 - Spatie RBAC tables: roles, permissions, and role/user mappings for the **3 canonical system users** (`system_administrator`, `operations_manager`, `operator` / `crane_operator`).
-- `personnel_profiles`: employee number, availability, emergency contact, tracking all enterprise operational employees (both software users and non-user field staff such as Riggers).
+- `personnel_profiles`: employee number, availability, emergency contact, tracking operational employees who hold Core-2 accounts.
 - `personnel_credentials`: license, certification, or qualification validity and verification (e.g., TESDA Crane NC II, TESDA Rigging NC II, DOLE-BOSH).
 - Laravel tables: sessions, password resets, personal access tokens (issued via Sanctum for mobile field users), cache, jobs, and migrations.
 
@@ -138,7 +138,7 @@ collision behavior.
 ### Dispatch Project Planning tables (`app/Modules/Dispatch/Planning`)
 
 - `project_plans`: unique reference, project title, client, site location, timeline bounds, baseline approval status (`draft`, `submitted`, `approved`, `rejected`), version, creator, and approver.
-- `project_plan_phases`: parent project plan, phase name, start/end dates, required operators, riggers, and drivers per shift.
+- `project_plan_phases`: parent project plan, phase name, start/end dates, required operators and drivers per shift.
 - `project_plan_allocations`: phase equipment reservations, asset ID, timeline window, allocation type, and maintenance collision protection.
 - `project_plan_shifts`: linked dispatch job, phase, shift date/times, confirmed crew roster, and 24-hour exception approval status.
 

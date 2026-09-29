@@ -52,7 +52,7 @@ flowchart LR
 | | `BP-1.3` | Priority / Emergency Approval Protocol | High-priority flag on draft job | Manager Approval / Rejection Decision |
 | | `BP-1.4` | Server-Authoritative Dispatch Activation | Complete resource assignment | Dispatched / Active Job |
 | | `BP-1.5` | Project Planning & Multi-Crane Sequencing | Complex multi-day project demand | Sequenced Milestones & Conflict Check |
-| **2. Assign Driver/Operator and Equipment** | `BP-2.1` | Personnel Eligibility & Credentials Check | Draft Job staffing request | Qualified Operator / Rigger Selection |
+| **2. Assign Driver/Operator and Equipment** | `BP-2.1` | Personnel Eligibility & Credentials Check | Draft Job staffing request | Qualified Operator Selection |
 | | `BP-2.2` | Asset Readiness & Overlap Check | Draft Job equipment request | Safe & Available Asset Selection |
 | | `BP-2.3` | Resource Assignment & Conflict Lock | Personnel & Asset selection | Persisted Batch Assignments |
 | | `BP-2.4` | HoS Duty Status Tracking & Break Enforcement | Operator status toggle / driving time | Active Duty Log & Rest Prompts |
@@ -82,7 +82,6 @@ sequenceDiagram
     actor Client as 🏢 Client
     actor OpsManager as 👨‍💼 Operations Manager
     actor Operator as 🏗️ Operator
-    actor Rigger as 🦺 Rigger (Workforce)
     participant Server as ⚙️ Laravel Authority (Actions/Policies)
     participant DB as 🗄️ PostgreSQL Database
 
@@ -90,7 +89,7 @@ sequenceDiagram
     OpsManager->>Server: Convert Request to Dispatch Draft (BP-1.2, BP-1.5)
     Server->>DB: Save Dispatch Draft (Status: draft)
 
-    OpsManager->>Server: Assign Operator, Rigger & Assets (BP-2.3)
+    OpsManager->>Server: Assign Operator & Assets (BP-2.3)
     Server->>DB: Validate Eligibility, Credentials, HoS Rest, Maintenance & Overlaps
 
     alt Emergency / Priority Job Requiring Manager Governance (BP-1.3)
@@ -157,24 +156,24 @@ The RACI matrix defines role accountability across Core Transaction 2 business p
 - **C (Consulted)**: Role offering advisory input or requirements.
 - **I (Informed)**: Role updated on process progress.
 
-*(Note: The 3 canonical system users are **Operations Manager**, **Operator**, and **System Administrator**. The Client represents external commercial intake, and Riggers represent non-software workforce crew tracked via `PersonnelProfile` and credentials without user accounts).*
+*(Note: The 3 canonical system users are **Operations Manager**, **Operator**, and **System Administrator**. The Client represents external commercial intake).*
 
-| Process Name | Process Code | Client | Operations Manager | Operator | Rigger (Workforce) | System Admin |
-| --- | --- | --- | :---: | :---: | :---: | :---: |
-| Service Intake & Handoff Conversion | `BP-1.1 / 1.2` | **C** | **R / A** | **I** | - | - |
-| Project Planning & Milestones | `BP-1.5` | **C** | **R / A** | **I** | **I** | - |
-| Emergency / Priority Dispatch Approval | `BP-1.3` | **I** | **R / A** | **I** | - | - |
-| Personnel & Equipment Assignment | `BP-2.1 / 2.3` | - | **R / A** | **C** | **C** | - |
-| Routine Dispatch Activation | `BP-1.4` | **I** | **R / A** | **I** | **I** | - |
-| Hours of Service (HoS) Duty Logging | `BP-2.4 / 2.5` | - | **A** | **R** | - | - |
-| Pre/Post-Trip DVIR Walkaround | `BP-3.3 / 3.4` | - | **A** | **R** | - | - |
-| Asset Inspection & Defect Reporting | `BP-3.1` | - | **A** | **R** | - | - |
-| Maintenance Work Order & Safe Release | `BP-3.2` | - | **R / A** | **I** | - | - |
-| Heavy Equipment Certification Check | `BP-4.1 / 4.2` | - | **R / A** | **C** | - | - |
-| Fuel Request & Dispense Verification | `BP-5.1 / 5.2 / 5.3` | - | **A** | **R** | - | - |
-| Field Execution & Status Update | `BP-1.4` | **I** | **I** | **R / A** | **R** | - |
-| SOS Emergency Distress & Response | `BP-7.1 / 7.2` | - | **A** | **R** | **I** | - |
-| System RBAC & User Administration | `BP-8.1` | - | **C** | - | - | **R / A** |
+| Process Name | Process Code | Client | Operations Manager | Operator | System Admin |
+| --- | --- | --- | :---: | :---: | :---: |
+| Service Intake & Handoff Conversion | `BP-1.1 / 1.2` | **C** | **R / A** | **I** | - |
+| Project Planning & Milestones | `BP-1.5` | **C** | **R / A** | **I** | - |
+| Emergency / Priority Dispatch Approval | `BP-1.3` | **I** | **R / A** | **I** | - |
+| Personnel & Equipment Assignment | `BP-2.1 / 2.3` | - | **R / A** | **C** | - |
+| Routine Dispatch Activation | `BP-1.4` | **I** | **R / A** | **I** | - |
+| Hours of Service (HoS) Duty Logging | `BP-2.4 / 2.5` | - | **A** | **R** | - |
+| Pre/Post-Trip DVIR Walkaround | `BP-3.3 / 3.4` | - | **A** | **R** | - |
+| Asset Inspection & Defect Reporting | `BP-3.1` | - | **A** | **R** | - |
+| Maintenance Work Order & Safe Release | `BP-3.2` | - | **R / A** | **I** | - |
+| Heavy Equipment Certification Check | `BP-4.1 / 4.2` | - | **R / A** | **C** | - |
+| Fuel Request & Dispense Verification | `BP-5.1 / 5.2 / 5.3` | - | **A** | **R** | - |
+| Field Execution & Status Update | `BP-1.4` | **I** | **I** | **R / A** | - |
+| SOS Emergency Distress & Response | `BP-7.1 / 7.2` | - | **A** | **R** | - |
+| System RBAC & User Administration | `BP-8.1` | - | **C** | - | **R / A** |
 
 ---
 

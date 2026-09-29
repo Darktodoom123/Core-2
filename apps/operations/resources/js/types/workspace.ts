@@ -208,7 +208,7 @@ export interface DispatchJobViewModel {
 }
 
 export interface DispatchResourceRequirements {
-    personnel: Partial<Record<'driver' | 'crane_operator' | 'rigger', number>>;
+    personnel: Partial<Record<'driver' | 'crane_operator', number>>;
     assets: Partial<
         Record<
             | 'truck'
@@ -1327,7 +1327,7 @@ export interface ProjectPhaseViewModel {
     kind: string;
     starts_at: string;
     ends_at: string;
-    coverage: Record<'driver' | 'crane_operator' | 'rigger', number>;
+    coverage: Record<'driver' | 'crane_operator', number>;
     allocations: Array<{
         id: number;
         operational_asset_id: number;
@@ -1356,13 +1356,13 @@ export interface ProjectShiftViewModel {
     personnel: Array<{
         user_id: number;
         name: string;
-        assignment_type: 'driver' | 'crane_operator' | 'rigger';
+        assignment_type: 'driver' | 'crane_operator';
         response: string;
     }>;
     pending_roster: Array<{
         name?: string;
         user_id: number;
-        assignment_type: 'driver' | 'crane_operator' | 'rigger';
+        assignment_type: 'driver' | 'crane_operator';
     }> | null;
     reason: string | null;
     can_decide: boolean;
@@ -1378,7 +1378,7 @@ export interface AssignmentScheduleConflictViewModel {
 export interface PersonnelCandidateViewModel {
     id: number;
     name: string;
-    assignment_type: 'driver' | 'crane_operator' | 'rigger';
+    assignment_type: 'driver' | 'crane_operator';
     assignment_label: string;
     eligible: boolean;
     reasons: string[];
@@ -1387,11 +1387,7 @@ export interface PersonnelCandidateViewModel {
     >;
     account_status: StatusViewModel<'active' | 'inactive' | 'suspended'>;
     credential: {
-        kind:
-            | 'driver_license'
-            | 'operator_certification'
-            | 'rigger_certification'
-            | null;
+        kind: 'driver_license' | 'operator_certification' | null;
         label: string;
         status:
             | 'valid'

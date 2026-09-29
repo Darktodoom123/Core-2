@@ -136,8 +136,8 @@ When the assigned asset is a mobile or heavy crane, the operator's field journey
 
 ### Heavy-lift rigging & ground crew workflow
 
-1. Riggers assigned to the lift crew are verified for valid certifications (e.g., TESDA Crane Rigging NC II, DOLE-BOSH) and availability status during dispatch assignment.
-2. Because Riggers are non-software employees without mobile or web user accounts, all on-site safety verifications (sling condition, rigging tackle, tag-line attachment, outrigger pad positioning, 15m exclusion zone enforcement) and lift milestone completions are confirmed with the rigger and submitted digitally via the Operator's mobile app or the Operations Manager's workspace.
+1. Crews are staffed by Operators only; there is no rigger crew slot.
+2. On-site safety verifications (sling condition, rigging tackle, tag-line attachment, outrigger pad positioning, 15m exclusion zone enforcement) and lift milestone completions are submitted via the Operator's mobile app or the Operations Manager's workspace.
 
 The current browser tracking surface queues location writes in a local outbox,
 adds an idempotency key, replays after reconnection, and surfaces queued,
@@ -252,11 +252,8 @@ sign-outs and requires both `users.manage` and `audit.view`. Each event shows
 the parsed browser/platform and device class, the IP address, and an
 approximate IP-derived location. This is not GPS, and browser data may not
 identify an exact device model; unknown values remain labeled as unknown.
-Personnel credentials remain in a separate view. Riggers are non-software
-workforce crew: they are tracked through personnel profiles and qualifications
-for assignment, but receive no web account or mobile login. The current
-user-linked Rigger assignment and legacy RBAC paths do not yet fully meet this
-boundary; see the [whole-web audit](web-sidebar-user-flows.md).
+Personnel credentials remain in a separate view. There is no Rigger role;
+crews are staffed by Operators only.
 
 ## 9. Shared service: GPT-assisted dispatch — current flow
 

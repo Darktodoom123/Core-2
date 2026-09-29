@@ -10,6 +10,7 @@ use Database\Seeders\Development\PhilippineSafetyOperationsSeeder;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
 
@@ -105,7 +106,7 @@ it('keeps local developer seeding idempotent and usable', function (): void {
         expect(User::query()->where('email', 'admin@example.com')->count())->toBe(1)
             ->and(User::query()->role(RoleName::SystemAdministrator->value)->count())->toBe(1)
             ->and(User::query()->role(RoleName::OperationsManager->value)->count())->toBe(1)
-            ->and(User::query()->role(RoleName::Rigger->value)->exists())->toBeTrue()
+            ->and(Role::query()->where('name', 'rigger')->exists())->toBeFalse()
             ->and(User::query()->whereIn('email', [
                 'manager@example.com',
                 'operator@example.com',

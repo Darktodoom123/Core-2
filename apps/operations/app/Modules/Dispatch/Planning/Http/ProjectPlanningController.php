@@ -87,7 +87,7 @@ final class ProjectPlanningController extends Controller
     public function candidates(Request $request, ProjectPlan $projectPlan, int $shift, DispatchResourceEligibility $eligibility): JsonResponse
     {
         abort_unless(PlanningAccess::view($request->user()), 403);
-        $validated = $request->validate(['search' => ['nullable', 'string', 'max:100'], 'role' => ['required', 'in:driver,crane_operator,rigger'], 'page' => ['sometimes', 'integer', 'min:1']]);
+        $validated = $request->validate(['search' => ['nullable', 'string', 'max:100'], 'role' => ['required', 'in:driver,crane_operator'], 'page' => ['sometimes', 'integer', 'min:1']]);
         $model = ProjectShift::query()->whereHas('phase', fn ($q) => $q->where('project_plan_id', $projectPlan->id))->with('job')->findOrFail($shift);
         $role = $validated['role'];
         $page = User::query()->role($role === 'driver' ? 'crane_operator' : $role)

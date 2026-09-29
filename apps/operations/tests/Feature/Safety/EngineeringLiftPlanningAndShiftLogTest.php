@@ -1,14 +1,11 @@
 <?php
 
-use App\Modules\Assignment\Services\DispatchResourceEligibility;
 use App\Modules\Dispatch\Actions\RecordTowerCraneShiftLog;
 use App\Modules\Dispatch\Enums\DispatchPriority;
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dispatch\Models\TowerCraneShiftLog;
 use App\Platform\Identity\Enums\RoleName;
-use App\Platform\Identity\Models\PersonnelCredential;
-use App\Platform\Identity\Models\PersonnelProfile;
 use App\Platform\Identity\Models\User;
 use App\Shared\Assets\Enums\AssetStatus;
 use App\Shared\Assets\Models\OperationalAsset;
@@ -22,69 +19,12 @@ beforeEach(function (): void {
     $this->seed(RolePermissionSeeder::class);
 });
 
-it('correctly assesses rigger eligibility with rigger certification credential', function (): void {
-    $rigger = User::factory()->create(['name' => 'Certified Rigger Alex', 'is_active' => true]);
-    $rigger->syncRoles([RoleName::Rigger->value]);
-
-    PersonnelProfile::query()->create([
-        'user_id' => $rigger->id,
-        'availability_status' => 'available',
-    ]);
-
-    PersonnelCredential::query()->create([
-        'user_id' => $rigger->id,
-        'kind' => 'rigger_certification',
-        'credential_number' => 'RIG-2026-001',
-        'credential_type' => 'TESDA NC-II Rigger',
-        'status' => 'active',
-        'issued_at' => now()->subMonth(),
-        'expires_at' => now()->addYear(),
-    ]);
-
-    $dispatcher = User::factory()->create();
-    $dispatcher->syncRoles([RoleName::OperationsManager->value]);
-
-    $job = DispatchJob::query()->create([
-        'reference' => 'DSP-RIGGER-01',
-        'client' => 'Highrise Builders',
-        'title' => 'Tandem Steel Girder Lift',
-        'site' => 'BGC Taguig',
-        'priority' => DispatchPriority::Routine,
-        'status' => DispatchStatus::Scheduled,
-        'scheduled_start' => now()->addDay(),
-        'scheduled_end' => now()->addDay()->addHours(4),
-        'created_by' => $dispatcher->id,
-    ]);
-
-    $eligibility = app(DispatchResourceEligibility::class);
-    $assessment = $eligibility->personnel($rigger, 'rigger', $job);
-
-    expect($assessment['eligible'])->toBeTrue()
-        ->and($assessment['credential']['kind'])->toBe('rigger_certification')
-        ->and($assessment['credential']['status'])->toBe('valid');
-});
-
-it('allows assigning a certified rigger to a dispatch job', function (): void {
+it('rejects rigger as a dispatch crew assignment type', function (): void {
     $dispatcher = User::factory()->create(['name' => 'Lead Dispatcher']);
     $dispatcher->syncRoles([RoleName::OperationsManager->value]);
 
-    $rigger = User::factory()->create(['name' => 'Signalman Bob', 'is_active' => true]);
-    $rigger->syncRoles([RoleName::Rigger->value]);
-
-    PersonnelProfile::query()->create([
-        'user_id' => $rigger->id,
-        'availability_status' => 'available',
-    ]);
-
-    PersonnelCredential::query()->create([
-        'user_id' => $rigger->id,
-        'kind' => 'rigger_certification',
-        'credential_number' => 'RIG-2026-002',
-        'credential_type' => 'TESDA NC-II Rigger',
-        'status' => 'active',
-        'issued_at' => now()->subMonth(),
-        'expires_at' => now()->addYear(),
-    ]);
+    $operator = User::factory()->create(['name' => 'Signalman Bob', 'is_active' => true]);
+    $operator->syncRoles([RoleName::CraneOperator->value]);
 
     $job = DispatchJob::query()->create([
         'reference' => 'DSP-RIGGER-02',
@@ -102,16 +42,15 @@ it('allows assigning a certified rigger to a dispatch job', function (): void {
         ->postJson("/operations/dispatch-jobs/{$job->id}/assignments", [
             'personnel' => [
                 [
-                    'user_id' => $rigger->id,
+                    'user_id' => $operator->id,
                     'assignment_type' => 'rigger',
                 ],
             ],
         ])
-        ->assertRedirect();
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['personnel.0.assignment_type']);
 
-    expect($job->personnelAssignments()->count())->toBe(1)
-        ->and($job->personnelAssignments()->first()->assignment_type)->toBe('rigger')
-        ->and($job->personnelAssignments()->first()->user_id)->toBe($rigger->id);
+    expect($job->personnelAssignments()->count())->toBe(0);
 });
 
 it('records tower crane shift logs with pre-climb inspection and free-slew verification', function (): void {

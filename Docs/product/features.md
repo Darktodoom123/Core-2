@@ -38,7 +38,7 @@ Core Transaction 2 delivers the complete operational backbone for heavy equipmen
 
 ## 2. Assign Driver/Operator and Equipment
 - **Personnel & Asset Assignment**:
-  - Multi-resource assignment (Lead Operator, Riggers, Technicians, Cranes, Transport Trucks, Support Equipment). Riggers are assigned as qualified employees (TESDA Rigging / DOLE-BOSH certified) without requiring mobile or web login accounts; field progression and lift execution are digitally logged by the operator or foreman.
+  - Multi-resource assignment (Operators as crane operators or drivers, Cranes, Transport Trucks, Support Equipment); field progression and lift execution are digitally logged by the operator or foreman.
   - Server-side qualification, license certification, rest-period, and equipment readiness checks.
   - Real-time double-booking conflict mitigation across overlapping time windows via the Shared availability coordinator.
 - **Multi-Tier Approval Gates & Exception Overrides**:
@@ -96,7 +96,7 @@ Core Transaction 2 delivers the complete operational backbone for heavy equipmen
 ## 6. Shared Platform Services
 - **User Administration & Role Management (3 Canonical System Users)**:
   - Single canonical role enforcement across operational software users: `System Administrator`, `Operations Manager`, `Operator`.
-  - Workforce employee profile management (`PersonnelProfile`) for enterprise operational personnel (including non-software field personnel like **Riggers**) tracking certifications, qualifications (TESDA / DOLE-BOSH), and availability without issuing software login credentials.
+  - Workforce employee profile management (`PersonnelProfile`) for enterprise operational personnel tracking certifications, qualifications (TESDA / DOLE-BOSH), and availability without issuing software login credentials.
   - Active/suspended status controls and operator qualification credential tracking.
 - **SOS Emergency Response System**:
   - High-priority distress alerts with instant location coordinates (`latitude`, `longitude`), categorization, and automated escalation timeouts.

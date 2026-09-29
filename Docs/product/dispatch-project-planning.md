@@ -10,12 +10,12 @@ Project plans URL remains compatible. See [the office workflow](dispatch-workspa
 
 Core 1 remains the project owner. A Core 2 plan records the Core 1 project reference, client, and site for operational planning; creating this record does not create or update a Core 1 commercial project.
 
-Workforce Management owns corporate rosters, rotations, and leave. Core 2 assigns eligible personnel to shifts using currently recorded account status, personnel availability, qualifications, and dispatch commitments. The upstream roster synchronization described in [the workforce boundary](core-hr-workforce-boundary.md) and [integration contract](../architecture/hr-workforce-integration.md) is not implemented by this feature. Crew candidates currently use the application's user-linked personnel model, including riggers.
+Workforce Management owns corporate rosters, rotations, and leave. Core 2 assigns eligible personnel to shifts using currently recorded account status, personnel availability, qualifications, and dispatch commitments. The upstream roster synchronization described in [the workforce boundary](core-hr-workforce-boundary.md) and [integration contract](../architecture/hr-workforce-integration.md) is not implemented by this feature. Crew candidates are Operators from the application's user-linked personnel model.
 
 ## Coordinator workflow
 
 1. Open **Dispatch workspace → Schedule → Resource coverage** and add a local coverage record with the source project reference.
-2. Add phases with dates and required operators, riggers, and drivers per shift. Expand a project on the Week, Month, or Quarter timeline and select a phase.
+2. Add phases with dates and required operators and drivers per shift. Expand a project on the Week, Month, or Quarter timeline and select a phase.
 3. Reserve equipment for the phase and record maintenance windows. The asset may remain on site across many shifts. Editing an allocation, including the optional drag shortcut, requires reviewing the affected dispatches, conflicts, and approval consequence before confirmation.
 4. Submit the baseline. A different authorized approver reviews it. The creator and submitter cannot approve their own baseline.
 5. Generate up to seven daily shifts at a time, each no longer than 24 hours. Repeat for another shift pattern or week. Each shift links to its own existing dispatch job.

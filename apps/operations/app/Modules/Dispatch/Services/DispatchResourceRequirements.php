@@ -7,7 +7,7 @@ use Illuminate\Support\Collection;
 
 final class DispatchResourceRequirements
 {
-    public const PERSONNEL_TYPES = ['driver', 'crane_operator', 'rigger'];
+    public const PERSONNEL_TYPES = ['driver', 'crane_operator'];
 
     public const ASSET_TYPES = ['truck', 'vehicle', 'crane', 'mobile_crane', 'tower_crane', 'equipment'];
 

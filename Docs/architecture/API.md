@@ -457,7 +457,7 @@ The Tracking microservice exposes high-throughput GPS ingestion and query endpoi
 
 ## Canonical values
 
-- **System Users (Roles)**: `system_administrator` (System Administrator), `operations_manager` (Operations Manager), `operator` / `crane_operator` (Operator). *(Note: Riggers and field assistants are workforce crew tracked via `PersonnelProfile` without software user login accounts).*
+- **System Users (Roles)**: `system_administrator` (System Administrator), `operations_manager` (Operations Manager), `operator` / `crane_operator` (Operator). *(Note: there is no Rigger role; crews are staffed by Operators.)*
 - **Dispatch priority**: `routine`, `priority`, `emergency`.
 - **Service request status**: `submitted`, `dispatching`.
 - **Dispatch execution status**: `draft`, `dispatched`, `en_route`, `arrived`, `working`, `completed`, `cancelled`.

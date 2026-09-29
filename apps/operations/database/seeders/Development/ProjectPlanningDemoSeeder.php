@@ -29,10 +29,10 @@ final class ProjectPlanningDemoSeeder extends Seeder
             $manager = $this->existingOrSeededRoleUser(RoleName::OperationsManager, 'demo.planner', 'Demo Project Coordinator');
             $approver = $this->existingOrSeededRoleUser(RoleName::SystemAdministrator, 'demo.approver', 'Demo Operations Approver');
             $operators = [$this->user('demo.operator.a', 'Alex Reyes', RoleName::CraneOperator->value), $this->user('demo.operator.b', 'Sam Cruz', RoleName::CraneOperator->value)];
-            $riggers = [$this->user('demo.rigger.a', 'Jordan Santos', RoleName::Rigger->value), $this->user('demo.rigger.b', 'Casey Mendoza', RoleName::Rigger->value), $this->user('demo.rigger.c', 'Taylor Ramos', RoleName::Rigger->value), $this->user('demo.rigger.d', 'Morgan Garcia', RoleName::Rigger->value)];
-            foreach ([...$operators, ...$riggers] as $person) {
+            $drivers = [$this->user('demo.driver.a', 'Jordan Santos', RoleName::CraneOperator->value), $this->user('demo.driver.b', 'Casey Mendoza', RoleName::CraneOperator->value), $this->user('demo.driver.c', 'Taylor Ramos', RoleName::CraneOperator->value), $this->user('demo.driver.d', 'Morgan Garcia', RoleName::CraneOperator->value)];
+            foreach ([...$operators, ...$drivers] as $person) {
                 $person->personnelProfile()->create(['employee_number' => 'DEMO-'.$person->id, 'availability_status' => 'available']);
-                $person->personnelCredentials()->create(['kind' => in_array($person, $operators, true) ? 'operator_certification' : 'rigger_certification', 'credential_number' => 'DEMO-CERT-'.$person->id, 'credential_type' => 'Demo qualification', 'status' => 'active', 'issued_at' => now()->subYear(), 'expires_at' => now()->addYear()]);
+                $person->personnelCredentials()->create(['kind' => in_array($person, $operators, true) ? 'operator_certification' : 'driver_license', 'credential_number' => 'DEMO-CERT-'.$person->id, 'credential_type' => 'Demo qualification', 'status' => 'active', 'issued_at' => now()->subYear(), 'expires_at' => now()->addYear()]);
             }
             $asset = OperationalAsset::query()->create(['code' => 'DEMO-CR-90', 'name' => '90 t site crane', 'kind' => 'crane', 'status' => AssetStatus::Available]);
             $asset->inspections()->create(['technician_id' => $manager->id, 'type' => 'daily_safety', 'result' => 'passed', 'checklist' => ['demo_readiness' => true], 'completed_at' => now()->subHour()]);
@@ -41,7 +41,7 @@ final class ProjectPlanningDemoSeeder extends Seeder
             $plan = $plans->create($manager, ['name' => 'Riverside bridge · 90-day works', 'source_reference' => 'DEMO-CORE1-BRIDGE-90', 'client' => 'Demo Civil Works', 'site' => 'Riverside bridge site']);
             $start = now()->addDays(7)->startOfDay();
             $plan->refresh();
-            $plans->savePhase($manager, $plan, ['version' => $plan->version, 'name' => 'Bridge lifting operations', 'kind' => 'operations', 'starts_at' => $start, 'ends_at' => $start->copy()->addDays(90), 'coverage' => ['crane_operator' => 1, 'driver' => 0, 'rigger' => 2]]);
+            $plans->savePhase($manager, $plan, ['version' => $plan->version, 'name' => 'Bridge lifting operations', 'kind' => 'operations', 'starts_at' => $start, 'ends_at' => $start->copy()->addDays(90), 'coverage' => ['crane_operator' => 1, 'driver' => 2]]);
             $phase = $plan->phases()->sole();
             $plan->refresh();
             $plans->saveAllocation($manager, $plan->refresh(), $phase->id, ['version' => $plan->version, 'operational_asset_id' => $asset->id, 'kind' => 'reservation', 'starts_at' => $phase->starts_at, 'ends_at' => $phase->ends_at, 'notes' => 'Crane remains on site throughout the project.']);
@@ -62,8 +62,8 @@ final class ProjectPlanningDemoSeeder extends Seeder
                 }
                 $team = $shift->job->scheduled_start->hour === 7 ? 0 : 1;
                 $roster = [
-                    ['user_id' => $riggers[$team * 2]->id, 'assignment_type' => 'rigger'],
-                    ['user_id' => $riggers[$team * 2 + 1]->id, 'assignment_type' => 'rigger'],
+                    ['user_id' => $drivers[$team * 2]->id, 'assignment_type' => 'driver'],
+                    ['user_id' => $drivers[$team * 2 + 1]->id, 'assignment_type' => 'driver'],
                 ];
                 if (! ($day === 3 && $team === 0)) {
                     $roster[] = ['user_id' => $operators[$team]->id, 'assignment_type' => 'crane_operator'];

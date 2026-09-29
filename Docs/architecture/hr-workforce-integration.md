@@ -68,7 +68,7 @@ flowchart TD
 | :--- | :--- | :--- |
 | **Core Human Capital Management (HCM)** | Defines corporate hierarchy: Official Department (*Heavy Lift Division, Logistics, Field Service*), Official Job Title (*Senior Heavy Equipment Operator, Transport Operator, Rigger*), and Employment Status (*Active, Probationary, Suspended, Resigned, Terminated*). | 1. **Interactive Software Roles (3 Canonical Users):** Maps Job Title $\rightarrow$ Core-2 System User Role (`System Administrator`, `Operations Manager`, `Operator`) and provisions `users` login account with mobile/web tokens.<br/>2. **Non-Software Field Roles (Riggers & Crew):** Ingests Job Title (`'Rigger'`, etc.) as an employee [`PersonnelProfile`](../../apps/operations/app/Platform/Identity/Models/PersonnelProfile.php) without creating a `users` login account or issuing mobile/web tokens.<br/>3. **Lifecycle Control:** `Terminated` status triggers instantaneous session termination, mobile token revocation, and assignment availability lockout (`is_active = false`, `availability_status = unavailable`). |
 | **Employee Self-Service (ESS)** | Self-service portal where employees update phone numbers, addresses, or profile pictures. | Changes to contact information propagate to Core-2 via webhook to ensure operations managers and emergency notifications have up-to-date phone numbers. |
-| **Employee Records Management (added)** | **Authoritative Master Data Store:** Maintains legal names, `employee_number`, official email, verified mobile number, emergency contacts, home address, and scanned compliance documents. | Synchronized into `users` (for software users) and `personnel_profiles` (`employee_number`, emergency contacts) via [`PersonnelProfile`](../../apps/operations/app/Platform/Identity/Models/PersonnelProfile.php) for all employees (including Riggers). |
+| **Employee Records Management (added)** | **Authoritative Master Data Store:** Maintains legal names, `employee_number`, official email, verified mobile number, emergency contacts, home address, and scanned compliance documents. | Synchronized into `users` (for software users) and `personnel_profiles` (`employee_number`, emergency contacts) via [`PersonnelProfile`](../../apps/operations/app/Platform/Identity/Models/PersonnelProfile.php) for employees who hold Core-2 accounts. |
 
 ---
 
@@ -100,16 +100,8 @@ The ingestion pipeline processes employees according to their operational softwa
    - Dispatches a secure, time-expiring setup token via email/SMS for web workspace and mobile field app access.
    - The employee sets their password and configures Multi-Factor Authentication (MFA) upon first login.
 
-#### Path B: Non-Interactive Field Personnel (Riggers)
-1. **HR Ingestion Event**: Core HR creates/updates an employee record with `employee_number = 'EMP-2026-0940'`, `title = 'Certified Heavy Rigger'`, `department = 'Heavy Lift'`.
-2. **Core-2 Personnel Staging (No Software Account)**:
-   - The integration adapter identifies `'Certified Heavy Rigger'` as a non-software operational role.
-   - Provisions a [`PersonnelProfile`](../../apps/operations/app/Platform/Identity/Models/PersonnelProfile.php) and attaches statutory [`PersonnelCredential`](../../apps/operations/app/Platform/Identity/Models/PersonnelCredential.php) records (e.g., TESDA Rigger NC II, DOLE-BOSH).
-   - Sets `availability_status = 'available'` for dispatch crew eligibility.
-   - **No `users` record is created, no web session login is provisioned, and no Sanctum mobile token is issued.**
-3. **Operational Execution**:
-   - Operations managers assign Riggers to crane crews based on qualifications.
-   - On-site lift execution, outrigger checklists, exclusion zone enforcement, and timesheet hours are recorded and signed off via mobile/web by the assigned Operator or Operations Manager.
+#### Riggers: out of scope
+Core-2 has no Rigger role or rigger crew slot (removed 2026-09-29). Crews are staffed by Operators only, so the adapter does not stage HR records for riggers or other non-software field staff.
 
 ---
 
@@ -174,11 +166,10 @@ graph TD
 ### 2. Job Title to Role Mapping Configuration
 - UI/Configuration interface allowing SysAdmins to map newly created HR job titles to Core-2 Spatie roles or designate non-software employee roles:
   - *Example (Software User):* Map `"Heavy Rigging Supervisor"` $\rightarrow$ `OperationsManager` with `dispatch.approve_priority` and `fleet.inspect` permissions.
-  - *Example (Employee Only):* Map `"Rigger"` / `"Certified Rigger"` $\rightarrow$ `Non-Interactive Employee` (creates [`PersonnelProfile`](../../apps/operations/app/Platform/Identity/Models/PersonnelProfile.php) with TESDA credentials for crew assignment, but creates no `users` login account).
 
 ### 3. Discrepancy & Reconciliation Resolver
 - An automated nightly reconciliation job (`hr:reconcile`) generating an admin dashboard report:
-  - **Unprovisioned Staff**: Employees in Core HR who are active in software-required roles but have no Core-2 login account (excluding designated non-software employees such as Riggers).
+  - **Unprovisioned Staff**: Employees in Core HR who are active in software-required roles but have no Core-2 login account.
   - **Orphaned Accounts**: Core-2 user accounts with no corresponding active `employee_number` in Core HR.
   - **Status Mismatches**: Workers marked `On Leave` in WFM but still showing `Available` in Core-2.
 

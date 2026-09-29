@@ -72,12 +72,6 @@ final class RolePermissionSeeder extends Seeder
                 PermissionName::TrackingShareOwn, PermissionName::ReportsViewOwn,
                 PermissionName::SosTrigger,
             ]),
-            RoleName::Rigger->value => self::values([
-                PermissionName::DispatchViewAssigned, PermissionName::DispatchRespondOwn,
-                PermissionName::AssignmentsViewOwn, PermissionName::EquipmentViewAssigned,
-                PermissionName::ReportsViewOwn,
-                PermissionName::SosTrigger,
-            ]),
         ];
     }
 

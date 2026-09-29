@@ -340,8 +340,7 @@ it('allows administrator to delete credential and physically deletes attachment 
 });
 
 it('prohibits unauthorized view-only user from managing credentials', function (): void {
-    $rigger = User::factory()->create(['is_active' => true]);
-    $rigger->syncRoles([RoleName::Rigger->value]);
+    $roleless = User::factory()->create(['is_active' => true]);
 
     $operator = User::factory()->create(['is_active' => true]);
     $operator->syncRoles([RoleName::CraneOperator->value]);
@@ -354,7 +353,7 @@ it('prohibits unauthorized view-only user from managing credentials', function (
         'status' => 'active',
     ]);
 
-    $this->actingAs($rigger)
+    $this->actingAs($roleless)
         ->postJson("/operations/users/{$operator->id}/credentials", [
             'kind' => 'operator_certification',
             'credential_number' => 'TESDA-HACK',
@@ -362,20 +361,20 @@ it('prohibits unauthorized view-only user from managing credentials', function (
         ])
         ->assertForbidden();
 
-    $this->actingAs($rigger)
+    $this->actingAs($roleless)
         ->patchJson("/operations/users/{$operator->id}/credentials/{$cred->id}", [
             'notes' => 'Hacked Notes',
         ])
         ->assertForbidden();
 
     $newFile = UploadedFile::fake()->create('hacked.pdf', 100, 'application/pdf');
-    $this->actingAs($rigger)
+    $this->actingAs($roleless)
         ->postJson("/operations/users/{$operator->id}/credentials/{$cred->id}/replace", [
             'file' => $newFile,
         ])
         ->assertForbidden();
 
-    $this->actingAs($rigger)
+    $this->actingAs($roleless)
         ->deleteJson("/operations/users/{$operator->id}/credentials/{$cred->id}")
         ->assertForbidden();
 });

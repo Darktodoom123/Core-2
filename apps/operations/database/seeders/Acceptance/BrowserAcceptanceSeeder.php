@@ -74,7 +74,7 @@ final class BrowserAcceptanceSeeder extends Seeder
             'user_id' => $foreman->id,
             'kind' => 'operator_certification',
             'credential_number' => 'TESDA-RIG-BROWSER',
-            'credential_type' => 'TESDA NC-II Master Rigger',
+            'credential_type' => 'TESDA NC-II Mobile Crane Operation',
             'status' => 'active',
             'issued_at' => now()->subMonths(6),
             'expires_at' => now()->addYears(2),

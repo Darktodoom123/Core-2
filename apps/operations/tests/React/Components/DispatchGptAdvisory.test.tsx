@@ -794,8 +794,8 @@ describe('dispatch GPT advisory', () => {
                 },
                 {
                     user_id: 3,
-                    name: 'Rigger Specialist',
-                    assignment_type: 'rigger',
+                    name: 'Support Driver',
+                    assignment_type: 'driver',
                 },
             ],
             proposed_assets: [
@@ -829,15 +829,15 @@ describe('dispatch GPT advisory', () => {
             }),
         ).toBeInTheDocument();
 
-        // Deselect the rigger and the prime mover
-        const riggerCheckbox = screen.getByRole('checkbox', {
-            name: 'Select Rigger Specialist',
+        // Deselect the driver and the prime mover
+        const driverCheckbox = screen.getByRole('checkbox', {
+            name: 'Select Support Driver',
         });
         const primeMoverCheckbox = screen.getByRole('checkbox', {
             name: 'Select PM-01 · Prime Mover',
         });
 
-        fireEvent.click(riggerCheckbox);
+        fireEvent.click(driverCheckbox);
         fireEvent.click(primeMoverCheckbox);
 
         const applyButton = screen.getByRole('button', {
@@ -854,7 +854,7 @@ describe('dispatch GPT advisory', () => {
         ).toBeChecked();
         expect(
             within(confirmation).getByRole('checkbox', {
-                name: 'Select Rigger Specialist',
+                name: 'Select Support Driver',
             }),
         ).not.toBeChecked();
         fireEvent.click(

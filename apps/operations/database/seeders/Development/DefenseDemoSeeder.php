@@ -119,7 +119,6 @@ final class DefenseDemoSeeder extends Seeder
     {
         $start = $anchor->copy()->subDays(5)->setTime(7, 0);
         $operator = $this->crew['operator.rsantos'];
-        $rigger = $this->crew['rigger.mbautista'];
         $crane = $this->cranes['DEF-CRN-2501'];
 
         $this->at($start->copy()->subDays(3));
@@ -127,7 +126,7 @@ final class DefenseDemoSeeder extends Seeder
 
         $this->at($start->copy()->subDays(2));
         $job = $this->convert($request, 'DSP-2026-0107', $start, $start->copy()->addHours(9));
-        $job = $this->link($job, $operator, $rigger, $crane);
+        $job = $this->link($job, $operator, $crane);
         $job = app(ActivateDispatchJob::class)->handle($this->dispatcher, $job, $job->version);
 
         $this->at($start->copy()->subDay()->setTime(18, 20));
@@ -199,7 +198,7 @@ final class DefenseDemoSeeder extends Seeder
 
         $this->at($start->copy()->subDay());
         $job = $this->convert($request, 'DSP-2026-0106', $start, $start->copy()->addHours(6));
-        $job = $this->link($job, $operator, $this->crew['rigger.egarcia'], $crane);
+        $job = $this->link($job, $operator, $crane);
         $job = app(ActivateDispatchJob::class)->handle($this->dispatcher, $job, $job->version);
         $job = $this->accept($job, $operator);
 
@@ -239,7 +238,7 @@ final class DefenseDemoSeeder extends Seeder
 
         $this->at($start->copy()->subDay());
         $job = $this->convert($request, 'DSP-2026-0105', $start, $start->copy()->addHours(8));
-        $job = $this->link($job, $operator, $this->crew['rigger.mbautista'], $crane);
+        $job = $this->link($job, $operator, $crane);
         $job = app(ActivateDispatchJob::class)->handle($this->dispatcher, $job, $job->version);
         $job = $this->accept($job, $operator);
 
@@ -272,7 +271,7 @@ final class DefenseDemoSeeder extends Seeder
         // The developer's own quick-login operator (BJ Bello locally) accepts this one live in the field app.
         $fieldAppOperator = User::query()->where('username', Username::fromEmail('operator@example.com'))->first()
             ?? $this->crew['operator.jvillanueva'];
-        $job = $this->link($job, $fieldAppOperator, $this->crew['rigger.egarcia'], $this->cranes['DEF-CRN-2504']);
+        $job = $this->link($job, $fieldAppOperator, $this->cranes['DEF-CRN-2504']);
         app(ActivateDispatchJob::class)->handle($this->dispatcher, $job, $job->version);
         Carbon::setTestNow();
     }
@@ -287,7 +286,7 @@ final class DefenseDemoSeeder extends Seeder
 
         $this->at($anchor->copy()->subHour());
         $job = $this->convert($request, 'DSP-2026-0103', $start, $start->copy()->addHours(10));
-        $this->link($job, $this->crew['operator.rsantos'], $this->crew['rigger.alim'], $this->cranes['DEF-CRN-8005']);
+        $this->link($job, $this->crew['operator.rsantos'], $this->cranes['DEF-CRN-8005']);
         Carbon::setTestNow();
     }
 
@@ -333,7 +332,7 @@ final class DefenseDemoSeeder extends Seeder
             'scheduled_date' => $scheduled,
             'priority' => $priority,
             'status' => ServiceRequestStatus::Submitted,
-            'requirements' => ['Mobile crane with valid load test', 'TESDA-certified crane operator', 'Certified rigger / signalperson'],
+            'requirements' => ['Mobile crane with valid load test', 'TESDA-certified crane operator'],
         ]);
     }
 
@@ -353,14 +352,13 @@ final class DefenseDemoSeeder extends Seeder
     }
 
     /** The key demo action: link the crane and its crew to the dispatch. */
-    private function link(DispatchJob $job, User $operator, User $rigger, OperationalAsset $crane): DispatchJob
+    private function link(DispatchJob $job, User $operator, OperationalAsset $crane): DispatchJob
     {
         $job = app(AssignDispatchResources::class)->handle(
             $this->dispatcher,
             $job,
             [
                 ['user_id' => $operator->id, 'assignment_type' => 'crane_operator'],
-                ['user_id' => $rigger->id, 'assignment_type' => 'rigger'],
             ],
             [['operational_asset_id' => $crane->id, 'assignment_type' => 'crane']],
             $job->version,
@@ -454,9 +452,6 @@ final class DefenseDemoSeeder extends Seeder
         $crew = [
             ['operator.rsantos', 'Rodel Santos', RoleName::CraneOperator, 'operator_certification', 'TESDA NC II Mobile Crane Operation'],
             ['operator.jvillanueva', 'Jomar Villanueva', RoleName::CraneOperator, 'operator_certification', 'TESDA NC II Mobile Crane Operation'],
-            ['rigger.mbautista', 'Mark Bautista', RoleName::Rigger, 'rigger_certification', 'TESDA NC II Rigging'],
-            ['rigger.egarcia', 'Edwin Garcia', RoleName::Rigger, 'rigger_certification', 'TESDA NC II Rigging'],
-            ['rigger.alim', 'Arnel Lim', RoleName::Rigger, 'rigger_certification', 'TESDA NC II Rigging'],
         ];
 
         foreach ($crew as $index => [$username, $name, $role, $kind, $type]) {

@@ -35,7 +35,7 @@ Authentication and RBAC enforce **3 canonical system users**:
 - `Operations Manager` (`operations_manager` — consolidating supervisory dispatch desk, resource assignment, schedule approvals, fleet/crane oversight, fuel logistics, emergency response)
 - `Operator` (`operator` / `crane_operator` — field mobile application user executing dispatch trips, heavy crane lift operations, equipment telemetry, DVIR pre/post-trip safety inspections, HoS status recording, and SOS emergency triggers)
 
-*(Workforce field personnel such as Riggers are non-software workforce crew tracked via `PersonnelProfile` and credentials without direct system login accounts).*
+*(Crews are staffed by Operators only; Core-2 has no Rigger role or rigger crew slot.)*
 
 SOS Emergency Safety, personnel administration (`PersonnelProfile`, `PersonnelCredential`), audit, tracking, reports, attachments, notifications, and proactive GPT assistance are shared platform services (`apps/operations/app/Platform`).
 The detailed ownership map is maintained in [Top-level modules](./modules.md).
@@ -55,7 +55,7 @@ payments, billing, and invoicing are not Core 2 deliverables. See [Alibaton Busi
 Core-2 does not serve as the master employee database or corporate payroll/leave system:
 - **Core HR** (Core Human Capital Management, Employee Self-Service, Employee Records Management) is the authoritative upstream source of employee master records (`employee_number`, full legal name, contact details, official job title/department, and employment status).
 - **Workforce Management** (Time & Attendance, Shift & Schedule Management, Timesheets, Leave Management, Workforce Analytics) is the upstream source of worker leave status and shift rosters, ensuring Core-2 sets `PersonnelProfile::$availability_status = 'on_leave'` to prevent scheduling conflicts across all assigned employees.
-- **Core-2 Identity Platform** receives employee and leave events to auto-provision user accounts for software users, maintain `PersonnelProfile` and `PersonnelCredential` records for all operational employees (including non-software field personnel like **Riggers** who receive no web or mobile login accounts), enforce automated session revocation on termination, and provide completed dispatch timestamps back to Timesheet Management. See [Core HR & Workforce Management Integration](./hr-workforce-integration.md).
+- **Core-2 Identity Platform** receives employee and leave events to auto-provision user accounts for software users, maintain `PersonnelProfile` and `PersonnelCredential` records for operational employees who hold Core-2 accounts, enforce automated session revocation on termination, and provide completed dispatch timestamps back to Timesheet Management. See [Core HR & Workforce Management Integration](./hr-workforce-integration.md).
 
 ### Username login migration boundary
 

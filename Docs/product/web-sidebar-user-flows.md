@@ -33,7 +33,7 @@ The shell groups server-provided navigation into **Core Operations**, **Field Go
 
 ## Who sees each sidebar item
 
-The table reflects the **three interactive product roles**, not custom permissions. ✓ means present in the sidebar; — means absent. The code still contains a legacy `rigger` software role; that is an implementation contradiction, not a fourth intended login role (finding W1).
+The table reflects the **three interactive product roles**, not custom permissions. ✓ means present in the sidebar; — means absent. The legacy `rigger` role was removed on 2026-09-29 (finding W1, resolved).
 
 | Sidebar item | Administrator | Manager | Operator | Primary destination |
 | --- | :---: | :---: | :---: | --- |
@@ -81,21 +81,21 @@ Sign in → Dashboard triage → Dispatch intake/schedule/resource coverage → 
 
 Sign in → field Dashboard → **Today's work** for assigned dispatch and response/status → assigned asset view → own Fuel Management request/logging → own Job reports → account/notifications. DVIR, HoS, navigation and emergency SOS initiation are primarily native field-app workflows; web availability depends on the implemented route and capability, and web status controls are still server-authorized.
 
-### Rigger / Signalperson: no software journey
+### Riggers: removed
 
-The Operations Manager selects a qualified Rigger from workforce personnel records during crew planning and checks certification and availability. On site, the Operator or Manager confirms safety checks and lift milestones with the Rigger, then records the evidence in their own authenticated workflow. A Rigger receives **no web sidebar, mobile app session, password, or API token**. The current user-linked assignment model does not yet fully satisfy this product boundary (W3).
+Core-2 has no Rigger role or rigger crew slot (removed 2026-09-29). Crews are staffed by Operators, as crane operators or drivers. On-site rigging checks and lift milestones are recorded by the Operator or Manager in their own authenticated workflow.
 
 ## Whole-web audit findings outside the manager flow
 
 | ID / priority | Evidence and effect | Recommended acceptance outcome |
 | --- | --- | --- |
-| **W1 / P1** | Product and workforce-boundary docs require no Rigger software account. The backend still defines a `rigger` RBAC role with web permissions; `LoginRequest` checks account activity and password but not this role. An active legacy Rigger `User` with credentials could therefore sign in to the web. The mobile `AuthController` likewise checks activity and verification but not role before issuing a Sanctum token; the mobile client rejects the role afterward. | Remove or disable the legacy interactive Rigger role after migrating dependent records. Deny web session and mobile token issuance for any remaining Rigger `User`, revoke existing sessions/tokens, and test both entry points. |
+| **W1 / P1 — resolved** | Resolved 2026-09-29: migration `2026_09_29_120000_remove_rigger_role_and_crew_slot` deleted the `rigger` role and its permissions, deactivated rigger-only accounts and revoked their API tokens. | None. `RoleName` no longer defines a rigger role, and user management rejects it. |
 | **W2 / P2** | Administrator **Audit trail** loads the latest 100 events and **Archived dispatches** loads 100 jobs. Both surfaces filter only their loaded arrays, while archive's empty/search copy reads as if it covers the full history. | Add server pagination/search and clear result scope, or label both as recent/loaded records and link to a complete authorized query. Verify record 101 can be found. |
-| **W3 / P1** | Riggers are meant to be assigned from non-login `PersonnelProfile`/credential records, but `PersonnelCandidateQuery`, assignment requests, and project shift candidate search use `users`/`user_id`, including the Rigger type. This creates pressure to create a software account just to schedule a Rigger. | Make Rigger assignment and credential checks profile-backed across dispatch and resource coverage; keep Operators as account-backed candidates. Test planning, conflicts, safety eligibility, and historical assignments without a Rigger `User`. |
+| **W3 / P1 — resolved** | Resolved 2026-09-29 by removing the rigger crew slot from dispatch requirements, crew assignment, and project planning coverage. Crews are Operators only. | None. |
 | **W4 / P2** | Cross-section navigation generally passes a section ID. The manager audit identifies lost asset/fuel record context, and notifications also open only the destination section. The same navigation contract is shared across roles. | Use typed destinations carrying record identity, permissions, return URL and missing-record fallback. Test each sidebar-adjacent alert/card jump. |
 | **W5 / P2** | Partial section visits show a loading placeholder while required props are absent, but navigation has no local visit-error state/retry. This affects every sidebar item, not only Manager screens. | Provide a section-load error and Retry/Back, preserving the prior usable section. Exercise failure for each data-heavy destination. |
 
-The manager-specific findings A1–A5 remain in the [manager audit](operations-manager-web-user-flow.md). Three focused React test files passed (24 tests) for the overview dashboard, user management and GPT governance. These tests do not verify the no-login Rigger boundary. This document does not claim a visual or accessibility pass: no local web server was available for browser inspection. A complete release review should execute each **interactive** role journey above at desktop and phone widths, with keyboard and Axe checks, stale/error fixtures and more than 100 audit/archive records. Separately, verify that Riggers can be scheduled without accounts and cannot authenticate on web or mobile.
+The manager-specific findings A1–A5 remain in the [manager audit](operations-manager-web-user-flow.md). Three focused React test files passed (24 tests) for the overview dashboard, user management and GPT governance. This document does not claim a visual or accessibility pass: no local web server was available for browser inspection. A complete release review should execute each **interactive** role journey above at desktop and phone widths, with keyboard and Axe checks, stale/error fixtures and more than 100 audit/archive records.
 
 ## Evidence checked
 

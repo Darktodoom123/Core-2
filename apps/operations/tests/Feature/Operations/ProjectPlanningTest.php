@@ -44,7 +44,7 @@ function planningProject($test): ProjectPlan
     $test->post("/operations/project-plans/{$plan->id}/phases", [
         'version' => $plan->version, 'name' => 'Lifting operations', 'kind' => 'operations',
         'starts_at' => $test->start->toIso8601String(), 'ends_at' => $test->start->copy()->addMonths(3)->toIso8601String(),
-        'coverage' => ['crane_operator' => 1, 'driver' => 0, 'rigger' => 0],
+        'coverage' => ['crane_operator' => 1, 'driver' => 0],
     ])->assertRedirect();
 
     return $plan->refresh();

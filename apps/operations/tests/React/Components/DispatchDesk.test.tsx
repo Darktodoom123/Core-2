@@ -138,8 +138,8 @@ describe('dispatch resources', () => {
     const assignment = {
         id: 1,
         user_id: 21,
-        name: 'Casey Rigger',
-        type: 'rigger',
+        name: 'Casey Operator',
+        type: 'crane_operator',
         response_status: {
             value: 'pending' as const,
             label: 'Pending response',
@@ -196,9 +196,9 @@ describe('dispatch resources', () => {
                 users={[
                     {
                         id: 21,
-                        name: 'Casey Rigger',
-                        role: 'rigger',
-                        role_label: 'Rigger',
+                        name: 'Casey Operator',
+                        role: 'crane_operator',
+                        role_label: 'Operator',
                         is_active: true,
                         suspended_at: null,
                         availability_status: 'on_leave',
@@ -212,7 +212,7 @@ describe('dispatch resources', () => {
                 refreshing={false}
             />,
         );
-        expect(screen.getByText('Casey Rigger')).toBeInTheDocument();
+        expect(screen.getByText('Casey Operator')).toBeInTheDocument();
         expect(screen.getByText('Availability: on leave')).toBeInTheDocument();
         fireEvent.change(
             screen.getByRole('searchbox', { name: 'Search people and assets' }),

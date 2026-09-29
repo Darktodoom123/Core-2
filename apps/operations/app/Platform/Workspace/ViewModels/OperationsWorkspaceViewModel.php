@@ -216,12 +216,10 @@ final class OperationsWorkspaceViewModel
         $kind = match ($assignment->assignment_type) {
             'driver' => 'driver_license',
             'crane_operator', 'field_foreman', 'foreman', 'lead' => 'operator_certification',
-            'rigger', 'signalperson' => 'rigger_certification',
             default => null,
         };
         $label = match ($kind) {
             'driver_license' => 'Driver license',
-            'rigger_certification' => 'Rigger certification',
             'operator_certification' => 'Operator certification',
             default => 'Credential',
         };

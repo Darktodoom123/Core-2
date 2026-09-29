@@ -471,9 +471,8 @@ describe('Managerial Override & Release Verification', function (): void {
             ->assertForbidden();
     });
 
-    test('non-authorized role (Rigger) is forbidden from triggering release', function (): void {
-        $rigger = User::factory()->create(['is_active' => true]);
-        $rigger->syncRoles([RoleName::Rigger->value]);
+    test('a user without an operational role is forbidden from triggering release', function (): void {
+        $roleless = User::factory()->create(['is_active' => true]);
 
         $asset = OperationalAsset::query()->create([
             'code' => 'CRN-AUTH-02',
@@ -484,13 +483,13 @@ describe('Managerial Override & Release Verification', function (): void {
 
         $workOrder = MaintenanceWorkOrder::query()->create([
             'operational_asset_id' => $asset->id,
-            'technician_id' => $rigger->id,
+            'technician_id' => $roleless->id,
             'status' => 'pending',
             'defect' => 'Boom leak',
             'dispatch_blocking' => true,
         ]);
 
-        $this->actingAs($rigger)
+        $this->actingAs($roleless)
             ->postJson("/operations/maintenance/{$workOrder->id}/release", [
                 'work_performed' => ['Visual check'],
             ])

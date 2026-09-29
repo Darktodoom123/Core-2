@@ -71,7 +71,7 @@ Sanctum token handling, CSRF protection, and password hashing are unchanged.
 - **FR-001 — Implemented:** The application shall require an authenticated, active internal account for operational routes.
 - **FR-002 — Implemented:** The application shall require verified email before the operations workspace is available.
 - **FR-003 — Implemented:** Login and password-reset requests shall be rate-limited and sessions regenerated or invalidated at access changes.
-- **FR-004 — Implemented:** Each operational software user shall have one canonical role selected from the 3 defined system user roles (`system_administrator` [System Administrator], `operations_manager` [Operations Manager], `operator` / `crane_operator` [Operator]). Non-software field personnel (specifically **Riggers**) are maintained as employee records (`PersonnelProfile`) for crew assignment and safety compliance without holding interactive mobile or web software user accounts.
+- **FR-004 — Implemented:** Each operational software user shall have one canonical role selected from the 3 defined system user roles (`system_administrator` [System Administrator], `operations_manager` [Operations Manager], `operator` / `crane_operator` [Operator]). There is no Rigger role; crews are staffed by Operators only.
 - **FR-005 — Implemented:** Laravel policies, permissions, and scoped database queries shall enforce access independently of the React interface.
 - **FR-006 — Implemented:** The last active System Administrator shall not be suspended or demoted.
 
@@ -88,8 +88,8 @@ Sanctum token handling, CSRF protection, and password hashing are unchanged.
 
 ### Module 2: Assign Driver/Operator and Equipment
 
-- **FR-012 — Implemented:** Operations managers shall assign zero or more personnel (Operators and Riggers) and assets using validated assignment types.
-- **FR-013 — Implemented:** Operator and Rigger assignments shall require valid qualifications/credentials (e.g. LTO professional driver's license, TESDA Heavy Equipment Operator NC II, TESDA Crane Rigging NC II, DOLE-BOSH) at the scheduled start.
+- **FR-012 — Implemented:** Operations managers shall assign zero or more personnel (Operators, as crane operators or drivers) and assets using validated assignment types.
+- **FR-013 — Implemented:** Operator assignments shall require valid qualifications/credentials (e.g. LTO professional driver's license, TESDA Heavy Equipment Operator NC II, DOLE-BOSH) at the scheduled start.
 - **FR-014 — Implemented:** Inactive, suspended, unavailable, or on-leave personnel shall not be assignable.
 - **FR-015 — Implemented:** Non-dispatchable assets, assets with an open blocking work order, and assets with overlapping active assignments shall not be assignable.
 - **FR-016 — Implemented:** All dispatch assignments (routine, priority, emergency) across service, rental, and direct dispatch streams shall create a pending Operations approval request.

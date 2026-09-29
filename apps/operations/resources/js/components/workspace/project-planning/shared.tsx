@@ -9,12 +9,11 @@ import type {
     ProjectShiftViewModel,
 } from '@/types/workspace';
 
-export type Role = 'driver' | 'crane_operator' | 'rigger';
+export type Role = 'driver' | 'crane_operator';
 export type Allocation = ProjectPhaseViewModel['allocations'][number];
-export const roles: Role[] = ['crane_operator', 'rigger', 'driver'];
+export const roles: Role[] = ['crane_operator', 'driver'];
 export const roleLabels: Record<Role, string> = {
     crane_operator: 'Operators',
-    rigger: 'Riggers',
     driver: 'Drivers',
 };
 export function localValue(value: string | Date) {

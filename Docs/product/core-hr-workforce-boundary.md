@@ -64,14 +64,13 @@ flowchart TD
 ## 1. Core HR Module Group
 
 ### Modules (as defined in Core HR):
-- **Core Human Capital Management (HCM)**: Defines organizational structure: Official Department (*Heavy Lift Division, Transport, Field Maintenance*), Job Title (*Senior Heavy Equipment Operator, Transport Operator, Rigger*), and Official Employment Status (*Active, Probationary, Suspended, Resigned, Terminated*).
+- **Core Human Capital Management (HCM)**: Defines organizational structure: Official Department (*Heavy Lift Division, Transport, Field Maintenance*), Job Title (*Senior Heavy Equipment Operator, Transport Operator*), and Official Employment Status (*Active, Probationary, Suspended, Resigned, Terminated*).
 - **Employee Self-Service (ESS)**: Employee self-update portal for personal and contact info (synced down to Core 2).
 - **Employee Records Management (added)**: The authoritative master data store for `employee_number`, legal names, official email, phone numbers, home address, emergency contacts, and statutory records.
 
 ### Core HR to Core 2 Ingestion:
 1. **Account Auto-Provisioning & Employee Ingestion**: 
    - **Interactive Software Users**: Core 2 maps HR Job Titles for software roles (`Senior Heavy Equipment Operator` $\rightarrow$ `RoleName::CraneOperator` [canonical `Operator` role], `Transport Operator` $\rightarrow$ `RoleName::CraneOperator` [canonical `Operator` role], `Operations Coordinator` $\rightarrow$ `RoleName::OperationsManager`), provisions a [`User`](../../apps/operations/app/Platform/Identity/Models/User.php) login account, creates [`PersonnelProfile`](../../apps/operations/app/Platform/Identity/Models/PersonnelProfile.php) keyed by `employee_number`, and sends an activation email/SMS with a secure setup token.
-   - **Non-Interactive Field Employees (Riggers)**: Field personnel whose duties do not require software operation (specifically **Riggers**) are ingested and maintained as operational employees ([`PersonnelProfile`](../../apps/operations/app/Platform/Identity/Models/PersonnelProfile.php) and [`PersonnelCredential`](../../apps/operations/app/Platform/Identity/Models/PersonnelCredential.php)) for crew dispatch assignment and TESDA/DOLE certification compliance, but are **not** provisioned with [`User`](../../apps/operations/app/Platform/Identity/Models/User.php) login credentials, web sessions, or mobile Sanctum API tokens.
 2. **Instant Offboarding Kill-Switch**: When Core HR marks an employee as `Resigned` or `Terminated`, Core 2 immediately:
    - Sets `users.is_active = false` and `users.suspended_at = now()` (for provisioned users).
    - Sets `personnel_profiles.availability_status = 'unavailable'`.
@@ -101,12 +100,12 @@ flowchart TD
 
 | Domain Responsibility | Core HR / WFM (Upstream Master) | Core 2 (Operational System) |
 | :--- | :--- | :--- |
-| **Employee Master Record** | **Authoritative Source** (`employee_number`, full legal name, contact details). | References `employee_number` via [`PersonnelProfile`](../../apps/operations/app/Platform/Identity/Models/PersonnelProfile.php) for all employees (including Riggers). |
-| **Corporate Department & Title** | **Authoritative Source** (Official Title & Organizational Org Chart). | Maps Job Title to operational Spatie RBAC Role (`OperationsManager`, `Operator`) for software users; maps non-software titles (`Rigger`) to employee profiles without login credentials. |
+| **Employee Master Record** | **Authoritative Source** (`employee_number`, full legal name, contact details). | References `employee_number` via [`PersonnelProfile`](../../apps/operations/app/Platform/Identity/Models/PersonnelProfile.php) for employees who hold Core-2 accounts. |
+| **Corporate Department & Title** | **Authoritative Source** (Official Title & Organizational Org Chart). | Maps Job Title to operational Spatie RBAC Role (`OperationsManager`, `Operator`) for software users. |
 | **Employment Status** | **Authoritative Source** (`Active`, `On Leave`, `Resigned`, `Terminated`). | Read-only mirror; triggers auto-suspension and assignment lockout upon termination. |
 | **Shift Rosters & Approved Leave** | **Authoritative Source** (Leave approvals, Shift rosters). | Enforces `availability_status = on_leave` to prevent dispatch scheduling conflicts across all assigned personnel. |
-| **System Access & Authentication** | Out of scope. | **Authoritative Source** for software users ([`User`](../../apps/operations/app/Platform/Identity/Models/User.php) login, password, 2FA, Sanctum mobile API tokens). Non-software field personnel (Riggers) receive no login credentials. |
-| **Equipment & Crane Eligibility** | Stores baseline HR qualification files. | **Authoritative Source** for operational qualification matching (e.g. operator license vs machine tonnage/type, rigger TESDA NC II certification ). |
+| **System Access & Authentication** | Out of scope. | **Authoritative Source** for software users ([`User`](../../apps/operations/app/Platform/Identity/Models/User.php) login, password, 2FA, Sanctum mobile API tokens). |
+| **Equipment & Crane Eligibility** | Stores baseline HR qualification files. | **Authoritative Source** for operational qualification matching (e.g. operator license vs machine tonnage/type). |
 | **Field Job Progression & Telemetry** | Out of scope. | **Authoritative Source** (Live GPS tracking, dispatch lifecycle progression, fuel requests) recorded via mobile/web by Operators and Field Foremen. |
 
 ---
@@ -130,4 +129,4 @@ Because Core HR and Workforce Management own employee creation and leave trackin
 4. **Core 2 never originates employee hiring or termination workflows; it ingests them.**
 5. **A termination event in Core HR must atomically revoke all Core 2 sessions and mobile API tokens without delay.**
 6. **Approved leaves in Workforce Management must immediately lock out operator and crew assignment in Core 2.**
-7. **Non-software field employees (specifically Riggers) are tracked as employees with personnel profiles and certifications for dispatch scheduling and DOLE/TESDA compliance, but are not provisioned with web or mobile software accounts.**
+7. **Core-2 has no Rigger role or rigger crew slot; crews are staffed by Operators only.**

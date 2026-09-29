@@ -1440,28 +1440,6 @@ function SystemAdminDashboardView({
                                         : undefined
                                 }
                             />
-                            {((rolesDistribution['rigger'] ?? 0) > 0 ||
-                                (rolesDistribution['driver'] ?? 0) > 0 ||
-                                (rolesDistribution['field_worker'] ?? 0) >
-                                    0) && (
-                                <ReadinessRow
-                                    label="Riggers & Support Crew"
-                                    value={String(
-                                        (rolesDistribution['rigger'] ?? 0) +
-                                            (rolesDistribution['driver'] ?? 0) +
-                                            (rolesDistribution[
-                                                'field_worker'
-                                            ] ?? 0),
-                                    )}
-                                    detail="Field rigging, signaling & transport support"
-                                    icon={Users}
-                                    onClick={
-                                        canOpenUsers
-                                            ? () => onSectionChange('users')
-                                            : undefined
-                                    }
-                                />
-                            )}
                         </Panel>
                     </section>
 

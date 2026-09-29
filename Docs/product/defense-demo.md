@@ -21,7 +21,6 @@ The demo accounts use the same local-only password as the default developer seed
 | `dispatcher.linking` | Operations Manager | Presenter: converts Core 1 orders and links cranes and crew |
 | `ops.approver` | Operations Manager | Second approver (self-approval is blocked) |
 | `operator.rsantos`, `operator.jvillanueva` | Crane operator | Field app |
-| `rigger.mbautista`, `rigger.egarcia`, `rigger.alim` | Rigger | Crew |
 
 ## Walkthrough
 

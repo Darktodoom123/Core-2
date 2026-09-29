@@ -396,12 +396,11 @@ it('allows authorized fleet manager to replace document attachment file with aud
 });
 
 it('prohibits unauthorized view-only user from updating or replacing asset documents', function (): void {
-    $rigger = User::factory()->create(['is_active' => true]);
-    $rigger->syncRoles([RoleName::Rigger->value]);
+    $roleless = User::factory()->create(['is_active' => true]);
 
     [$asset, $permit] = createAssetWithPermit('CRN-NO-PERM');
 
-    $this->actingAs($rigger)
+    $this->actingAs($roleless)
         ->patchJson(route('operations.fleet.documents.update', [
             'operationalAsset' => $asset->id,
             'document' => $permit->id,
@@ -409,7 +408,7 @@ it('prohibits unauthorized view-only user from updating or replacing asset docum
         ->assertForbidden();
 
     $newFile = UploadedFile::fake()->create('hacked.pdf', 200, 'application/pdf');
-    $this->actingAs($rigger)
+    $this->actingAs($roleless)
         ->postJson(route('operations.fleet.documents.replace', [
             'operationalAsset' => $asset->id,
             'document' => $permit->id,

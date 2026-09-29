@@ -53,7 +53,7 @@ function fixture(): ProjectPlanningViewModel {
                         kind: 'operations',
                         starts_at: '2026-09-01T00:00:00Z',
                         ends_at: '2026-12-01T00:00:00Z',
-                        coverage: { crane_operator: 1, driver: 0, rigger: 0 },
+                        coverage: { crane_operator: 1, driver: 0 },
                         allocations: [
                             {
                                 id: 1,
@@ -154,7 +154,7 @@ describe('project planning workflow', () => {
 
     it('hides the previous roles candidates immediately during a role switch', async () => {
         const data = fixture();
-        data.projects[0].phases[0].coverage.rigger = 1;
+        data.projects[0].phases[0].coverage.driver = 1;
         render(
             <DispatchWorkspace
                 planning={data}
@@ -172,7 +172,7 @@ describe('project planning workflow', () => {
             await within(dialog).findByRole('button', { name: 'Assign' }),
         ).toBeEnabled();
         fireEvent.click(
-            within(dialog).getByRole('button', { name: /Riggers/ }),
+            within(dialog).getByRole('button', { name: /Drivers/ }),
         );
         expect(
             within(dialog).queryByRole('button', { name: 'Assign' }),
@@ -182,7 +182,7 @@ describe('project planning workflow', () => {
         ).toBeInTheDocument();
         expect(
             within(dialog).queryByRole('button', {
-                name: 'Remove Alex Reyes from Riggers',
+                name: 'Remove Alex Reyes from Drivers',
             }),
         ).not.toBeInTheDocument();
     });

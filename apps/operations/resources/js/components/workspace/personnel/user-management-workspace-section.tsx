@@ -111,11 +111,6 @@ const ROLE_OPTIONS: Array<{ value: AccountRole; label: string }> = [
     { value: 'crane_operator', label: 'Operator' },
 ];
 
-const ROLE_FILTER_OPTIONS = [
-    ...ROLE_OPTIONS,
-    { value: 'rigger', label: 'Rigger' },
-];
-
 const EMPTY_CREATE_FORM: CreateAccountForm = {
     name: '',
     username: '',
@@ -979,11 +974,6 @@ function AccountManagementSection({ canViewAudit }: { canViewAudit: boolean }) {
                         </Button>
                     </div>
 
-                    <p className="text-xs leading-5 text-ink-soft">
-                        Rigger accounts can sign in; their qualifications and
-                        credentials are managed under Personnel credentials.
-                    </p>
-
                     <div className="grid gap-3 sm:grid-cols-2">
                         <div className="relative sm:col-span-2">
                             <Search
@@ -1013,7 +1003,7 @@ function AccountManagementSection({ canViewAudit }: { canViewAudit: boolean }) {
                             }}
                         >
                             <option value="">All roles</option>
-                            {ROLE_FILTER_OPTIONS.map((option) => (
+                            {ROLE_OPTIONS.map((option) => (
                                 <option key={option.value} value={option.value}>
                                     {option.label}
                                 </option>

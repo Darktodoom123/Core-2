@@ -53,7 +53,7 @@ final class StoreDispatchJobRequest extends FormRequest
             'requirements' => [Rule::prohibitedIf($linkedToServiceRequest), 'sometimes', 'array'],
             'requirements.*' => ['string', 'max:255'],
             'resource_requirements' => [Rule::prohibitedIf($linkedToServiceRequest), 'sometimes', 'array:personnel,assets'],
-            'resource_requirements.personnel' => ['sometimes', 'array:driver,crane_operator,rigger'],
+            'resource_requirements.personnel' => ['sometimes', 'array:driver,crane_operator'],
             'resource_requirements.assets' => ['sometimes', 'array:truck,vehicle,crane,mobile_crane,tower_crane,equipment'],
             'resource_requirements.personnel.*' => ['integer', 'min:0', 'max:50'],
             'resource_requirements.assets.*' => ['integer', 'min:0', 'max:50'],

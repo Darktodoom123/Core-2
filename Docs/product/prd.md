@@ -33,9 +33,9 @@ The product supports **3 canonical system users**:
 - **Operations Manager** (`operations_manager`) — Dispatch operations desk, resource assignment, schedule approvals, fleet/crane oversight, fuel logistics, and emergency SOS incident triage.
 - **Operator** (`operator` / `crane_operator`) — Field mobile application user executing dispatch trips, heavy crane lift operations, equipment telemetry, DVIR pre/post-trip safety inspections, HoS status recording, and SOS emergency triggers.
 
-*(Workforce field personnel such as Riggers are non-software workforce crew tracked via `PersonnelProfile` and credentials without direct system login accounts).*
+*(Crews are staffed by Operators only; Core-2 has no Rigger role or rigger crew slot.)*
 
-Following role consolidation, incident response is handled by the `Operations Manager`, while DVIR inspections are performed by the `Operator`. Riggers are maintained as employee records (`PersonnelProfile` and `PersonnelCredential`) for dispatch scheduling, DOLE/TESDA certification compliance, but do not hold software user accounts.
+Following role consolidation, incident response is handled by the `Operations Manager`, while DVIR inspections are performed by the `Operator`. Core-2 has no Rigger role: crews are staffed by Operators only.
 
 The operational core is built upon **5 Main Operational Business Modules**:
 1. **Dispatch Job and Scheduling (Real-Time Activation)** — Job intake, route planning, shift scheduling, real-time activation, and multi-phase project planning.
@@ -103,7 +103,7 @@ Field personnel operating heavy equipment and transport assets. Operates via the
 
 Heavy equipment and crane journeys show approved access routes, site staging details, and turn-by-turn guidance. The app enforces an explicit Drive mode versus Crane setup/operation mode to ensure safe field execution.
 
-*(Note: Workforce field personnel such as Riggers are non-software workforce crew tracked via [`PersonnelProfile`](../../apps/operations/app/Platform/Identity/Models/PersonnelProfile.php) and statutory credentials [e.g. TESDA Crane Rigging NC II] for crew eligibility, but do not possess software login accounts).*
+*(Note: Core-2 has no Rigger role or rigger crew slot; crews are staffed by Operators only.)*
 
 ## 6. Core product experience
 

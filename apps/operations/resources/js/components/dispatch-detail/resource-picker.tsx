@@ -95,7 +95,6 @@ const personnelTypes: Array<{
 }> = [
     { value: 'driver', label: 'Drivers' },
     { value: 'crane_operator', label: 'Crane operators' },
-    { value: 'rigger', label: 'Riggers / Signalpersons' },
 ];
 
 const assetTypes: Array<{

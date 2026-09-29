@@ -1470,8 +1470,7 @@ export function LiveDispatchWorkspace({
                                             Crew On Duty
                                         </p>
                                         <p className="mt-1 text-[11px] text-ink-soft">
-                                            Qualified operators &amp; riggers
-                                            available
+                                            Qualified operators available
                                         </p>
                                     </div>
 
