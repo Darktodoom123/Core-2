@@ -6,7 +6,8 @@ Core-2 is organized as an isolated two-service monorepo:
 - `apps/operations/`: Operations Monolith & BFF (Laravel 13, Inertia 3, React 19, Vite 8, Tailwind CSS v4, Pest 4) with dedicated queue workers (`operational`, `ai`, `reports`, `emergency`).
 - `apps/tracking/`: Standalone Tracking microservice with dedicated database (`core2_ms_tracking`) and HMAC-signed telemetry REST API.
 - `packages/field-mobile/`: Native Expo React Native field mobile client (Expo 57, React Native 0.86, Expo SQLite offline outbox, Detox E2E).
-- `infra/docker/`: Container definitions, multi-stage Dockerfiles, Nginx configs, and Supervisor process topologies.
+- `Dockerfile` (repo root): Multi-stage container definitions for Operations, Tracking, and test targets.
+- `infra/docker/`: Entrypoints, Nginx configs, and Supervisor process topologies used by the Dockerfile.
 
 ---
 

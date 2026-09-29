@@ -112,6 +112,7 @@ jobs:
             docker:
               - *ci
               - 'infra/**'
+              - 'Dockerfile'
               - 'docker-compose.yml'
               - 'docker-compose.*.yml'
               - '.dockerignore'
@@ -619,7 +620,7 @@ jobs:
       - name: Check Dockerfile
         run: |
           for attempt in 1 2 3; do
-            docker buildx build --check -f infra/docker/Dockerfile . && break || {
+            docker buildx build --check -f Dockerfile . && break || {
               if [ "$attempt" -lt 3 ]; then
                 echo "Dockerfile check attempt $attempt failed; retrying in 3s..."
                 sleep 3
@@ -652,7 +653,7 @@ jobs:
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
         with:
           context: .
-          file: ./infra/docker/Dockerfile
+          file: ./Dockerfile
           target: runtime
           push: false
           load: true
@@ -675,7 +676,7 @@ jobs:
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
         with:
           context: .
-          file: ./infra/docker/Dockerfile
+          file: ./Dockerfile
           target: tracking-runtime
           push: false
           load: true
@@ -701,7 +702,7 @@ jobs:
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
         with:
           context: .
-          file: ./infra/docker/Dockerfile
+          file: ./Dockerfile
           target: test-runner
           push: false
           load: true

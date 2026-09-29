@@ -5,7 +5,7 @@ services:
     image: "${CORE2_APP_IMAGE:-core2/runtime:ci}"
     build:
       context: .
-      dockerfile: infra/docker/Dockerfile
+      dockerfile: Dockerfile
       target: runtime
       args:
         VITE_PUBLIC_REVERB_IDENTIFIER: "${REVERB_APP_KEY:?Set REVERB_APP_KEY in .env}"
@@ -112,7 +112,7 @@ services:
     image: "${CORE2_TRACKING_IMAGE:-core2/tracking:ci}"
     build:
       context: .
-      dockerfile: infra/docker/Dockerfile
+      dockerfile: Dockerfile
       target: tracking-runtime
     restart: unless-stopped
     init: true
@@ -218,7 +218,7 @@ services:
     image: "${CORE2_TEST_IMAGE:-core2/test-runner:ci}"
     build:
       context: .
-      dockerfile: infra/docker/Dockerfile
+      dockerfile: Dockerfile
       target: test-runner
     profiles: ["test"]
     working_dir: /var/www/html
