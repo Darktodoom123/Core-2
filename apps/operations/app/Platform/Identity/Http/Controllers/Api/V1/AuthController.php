@@ -9,6 +9,7 @@ use App\Platform\Identity\Models\User;
 use App\Platform\Identity\Models\UserDeviceToken;
 use App\Platform\Identity\Services\DeviceTrustService;
 use App\Platform\Identity\Services\EmailOtpService;
+use App\Platform\Identity\Services\NewDeviceSignInAlert;
 use App\Platform\Identity\Support\Username;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
@@ -165,6 +166,7 @@ final class AuthController extends Controller
         Request $request,
         EmailOtpService $otpService,
         DeviceTrustService $trustService,
+        NewDeviceSignInAlert $signInAlert,
     ): JsonResponse {
         $validated = $request->validate([
             'challenge_id' => ['required', 'string'],
@@ -220,6 +222,7 @@ final class AuthController extends Controller
         }
 
         $token = $user->createToken($deviceName)->plainTextToken;
+        $signInAlert->send($user, $deviceName, $request->ip());
 
         return response()->json([
             'data' => [

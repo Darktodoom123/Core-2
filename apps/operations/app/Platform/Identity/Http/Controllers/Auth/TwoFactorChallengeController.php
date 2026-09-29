@@ -9,6 +9,7 @@ use App\Platform\Identity\Models\EmailOneTimeCode;
 use App\Platform\Identity\Models\User;
 use App\Platform\Identity\Services\DeviceTrustService;
 use App\Platform\Identity\Services\EmailOtpService;
+use App\Platform\Identity\Services\NewDeviceSignInAlert;
 use App\Platform\Identity\Support\UserAgentParser;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -65,6 +66,7 @@ final class TwoFactorChallengeController extends Controller
         EmailOtpService $otpService,
         DeviceTrustService $trustService,
         RecordAuditEvent $audit,
+        NewDeviceSignInAlert $signInAlert,
     ): RedirectResponse {
         $twoFactorData = $request->session()->get('login.two_factor');
 
@@ -126,6 +128,7 @@ final class TwoFactorChallengeController extends Controller
             'user_agent' => $request->userAgent(),
             'outcome' => 'success',
         ]);
+        $signInAlert->send($user, $deviceInfo['label'], $request->ip());
 
         $redirect = redirect()->intended(route('home', absolute: false));
         if ($trustToken !== null) {

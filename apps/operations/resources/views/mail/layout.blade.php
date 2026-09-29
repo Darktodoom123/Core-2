@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light only">
+    <meta name="supported-color-schemes" content="light only">
+    <title>{{ $heading }}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f5f7; -webkit-text-size-adjust: 100%;">
+    <div style="display: none; max-height: 0; overflow: hidden; opacity: 0; color: transparent;">
+        {{ $preheader }}
+    </div>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f5f7;">
+        <tr>
+            <td align="center" style="padding: 40px 16px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 480px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+                    <tr>
+                        <td style="padding: 0 4px 16px; font-size: 14px; font-weight: 700; color: #0f172a;">
+                            Core-2
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background-color: #ffffff; border-top: 3px solid #ffbf00; border-radius: 4px; padding: 32px;">
+                            <p style="margin: 0 0 20px; font-size: 18px; line-height: 1.4; font-weight: 600; color: #0f172a;">
+                                {{ $heading }}
+                            </p>
+                            @yield('body')
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 16px 4px 0; font-size: 12px; line-height: 1.6; color: #94a3b8;">
+                            Core-2 Operations
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
