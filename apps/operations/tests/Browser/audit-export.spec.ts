@@ -1,5 +1,38 @@
 import { expect, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { browserFixtures, signIn } from './browser-fixtures';
+
+type ExportFormat = 'csv' | 'pdf';
+
+/** Records every 4xx/5xx response so a queued export cannot hide a failed request. */
+function trackNetworkErrors(page: Page): { url: string; status: number }[] {
+    const errors: { url: string; status: number }[] = [];
+    page.on('response', (response) => {
+        if (response.status() >= 400) {
+            errors.push({ url: response.url(), status: response.status() });
+        }
+    });
+
+    return errors;
+}
+
+async function openAuditTrail(page: Page): Promise<void> {
+    await page.goto('/?section=audit');
+    await expect(
+        page.getByRole('heading', { name: 'Audit trail', exact: true }),
+    ).toBeVisible();
+}
+
+async function queueExport(page: Page, format: ExportFormat): Promise<void> {
+    await page.getByRole('button', { name: 'Export', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Export the audit trail' });
+    await expect(dialog).toBeVisible();
+
+    await dialog.locator(`input[name="format"][value="${format}"]`).check();
+    await dialog.getByRole('button', { name: 'Queue export' }).click();
+
+    await expect(page.getByText(/Export task requested/i)).toBeVisible();
+}
 
 test.describe('Audit Trail & Report Export Pipeline E2E', () => {
     test.beforeEach(async ({ page }) => {
@@ -7,206 +40,87 @@ test.describe('Audit Trail & Report Export Pipeline E2E', () => {
         await signIn(page, fixtures.users.admin, fixtures.password);
     });
 
-    test('Variant 1: Admin can request background server export for CSV without date range', async ({
+    test('Variant 1: Admin can queue a CSV export of the whole audit trail', async ({
         page,
     }) => {
-        const networkErrors: { url: string; status: number }[] = [];
-        page.on('response', (response) => {
-            if (response.status() >= 400) {
-                networkErrors.push({
-                    url: response.url(),
-                    status: response.status(),
-                });
-            }
-        });
+        const networkErrors = trackNetworkErrors(page);
 
-        await page.goto('/?section=audit');
-        await expect(
-            page.getByRole('heading', { name: 'Audit trail & compliance log' }),
-        ).toBeVisible();
+        await openAuditTrail(page);
+        await queueExport(page, 'csv');
 
-        // Open export modal
-        await page
-            .getByRole('button', { name: 'Export Audit Dataset' })
-            .click();
-        await expect(
-            page.getByRole('heading', { name: 'Export Audit Dataset' }),
-        ).toBeVisible();
-
-        // Select CSV format
-        await page.locator('input[name="format"][value="csv"]').check();
-
-        // Request export
-        await page
-            .getByRole('button', { name: 'Request Server Background Export' })
-            .click();
-
-        // Verify success flash and zero network errors
-        await expect(page.getByText(/Export task requested/i)).toBeVisible();
         expect(networkErrors).toHaveLength(0);
-        await expect(page.getByText('404')).not.toBeVisible();
     });
 
-    test('Variant 2: Admin can request background server export for PDF without date range', async ({
+    test('Variant 2: Admin can queue a PDF export of the whole audit trail', async ({
         page,
     }) => {
-        const networkErrors: { url: string; status: number }[] = [];
-        page.on('response', (response) => {
-            if (response.status() >= 400) {
-                networkErrors.push({
-                    url: response.url(),
-                    status: response.status(),
-                });
-            }
-        });
+        const networkErrors = trackNetworkErrors(page);
 
-        await page.goto('/?section=audit');
-        await expect(
-            page.getByRole('heading', { name: 'Audit trail & compliance log' }),
-        ).toBeVisible();
+        await openAuditTrail(page);
+        await queueExport(page, 'pdf');
 
-        // Open export modal
-        await page
-            .getByRole('button', { name: 'Export Audit Dataset' })
-            .click();
-        await expect(
-            page.getByRole('heading', { name: 'Export Audit Dataset' }),
-        ).toBeVisible();
-
-        // Select PDF format
-        await page.locator('input[name="format"][value="pdf"]').check();
-
-        // Request export
-        await page
-            .getByRole('button', { name: 'Request Server Background Export' })
-            .click();
-
-        // Verify success flash and zero network errors
-        await expect(page.getByText(/Export task requested/i)).toBeVisible();
         expect(networkErrors).toHaveLength(0);
-        await expect(page.getByText('404')).not.toBeVisible();
     });
 
-    test('Variant 3: Admin can request background server export for CSV with date range', async ({
+    test('Variant 3: Admin can queue a CSV export for the last 7 days', async ({
         page,
     }) => {
-        const networkErrors: { url: string; status: number }[] = [];
-        page.on('response', (response) => {
-            if (response.status() >= 400) {
-                networkErrors.push({
-                    url: response.url(),
-                    status: response.status(),
-                });
-            }
+        const networkErrors = trackNetworkErrors(page);
+
+        await openAuditTrail(page);
+        await page
+            .getByRole('group', { name: 'Date range' })
+            .getByRole('button', { name: '7 days', exact: true })
+            .click();
+
+        // The dialog starts from the dates chosen on the page.
+        await page.getByRole('button', { name: 'Export', exact: true }).click();
+        const dialog = page.getByRole('dialog', {
+            name: 'Export the audit trail',
         });
+        await expect(dialog.getByLabel('Export from date')).not.toHaveValue('');
+        await dialog.getByRole('button', { name: 'Cancel' }).click();
 
-        await page.goto('/?section=audit');
-        await expect(
-            page.getByRole('heading', { name: 'Audit trail & compliance log' }),
-        ).toBeVisible();
+        await queueExport(page, 'csv');
 
-        // Set date preset to 7 Days
-        const preset7d = page.getByRole('button', { name: '7 Days' });
-        await expect(preset7d).toBeVisible();
-        await preset7d.click();
-
-        // Open export modal
-        await page
-            .getByRole('button', { name: 'Export Audit Dataset' })
-            .click();
-        await expect(
-            page.getByRole('heading', { name: 'Export Audit Dataset' }),
-        ).toBeVisible();
-
-        // Select CSV format
-        await page.locator('input[name="format"][value="csv"]').check();
-
-        // Request export
-        await page
-            .getByRole('button', { name: 'Request Server Background Export' })
-            .click();
-
-        // Verify success flash and zero network errors
-        await expect(page.getByText(/Export task requested/i)).toBeVisible();
         expect(networkErrors).toHaveLength(0);
-        await expect(page.getByText('404')).not.toBeVisible();
     });
 
-    test('Variant 4: Admin can request background server export for PDF with date range', async ({
+    test('Variant 4: Admin can queue a PDF export for today', async ({
         page,
     }) => {
-        const networkErrors: { url: string; status: number }[] = [];
-        page.on('response', (response) => {
-            if (response.status() >= 400) {
-                networkErrors.push({
-                    url: response.url(),
-                    status: response.status(),
-                });
-            }
+        const networkErrors = trackNetworkErrors(page);
+
+        await openAuditTrail(page);
+        await page
+            .getByRole('group', { name: 'Date range' })
+            .getByRole('button', { name: 'Today', exact: true })
+            .click();
+        await queueExport(page, 'pdf');
+
+        expect(networkErrors).toHaveLength(0);
+    });
+
+    test('Variant 5: A queued export appears under Your audit exports', async ({
+        page,
+    }) => {
+        await openAuditTrail(page);
+        await queueExport(page, 'csv');
+
+        const exportsPanel = page.getByRole('region', {
+            name: 'Your audit exports',
         });
-
-        await page.goto('/?section=audit');
-        await expect(
-            page.getByRole('heading', { name: 'Audit trail & compliance log' }),
-        ).toBeVisible();
-
-        // Set date preset to Today
-        const presetToday = page.getByRole('button', { name: 'Today' });
-        await expect(presetToday).toBeVisible();
-        await presetToday.click();
-
-        // Open export modal
-        await page
-            .getByRole('button', { name: 'Export Audit Dataset' })
+        await exportsPanel
+            .getByRole('button', { name: 'Check status' })
             .click();
-        await expect(
-            page.getByRole('heading', { name: 'Export Audit Dataset' }),
-        ).toBeVisible();
-
-        // Select PDF format
-        await page.locator('input[name="format"][value="pdf"]').check();
-
-        // Request export
-        await page
-            .getByRole('button', { name: 'Request Server Background Export' })
-            .click();
-
-        // Verify success flash and zero network errors
-        await expect(page.getByText(/Export task requested/i)).toBeVisible();
-        expect(networkErrors).toHaveLength(0);
-        await expect(page.getByText('404')).not.toBeVisible();
+        await expect(exportsPanel.getByRole('listitem').first()).toBeVisible();
     });
 
-    test('Variant 5: Admin can trigger instant filtered CSV client download', async ({
-        page,
-    }) => {
-        await page.goto('/?section=audit');
-        await expect(
-            page.getByRole('heading', { name: 'Audit trail & compliance log' }),
-        ).toBeVisible();
-
-        // Open export modal
-        await page
-            .getByRole('button', { name: 'Export Audit Dataset' })
-            .click();
-        await expect(
-            page.getByRole('heading', { name: 'Export Audit Dataset' }),
-        ).toBeVisible();
-
-        // Trigger direct CSV download
-        const downloadPromise = page.waitForEvent('download');
-        await page.getByRole('button', { name: /Instant CSV/i }).click();
-        const download = await downloadPromise;
-
-        expect(download.suggestedFilename()).toContain('core2-audit-trail-');
-        expect(download.suggestedFilename()).toMatch(/\.csv$/);
-    });
-
-    test('Variant 6: Direct GET /operations/reports/exports redirects gracefully to workspace reports', async ({
+    test('Variant 6: Direct GET /operations/reports/exports redirects gracefully to workspace exports', async ({
         page,
     }) => {
         await page.goto('/operations/reports/exports');
         await expect(page.getByText('404')).not.toBeVisible();
-        await expect(page.url()).toContain('section=reports');
+        await expect(page).toHaveURL(/section=exports/);
     });
 });

@@ -287,24 +287,26 @@ test.describe('system administrator account management', () => {
             .getByRole('button', { name: 'Audit trail', exact: true })
             .click();
         await expect(
-            page.getByRole('heading', {
-                name: 'Audit trail & compliance log',
-            }),
+            page.getByRole('heading', { name: 'Audit trail', exact: true }),
         ).toBeVisible();
         await expect(page).toHaveURL(/view=audit/);
-        await page.getByRole('button', { name: /Access & Users/ }).click();
+        await page
+            .getByRole('group', { name: 'Filter by category' })
+            .getByRole('button', { name: /Access & people/ })
+            .click();
 
-        const auditRegion = page.getByRole('region', {
-            name: 'Audit trail table scroll region',
+        // The results table names each recorded action in plain language.
+        const auditResults = page.getByRole('region', {
+            name: /events|Loading events/,
         });
 
         for (const action of [
-            'user.created',
-            'user.access_updated',
-            'user.password_reset',
+            'Account created',
+            'Account access changed',
+            'Password reset',
         ]) {
             await expect(
-                auditRegion.getByText(action, { exact: true }).first(),
+                auditResults.getByText(action, { exact: true }).first(),
             ).toBeVisible();
         }
     });
