@@ -29,6 +29,7 @@ use App\Modules\HoursOfService\Actions\StartOperatorShiftAction;
 use App\Modules\HoursOfService\Enums\DutyStatus;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
+use App\Platform\Identity\Support\Username;
 use App\Platform\Reporting\Actions\ReviewJobReport;
 use App\Platform\Reporting\Actions\SubmitJobReport;
 use App\Shared\Assets\Enums\AssetStatus;
@@ -49,7 +50,7 @@ use LogicException;
  * different stage so the whole lifecycle can be shown live: intake → convert → link assets →
  * approval → activation → field execution (DVIR, HoS, fuel) → job report → supervisory close-out.
  *
- *   php artisan db:seed --class="Database\Seeders\Development\DefenseDemoSeeder"
+ * See Docs/product/defense-demo.md for the walkthrough.
  */
 final class DefenseDemoSeeder extends Seeder
 {
@@ -74,7 +75,7 @@ final class DefenseDemoSeeder extends Seeder
         }
 
         if (ServiceRequest::withTrashed()->where('reference', self::MARKER_REFERENCE)->exists()) {
-            $this->command?->warn('Defense demo already seeded. Run `php artisan migrate:fresh --seed` first to reset it.');
+            $this->command?->warn('Defense demo already seeded. Existing demo records were left unchanged.');
 
             return;
         }
@@ -84,6 +85,8 @@ final class DefenseDemoSeeder extends Seeder
 
         // Seeders run unguarded; the domain actions are written for guarded (HTTP) models.
         Model::reguard();
+        // Report actions audit X-Request-ID (a uuid column), which the field app always sends.
+        request()->headers->set('X-Request-ID', (string) Str::uuid());
 
         try {
             DB::transaction(function () use ($anchor): void {
@@ -266,7 +269,10 @@ final class DefenseDemoSeeder extends Seeder
 
         $this->at($anchor->copy()->subHours(2));
         $job = $this->convert($request, 'DSP-2026-0104', $start, $start->copy()->addHours(8));
-        $job = $this->link($job, $this->crew['operator.jvillanueva'], $this->crew['rigger.egarcia'], $this->cranes['DEF-CRN-2504']);
+        // The developer's own quick-login operator (BJ Bello locally) accepts this one live in the field app.
+        $fieldAppOperator = User::query()->where('username', Username::fromEmail('operator@example.com'))->first()
+            ?? $this->crew['operator.jvillanueva'];
+        $job = $this->link($job, $fieldAppOperator, $this->crew['rigger.egarcia'], $this->cranes['DEF-CRN-2504']);
         app(ActivateDispatchJob::class)->handle($this->dispatcher, $job, $job->version);
         Carbon::setTestNow();
     }

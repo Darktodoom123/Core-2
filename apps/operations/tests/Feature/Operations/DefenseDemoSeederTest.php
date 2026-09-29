@@ -11,6 +11,7 @@ use App\Modules\Fuel\Models\FuelRequest;
 use App\Platform\Identity\Models\User;
 use App\Platform\Reporting\Enums\JobReportStatus;
 use Database\Seeders\Development\DefenseDemoSeeder;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -44,4 +45,20 @@ it('seeds every lifecycle stage from Core 1 intake to approved close-out', funct
     // Re-running is a no-op instead of a duplicate-key failure.
     $this->seed(DefenseDemoSeeder::class);
     expect(ServiceRequest::query()->count())->toBe(7);
+});
+
+it('puts the local quick-login operator on the field-app acceptance stage when that account exists', function (): void {
+    $this->seed(RolePermissionSeeder::class);
+    $operator = User::factory()->create(['username' => 'operator', 'email' => 'operator@example.com', 'is_active' => true]);
+    $operator->syncRoles(['crane_operator']);
+    $operator->personnelCredentials()->create([
+        'kind' => 'operator_certification', 'credential_number' => 'OP-LOCAL', 'credential_type' => 'TESDA NC II',
+        'status' => 'active', 'issued_at' => now()->subYear(), 'expires_at' => now()->addYear(),
+    ]);
+
+    $this->seed(DefenseDemoSeeder::class);
+
+    $job = DispatchJob::query()->where('reference', 'DSP-2026-0104')->sole();
+    expect($job->status)->toBe(DispatchStatus::Dispatched)
+        ->and($job->personnelAssignments()->where('assignment_type', 'crane_operator')->sole()->user_id)->toBe($operator->id);
 });
