@@ -26,7 +26,7 @@
         "@vitejs/plugin-react": "^5.2.0",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
-        "concurrently": "^9.0.1",
+        "concurrently": "^10.0.5",
         "globals": "^15.14.0",
         "image-size": "file:../../third_party/image-size",
         "laravel-echo": "^2.4.0",
