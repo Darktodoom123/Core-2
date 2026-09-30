@@ -18,8 +18,11 @@ function trackNetworkErrors(page: Page): { url: string; status: number }[] {
 
 async function openAuditTrail(page: Page): Promise<void> {
     await page.goto('/?section=audit');
+    // The header banner repeats the section label, so scope to the page body.
     await expect(
-        page.getByRole('heading', { name: 'Audit trail', exact: true }),
+        page
+            .locator('#workspace-content')
+            .getByRole('heading', { name: 'Audit trail', exact: true }),
     ).toBeVisible();
 }
 
