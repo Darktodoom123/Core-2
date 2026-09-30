@@ -73,7 +73,7 @@
         "eslint-plugin-react-hooks": "^7.0.0",
         "fontaine": "^0.8.0",
         "image-size": "file:third_party/image-size",
-        "jsdom": "^29.1.1",
+        "jsdom": "^30.1.1",
         "nx": "23.2.0",
         "prettier": "^3.4.2",
         "prettier-plugin-tailwindcss": "^0.6.11",
