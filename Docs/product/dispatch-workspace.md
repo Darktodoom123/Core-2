@@ -13,8 +13,9 @@ Creating a local coverage record does not create or synchronize a Core 1 project
    emergencies first, then by requested date, and filterable by type. Opening
    one shows its Core 1 details read-only, the fleet unit it needs with an
    operator, and an automatic duplicate hint when a manual draft exists for
-   the same client. **Create dispatch** assigns the `DSP-SRV-…`/`DSP-REN-…`
-   reference on the server, sends times with the browser's offset, and opens
+   the same client. **Create dispatch** assigns the reference on the server
+   (`DSP-SRV-…` for job orders, `REN-DSP-{id}` for rentals), sends times with
+   the browser's offset, and opens
    the Schedule on that day with the new dispatch selected for crew and
    equipment assignment. **Create direct dispatch** covers work that did not
    come from Core 1; unsaved drafts retain exit protection.

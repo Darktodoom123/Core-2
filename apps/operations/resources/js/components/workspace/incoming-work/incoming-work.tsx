@@ -586,11 +586,18 @@ function sortByUrgency(
     });
 }
 
-/** Cranes, heavy equipment and trucks we send out with an operator. */
+/** Tower and mobile cranes, heavy equipment and trucks: all go out with an operator. */
+const OPERATED_KINDS = [
+    'tower_crane',
+    'crane',
+    'mobile_crane',
+    'equipment',
+    'truck',
+    'vehicle',
+];
+
 function isFleetEquipment(asset: AssetViewModel): boolean {
-    return ['crane', 'mobile_crane', 'equipment', 'truck', 'vehicle'].includes(
-        asset.kind,
-    );
+    return OPERATED_KINDS.includes(asset.kind);
 }
 
 function nextDemoReference(): string {

@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { IncomingWork } from '@/components/workspace/incoming-work/incoming-work';
 import type {
+    AssetViewModel,
     DispatchJobViewModel,
     RentalDispatchHandoffViewModel,
     ServiceRequestViewModel,
@@ -240,6 +241,22 @@ describe('IncomingWork', () => {
 
         renderIncoming({
             capabilities: capabilities({ create_service_request: true }),
+            assets: [
+                {
+                    id: 1,
+                    code: 'TWR-301',
+                    name: 'JHD140N-8 Luffing Tower Crane',
+                    kind: 'tower_crane',
+                    subtype: 'Luffing Tower Crane',
+                },
+                {
+                    id: 27,
+                    code: 'MOB-CRN-401',
+                    name: 'XCMG XCT25L5_S1 Truck Crane',
+                    kind: 'crane',
+                    subtype: 'Truck Crane',
+                },
+            ] as AssetViewModel[],
         });
         fireEvent.click(
             await screen.findByRole('button', {
@@ -255,5 +272,13 @@ describe('IncomingWork', () => {
         expect(
             screen.getByRole('button', { name: 'Send to Incoming work' }),
         ).toBeInTheDocument();
+
+        const units = screen.getByLabelText(/Equipment/);
+        expect(units).toHaveTextContent(
+            'TWR-301 · JHD140N-8 Luffing Tower Crane',
+        );
+        expect(units).toHaveTextContent(
+            'MOB-CRN-401 · XCMG XCT25L5_S1 Truck Crane',
+        );
     });
 });

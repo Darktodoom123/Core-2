@@ -2,6 +2,7 @@
 
 use App\Modules\Dispatch\Models\ServiceRequest;
 use App\Modules\Rental\Models\RentalReservation;
+use App\Modules\Rental\ViewModels\RentalHandoffViewModel;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
 use App\Shared\Assets\Enums\AssetStatus;
@@ -43,3 +44,12 @@ it('seeds undispatched Core 1 job orders and rentals into incoming work', functi
         ->assertJsonFragment(['reference' => 'RN-2026-0031'])
         ->assertJsonFragment(['name' => 'CRANE-50T · 50T Tadano Hydraulic Crane', 'quantity' => 1, 'operator' => 'Operator']);
 });
+
+it('treats every operated unit type, including tower cranes, as needing an operator', function (string $kind, ?string $expected) {
+    expect(RentalHandoffViewModel::operatorLabel(new OperationalAsset(['kind' => $kind])))->toBe($expected);
+})->with([
+    'tower crane' => ['tower_crane', 'Operator'],
+    'mobile crane' => ['crane', 'Operator'],
+    'heavy equipment' => ['equipment', 'Operator'],
+    'truck' => ['truck', 'Operator'],
+]);

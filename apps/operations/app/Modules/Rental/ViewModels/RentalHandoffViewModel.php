@@ -103,7 +103,7 @@ final class RentalHandoffViewModel
      */
     public static function operatorLabel(OperationalAsset $asset): ?string
     {
-        return in_array($asset->kind, ['crane', 'mobile_crane', 'equipment', 'truck', 'vehicle'], true)
+        return in_array($asset->kind, ['tower_crane', 'crane', 'mobile_crane', 'equipment', 'truck', 'vehicle'], true)
             ? 'Operator'
             : null;
     }
