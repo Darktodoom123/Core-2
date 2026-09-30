@@ -212,108 +212,48 @@ test.describe('New dispatch direct-intake contract', () => {
         await page.getByRole('button', { name: /^New dispatch\b/i }).click();
 
         const queueHeading = page.getByRole('heading', {
-            name: 'Incoming work queue',
+            name: 'Incoming work',
             exact: true,
         });
-        const fallbackLabel = page.getByText('Other work', {
-            exact: true,
+        const flowSteps = page.getByRole('list', {
+            name: 'How incoming work becomes a dispatch',
         });
-        const reconciliationLabel = page.getByText('Duplicate check', {
-            exact: true,
-        });
-        const reconciliationButton = page.getByRole('button', {
-            name: /Check for duplicates/i,
-        });
-        const headerAddClient = page.getByRole('button', {
-            name: 'Add client',
-            exact: true,
+        const filters = page.getByRole('group', {
+            name: 'Filter incoming work',
         });
 
         await expect(queueHeading).toBeVisible();
-        await expect(fallbackLabel).toBeVisible();
-        await expect(reconciliationLabel).toBeVisible();
-        await expect(headerAddClient).toBeVisible();
+        await expect(flowSteps).toBeVisible();
+        await expect(filters).toBeVisible();
+        await expect(
+            page.getByRole('button', { name: 'Add client', exact: true }),
+        ).toHaveCount(0);
 
         const queue = page.getByRole('list', { name: 'Incoming work queue' });
-        const renderedIncomingRows = queue.getByRole('listitem');
-        const renderedIncomingCount = await renderedIncomingRows.count();
-        const queueScope = page.getByText(/^Showing \d+ of \d+ orders/i);
-        await expect(queueScope).toBeVisible();
-        expect(countFromText(await queueScope.innerText())).toBe(
-            renderedIncomingCount,
-        );
+        const allFilter = filters.getByRole('button', { name: /^All/ });
+        await expect(allFilter).toHaveAttribute('aria-pressed', 'true');
 
-        const reconciliationButtonText = await reconciliationButton.innerText();
-        await reconciliationButton.click();
-        await expect(
-            page.getByRole('heading', {
-                name: /duplicate dispatches/i,
-            }),
-        ).toBeVisible();
-        const renderedReconciliationRows = page.locator(
-            '[data-reconciliation-item="true"]',
-        );
-        const renderedReconciliationCount =
-            await renderedReconciliationRows.count();
-        expect(countFromText(reconciliationButtonText)).toBe(
-            renderedReconciliationCount,
-        );
+        if ((await queue.count()) > 0) {
+            const renderedIncomingCount = await queue
+                .getByRole('listitem')
+                .count();
+            expect(countFromText(await allFilter.innerText())).toBe(
+                renderedIncomingCount,
+            );
 
-        const possibleMatches = renderedReconciliationRows.filter({
-            hasText: 'Possible matching draft',
-        });
-
-        if ((await possibleMatches.count()) > 0) {
+            await queue.getByRole('button').first().click();
             await expect(
-                possibleMatches.first().getByRole('button', {
-                    name: /Review draft/i,
-                }),
+                page.getByText(/update the order in Core 1/i),
             ).toBeVisible();
-            await expect(
-                possibleMatches.first().getByRole('button', {
-                    name: /Review and create dispatch/i,
-                }),
-            ).toHaveCount(0);
+            await expect(page.getByLabel(/Dispatch reference/i)).toHaveCount(0);
         }
-
-        const reviewableRental = renderedReconciliationRows
-            .filter({ hasText: 'Rental Reservation' })
-            .filter({
-                has: page.getByRole('button', {
-                    name: /Review and create dispatch/i,
-                }),
-            })
-            .first();
-
-        if ((await reviewableRental.count()) > 0) {
-            await reviewableRental
-                .getByRole('button', {
-                    name: /Review and create dispatch/i,
-                })
-                .click();
-            await expect(page.getByText(/Showing rental/i)).toBeVisible();
-            await expect(
-                page.getByRole('button', { name: 'Create rental dispatch' }),
-            ).toHaveCount(1);
-            await page
-                .getByRole('button', { name: /Close rental intake/i })
-                .click();
-        } else {
-            await page
-                .getByRole('button', { name: /Close duplicate check/i })
-                .click();
-        }
-
-        await expect(queueHeading).toBeVisible();
 
         const direct = await openDirectDispatch(page);
 
         // Parent integration contract: this is a subview replacement, not an
         // appended form below the queue/fallback/reconciliation rows.
         await expect(queueHeading).toBeHidden();
-        await expect(fallbackLabel).toBeHidden();
-        await expect(reconciliationLabel).toBeHidden();
-        await expect(headerAddClient).toBeHidden();
+        await expect(flowSteps).toBeHidden();
         await expect(page.getByRole('dialog')).toHaveCount(0);
 
         await expect(

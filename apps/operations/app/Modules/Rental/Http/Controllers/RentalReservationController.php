@@ -3,6 +3,7 @@
 namespace App\Modules\Rental\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Dispatch\Support\DispatchScheduleUrl;
 use App\Modules\Rental\Actions\ApproveRentalReservation;
 use App\Modules\Rental\Actions\AssignRentalOperator;
 use App\Modules\Rental\Actions\AuthorizeRentalOperation;
@@ -44,16 +45,25 @@ final class RentalReservationController extends Controller
 
     public function createDispatch(Request $request, RentalReservation $rentalReservation, CreateRentalDispatchHandoff $action): JsonResponse|RedirectResponse
     {
+        $scheduleDate = $request->validate([
+            'schedule_date' => ['sometimes', 'nullable', 'date_format:Y-m-d'],
+        ])['schedule_date'] ?? null;
         $job = $action->handle($rentalReservation, $request->user());
 
         if ($request->expectsJson()) {
             return response()->json(['data' => $job], 201);
         }
 
-        return back()->with('flash', [
+        $flash = [
             'tone' => 'success',
             'message' => "Rental {$rentalReservation->reference} was linked to dispatch {$job->reference}.",
-        ]);
+        ];
+
+        if ($request->boolean('open_schedule')) {
+            return redirect(DispatchScheduleUrl::for($job, $scheduleDate))->with('flash', $flash);
+        }
+
+        return back()->with('flash', $flash);
     }
 
     public function assignOperator(RentalReservation $rentalReservation, AssignRentalOperatorRequest $request, AssignRentalOperator $action): JsonResponse

@@ -126,6 +126,8 @@ export interface RentalItemContext {
     name: string;
     quantity: number;
     condition_notes?: string | null;
+    /** "Operator" when the unit goes out with one; null when none. */
+    operator?: string | null;
 }
 
 export interface GeoCoordinates {

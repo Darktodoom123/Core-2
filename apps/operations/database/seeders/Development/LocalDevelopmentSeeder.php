@@ -191,6 +191,7 @@ final class LocalDevelopmentSeeder extends Seeder
         }
 
         $this->call(AlibatonPersonnelSeeder::class);
+        $this->call(Core1IncomingWorkSeeder::class);
     }
 
     private function replaceLegacyLocalAssets(): void

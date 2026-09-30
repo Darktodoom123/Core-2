@@ -8,15 +8,20 @@ Creating a local coverage record does not create or synchronize a Core 1 project
 
 ## Daily workflow
 
-1. **Incoming work:** review the permission-scoped, server-paginated handoff
-   queue. Its total covers all eligible handoffs the current user may review;
-   loading and failure states identify when only the workspace snapshot is
-   visible. Use the explicit direct dispatch fallback when authorized; unsaved
-   drafts retain exit protection.
-   Reconciliation marks client-name similarity as a possible draft match and
-   sends unmatched rental handoffs through their review screens before
-   conversion. The selected handoff is isolated for review, with a way to show
-   all loaded handoffs.
+1. **Incoming work:** job orders (Core 1 Job Order Registration) and delivery
+   rentals (Core 1 Rental Management) wait in a server-paginated list, sorted
+   emergencies first, then by requested date, and filterable by type. Opening
+   one shows its Core 1 details read-only, the fleet unit it needs with an
+   operator, and an automatic duplicate hint when a manual draft exists for
+   the same client. **Create dispatch** assigns the `DSP-SRV-…`/`DSP-REN-…`
+   reference on the server, sends times with the browser's offset, and opens
+   the Schedule on that day with the new dispatch selected for crew and
+   equipment assignment. **Create direct dispatch** covers work that did not
+   come from Core 1; unsaved drafts retain exit protection.
+   Core 1 is not connected yet. `Core1IncomingWorkSeeder` fills the list with
+   sample orders for real fleet units, and **Simulate Core 1 order** (users who
+   can create service requests) adds one through the existing service-request
+   route.
 2. **Schedule:** the default view starts today. Search and filter permitted jobs,
    select a job, review its requirements and recorded resources, and follow its
    next action. List uses the selected day. Calendar supports day/week/month.

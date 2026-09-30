@@ -184,7 +184,7 @@ final class DispatchDeskIncomingQuery
         }
 
         $reservations = RentalReservation::query()
-            ->with(['client:id,code,company_name', 'latestHandoverEvidence'])
+            ->with(['client:id,code,company_name', 'latestHandoverEvidence', 'items.asset:id,code,name,kind'])
             ->whereKey($ids)
             ->get();
 

@@ -71,7 +71,7 @@ function parseSource(value: string | null): DispatchSourceFilter {
 function parseIntakeMode(
     value: string | null,
 ): DispatchDeskUrlState['intakeMode'] {
-    if (value === 'service' || value === 'rental') {
+    if (value === 'service' || value === 'rental' || value === 'manual') {
         return value;
     }
 

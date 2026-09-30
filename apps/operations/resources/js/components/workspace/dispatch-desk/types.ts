@@ -50,5 +50,5 @@ export interface DispatchDeskUrlState {
     needsAssignmentOnly: boolean;
     selectedJobId: number | null;
     showIntake: boolean;
-    intakeMode: 'service' | 'rental' | null;
+    intakeMode: 'service' | 'rental' | 'manual' | null;
 }

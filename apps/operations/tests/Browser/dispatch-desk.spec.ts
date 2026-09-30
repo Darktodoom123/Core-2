@@ -159,7 +159,7 @@ test('office dispatch desk preserves schedule context and separates operational 
     ).toHaveAttribute('aria-current', 'page');
     await views.getByRole('button', { name: /^Incoming work/ }).click();
     await expect(
-        page.getByRole('heading', { name: 'Incoming work queue', exact: true }),
+        page.getByRole('heading', { name: 'Incoming work', exact: true }),
     ).toBeVisible();
     const accessibility = await new AxeBuilder({ page })
         .include('.workspace-width-contained')

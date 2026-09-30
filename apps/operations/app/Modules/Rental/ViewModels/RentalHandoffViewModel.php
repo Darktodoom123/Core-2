@@ -3,6 +3,7 @@
 namespace App\Modules\Rental\ViewModels;
 
 use App\Modules\Rental\Models\RentalReservation;
+use App\Shared\Assets\Models\OperationalAsset;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -50,6 +51,7 @@ final class RentalHandoffViewModel
             'evidence_signee' => $latestEvidence?->signee_name,
             'evidence_submitted_at' => $latestEvidence?->submitted_at?->toIso8601String(),
             'evidence_type' => $latestEvidence?->handover_type,
+            'rental_items' => self::items($reservation),
         ];
     }
 
@@ -61,5 +63,48 @@ final class RentalHandoffViewModel
     private static function dateOnly(mixed $value): ?string
     {
         return $value === null ? null : Carbon::parse((string) $value)->toDateString();
+    }
+
+    /**
+     * Reserved equipment and the operator each unit needs. Only filled when the
+     * caller eager-loaded `items.asset`, so other lists stay query-free.
+     *
+     * @return list<array{id: int, name: string, quantity: int, operator: string|null}>
+     */
+    private static function items(RentalReservation $reservation): array
+    {
+        if (! $reservation->relationLoaded('items')) {
+            return [];
+        }
+
+        $items = [];
+
+        foreach ($reservation->items as $item) {
+            $asset = $item->asset;
+
+            if ($asset === null) {
+                continue;
+            }
+
+            $items[] = [
+                'id' => (int) $item->getKey(),
+                'name' => "{$asset->code} · {$asset->name}",
+                'quantity' => (int) $item->quantity,
+                'operator' => self::operatorLabel($asset),
+            ];
+        }
+
+        return $items;
+    }
+
+    /**
+     * Cranes, machines and trucks all go out with an operator. Operators are
+     * flexible across unit types, so the need is simply "Operator".
+     */
+    public static function operatorLabel(OperationalAsset $asset): ?string
+    {
+        return in_array($asset->kind, ['crane', 'mobile_crane', 'equipment', 'truck', 'vehicle'], true)
+            ? 'Operator'
+            : null;
     }
 }

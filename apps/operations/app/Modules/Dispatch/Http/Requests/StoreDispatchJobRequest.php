@@ -35,7 +35,6 @@ final class StoreDispatchJobRequest extends FormRequest
                 ),
             ],
             'reference' => [
-                Rule::requiredIf($linkedToServiceRequest),
                 'nullable',
                 'string',
                 'max:40',
@@ -47,6 +46,8 @@ final class StoreDispatchJobRequest extends FormRequest
             'site_notes' => [Rule::prohibitedIf($linkedToServiceRequest), 'nullable', 'string', 'max:5000'],
             'scheduled_start' => ['required', 'date'],
             'scheduled_end' => ['required', 'date', 'after:scheduled_start'],
+            'open_schedule' => ['sometimes', 'boolean'],
+            'schedule_date' => ['sometimes', 'nullable', 'date_format:Y-m-d'],
             'priority' => [Rule::prohibitedIf($linkedToServiceRequest), 'required_without:service_request_id', Rule::enum(DispatchPriority::class)],
             'work_stream' => ['nullable', 'string', Rule::in(['service', 'rental', 'general'])],
             'equipment_subtype' => ['nullable', 'string', 'max:50'],

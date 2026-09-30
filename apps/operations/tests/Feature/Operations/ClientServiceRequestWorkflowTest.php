@@ -130,6 +130,80 @@ it('converts one service request into multiple distinct draft dispatches atomica
         ->and(AuditEvent::query()->where('action', 'service_request.dispatch_started')->count())->toBe(1);
 });
 
+it('generates the dispatch reference when a service request is converted without one', function () {
+    $dispatcher = intakeUser(RoleName::OperationsManager);
+    $client = Client::query()->create([
+        'code' => 'CLI-4010',
+        'company_name' => 'Northpoint Builders',
+        'status' => 'active',
+    ]);
+    $serviceRequest = ServiceRequest::query()->create([
+        'reference' => 'JO-2026-4010',
+        'client_id' => $client->id,
+        'created_by' => $dispatcher->id,
+        'project_name' => 'Precast panel lift',
+        'service_type' => 'crane_lift',
+        'location' => 'Ortigas Center, Pasig City',
+        'priority' => DispatchPriority::Routine,
+        'status' => 'submitted',
+    ]);
+
+    $this->actingAs($dispatcher)
+        ->from('/')
+        ->post('/operations/dispatch-jobs', [
+            'service_request_id' => $serviceRequest->id,
+            'scheduled_start' => now()->addDay()->toIso8601String(),
+            'scheduled_end' => now()->addDay()->addHours(4)->toIso8601String(),
+        ])
+        ->assertRedirect('/')
+        ->assertSessionDoesntHaveErrors();
+
+    $job = DispatchJob::query()->whereBelongsTo($serviceRequest)->sole();
+
+    expect($job->reference)->toMatch('/^DSP-SRV-\d{4}-\d{3,}$/');
+});
+
+it('opens the new dispatch on the schedule day the browser chose', function () {
+    $dispatcher = intakeUser(RoleName::OperationsManager);
+    $client = Client::query()->create([
+        'code' => 'CLI-4011',
+        'company_name' => 'Harbor Energy Works',
+        'status' => 'active',
+    ]);
+    $serviceRequest = ServiceRequest::query()->create([
+        'reference' => 'JO-2026-4011',
+        'client_id' => $client->id,
+        'created_by' => $dispatcher->id,
+        'project_name' => 'Transformer replacement lift',
+        'service_type' => 'crane_lift',
+        'location' => 'Batangas City',
+        'priority' => DispatchPriority::Emergency,
+        'status' => 'submitted',
+    ]);
+    $start = now()->addDays(2)->setTime(9, 0);
+
+    $response = $this->actingAs($dispatcher)
+        ->from('/?view=dispatch&dispatch_view=incoming')
+        ->post('/operations/dispatch-jobs', [
+            'service_request_id' => $serviceRequest->id,
+            'scheduled_start' => $start->toIso8601String(),
+            'scheduled_end' => $start->copy()->addHours(4)->toIso8601String(),
+            'open_schedule' => true,
+            'schedule_date' => '2031-01-15',
+        ]);
+
+    $job = DispatchJob::query()->whereBelongsTo($serviceRequest)->sole();
+
+    $response->assertRedirect('/?'.http_build_query([
+        'view' => 'dispatch',
+        'dispatch_view' => 'schedule',
+        'dispatch_mode' => 'list',
+        'dispatch_period' => 'day',
+        'dispatch_date' => '2031-01-15',
+        'dispatch_job' => $job->id,
+    ]))->assertSessionHas('flash.message', "Dispatch {$job->reference} was created.");
+});
+
 it('rejects duplicate and invalid service request conversions without creating another job', function () {
     $dispatcher = intakeUser(RoleName::OperationsManager);
     $client = Client::query()->create([

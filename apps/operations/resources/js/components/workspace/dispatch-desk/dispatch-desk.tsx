@@ -29,6 +29,7 @@ import {
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import { DIRECT_DISPATCH_DISCARD_EVENT } from '@/components/workspace/direct-dispatch';
 import { DispatchGptAdvisory } from '@/components/workspace/dispatch-gpt-advisory';
+import { IncomingWork } from '@/components/workspace/incoming-work/incoming-work';
 import { LiveDispatchIntake } from '@/components/workspace/live-dispatch-intake';
 import { ScheduleBoardTable } from '@/components/workspace/live-dispatch-workspace';
 import type { DerivedConflict } from '@/components/workspace/live-dispatch-workspace';
@@ -657,14 +658,15 @@ export function DispatchDesk({
                     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-surface-subtle px-5 py-3 lg:px-7">
                         <div className="flex min-w-0 items-center gap-2 text-xs text-ink-soft">
                             <span>
-                                {state.view === 'incoming' ||
-                                isResourceCoverageMode
-                                    ? 'Resource context uses loaded, permitted records'
-                                    : search.page
-                                      ? `${search.page.total} dispatch${search.page.total === 1 ? '' : 'es'} found · Page ${search.page.current_page} of ${search.page.last_page}`
-                                      : search.error
-                                        ? 'Showing a limited snapshot; complete search is unavailable'
-                                        : 'Showing the loaded snapshot while complete results load'}
+                                {state.view === 'incoming'
+                                    ? 'Orders sent from Core 1 that are waiting for a dispatch'
+                                    : isResourceCoverageMode
+                                      ? 'Resource context uses loaded, permitted records'
+                                      : search.page
+                                        ? `${search.page.total} dispatch${search.page.total === 1 ? '' : 'es'} found · Page ${search.page.current_page} of ${search.page.last_page}`
+                                        : search.error
+                                          ? 'Showing a limited snapshot; complete search is unavailable'
+                                          : 'Showing the loaded snapshot while complete results load'}
                             </span>
                             {(refreshing || search.pending) && (
                                 <span
@@ -748,47 +750,43 @@ export function DispatchDesk({
                             Back to first page
                         </Button>
                     )}
-                    {state.view === 'incoming' ? (
+                    {state.view === 'incoming' &&
+                    state.intakeMode === 'manual' ? (
                         <section
                             id="incoming-work-panel"
                             className="bg-canvas p-4 lg:p-6"
-                            aria-labelledby="incoming-work-heading"
+                            aria-label="Direct dispatch"
                         >
-                            <div className="mx-auto max-w-6xl">
-                                <div className="border-b border-line pb-4">
-                                    <h2
-                                        id="incoming-work-heading"
-                                        className="text-lg font-semibold tracking-[-0.02em] text-ink"
-                                    >
-                                        Incoming work
-                                    </h2>
-                                    <p className="mt-1 max-w-2xl text-sm leading-6 text-ink-soft">
-                                        Review source-aware handoffs and decide
-                                        whether to convert, reconcile, or create
-                                        a manual operational draft.
-                                    </p>
-                                </div>
-                                <LiveDispatchIntake
-                                    clients={clients}
-                                    serviceRequests={serviceRequests}
-                                    rentalHandoffs={rentalHandoffs}
-                                    incomingTotal={incomingTotal}
-                                    onIncomingTotalChange={setIncomingCount}
-                                    jobs={jobs}
-                                    capabilities={capabilities}
-                                    initialRequestId={intakeRequestId}
-                                    initialMode={state.intakeMode}
-                                    showQueueWhenEmpty
-                                    onDirtyChange={setDirectIntakeDirty}
-                                    onClose={() => {
-                                        setDirectIntakeDirty(false);
-                                        setShowIntake(false);
-                                        setIntakeMode(null);
-                                        setView('schedule');
-                                    }}
-                                />
-                            </div>
+                            <LiveDispatchIntake
+                                clients={clients}
+                                serviceRequests={serviceRequests}
+                                rentalHandoffs={rentalHandoffs}
+                                incomingTotal={incomingTotal}
+                                jobs={jobs}
+                                capabilities={capabilities}
+                                initialMode="manual"
+                                onDirtyChange={setDirectIntakeDirty}
+                                onBackToQueue={() => setIntakeMode(null)}
+                                onClose={() => {
+                                    setDirectIntakeDirty(false);
+                                    setShowIntake(false);
+                                    setIntakeMode(null);
+                                    setView('schedule');
+                                }}
+                            />
                         </section>
+                    ) : state.view === 'incoming' ? (
+                        <IncomingWork
+                            clients={clients}
+                            assets={assets}
+                            serviceRequests={serviceRequests}
+                            rentalHandoffs={rentalHandoffs}
+                            jobs={jobs}
+                            capabilities={capabilities}
+                            initialRequestId={intakeRequestId}
+                            onIncomingTotalChange={setIncomingCount}
+                            onCreateDirect={() => setIntakeMode('manual')}
+                        />
                     ) : (
                         <>
                             <div

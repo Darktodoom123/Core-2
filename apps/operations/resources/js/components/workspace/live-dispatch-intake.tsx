@@ -1,12 +1,5 @@
 import { useForm, router } from '@inertiajs/react';
-import {
-    CalendarDays,
-    CheckCircle2,
-    Package,
-    Plus,
-    Truck,
-    X,
-} from 'lucide-react';
+import { CalendarDays, CheckCircle2, Package, Plus, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent, InputHTMLAttributes, ReactNode } from 'react';
 import {
@@ -18,9 +11,19 @@ import {
 } from '@/components/ui';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import { DirectDispatchView } from '@/components/workspace/direct-dispatch/direct-dispatch-view';
+import {
+    addHours,
+    isIncomingQueuePage,
+    toLocalDateTime,
+} from '@/components/workspace/incoming-work/incoming-work-helpers';
+import type {
+    IncomingQueuePage,
+    IncomingWorkItem,
+} from '@/components/workspace/incoming-work/incoming-work-helpers';
 import { humanize } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import type {
+    AssetViewModel,
     ClientViewModel,
     DispatchJobViewModel,
     RentalDispatchHandoffViewModel,
@@ -31,29 +34,6 @@ import type {
 
 export type IntakeMode =
     'manual' | 'service' | 'rental' | 'reconciliation' | 'client' | null;
-
-type IncomingWorkItem = {
-    key: string;
-    mode: 'service' | 'rental';
-    sourceLabel: string;
-    reference: string;
-    client: string;
-    detail: string;
-    status: string;
-    sourceId: number;
-    hasEvidence?: boolean;
-    evidenceSignee?: string | null;
-};
-
-interface IncomingQueuePage {
-    items: IncomingWorkItem[];
-    service_requests: ServiceRequestViewModel[];
-    rental_handoffs: RentalDispatchHandoffViewModel[];
-    total: number;
-    current_page: number;
-    last_page: number;
-    per_page: number;
-}
 
 export function LiveDispatchIntake({
     clients,
@@ -67,6 +47,7 @@ export function LiveDispatchIntake({
     incomingTotal,
     onIncomingTotalChange,
     onClose,
+    onBackToQueue,
     onDirtyChange,
 }: {
     clients: ClientViewModel[];
@@ -80,6 +61,7 @@ export function LiveDispatchIntake({
     incomingTotal?: number;
     onIncomingTotalChange?: (total: number) => void;
     onClose?: () => void;
+    onBackToQueue?: () => void;
     onDirtyChange?: (isDirty: boolean) => void;
 }) {
     const canCreateManual = capabilities.create_dispatch;
@@ -131,17 +113,9 @@ export function LiveDispatchIntake({
                     throw new Error('Incoming queue failed');
                 }
 
-                const page: IncomingQueuePage = await response.json();
+                const page: unknown = await response.json();
 
-                if (
-                    !Array.isArray(page.items) ||
-                    !Array.isArray(page.service_requests) ||
-                    !Array.isArray(page.rental_handoffs) ||
-                    !Number.isInteger(page.total) ||
-                    !Number.isInteger(page.current_page) ||
-                    !Number.isInteger(page.last_page) ||
-                    !Number.isInteger(page.per_page)
-                ) {
+                if (!isIncomingQueuePage(page)) {
                     throw new Error('Incoming queue response was invalid');
                 }
 
@@ -286,34 +260,6 @@ export function LiveDispatchIntake({
                 aria-labelledby="direct-dispatch-title"
             >
                 <div className="workspace-width-contained mx-auto max-w-7xl">
-                    {incomingTotalCount > 0 && (
-                        <div className="mb-4 flex items-center justify-between gap-3 border-b border-line pb-3">
-                            <div className="flex items-center gap-1 rounded-lg border border-line bg-surface-subtle p-1">
-                                <button
-                                    type="button"
-                                    className="flex items-center gap-1.5 rounded-md bg-surface px-3 py-1.5 text-xs font-semibold text-ink shadow-xs"
-                                >
-                                    <Truck className="h-3.5 w-3.5 text-brand-strong" />
-                                    Direct dispatch
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        if (onDirtyChange) {
-                                            onDirtyChange(false);
-                                        }
-
-                                        setMode(null);
-                                    }}
-                                    className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-ink-soft hover:bg-surface hover:text-ink"
-                                >
-                                    <Package className="h-3.5 w-3.5" />
-                                    Incoming orders ({incomingTotalCount})
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
                     <DirectDispatchView
                         clients={clients}
                         capabilities={capabilities}
@@ -321,7 +267,9 @@ export function LiveDispatchIntake({
                             setShowClientIntake(false);
                             onDirtyChange?.(false);
 
-                            if (
+                            if (onBackToQueue) {
+                                onBackToQueue();
+                            } else if (
                                 incomingItems.length > 0 ||
                                 showQueueWhenEmpty
                             ) {
@@ -342,7 +290,8 @@ export function LiveDispatchIntake({
                                 document
                                     .getElementById(
                                         reason === 'back' &&
-                                            (incomingItems.length > 0 ||
+                                            (onBackToQueue !== undefined ||
+                                                incomingItems.length > 0 ||
                                                 showQueueWhenEmpty)
                                             ? 'create-direct-dispatch-trigger'
                                             : 'new-dispatch-trigger',
@@ -833,16 +782,29 @@ function ServiceIntakeSection({
     );
 }
 
-function ServiceRequestIntakeForm({
+export function ServiceRequestIntakeForm({
     clients,
     onClose,
+    defaultReference = '',
+    submitLabel = 'Save service request',
+    compact = false,
+    equipment,
 }: {
     clients: ClientViewModel[];
     onClose: () => void;
+    defaultReference?: string;
+    submitLabel?: string;
+    compact?: boolean;
+    /** When given, the order names one fleet unit instead of free-text needs. */
+    equipment?: AssetViewModel[];
 }) {
     const [requirementsText, setRequirementsText] = useState('');
+    const [equipmentId, setEquipmentId] = useState('');
+    const [needsOperator, setNeedsOperator] = useState(true);
+    const selectedEquipment =
+        equipment?.find((asset) => String(asset.id) === equipmentId) ?? null;
     const form = useForm({
-        reference: '',
+        reference: defaultReference,
         client_id: '',
         business_line: 'service',
         project_name: '',
@@ -854,19 +816,23 @@ function ServiceRequestIntakeForm({
         requirements: [] as string[],
     });
 
-    const complete = [
-        form.data.reference,
-        form.data.client_id,
-        form.data.project_name,
-        form.data.service_type,
-        form.data.location,
-    ].every((value) => value.trim() !== '');
+    const complete =
+        [
+            form.data.reference,
+            form.data.client_id,
+            form.data.project_name,
+            form.data.service_type,
+            form.data.location,
+        ].every((value) => value.trim() !== '') &&
+        (equipment === undefined || selectedEquipment !== null);
 
     const submit = (event: FormEvent) => {
         event.preventDefault();
         form.transform((data) => ({
             ...data,
-            requirements: linesFromText(requirementsText),
+            requirements: selectedEquipment
+                ? fleetRequirements(selectedEquipment, needsOperator)
+                : linesFromText(requirementsText),
         }));
         form.post('/operations/service-requests', {
             preserveScroll: true,
@@ -880,7 +846,10 @@ function ServiceRequestIntakeForm({
 
     return (
         <form
-            className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4"
+            className={cn(
+                'mt-4 grid gap-4 md:grid-cols-2',
+                !compact && 'xl:grid-cols-4',
+            )}
             onSubmit={submit}
             noValidate
         >
@@ -954,16 +923,47 @@ function ServiceRequestIntakeForm({
                 <option value="priority">Priority</option>
                 <option value="emergency">Emergency</option>
             </SelectField>
-            <div className="hidden xl:block" aria-hidden="true" />
-            <TextAreaField
-                id="request-requirements"
-                label="Requirements"
-                hint="One per line, e.g. 25T mobile crane"
-                value={requirementsText}
-                error={form.errors.requirements}
-                onChange={setRequirementsText}
-                className="md:col-span-2"
-            />
+            {!compact && <div className="hidden xl:block" aria-hidden="true" />}
+            {equipment ? (
+                <div className="grid gap-3 md:col-span-2">
+                    <SelectField
+                        id="request-equipment"
+                        label="Equipment"
+                        value={equipmentId}
+                        error={form.errors.requirements}
+                        onChange={setEquipmentId}
+                        required
+                    >
+                        <option value="">Select a unit from our fleet</option>
+                        {equipment.map((asset) => (
+                            <option key={asset.id} value={asset.id}>
+                                {asset.code} · {asset.name}
+                            </option>
+                        ))}
+                    </SelectField>
+                    <label className="flex min-h-11 items-center gap-2 text-sm text-ink">
+                        <input
+                            type="checkbox"
+                            checked={needsOperator}
+                            onChange={(event) =>
+                                setNeedsOperator(event.target.checked)
+                            }
+                            className="h-4 w-4"
+                        />
+                        Include our operator for this unit
+                    </label>
+                </div>
+            ) : (
+                <TextAreaField
+                    id="request-requirements"
+                    label="Requirements"
+                    hint="One per line, e.g. 25T mobile crane"
+                    value={requirementsText}
+                    error={form.errors.requirements}
+                    onChange={setRequirementsText}
+                    className="md:col-span-2"
+                />
+            )}
             <TextAreaField
                 id="request-site-notes"
                 label="Site notes"
@@ -972,15 +972,18 @@ function ServiceRequestIntakeForm({
                 onChange={(value) => form.setData('site_notes', value)}
                 className="md:col-span-2"
             />
-            <div className="flex justify-end border-t border-line pt-4 md:col-span-2 xl:col-span-4">
+            <div
+                className={cn(
+                    'flex justify-end border-t border-line pt-4 md:col-span-2',
+                    !compact && 'xl:col-span-4',
+                )}
+            >
                 <Button
                     type="submit"
                     variant="primary"
                     disabled={form.processing || !complete}
                 >
-                    {form.processing
-                        ? 'Saving request…'
-                        : 'Save service request'}
+                    {form.processing ? 'Saving request…' : submitLabel}
                 </Button>
             </div>
         </form>
@@ -996,7 +999,6 @@ function DispatchConversion({
 }) {
     const form = useForm({
         service_request_id: '',
-        reference: '',
         scheduled_start: '',
         scheduled_end: '',
     });
@@ -1044,7 +1046,6 @@ function DispatchConversion({
 
     const complete = [
         form.data.service_request_id,
-        form.data.reference,
         form.data.scheduled_start,
         form.data.scheduled_end,
     ].every((value) => value.trim() !== '');
@@ -1053,9 +1054,6 @@ function DispatchConversion({
         event.preventDefault();
         form.post('/operations/dispatch-jobs', {
             preserveScroll: true,
-            onSuccess: () => {
-                form.reset('reference');
-            },
         });
     };
 
@@ -1160,16 +1158,6 @@ function DispatchConversion({
                             </option>
                         ))}
                     </SelectField>
-                    <IntakeInput
-                        id="conversion-reference"
-                        label="Dispatch reference"
-                        value={form.data.reference}
-                        error={form.errors.reference}
-                        onChange={(value) => form.setData('reference', value)}
-                        placeholder="e.g. DSP-2026-0102"
-                        required
-                    />
-                    <div className="hidden sm:block" aria-hidden="true" />
                     <DateTimePicker
                         id="conversion-start"
                         label="Dispatch start"
@@ -1930,36 +1918,22 @@ function FieldError({ id, error }: { id: string; error?: string }) {
     );
 }
 
+function fleetRequirements(
+    asset: AssetViewModel,
+    needsOperator: boolean,
+): string[] {
+    const unit = `${asset.code} · ${asset.name}`;
+
+    if (!needsOperator) {
+        return [unit];
+    }
+
+    return [unit, 'Operator'];
+}
+
 function linesFromText(value: string): string[] {
     return value
         .split(/\r?\n/)
         .map((line) => line.trim())
         .filter((line) => line !== '');
-}
-
-function toLocalDateTime(value: string | null): string {
-    if (value === null) {
-        return '';
-    }
-
-    const date = new Date(value);
-
-    if (Number.isNaN(date.getTime())) {
-        return '';
-    }
-
-    const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-
-    return local.toISOString().slice(0, 16);
-}
-
-function addHours(value: string, hours: number): string {
-    if (value === '') {
-        return '';
-    }
-
-    const date = new Date(value);
-    date.setHours(date.getHours() + hours);
-
-    return toLocalDateTime(date.toISOString());
 }

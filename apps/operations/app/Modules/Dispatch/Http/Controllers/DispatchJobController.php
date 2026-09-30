@@ -19,6 +19,7 @@ use App\Modules\Dispatch\Http\Requests\UpdateDispatchResourceRequirementsRequest
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dispatch\Planning\Models\ProjectShift;
 use App\Modules\Dispatch\Planning\Services\PlanningAccess;
+use App\Modules\Dispatch\Support\DispatchScheduleUrl;
 use App\Modules\Dispatch\ViewModels\DispatchExecutionViewModel;
 use App\Modules\Dispatch\ViewModels\DispatchFieldProgressionViewModel;
 use App\Platform\Gpt\Services\BlockerAdviceReview;
@@ -69,13 +70,15 @@ final class DispatchJobController extends Controller
         CreateManualDispatchHandoff $manual,
     ): RedirectResponse {
         $validated = $request->validated();
+        $scheduleDate = $validated['schedule_date'] ?? null;
+        unset($validated['open_schedule'], $validated['schedule_date']);
 
         if (isset($validated['service_request_id'])) {
             $job = $convert->handle(
                 (int) $validated['service_request_id'],
                 $request->user(),
                 [
-                    'reference' => $validated['reference'],
+                    'reference' => $validated['reference'] ?? null,
                     'scheduled_start' => $validated['scheduled_start'],
                     'scheduled_end' => $validated['scheduled_end'],
                 ],
@@ -84,10 +87,16 @@ final class DispatchJobController extends Controller
             $job = $manual->handle($request->user(), $validated);
         }
 
-        return back()->with('flash', [
+        $flash = [
             'tone' => 'success',
             'message' => "Dispatch {$job->reference} was created.",
-        ]);
+        ];
+
+        if ($request->boolean('open_schedule')) {
+            return redirect(DispatchScheduleUrl::for($job, $scheduleDate))->with('flash', $flash);
+        }
+
+        return back()->with('flash', $flash);
     }
 
     public function show(

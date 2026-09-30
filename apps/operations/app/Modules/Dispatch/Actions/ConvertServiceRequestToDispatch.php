@@ -6,6 +6,7 @@ use App\Modules\Dispatch\Enums\DispatchSourceType;
 use App\Modules\Dispatch\Enums\ServiceRequestStatus;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dispatch\Models\ServiceRequest;
+use App\Modules\Dispatch\Services\ManualDispatchReferenceGenerator;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -16,11 +17,12 @@ final class ConvertServiceRequestToDispatch
     public function __construct(
         private readonly RecordAuditEvent $audit,
         private readonly CreateDispatchFromSource $dispatch,
+        private readonly ManualDispatchReferenceGenerator $references,
     ) {}
 
     /**
      * @param  array{
-     *     reference: string,
+     *     reference?: string|null,
      *     scheduled_start: string,
      *     scheduled_end: string
      * }  $attributes
@@ -54,7 +56,7 @@ final class ConvertServiceRequestToDispatch
             }
 
             $job = $this->dispatch->handleWithinTransaction($actor, $serviceRequest, DispatchSourceType::ServiceRequest, [
-                'reference' => $attributes['reference'],
+                'reference' => $attributes['reference'] ?? $this->references->generate('service'),
                 'client' => $serviceRequest->client->company_name,
                 'title' => $serviceRequest->project_name,
                 'site' => $serviceRequest->location,
