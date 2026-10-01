@@ -64,7 +64,7 @@ Homestead.yaml
 /.zed
 AGENTS.md
 CLAUDE.md
-/.claude/worktrees/
+/.claude/
 .agents
 .impeccable
 .codex
