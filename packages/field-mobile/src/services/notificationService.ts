@@ -255,14 +255,6 @@ export function clearNotificationTokenCache(): void {
     cachedInstallationId = null;
 }
 
-export function getLastRegisteredToken(): string | null {
-    return lastRegisteredToken;
-}
-
-export function getLastRegisteredAt(): string | null {
-    return lastRegisteredAt;
-}
-
 /**
  * Safely extracts job_id / dispatch_job_id from notification data.
  */

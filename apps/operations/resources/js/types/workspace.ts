@@ -114,13 +114,6 @@ export interface PlannedCraneSlotViewModel {
 export type DispatchSourceType =
     'direct' | 'service_request' | 'rental_reservation' | 'manual';
 
-export interface DispatchRequirementItem {
-    id: string;
-    text: string;
-    completed: boolean;
-    required_for_activation?: boolean;
-}
-
 export interface RentalItemContext {
     id: number;
     name: string;
@@ -128,11 +121,6 @@ export interface RentalItemContext {
     condition_notes?: string | null;
     /** "Operator" when the unit goes out with one; null when none. */
     operator?: string | null;
-}
-
-export interface GeoCoordinates {
-    latitude: number | null;
-    longitude: number | null;
 }
 
 export interface DispatchSourceViewModel {

@@ -1,12 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import React, { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-    AssetListSkeleton,
-    FuelTableSkeleton,
-    LiveWorkspaceSection,
-    ResponsiveTable,
-} from '@/components/workspace/live-workspace-sections';
+import { LiveWorkspaceSection } from '@/components/workspace/live-workspace-sections';
 import type {
     AssetViewModel,
     DispatchJobViewModel,
@@ -526,40 +521,5 @@ describe('Phase 2 Lead Integration: LiveWorkspaceSection Screen Coordination', (
             screen.getAllByText('Tower Crane Erection').length,
         ).toBeGreaterThanOrEqual(1);
         expect(screen.queryByText('FUEL-2026-0001')).not.toBeInTheDocument();
-    });
-
-    it('renders skeleton loaders and ResponsiveTable correctly', () => {
-        const { container: assetSkeleton } = render(<AssetListSkeleton />);
-        expect(
-            assetSkeleton.querySelector(
-                '[aria-label="Loading operational assets"]',
-            ),
-        ).toBeInTheDocument();
-
-        const { container: fuelSkeleton } = render(<FuelTableSkeleton />);
-        expect(
-            fuelSkeleton.querySelector('[aria-label="Loading fuel requests"]'),
-        ).toBeInTheDocument();
-
-        render(
-            <ResponsiveTable
-                headers={['Asset Code', 'Status']}
-                rows={[
-                    {
-                        key: 1,
-                        cells: [
-                            <span key="c">CRN-001</span>,
-                            <span key="s">Active</span>,
-                        ],
-                    },
-                ]}
-            />,
-        );
-
-        expect(screen.getAllByText('Asset Code').length).toBeGreaterThanOrEqual(
-            1,
-        );
-        expect(screen.getAllByText('CRN-001').length).toBeGreaterThanOrEqual(1);
-        expect(screen.getAllByText('Active').length).toBeGreaterThanOrEqual(1);
     });
 });

@@ -372,8 +372,6 @@ opportunistically in code you touch:
   its tabs are migrated and guarded by `designTokenAdoption.test.ts`.
 - Resting panels combine a border with a shadow (`sharedStyles.panel`,
   `shadows.md`).
-- `createMachinedStyles` in `src/theme/index.tsx` (uppercase "pedal" buttons and
-  panels) has no callers.
 - Very large screen files: `AppNavigator.tsx` is over 3,000 lines.
   `HosScreen.tsx` and `DvirScreen.tsx` were split into `src/screens/hos/` and
   `src/screens/dvir/` (largest files 667 and 737 lines); their section

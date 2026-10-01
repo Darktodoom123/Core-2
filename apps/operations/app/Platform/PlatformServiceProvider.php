@@ -55,7 +55,6 @@ final class PlatformServiceProvider extends ServiceProvider
         });
 
         $this->app->alias(StorageFallbackServiceInterface::class, StorageFallbackService::class);
-        $this->app->alias(StorageFallbackServiceInterface::class, 'storage.fallback');
     }
 
     public function boot(): void

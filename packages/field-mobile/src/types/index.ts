@@ -312,10 +312,6 @@ export interface ActivateSosIncidentPayload extends SosContextSelection {
     location?: SosLocationSnapshot | null;
 }
 
-export interface SosCommandPayload extends ActivateSosIncidentPayload {
-    command_id?: string;
-}
-
 export type OutboxCommandType =
     | 'respond_assignment'
     | 'transition_status'
@@ -403,53 +399,6 @@ export interface HosCertifyCommandPayload {
     location_source?: string | null;
     location_name?: string | null;
     remarks?: string | null;
-}
-
-export interface EquipmentInspectionCommandPayload {
-    operational_asset_id: number;
-    dispatch_job_id?: number | null;
-    type:
-        | 'pre_operation'
-        | 'post_operation'
-        | 'maintenance'
-        | 'safety'
-        | 'post_repair';
-    result: 'passed' | 'failed' | 'conditional';
-    checklist: TechnicianInspectionCheck[] | Record<string, unknown>[];
-    findings?: string | null;
-}
-
-export interface PhotoAttachment {
-    uri: string;
-    fileName?: string;
-    fileSize?: number;
-    base64?: string;
-}
-
-export interface MaintenanceWorkOrderCommandPayload {
-    operational_asset_id: number;
-    dispatch_job_id?: number | null;
-    defect: string;
-    remarks?: string | null;
-    dispatch_blocking?: boolean;
-    scheduled_at?: string | null;
-    next_due_at?: string | null;
-    attachments?: PhotoAttachment[];
-}
-
-export interface ReleaseMaintenanceWorkOrderCommandPayload {
-    maintenance_work_order_id: number;
-    dispatch_job_id?: number | null;
-    work_performed: string[];
-    parts?: Array<{
-        part_name: string;
-        part_number?: string;
-        quantity: number;
-    }>;
-    release_checklist?: Record<string, unknown>[];
-    remarks?: string | null;
-    managerial_override?: boolean;
-    override_reason?: string | null;
 }
 
 export interface RentalHandoverCommandPayload {
@@ -553,69 +502,6 @@ export interface ApiErrorResponse {
     retry_after?: number;
 }
 
-export interface DispatchAssignmentOfferV2 {
-    id: number;
-    attempt_id: number;
-    plan_version_id: number;
-    workspace_key: string;
-    user_id: number;
-    assignment_type: string;
-    is_mandatory: boolean;
-    status: string;
-    offered_at?: string | null;
-    responded_at?: string | null;
-    response_reason?: string | null;
-    user?: User;
-}
-
-export interface DispatchPlanVersionV2 {
-    id: number;
-    attempt_id: number;
-    version: number;
-    status: string;
-    snapshot: Record<string, unknown>;
-    submitted_at?: string | null;
-    scheduled_start?: string | null;
-    scheduled_end?: string | null;
-}
-
-export interface DispatchReadinessV2 {
-    is_ready: boolean;
-    attempt_version?: number | null;
-    blockers: Array<{
-        code: string;
-        severity: string;
-        details?: Record<string, unknown>;
-    }>;
-}
-
-export interface DispatchJobV2 {
-    id: number;
-    reference: string;
-    client: string;
-    title: string;
-    site: string;
-    site_notes?: string | null;
-    priority: string;
-    status: string;
-    version: number;
-    scheduled_start?: string | null;
-    scheduled_end?: string | null;
-    attempt_number?: number;
-    is_archived?: boolean;
-    designated_lead?: {
-        offer_id: number;
-        user_id: number;
-        name: string;
-        username: string;
-    } | null;
-    is_designated_lead?: boolean;
-    my_offer?: DispatchAssignmentOfferV2 | null;
-    offers?: DispatchAssignmentOfferV2[];
-    active_plan?: DispatchPlanVersionV2 | null;
-    readiness?: DispatchReadinessV2 | null;
-}
-
 // ==========================================
 // Shift & Field Operational State Types
 // ==========================================
@@ -633,15 +519,6 @@ export type StandbyReason =
     | 'rigging_recheck'
     | 'inspection_hold'
     | 'other';
-
-export interface DutyStatusInfo {
-    status: DutyStatus;
-    statusLabel: string;
-    startedAt: string;
-    elapsedFormatted: string;
-    standbyReason?: StandbyReason | null;
-    remarks?: string | null;
-}
 
 export interface ShiftInfo {
     status: ShiftStatus;
@@ -753,65 +630,6 @@ export interface DvirInspectionRecord {
     }>;
 }
 
-export type LocationSharingTone = 'active' | 'queued' | 'paused' | 'offline';
-
-// ==========================================
-// Parked-and-Secured Confirmation Types
-// ==========================================
-
-export interface ParkedSecuredChecklist {
-    parkingBrakeEngaged: boolean;
-    wheelChocksDeployed: boolean;
-    hazardBeaconsActive: boolean;
-    surfaceAssessed: boolean;
-}
-
-export interface ParkedSecuredState {
-    isConfirmed: boolean;
-    confirmedAt?: string | null;
-    confirmedBy?: string | null;
-    checklist: ParkedSecuredChecklist;
-}
-
-// ==========================================
-// Crane Setup Safety Mode Types
-// ==========================================
-
-export type CraneHazardSeverity = 'critical' | 'warning' | 'info';
-
-export interface CraneHazardItem {
-    id: string;
-    type:
-        | 'powerline'
-        | 'underground_utility'
-        | 'unstable_ground'
-        | 'traffic'
-        | 'overhead_load';
-    title: string;
-    description: string;
-    severity: CraneHazardSeverity;
-    clearanceRequiredMetres?: number;
-    isMitigated: boolean;
-}
-
-export interface CraneSetupSafetyChecklist {
-    groundBearingVerified: boolean;
-    outriggersFullyExtended: boolean;
-    levelBubbleCentered: boolean;
-    powerLineClearanceVerified: boolean;
-    exclusionZoneBarricaded: boolean;
-    windSpeedChecked: boolean;
-}
-
-export interface CraneSetupState {
-    isSetupComplete: boolean;
-    verifiedAt?: string | null;
-    verifiedBy?: string | null;
-    exclusionRadiusMetres: number;
-    checklist: CraneSetupSafetyChecklist;
-    hazards: CraneHazardItem[];
-}
-
 // ==========================================
 // Technician Inspection & Handover Types
 // ==========================================
@@ -835,51 +653,6 @@ export interface TechnicianInspectionCheck {
     statusLabel: string;
     notes?: string | null;
     icon: string;
-}
-
-export type MaintenanceSeverity = 'minor' | 'major' | 'safety_critical';
-export type MaintenanceStatus = 'logged' | 'in_progress' | 'repaired';
-
-export interface MaintenanceWorkOrder {
-    id: string;
-    assetCode: string;
-    assetName: string;
-    defectTitle: string;
-    description: string;
-    severity: MaintenanceSeverity;
-    status: MaintenanceStatus;
-    reportedBy: string;
-    createdAt: string;
-    attachments?: Array<{
-        uri: string;
-        fileName?: string;
-        fileSize?: number;
-        base64?: string;
-    }>;
-}
-
-export interface SafeReleaseVerification {
-    isCertifiedSafe: boolean;
-    certifiedBy?: string | null;
-    certificationDate?: string | null;
-    certificateNumber?: string | null;
-    remarks?: string | null;
-}
-
-export type HandoverType = 'tech_to_operator' | 'operator_to_tech';
-export type ConditionRating = 'excellent' | 'good' | 'fair' | 'out_of_service';
-
-export interface TechnicianHandover {
-    id: string;
-    assetCode: string;
-    technicianName: string;
-    recipientName: string;
-    handoverType: HandoverType;
-    conditionRating: ConditionRating;
-    odometerKm?: number | null;
-    remarks: string;
-    signatureConfirmed: boolean;
-    timestamp: string;
 }
 
 export type NotificationTab = 'all' | 'alerts' | 'dispatches' | 'outbox';

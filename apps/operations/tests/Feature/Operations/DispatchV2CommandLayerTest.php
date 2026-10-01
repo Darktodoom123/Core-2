@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Dispatch\Commands\DispatchV2Commands;
 use App\Modules\Dispatch\Data\DispatchV2Mutation;
 use App\Modules\Dispatch\Enums\DispatchAssignmentOfferStatus;
 use App\Modules\Dispatch\Enums\DispatchAttemptStatus;
@@ -17,7 +18,6 @@ use App\Modules\Dispatch\Models\DispatchIdempotencyKey;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dispatch\Models\DispatchPlanApproval;
 use App\Modules\Dispatch\Models\DispatchPlanVersion;
-use App\Modules\Dispatch\Queries\DispatchV2ReadinessQuery;
 use App\Modules\Dispatch\Services\DispatchV2CommandService;
 use App\Platform\Audit\Contracts\AuditEventRecorder;
 use App\Platform\Audit\Models\AuditEvent;
@@ -179,7 +179,7 @@ it('returns deterministic readiness blockers and derived labels without mutating
     $auditCount = AuditEvent::query()->count();
     $version = $aggregate['attempt']->version;
 
-    $projection = app(DispatchV2ReadinessQuery::class)->handle($dispatcher, $aggregate['attempt']);
+    $projection = app(DispatchV2Commands::class)->readiness($dispatcher, $aggregate['attempt']);
     $codes = array_map(static fn ($blocker): string => $blocker->code->value, $projection->blockers);
 
     expect($codes)->toBe([
@@ -204,7 +204,7 @@ it('derives scheduled and awaiting approval labels from facts, never from lifecy
     $aggregate['plan']->update(['status' => DispatchPlanVersionStatus::Submitted]);
     $aggregate['attempt']->refresh();
 
-    $projection = app(DispatchV2ReadinessQuery::class)->handle($dispatcher, $aggregate['attempt']);
+    $projection = app(DispatchV2Commands::class)->readiness($dispatcher, $aggregate['attempt']);
 
     expect($projection->scheduled)->toBeTrue()
         ->and($projection->awaitingApproval)->toBeTrue()

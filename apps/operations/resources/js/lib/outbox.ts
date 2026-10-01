@@ -156,8 +156,3 @@ export function updateOutboxItemStatus(
 
     saveOutboxQueue(queue);
 }
-
-export function removeOutboxItem(id: string): void {
-    const queue = getOutboxQueue().filter((item) => item.id !== id);
-    saveOutboxQueue(queue);
-}

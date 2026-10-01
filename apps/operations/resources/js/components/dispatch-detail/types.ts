@@ -16,5 +16,3 @@ export interface AssignmentRequestPayload {
     advice_id?: number;
     option_id?: number;
 }
-
-export type DispatchStep = 1 | 2 | 3;

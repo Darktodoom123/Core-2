@@ -247,5 +247,3 @@ export function Modal({
         </AnimatePresence>
     );
 }
-
-export const Dialog = Modal;

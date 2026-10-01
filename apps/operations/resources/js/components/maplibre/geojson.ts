@@ -1,10 +1,4 @@
-import type {
-    Feature,
-    FeatureCollection,
-    LineString,
-    Point,
-    Polygon,
-} from 'geojson';
+import type { Feature, FeatureCollection, Point, Polygon } from 'geojson';
 
 export type LngLat = [number, number];
 
@@ -16,17 +10,6 @@ export function pointFeature(
         type: 'Feature',
         properties,
         geometry: { type: 'Point', coordinates },
-    };
-}
-
-export function lineFeature(
-    coordinates: LngLat[],
-    properties: Record<string, unknown> = {},
-): Feature<LineString> {
-    return {
-        type: 'Feature',
-        properties,
-        geometry: { type: 'LineString', coordinates },
     };
 }
 

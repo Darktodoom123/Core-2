@@ -9,21 +9,6 @@ import type {
     DispatchSourceFilter,
 } from './types';
 
-const DESK_KEYS = [
-    'dispatch_page',
-    'dispatch_view',
-    'dispatch_mode',
-    'dispatch_period',
-    'dispatch_date',
-    'dispatch_q',
-    'dispatch_source',
-    'dispatch_attention',
-    'dispatch_needs_assignment',
-    'dispatch_job',
-    'dispatch_intake',
-    'dispatch_intake_mode',
-] as const;
-
 function firstString(value: string | null): string {
     return value?.trim() ?? '';
 }
@@ -316,5 +301,3 @@ export function useDispatchDeskState(
         [state, update],
     );
 }
-
-export const dispatchDeskUrlKeys = DESK_KEYS;

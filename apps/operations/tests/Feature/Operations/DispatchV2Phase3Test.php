@@ -16,7 +16,6 @@ use App\Modules\Dispatch\Models\DispatchHandoff;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dispatch\Models\DispatchPlanApproval;
 use App\Modules\Dispatch\Models\DispatchPlanVersion;
-use App\Modules\Dispatch\Queries\DispatchV2ReadinessQuery;
 use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Enums\RoleName;
@@ -234,7 +233,7 @@ it('keeps optional declines non-blocking while reporting authoritative personnel
         'assets' => [['asset_id' => $asset->id, 'is_mandatory' => true]],
     ]]);
 
-    $projection = app(DispatchV2ReadinessQuery::class)->handle($aggregate['dispatcher'], $aggregate['attempt']);
+    $projection = app(DispatchV2Commands::class)->readiness($aggregate['dispatcher'], $aggregate['attempt']);
     $codes = collect($projection->blockers)->map(fn ($blocker): string => $blocker->code->value)->all();
     expect($codes)->toContain('personnel_suspended')->toContain('asset_unsafe')
         ->and($mandatory->fresh()->status)->toBe(DispatchAssignmentOfferStatus::Accepted)

@@ -177,14 +177,6 @@ export const fuelUrgencyOptions: {
     { value: 'critical', label: 'Critical', hint: 'Work is stopped' },
 ];
 
-export const fuelTankLevels: { value: number; label: string }[] = [
-    { value: 0, label: 'Empty' },
-    { value: 10, label: 'Reserve' },
-    { value: 25, label: '¼' },
-    { value: 50, label: '½' },
-    { value: 75, label: '¾' },
-];
-
 export const fuelNoReceiptReasons: {
     value: FuelNoReceiptReason;
     label: string;

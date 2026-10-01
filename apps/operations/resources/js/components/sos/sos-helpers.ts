@@ -1,8 +1,3 @@
-import type {
-    SosIncidentCategoryValue,
-    SosIncidentStatusValue,
-} from '@/types/workspace';
-
 export function humanizeSosValue(value: string): string {
     return value
         .replaceAll('_', ' ')
@@ -111,16 +106,4 @@ export function describeSosAccuracy(accuracyMetres: number | null): {
     }
 
     return { label, quality: 'Imprecise', tone: 'danger' };
-}
-
-export function sosCategoryLabel(value: SosIncidentCategoryValue): string {
-    return humanizeSosValue(value);
-}
-
-export function sosStatusLabel(value: SosIncidentStatusValue): string {
-    return humanizeSosValue(value);
-}
-
-export function isUnresolvedSosStatus(value: SosIncidentStatusValue): boolean {
-    return value !== 'resolved' && value !== 'cancelled';
 }

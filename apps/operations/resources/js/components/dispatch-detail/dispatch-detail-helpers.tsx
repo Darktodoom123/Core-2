@@ -7,7 +7,6 @@ import {
     Wrench,
 } from 'lucide-react';
 import React from 'react';
-import { Skeleton } from '@/components/ui';
 import { formatDateTime, humanize } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import type {
@@ -188,16 +187,6 @@ export function SelectionGroup({
             ) : (
                 <p className="mt-1 text-xs text-ink-soft">{emptyMessage}</p>
             )}
-        </div>
-    );
-}
-
-export function CandidateListSkeleton() {
-    return (
-        <div className="space-y-4">
-            <Skeleton className="h-20 w-full" />
-            <Skeleton className="h-20 w-full" />
-            <Skeleton className="h-20 w-full" />
         </div>
     );
 }

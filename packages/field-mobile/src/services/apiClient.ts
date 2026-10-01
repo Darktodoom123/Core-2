@@ -170,13 +170,6 @@ export interface LoginChallengeResult {
     cooldown_seconds: number;
 }
 
-export interface LoginSuccessResult {
-    requires_verification?: false;
-    token: string;
-    user: User;
-    trust_token?: string | null;
-}
-
 export type LoginResponse = {
     requires_verification?: boolean;
     token: string;

@@ -7,9 +7,7 @@
 
 - Solid paths in diagrams are current.
 - Dotted paths are recommended or planned.
-- The routed UI is `apps/operations/resources/js/pages/workspace.tsx`; `operations.tsx` and its
-  rich role surfaces are an unrouted fixture prototype that will be
-  progressively converted into the canonical live experience.
+- The routed UI is `apps/operations/resources/js/pages/workspace.tsx`.
 
 ## Business Architecture Boundary
 

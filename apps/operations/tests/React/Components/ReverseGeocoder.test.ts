@@ -7,7 +7,6 @@ import {
     onLocationResolved,
     primePlace,
     reverseGeocode,
-    reverseGeocodeDetailed,
     setCachedLocationName,
 } from '@/services/reverse-geocoder';
 
@@ -15,7 +14,12 @@ function serverPlace(primary: string, secondary: string | null = null) {
     return {
         ok: true,
         json: async () => ({
-            data: { status: 'resolved', primary, secondary, provider: 'stadia' },
+            data: {
+                status: 'resolved',
+                primary,
+                secondary,
+                provider: 'stadia',
+            },
         }),
     } as Response;
 }
@@ -134,23 +138,6 @@ describe('Reverse Geocoder Service', () => {
         const url = String(fetchSpy.mock.calls[0]?.[0]);
         expect(url.startsWith('/operations/places/reverse?')).toBe(true);
         expect(url).not.toMatch(/photon|bigdatacloud|stadiamaps/);
-    });
-
-    it('returns the headline and area for detail panels', async () => {
-        vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-            serverPlace(
-                'Purificacion Street',
-                'Bernabe Heights, Caloocan, Metro Manila 1427, Philippines',
-            ),
-        );
-
-        await expect(
-            reverseGeocodeDetailed(14.762045, 121.07749),
-        ).resolves.toEqual({
-            primary: 'Purificacion Street',
-            secondary:
-                'Bernabe Heights, Caloocan, Metro Manila 1427, Philippines',
-        });
     });
 
     it('notifies registered listeners when a location is resolved', async () => {

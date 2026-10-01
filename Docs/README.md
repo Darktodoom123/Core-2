@@ -143,3 +143,4 @@ Historical context and early sprint audits. **These documents represent historic
 - `Docs/archive/consolidated/`: Initial project requirements, user story maps, and draft sprint plans.
 - `Docs/archive/reports/`: Historical sprint execution audits (Sprints 4, 5, 6, 7).
 - `Docs/archive/phase-0-baseline.md`: Initial phase 0 environment baseline.
+- `Docs/archive/PROJECT.md` and `Docs/archive/TEST_INFRA.md`: Web dispatch parity specification and test infrastructure plan from the 2026-09-06 milestone run, moved from the repository root.

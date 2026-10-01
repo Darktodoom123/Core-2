@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useMemo } from 'react';
 import type { ReactNode } from 'react';
-import { StyleSheet } from 'react-native';
 import { lightThemeColors, darkHudThemeColors } from './tokens';
 import type { ThemeMode, ThemeColors } from './tokens';
 
@@ -66,86 +65,3 @@ export function useThemedStyles<T>(factory: (theme: ThemeColors) => T): T {
 
     return useMemo(() => factory(theme), [factory, theme]);
 }
-
-export const createMachinedStyles = (theme: ThemeColors) =>
-    StyleSheet.create({
-        screenCanvas: {
-            flex: 1,
-            backgroundColor: theme.canvas,
-        },
-        headerBezel: {
-            backgroundColor:
-                theme.mode === 'dark_hud'
-                    ? theme.surfaceElevated
-                    : theme.surfaceDark,
-            paddingHorizontal: 16,
-            paddingVertical: 14,
-            borderBottomWidth: 1,
-            borderBottomColor: theme.border,
-        },
-        headerTitle: {
-            fontSize: 16,
-            fontWeight: '700',
-            color: '#FFFFFF',
-            letterSpacing: 0.2,
-        },
-        headerSubtitle: {
-            fontSize: 13,
-            color: theme.textSecondary,
-            marginTop: 2,
-        },
-        machinedPanel: {
-            backgroundColor: theme.surface,
-            borderWidth: 1,
-            borderColor: theme.border,
-            borderRadius: 12,
-            padding: 16,
-            marginBottom: 14,
-        },
-        panelTitle: {
-            fontSize: 14,
-            fontWeight: '700',
-            color: theme.textPrimary,
-            letterSpacing: 0.5,
-            textTransform: 'uppercase',
-            marginBottom: 10,
-        },
-        actionPedalPrimary: {
-            minHeight: 52,
-            backgroundColor: theme.brandAmber,
-            borderRadius: 10,
-            alignItems: 'center',
-            justifyContent: 'center',
-            paddingHorizontal: 18,
-            borderWidth: 1,
-            borderColor:
-                theme.mode === 'dark_hud' ? theme.hudGlowAmber : '#806000',
-        },
-        actionPedalPrimaryText: {
-            color: '#0F172A',
-            fontSize: 15,
-            fontWeight: '800',
-            letterSpacing: 0.3,
-            textTransform: 'uppercase',
-        },
-        actionRockerSecondary: {
-            minHeight: 48,
-            backgroundColor: theme.surfaceElevated,
-            borderRadius: 10,
-            alignItems: 'center',
-            justifyContent: 'center',
-            paddingHorizontal: 16,
-            borderWidth: 1,
-            borderColor: theme.borderStrong,
-        },
-        actionRockerSecondaryText: {
-            color: theme.textPrimary,
-            fontSize: 14,
-            fontWeight: '700',
-        },
-        telemetryMono: {
-            fontFamily: 'monospace',
-            fontWeight: '700',
-            color: theme.textPrimary,
-        },
-    });

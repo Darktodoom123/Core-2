@@ -93,52 +93,10 @@ export function auditActionLabel(action: string): string {
     return verb ? `${domainLabel} · ${verb}` : domainLabel;
 }
 
-const CATEGORY_PREFIXES: [AuditCategory, string[]][] = [
-    ['access', ['user.', 'personnel.', 'account.', 'auth.']],
-    [
-        'dispatch',
-        [
-            'dispatch.',
-            'dispatch_job',
-            'project_',
-            'service_request.',
-            'client.',
-            'rental_',
-            'approval.',
-        ],
-    ],
-    [
-        'fleet',
-        [
-            'asset.',
-            'maintenance.',
-            'fuel.',
-            'hos.',
-            'dvir.',
-            'equipment.',
-            'unit_link.',
-        ],
-    ],
-    ['safety', ['safety.']],
-    ['reports', ['job_report.', 'report.', 'report_export', 'attachment.']],
-    ['gpt', ['gpt.']],
-];
-
 const OVERRIDE_MARKERS = ['emergency_abort', 'safety_lockdown', 'override'];
 
 export function isOverrideAction(action: string): boolean {
     return OVERRIDE_MARKERS.some((marker) => action.includes(marker));
-}
-
-/** Mirrors the server's AuditCategory prefixes for display only. */
-export function auditCategoryOf(action: string): AuditCategory | null {
-    for (const [category, prefixes] of CATEGORY_PREFIXES) {
-        if (prefixes.some((prefix) => action.startsWith(prefix))) {
-            return category;
-        }
-    }
-
-    return null;
 }
 
 export const AUDIT_CATEGORY_LABELS: Record<AuditCategory, string> = {

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Unit\Platform\Storage;
 
 use App\Platform\Storage\Contracts\StorageFallbackServiceInterface;
-use App\Platform\Storage\Facades\StorageFallback;
 use App\Platform\Storage\Services\StorageFallbackService;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
@@ -221,9 +220,4 @@ test('protected R2 refuses a bucket also configured for public media', function 
     Config::set('filesystems.disks.r2-private.bucket', 'documents');
     expect($service->isConfigured('r2-private'))->toBeTrue()
         ->and($service->resolveProtectedDisk('r2-private'))->toBe('r2-private');
-});
-
-test('StorageFallback facade delegates correctly to registered service', function () {
-    expect(StorageFallback::isConfigured('local'))->toBeTrue()
-        ->and(StorageFallback::isConfigured('non_existent_disk_xyz'))->toBeFalse();
 });

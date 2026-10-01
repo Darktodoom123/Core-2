@@ -232,19 +232,6 @@ export async function reverseGeocode(
     return place.status === 'resolved' ? placeLabel(place) : null;
 }
 
-/** Headline + surrounding area, or null when unavailable. */
-export async function reverseGeocodeDetailed(
-    latitude: number,
-    longitude: number,
-    signal?: AbortSignal,
-): Promise<DetailedLocationName | null> {
-    const place = await resolvePlace(latitude, longitude, signal);
-
-    return place.status === 'resolved' && place.primary
-        ? { primary: place.primary, secondary: place.secondary }
-        : null;
-}
-
 /**
  * Nearest address for a coordinate as React state. Uses the server-sent
  * `place` when given; otherwise looks it up once and shares the result.

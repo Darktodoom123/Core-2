@@ -151,7 +151,6 @@ Core Transaction 2 is structured as a two-service monorepo:
 ### A. Pages (`apps/operations/resources/js/pages/`)
 - `workspace.tsx`: Authoritative live operations workspace at `/operations` delivering role-adaptive views.
 - `dispatch-detail.tsx`: Authoritative deep dispatch detail workspace at `/operations/dispatch-jobs/{id}`.
-- `operations.tsx`: Isolated prototype/sandbox simulation surface with clear demo badges.
 - `error.tsx`: Branded full-stack error boundary presenting friendly status screens and unique incident Reference IDs (401, 403, 404, 419, 429, 500, 503).
 - `auth/*`: Authentication surfaces (Login, Reset Password, Verify Email).
 
@@ -196,7 +195,6 @@ Core Transaction 2 is structured as a two-service monorepo:
 - `AssignedJobsListScreen.tsx`: Assigned jobs feed, offer acceptance/rejection, and job details.
 - `HeavyCraneDriveModeScreen.tsx`: High-contrast in-cab turn-by-turn navigation HUD with clearance and corridor warning overlays.
 - `FuelScreen.tsx`: Mobile fuel requests, dispensed liters, meter readings, receipt photo capture.
-- `EquipmentInspectionScreen.tsx`: 5-tab inspection suite (Checklist, Maintenance Work Order, Safe-Release Certificate, Fuel Receipt, Custody Handover).
 - `RentalHandoverScreen.tsx`: Equipment condition checkout/return handovers.
 - `DocumentsWalletScreen.tsx`: Digital credentials, licenses, certifications, and compliance wallet.
 
@@ -204,8 +202,6 @@ Core Transaction 2 is structured as a two-service monorepo:
 - `ShiftStatusCard.tsx`: Real-time shift duration timer, duty cycle status, and location telemetry switch.
 - `AssignmentResponseCard.tsx`: Offer acceptance and structured rejection with mandatory reasons.
 - `FieldProgressionStepper.tsx`: Monotonic forward progression stepper.
-- `ParkedSecuredCard.tsx`: 4-point arrival safety checklist.
-- `CraneSetupSafetyCard.tsx`: 15m exclusion zone and outrigger pad positioning safety mode.
 - `CommandConflictBanner.tsx`: 409 conflict detection and state resolution banner.
 - `FailedCommandsList.tsx`: Outbox retry and discard management with 429 rate limit backoff.
 

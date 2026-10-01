@@ -214,5 +214,3 @@ export const Stat = forwardRef<HTMLDivElement, StatProps>(
 );
 
 Stat.displayName = 'Stat';
-
-export const StatCard = Stat;

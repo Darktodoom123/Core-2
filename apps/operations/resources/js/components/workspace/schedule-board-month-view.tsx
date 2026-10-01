@@ -397,17 +397,6 @@ export function buildMonthGrid(monthStart: Date): CalendarDay[] {
     });
 }
 
-export function jobOverlapsLocalDate(
-    job: DispatchJobViewModel,
-    selectedDate: string,
-): boolean {
-    const span = localDateSpanForJob(job);
-
-    return Boolean(
-        span && span.start <= selectedDate && span.end >= selectedDate,
-    );
-}
-
 function indexJobsByDate(
     jobs: DispatchJobViewModel[],
     gridStart: string,
